@@ -1,0 +1,16 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  display: grid;
+  place-items: center;
+  background: #0b1220;
+  color: #e8eefc;
+  font: 16px system-ui;
+}
+.wip {
+  font-size: clamp(28px, 5vw, 48px);
+  letter-spacing: 0.5px;
+}
