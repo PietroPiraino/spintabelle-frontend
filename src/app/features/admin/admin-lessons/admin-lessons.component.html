@@ -1,0 +1,136 @@
+<div class="admin-grid">
+  <!-- FORM -->
+  <div class="card card--pad admin-form">
+    <h2>{{ editingId() ? 'Modifica lezione' : 'Nuova lezione' }}</h2>
+
+    @if (feedback()) {
+      <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
+    }
+    @if (error()) {
+      <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="field">
+        <label for="title">Titolo</label>
+        <input
+          id="title"
+          type="text"
+          class="input"
+          formControlName="title"
+          placeholder="Es. Range di apertura 25bb"
+          [class.is-invalid]="form.controls.title.touched && form.controls.title.invalid"
+        />
+      </div>
+
+      <div class="field">
+        <label for="description">Descrizione</label>
+        <textarea
+          id="description"
+          class="input"
+          formControlName="description"
+          rows="4"
+          placeholder="Di cosa parla la lezione?"
+          [class.is-invalid]="form.controls.description.touched && form.controls.description.invalid"
+        ></textarea>
+      </div>
+
+      <div class="field">
+        <label for="vimeo">Link embed Vimeo</label>
+        <input
+          id="vimeo"
+          type="url"
+          class="input"
+          formControlName="vimeoEmbedUrl"
+          placeholder="https://player.vimeo.com/video/…"
+          [class.is-invalid]="form.controls.vimeoEmbedUrl.touched && form.controls.vimeoEmbedUrl.invalid"
+        />
+      </div>
+
+      <div class="field">
+        <label for="visibility">Visibilità</label>
+        <select id="visibility" class="input" formControlName="visibility">
+          <option value="USER">Base — tutti gli utenti registrati</option>
+          <option value="SUBSCRIBER">Premium — solo abbonati</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="newTag">Tag</label>
+        @if (knownTags().length > 0) {
+          <div class="row admin-form__tags" role="group" aria-label="Seleziona i tag">
+            @for (tag of knownTags(); track tag) {
+              <button
+                type="button"
+                class="badge badge--tag"
+                [class.is-active]="selectedTags().includes(tag)"
+                (click)="toggleTag(tag)"
+              >{{ tag }}</button>
+            }
+          </div>
+        }
+        <div class="row" style="gap: 0.5rem">
+          <input
+            id="newTag"
+            type="text"
+            class="input"
+            formControlName="newTag"
+            placeholder="Nuovo tag…"
+            style="flex: 1"
+            (keydown.enter)="addNewTag($event)"
+          />
+          <button type="button" class="btn btn--ghost btn--sm" (click)="addNewTag()">
+            Aggiungi
+          </button>
+        </div>
+      </div>
+
+      <div class="row">
+        <button type="submit" class="btn btn--primary" [disabled]="saving()">
+          {{ saving() ? 'Salvataggio…' : editingId() ? 'Salva modifiche' : 'Crea lezione' }}
+        </button>
+        @if (editingId()) {
+          <button type="button" class="btn btn--ghost" (click)="cancelEdit()">Annulla</button>
+        }
+      </div>
+    </form>
+  </div>
+
+  <!-- LISTA -->
+  <div class="admin-list">
+    <h2>Lezioni pubblicate</h2>
+    @if (!lessons()) {
+      <div class="spinner" role="status" aria-label="Caricamento"></div>
+    } @else if (lessons()!.length === 0) {
+      <div class="empty-state">
+        <p>Nessuna lezione ancora: crea la prima dal form.</p>
+      </div>
+    } @else {
+      @for (lesson of lessons()!; track lesson.id) {
+        <div class="card admin-item" [class.is-editing]="editingId() === lesson.id">
+          <div class="admin-item__info">
+            <div class="row" style="gap: 0.6rem">
+              <strong>{{ lesson.title }}</strong>
+              @if (lesson.visibility === 'SUBSCRIBER') {
+                <span class="badge badge--premium">Premium</span>
+              } @else {
+                <span class="badge badge--free">Base</span>
+              }
+            </div>
+            @if (lesson.tags.length > 0) {
+              <span class="admin-item__meta">{{ lesson.tags.join(' · ') }}</span>
+            }
+          </div>
+          <div class="row" style="gap: 0.5rem">
+            <button type="button" class="btn btn--ghost btn--sm" (click)="edit(lesson)">
+              Modifica
+            </button>
+            <button type="button" class="btn btn--danger btn--sm" (click)="remove(lesson)">
+              Elimina
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>

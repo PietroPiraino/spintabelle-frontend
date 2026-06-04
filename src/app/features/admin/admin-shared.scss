@@ -1,0 +1,78 @@
+// Stili condivisi dalle tab del pannello admin
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(340px, 460px) 1fr;
+  gap: 2rem;
+  align-items: start;
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-form {
+  position: sticky;
+  top: 84px;
+
+  h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .form-feedback {
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 960px) {
+    position: static;
+  }
+}
+
+.admin-form__tags {
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+
+  h2 {
+    font-size: 1.3rem;
+    margin-bottom: 0.4rem;
+  }
+}
+
+.admin-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1.2rem;
+
+  &.is-editing {
+    border-color: var(--copper-400);
+    box-shadow: var(--glow-copper);
+  }
+}
+
+.admin-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+
+  strong {
+    color: var(--cream-100);
+  }
+}
+
+.admin-item__meta {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}

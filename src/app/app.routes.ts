@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard, roleGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -82,6 +82,13 @@ export const routes: Routes = [
         './features/auth/resend-verification/resend-verification.component'
       ).then((m) => m.ResendVerificationComponent),
     title: 'Reinvia verifica — Best Fish Forever',
+  },
+  {
+    path: 'admin',
+    loadComponent: () =>
+      import('./features/admin/admin.component').then((m) => m.AdminComponent),
+    canActivate: [roleGuard(['ADMIN'])],
+    title: 'Admin — Best Fish Forever',
   },
   {
     path: '**',

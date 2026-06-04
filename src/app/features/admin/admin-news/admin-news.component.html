@@ -1,0 +1,88 @@
+<div class="admin-grid">
+  <!-- FORM -->
+  <div class="card card--pad admin-form">
+    <h2>{{ editingId() ? 'Modifica news' : 'Nuova news' }}</h2>
+
+    @if (feedback()) {
+      <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
+    }
+    @if (error()) {
+      <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="field">
+        <label for="news-title">Titolo</label>
+        <input
+          id="news-title"
+          type="text"
+          class="input"
+          formControlName="title"
+          placeholder="Titolo della news"
+          [class.is-invalid]="form.controls.title.touched && form.controls.title.invalid"
+        />
+      </div>
+
+      <div class="field">
+        <label for="news-body">Testo</label>
+        <textarea
+          id="news-body"
+          class="input"
+          formControlName="body"
+          rows="8"
+          placeholder="Il contenuto della news (i paragrafi vengono mantenuti)"
+          [class.is-invalid]="form.controls.body.touched && form.controls.body.invalid"
+        ></textarea>
+      </div>
+
+      <div class="field">
+        <label for="news-cover">URL immagine di copertina (opzionale)</label>
+        <input
+          id="news-cover"
+          type="url"
+          class="input"
+          formControlName="coverImageUrl"
+          placeholder="https://…"
+        />
+      </div>
+
+      <div class="row">
+        <button type="submit" class="btn btn--primary" [disabled]="saving()">
+          {{ saving() ? 'Salvataggio…' : editingId() ? 'Salva modifiche' : 'Pubblica news' }}
+        </button>
+        @if (editingId()) {
+          <button type="button" class="btn btn--ghost" (click)="cancelEdit()">Annulla</button>
+        }
+      </div>
+    </form>
+  </div>
+
+  <!-- LISTA -->
+  <div class="admin-list">
+    <h2>News pubblicate</h2>
+    @if (!items()) {
+      <div class="spinner" role="status" aria-label="Caricamento"></div>
+    } @else if (items()!.length === 0) {
+      <div class="empty-state">
+        <p>Nessuna news ancora: pubblica la prima dal form.</p>
+      </div>
+    } @else {
+      @for (news of items()!; track news._id) {
+        <div class="card admin-item" [class.is-editing]="editingId() === news._id">
+          <div class="admin-item__info">
+            <strong>{{ news.title }}</strong>
+            <span class="admin-item__meta">{{ news.createdAt | date: 'dd MMM yyyy, HH:mm' }}</span>
+          </div>
+          <div class="row" style="gap: 0.5rem">
+            <button type="button" class="btn btn--ghost btn--sm" (click)="edit(news)">
+              Modifica
+            </button>
+            <button type="button" class="btn btn--danger btn--sm" (click)="remove(news)">
+              Elimina
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>
