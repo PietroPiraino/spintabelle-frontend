@@ -108,7 +108,10 @@ export class Hero3dComponent implements OnDestroy {
     return canvas;
   }
 
-  /** Dorso carta: navy pieno con cornice neon e trama a losanghe. */
+  /**
+   * Dorso carta chiaro: sul tema ghiaccio il testo navy resta leggibile
+   * anche quando una carta passa dietro ai titoli della hero.
+   */
   private drawCardBack(): HTMLCanvasElement {
     const w = 256;
     const h = 358;
@@ -117,18 +120,17 @@ export class Hero3dComponent implements OnDestroy {
     canvas.height = h;
     const ctx = canvas.getContext('2d')!;
 
-    ctx.fillStyle = '#16223f';
+    ctx.fillStyle = '#f4f1e9';
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = '#ff6a1f';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.roundRect(14, 14, w - 28, h - 28, 14);
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(255, 106, 31, 0.35)';
+    // trama a losanghe soft (ciano/arancio alternati)
     ctx.lineWidth = 2;
+    let stripe = 0;
     for (let x = -h; x < w + h; x += 26) {
+      ctx.strokeStyle =
+        stripe++ % 2 === 0
+          ? 'rgba(0, 212, 212, 0.22)'
+          : 'rgba(255, 106, 31, 0.2)';
       ctx.beginPath();
       ctx.moveTo(x, 20);
       ctx.lineTo(x + h, h - 20);
@@ -138,6 +140,19 @@ export class Hero3dComponent implements OnDestroy {
       ctx.lineTo(x, h - 20);
       ctx.stroke();
     }
+
+    // fiore centrale in filigrana
+    ctx.fillStyle = 'rgba(22, 34, 63, 0.14)';
+    ctx.font = '120px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('♣', w / 2, h / 2 + 42);
+
+    // cornice neon arancio
+    ctx.strokeStyle = '#ff6a1f';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.roundRect(14, 14, w - 28, h - 28, 14);
+    ctx.stroke();
 
     return canvas;
   }
@@ -230,7 +245,8 @@ export class Hero3dComponent implements OnDestroy {
       { mesh: makeCard({ rank: '4', suit: '♣', color: navy }), x: 5.5, y: 0.6, z: 0.4, rotZ: -0.22, speed: 0.7, phase: 1.4 },
       { mesh: makeCard(), x: 7.2, y: -1.6, z: -1.6, rotZ: 0.4, speed: 0.45, phase: 2.6 },
       { mesh: makeCard(), x: 4.4, y: 3.3, z: -2.4, rotZ: -0.35, speed: 0.6, phase: 3.4 },
-      { mesh: makeCard(), x: -0.8, y: -3.1, z: -3.2, rotZ: 0.5, speed: 0.5, phase: 4.6 },
+      // tutte sul lato destro: la colonna di testo resta sempre libera
+      { mesh: makeCard(), x: 6.2, y: -3.4, z: -3.2, rotZ: 0.5, speed: 0.5, phase: 4.6 },
     ];
     for (const card of cards) {
       card.mesh.position.set(card.x, card.y, card.z);
@@ -250,13 +266,14 @@ export class Hero3dComponent implements OnDestroy {
     let running = true;
     let visible = true;
 
-    const clock = new THREE.Clock();
+    // niente THREE.Clock (deprecato): basta il tempo trascorso
+    const start = performance.now();
     const loop = () => {
       if (this.disposed) return;
       this.rafId = requestAnimationFrame(loop);
       if (!running || !visible) return;
 
-      const t = clock.getElapsedTime();
+      const t = (performance.now() - start) / 1000;
       for (const card of cards) {
         card.mesh.position.y = card.y + Math.sin(t * card.speed + card.phase) * 0.45;
         card.mesh.rotation.y = Math.sin(t * card.speed * 0.6 + card.phase) * 0.38;

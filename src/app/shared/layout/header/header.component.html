@@ -34,7 +34,10 @@
       }
 
       <div class="header__auth">
-        @if (auth.isAuthenticated()) {
+        @if (!auth.ready()) {
+          <!-- sessione in ripristino: evita il lampeggio Accedi → nickname -->
+          <span class="header__auth-wait" aria-hidden="true"></span>
+        } @else if (auth.isAuthenticated()) {
           <span class="header__user" title="{{ auth.user()?.email }}">
             <span class="header__user-dot" aria-hidden="true"></span>
             {{ auth.displayName() }}

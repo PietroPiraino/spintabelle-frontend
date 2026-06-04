@@ -4,8 +4,6 @@ import localeIt from '@angular/common/locales/it';
 import {
   ApplicationConfig,
   LOCALE_ID,
-  inject,
-  provideAppInitializer,
   provideZonelessChangeDetection,
 } from '@angular/core';
 import {
@@ -14,14 +12,16 @@ import {
   withInMemoryScrolling,
   withViewTransitions,
 } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
-import { AuthService } from './core/services/auth.service';
 
 registerLocaleData(localeIt);
 
+// NB: il ripristino sessione NON blocca il bootstrap (il backend su Render
+// può impiegare decine di secondi a svegliarsi dallo sleep): parte in
+// background dal costruttore di AuthService, e i guard aspettano `ready`
+// solo quando una rotta protetta lo richiede.
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
@@ -36,7 +36,5 @@ export const appConfig: ApplicationConfig = {
     ),
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: LOCALE_ID, useValue: 'it' },
-    // Ripristina la sessione (cookie refresh) prima che girino i guard
-    provideAppInitializer(() => firstValueFrom(inject(AuthService).bootstrap())),
   ],
 };

@@ -15,11 +15,28 @@
 }
 
 .hero__copy {
+  position: relative;
   max-width: 620px;
   display: flex;
   flex-direction: column;
   gap: 1.4rem;
   align-items: flex-start;
+
+  // Alone di protezione: il testo resta leggibile anche se una carta 3D
+  // gli passa dietro
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -3rem -4rem -3rem -5rem;
+    z-index: -1;
+    background: radial-gradient(
+      closest-side,
+      rgba(247, 245, 240, 0.95),
+      rgba(247, 245, 240, 0.7) 65%,
+      transparent
+    );
+    filter: blur(4px);
+  }
 }
 
 .hero__hint {

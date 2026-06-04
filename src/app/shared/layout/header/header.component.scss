@@ -102,6 +102,27 @@
   white-space: nowrap;
 }
 
+.header__auth-wait {
+  display: inline-block;
+  width: 86px;
+  height: 30px;
+  border-radius: 999px;
+  background: linear-gradient(
+    100deg,
+    var(--line) 30%,
+    rgba(255, 106, 31, 0.12) 50%,
+    var(--line) 70%
+  );
+  background-size: 220% 100%;
+  animation: auth-shimmer 1.4s linear infinite;
+}
+
+@keyframes auth-shimmer {
+  to {
+    background-position: -120% 0;
+  }
+}
+
 .header__user-dot {
   width: 7px;
   height: 7px;

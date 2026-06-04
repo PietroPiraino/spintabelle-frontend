@@ -19,6 +19,11 @@ export class AuthService {
   /** true quando il tentativo di ripristino sessione all'avvio è concluso */
   readonly ready = signal(false);
 
+  constructor() {
+    // Ripristino sessione in background: non blocca il primo render
+    this.bootstrap().subscribe();
+  }
+
   readonly isAuthenticated = computed(() => this.user() !== null);
   readonly isSubscriber = computed(() => {
     const role = this.user()?.role;

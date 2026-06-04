@@ -24,8 +24,79 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@500&display=swap" rel="stylesheet">
+
+  <!-- Loader pre-bootstrap: visibile finché Angular non rimpiazza il contenuto di app-root -->
+  <style>
+    .boot-loader {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      background: #f7f5f0;
+      background-image:
+        radial-gradient(700px 420px at 85% -6%, rgba(255, 106, 31, 0.12), transparent 60%),
+        radial-gradient(560px 400px at -8% 18%, rgba(0, 212, 212, 0.1), transparent 62%);
+      font-family: 'Bricolage Grotesque', 'Segoe UI', sans-serif;
+      color: #16223f;
+    }
+    .boot-loader__cards { display: flex; }
+    .boot-loader__card {
+      display: grid;
+      place-items: center;
+      width: 52px;
+      height: 74px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid rgba(22, 34, 63, 0.2);
+      box-shadow: 0 10px 26px rgba(22, 34, 63, 0.12), 0 0 16px rgba(255, 106, 31, 0.15);
+      font-size: 1.15rem;
+      font-weight: 800;
+      animation: boot-deal 1.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    }
+    .boot-loader__card:nth-child(1) { transform: rotate(-12deg) translateX(8px); }
+    .boot-loader__card:nth-child(2) { transform: rotate(2deg) translateY(-7px); animation-delay: 0.18s; z-index: 1; }
+    .boot-loader__card:nth-child(3) { transform: rotate(12deg) translateX(-8px); color: #e25510; animation-delay: 0.36s; }
+    @keyframes boot-deal { 0%, 100% { translate: 0 0; } 50% { translate: 0 -9px; } }
+    .boot-loader__brand { font-weight: 800; font-size: 1.05rem; letter-spacing: 0.02em; }
+    .boot-loader__brand em { font-style: normal; color: #ff6a1f; }
+    .boot-loader__bar {
+      width: 132px;
+      height: 3px;
+      border-radius: 3px;
+      overflow: hidden;
+      background: rgba(22, 34, 63, 0.1);
+      position: relative;
+    }
+    .boot-loader__bar::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      width: 45%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #ff6a1f, #ffb547);
+      box-shadow: 0 0 10px rgba(255, 106, 31, 0.6);
+      animation: boot-slide 1.1s ease-in-out infinite alternate;
+    }
+    @keyframes boot-slide { to { translate: 122% 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .boot-loader__card, .boot-loader__bar::after { animation: none; }
+    }
+  </style>
 </head>
 <body>
-  <app-root></app-root>
+  <app-root>
+    <div class="boot-loader" role="status" aria-label="Caricamento del sito">
+      <div class="boot-loader__cards" aria-hidden="true">
+        <span class="boot-loader__card">7♣</span>
+        <span class="boot-loader__card">♣</span>
+        <span class="boot-loader__card">4♣</span>
+      </div>
+      <span class="boot-loader__brand">Best Fish <em>Forever</em></span>
+      <div class="boot-loader__bar" aria-hidden="true"></div>
+    </div>
+  </app-root>
 </body>
 </html>
