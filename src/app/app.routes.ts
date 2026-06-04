@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { guestGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -9,6 +9,15 @@ export const routes: Routes = [
         (m) => m.LandingComponent,
       ),
     title: 'Best Fish Forever — Scuola di Poker Spin & Go',
+  },
+  {
+    path: 'lezioni',
+    loadComponent: () =>
+      import('./features/lessons/lessons.component').then(
+        (m) => m.LessonsComponent,
+      ),
+    canActivate: [authGuard],
+    title: 'Lezioni — Best Fish Forever',
   },
   {
     path: 'login',

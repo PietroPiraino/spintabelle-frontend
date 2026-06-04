@@ -1,0 +1,91 @@
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Studio</span>
+      <div class="spread">
+        <h1>Lezioni</h1>
+        <input
+          type="search"
+          class="input lessons__search"
+          placeholder="Cerca per titolo, tema, tag…"
+          aria-label="Cerca tra le lezioni"
+          (input)="onSearch($event)"
+        />
+      </div>
+
+      @if (tags().length > 0) {
+        <div class="row lessons__tags" role="group" aria-label="Filtra per tag">
+          @for (tag of tags(); track tag) {
+            <button
+              type="button"
+              class="badge badge--tag"
+              [class.is-active]="selectedTag() === tag"
+              (click)="toggleTag(tag)"
+            >{{ tag }}</button>
+          }
+        </div>
+      }
+    </div>
+
+    @if (!lessons()) {
+      <div class="spinner" role="status" aria-label="Caricamento lezioni"></div>
+    } @else if (filtered().length === 0) {
+      <div class="empty-state">
+        <div class="empty-state__suit" aria-hidden="true">♠ ♥ ♣ ♦</div>
+        <p>Nessuna lezione trovata con questi filtri.</p>
+      </div>
+    } @else {
+      <div class="grid grid--2">
+        @for (lesson of filtered(); track lesson.id; let i = $index) {
+          <article class="card card--hover lesson-card rise" [style.animation-delay.ms]="i * 60">
+            <div class="lesson-card__media">
+              @if (lesson.locked) {
+                <div class="lesson-card__locked">
+                  <span class="lesson-card__lock" aria-hidden="true">🂠</span>
+                  <p class="lesson-card__locked-title">Riservata agli abbonati</p>
+                  <p class="lesson-card__locked-sub">
+                    Sblocca tutte le lezioni premium della scuola.
+                  </p>
+                  <a [href]="discordUrl" target="_blank" rel="noopener" class="btn btn--primary btn--sm">
+                    Scopri come abbonarti
+                  </a>
+                </div>
+              } @else if (playingId() === lesson.id && lesson.vimeoEmbedUrl) {
+                <app-vimeo-player [url]="lesson.vimeoEmbedUrl" [videoTitle]="lesson.title" />
+              } @else {
+                <button type="button" class="lesson-card__poster" (click)="play(lesson.id)">
+                  <span class="lesson-card__play" aria-hidden="true">▶</span>
+                  <span class="visually-hidden">Guarda {{ lesson.title }}</span>
+                </button>
+              }
+            </div>
+
+            <div class="lesson-card__body">
+              <div class="spread">
+                <h3>{{ lesson.title }}</h3>
+                @if (lesson.visibility === 'SUBSCRIBER') {
+                  <span class="badge badge--premium">Premium</span>
+                } @else {
+                  <span class="badge badge--free">Base</span>
+                }
+              </div>
+              <p class="lesson-card__desc">{{ lesson.description }}</p>
+              @if (lesson.tags.length > 0) {
+                <div class="row lesson-card__taglist">
+                  @for (tag of lesson.tags; track tag) {
+                    <button
+                      type="button"
+                      class="badge badge--tag"
+                      [class.is-active]="selectedTag() === tag"
+                      (click)="toggleTag(tag)"
+                    >{{ tag }}</button>
+                  }
+                </div>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
+</section>

@@ -1,0 +1,114 @@
+.lessons__search {
+  max-width: 320px;
+}
+
+.lessons__tags {
+  gap: 0.5rem;
+}
+
+.lesson-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lesson-card__media {
+  border-bottom: 1px solid var(--line);
+}
+
+// Poster click-to-play: dorso di carta stilizzato
+.lesson-card__poster {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+  cursor: pointer;
+  background:
+    radial-gradient(420px 200px at 50% 0%, rgba(200, 99, 42, 0.18), transparent 70%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(237, 228, 205, 0.035) 0 14px,
+      transparent 14px 28px
+    ),
+    linear-gradient(160deg, var(--navy-700), var(--bg-0));
+  transition: filter var(--t-med);
+
+  &:hover {
+    filter: brightness(1.2);
+
+    .lesson-card__play {
+      transform: scale(1.08);
+      box-shadow: var(--glow-copper-strong);
+    }
+  }
+}
+
+.lesson-card__play {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  padding-left: 4px;
+  color: #140802;
+  background: linear-gradient(135deg, var(--copper-400), var(--copper-600));
+  box-shadow: var(--glow-copper);
+  transition: transform var(--t-med), box-shadow var(--t-med);
+}
+
+// Stato bloccato (upsell abbonati)
+.lesson-card__locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  aspect-ratio: 16 / 9;
+  padding: 1.4rem;
+  text-align: center;
+  background:
+    radial-gradient(400px 220px at 50% 110%, rgba(255, 181, 71, 0.12), transparent 70%),
+    linear-gradient(160deg, rgba(7, 11, 24, 0.92), rgba(17, 26, 51, 0.95));
+}
+
+.lesson-card__lock {
+  font-size: 2.2rem;
+  color: var(--gold);
+  filter: drop-shadow(0 0 14px rgba(255, 181, 71, 0.45));
+}
+
+.lesson-card__locked-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--cream-100);
+}
+
+.lesson-card__locked-sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.7rem;
+}
+
+.lesson-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1.2rem 1.4rem 1.4rem;
+
+  h3 {
+    font-size: 1.15rem;
+  }
+}
+
+.lesson-card__desc {
+  font-size: 0.93rem;
+  color: var(--text-muted);
+}
+
+.lesson-card__taglist {
+  gap: 0.4rem;
+  margin-top: auto;
+}
