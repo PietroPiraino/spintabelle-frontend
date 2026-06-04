@@ -1,0 +1,49 @@
+<div class="auth-page container">
+  <div class="card card--pad auth-card rise">
+    @if (sent()) {
+      <div class="auth-card__suit" aria-hidden="true">♥</div>
+      <h1>Fatto!</h1>
+      <p class="auth-card__sub">
+        Se esiste un account non verificato con questa email, riceverai un nuovo
+        link a breve. Controlla anche lo spam.
+      </p>
+      <a routerLink="/login" class="btn btn--primary">Torna all'accesso</a>
+    } @else {
+      <div class="auth-card__suit" aria-hidden="true">♦</div>
+      <h1>Reinvia la verifica</h1>
+      <p class="auth-card__sub">
+        Inserisci l'email con cui ti sei registrato: ti rimandiamo il link.
+      </p>
+
+      @if (error()) {
+        <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="field">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            class="input"
+            formControlName="email"
+            autocomplete="email"
+            placeholder="tu@esempio.it"
+            [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+          />
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <span class="field-error">Inserisci un'email valida.</span>
+          }
+        </div>
+
+        <button type="submit" class="btn btn--primary" [disabled]="loading()">
+          {{ loading() ? 'Invio…' : 'Invia il link' }}
+        </button>
+      </form>
+
+      <p class="auth-card__footer">
+        Tutto a posto? <a routerLink="/login">Accedi</a>
+      </p>
+    }
+  </div>
+</div>

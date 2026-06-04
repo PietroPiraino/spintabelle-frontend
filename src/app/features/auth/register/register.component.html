@@ -1,0 +1,102 @@
+<div class="auth-page container">
+  @if (sentTo(); as email) {
+    <div class="card card--pad auth-card rise" role="status">
+      <div class="auth-card__suit" aria-hidden="true">♥</div>
+      <h1>Controlla la posta</h1>
+      <p class="auth-card__sub">
+        Ti abbiamo inviato un link di verifica a <strong>{{ email }}</strong>.
+        Cliccalo per attivare l'account, poi torna qui per accedere.
+      </p>
+      <a routerLink="/login" class="btn btn--primary">Vai all'accesso</a>
+      <p class="auth-card__footer">
+        Non è arrivata? <a routerLink="/recupera-verifica">Reinvia il link</a>
+      </p>
+    </div>
+  } @else {
+    <div class="card card--pad auth-card rise">
+      <div class="auth-card__suit" aria-hidden="true">♣</div>
+      <h1>Unisciti al banco</h1>
+      <p class="auth-card__sub">Crea l'account per accedere alle lezioni della scuola.</p>
+
+      @if (error()) {
+        <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="field">
+          <label for="nickname">Nickname</label>
+          <input
+            id="nickname"
+            type="text"
+            class="input"
+            formControlName="nickname"
+            autocomplete="username"
+            placeholder="Il tuo nome al tavolo"
+            [class.is-invalid]="form.controls.nickname.touched && form.controls.nickname.invalid"
+          />
+          @if (form.controls.nickname.touched && form.controls.nickname.invalid) {
+            <span class="field-error">
+              3–24 caratteri: lettere, numeri, punto, trattino o underscore.
+            </span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            class="input"
+            formControlName="email"
+            autocomplete="email"
+            placeholder="tu@esempio.it"
+            [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+          />
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <span class="field-error">Inserisci un'email valida.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            class="input"
+            formControlName="password"
+            autocomplete="new-password"
+            placeholder="Minimo 8 caratteri"
+            [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+          />
+          @if (form.controls.password.touched && form.controls.password.invalid) {
+            <span class="field-error">La password deve avere almeno 8 caratteri.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="confirm">Conferma password</label>
+          <input
+            id="confirm"
+            type="password"
+            class="input"
+            formControlName="confirm"
+            autocomplete="new-password"
+            placeholder="Ripeti la password"
+            [class.is-invalid]="form.controls.confirm.touched && (form.controls.confirm.invalid || form.hasError('passwordsMismatch'))"
+          />
+          @if (form.controls.confirm.touched && form.hasError('passwordsMismatch')) {
+            <span class="field-error">Le password non coincidono.</span>
+          }
+        </div>
+
+        <button type="submit" class="btn btn--primary" [disabled]="loading()">
+          {{ loading() ? 'Creazione account…' : 'Crea account' }}
+        </button>
+      </form>
+
+      <p class="auth-card__footer">
+        Hai già un account? <a routerLink="/login">Accedi</a>
+      </p>
+    </div>
+  }
+</div>

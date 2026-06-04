@@ -1,0 +1,48 @@
+// Layout condiviso delle pagine di autenticazione
+
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: clamp(3rem, 8vw, 6rem);
+}
+
+.auth-card {
+  width: min(440px, 100%);
+  padding: 2.4rem 2.2rem;
+
+  .auth-card__suit {
+    font-size: 1.6rem;
+    color: var(--copper-400);
+    margin-bottom: 0.6rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .auth-card__sub {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.8rem;
+  }
+
+  form .btn {
+    width: 100%;
+    margin-top: 0.4rem;
+  }
+
+  .auth-card__footer {
+    margin-top: 1.6rem;
+    padding-top: 1.3rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .form-feedback {
+    margin-bottom: 1.1rem;
+  }
+}

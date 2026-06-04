@@ -1,0 +1,58 @@
+<div class="auth-page container">
+  <div class="card card--pad auth-card rise">
+    <div class="auth-card__suit" aria-hidden="true">♠</div>
+    <h1>Bentornato al tavolo</h1>
+    <p class="auth-card__sub">Accedi per lezioni, tabelle e community.</p>
+
+    @if (error()) {
+      <div class="form-feedback is-error" role="alert">
+        {{ error() }}
+        @if (showResend()) {
+          <a routerLink="/recupera-verifica">Reinvia il link di verifica</a>
+        }
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          class="input"
+          formControlName="email"
+          autocomplete="email"
+          placeholder="tu@esempio.it"
+          [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+        />
+        @if (form.controls.email.touched && form.controls.email.invalid) {
+          <span class="field-error">Inserisci un'email valida.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          class="input"
+          formControlName="password"
+          autocomplete="current-password"
+          placeholder="••••••••"
+          [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+        />
+        @if (form.controls.password.touched && form.controls.password.invalid) {
+          <span class="field-error">La password ha almeno 8 caratteri.</span>
+        }
+      </div>
+
+      <button type="submit" class="btn btn--primary" [disabled]="loading()">
+        {{ loading() ? 'Accesso in corso…' : 'Accedi' }}
+      </button>
+    </form>
+
+    <p class="auth-card__footer">
+      Non hai un account? <a routerLink="/registrazione">Registrati</a>
+    </p>
+  </div>
+</div>

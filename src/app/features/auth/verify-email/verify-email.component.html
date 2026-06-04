@@ -1,0 +1,22 @@
+<div class="auth-page container">
+  <div class="card card--pad auth-card rise" role="status">
+    @if (success()) {
+      <div class="auth-card__suit" aria-hidden="true">♦</div>
+      <h1>Email verificata!</h1>
+      <p class="auth-card__sub">
+        Il tuo account è attivo: prendi posto al tavolo.
+      </p>
+      <a routerLink="/login" class="btn btn--primary">Accedi ora</a>
+    } @else {
+      <div class="auth-card__suit" aria-hidden="true">♠</div>
+      <h1>Verifica non riuscita</h1>
+      <p class="auth-card__sub">
+        Il link è scaduto o non è valido. Richiedine uno nuovo: ci vuole un attimo.
+      </p>
+      <a routerLink="/recupera-verifica" class="btn btn--primary">Richiedi un nuovo link</a>
+      <p class="auth-card__footer">
+        Oppure torna alla <a routerLink="/">home</a>
+      </p>
+    }
+  </div>
+</div>
