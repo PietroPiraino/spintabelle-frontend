@@ -28,9 +28,10 @@
   height: 64px;
   border-radius: 50%;
   font-size: 1.5rem;
-  color: var(--copper-400);
-  background: linear-gradient(160deg, var(--navy-700), var(--bg-0));
-  border: 1px solid var(--line-strong);
+  color: var(--copper-500);
+  background: var(--bg-1);
+  border: 1px solid rgba(255, 106, 31, 0.45);
+  box-shadow: 0 0 16px rgba(255, 106, 31, 0.2);
   margin-bottom: 0.6rem;
 }
 
@@ -39,7 +40,7 @@
   font-size: 0.72rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: #b06f00;
 }
 
 .coach__bio {

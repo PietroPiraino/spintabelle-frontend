@@ -22,7 +22,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
       aspect-ratio: 16 / 9;
       border-radius: var(--radius-sm);
       overflow: hidden;
-      background: var(--bg-0);
+      background: #0c1428; // cornice video sempre scura
 
       iframe {
         position: absolute;

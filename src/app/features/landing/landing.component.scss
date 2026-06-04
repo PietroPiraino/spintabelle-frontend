@@ -29,7 +29,7 @@
   color: var(--text-faint);
 
   span {
-    color: var(--copper-400);
+    color: var(--copper-600);
   }
 }
 
@@ -47,8 +47,8 @@
 
 .value-prop__suit {
   font-size: 1.7rem;
-  color: var(--copper-400);
-  filter: drop-shadow(0 0 12px rgba(224, 125, 60, 0.5));
+  color: var(--copper-500);
+  filter: drop-shadow(0 0 12px rgba(255, 106, 31, 0.55));
 }
 
 // ---- OFFERTA ----
@@ -66,14 +66,14 @@
 
 .offer__card--tables {
   background:
-    radial-gradient(380px 220px at 90% -10%, rgba(255, 181, 71, 0.12), transparent 70%),
-    linear-gradient(160deg, var(--surface-2), var(--surface-1) 70%);
+    radial-gradient(380px 220px at 90% -10%, rgba(0, 212, 212, 0.12), transparent 70%),
+    var(--surface-1);
 }
 
 .offer__card--lessons {
   background:
-    radial-gradient(380px 220px at 90% -10%, rgba(200, 99, 42, 0.18), transparent 70%),
-    linear-gradient(160deg, var(--surface-2), var(--surface-1) 70%);
+    radial-gradient(380px 220px at 90% -10%, rgba(255, 106, 31, 0.12), transparent 70%),
+    var(--surface-1);
 }
 
 // ---- COMMUNITY ----
@@ -85,8 +85,9 @@
   flex-wrap: wrap;
   padding: clamp(1.8rem, 4vw, 3rem);
   background:
-    radial-gradient(500px 280px at 8% 120%, rgba(46, 139, 99, 0.14), transparent 70%),
-    linear-gradient(160deg, var(--surface-2), var(--surface-1) 70%);
+    radial-gradient(500px 280px at 8% 120%, rgba(0, 169, 110, 0.1), transparent 70%),
+    radial-gradient(420px 240px at 95% -20%, rgba(255, 181, 71, 0.12), transparent 70%),
+    var(--surface-1);
 }
 
 .community__copy {

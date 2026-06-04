@@ -6,23 +6,24 @@
   pointer-events: none; // i click passano al contenuto della hero
 }
 
-// Fallback sempre presente sotto il canvas: brace e profondità
+// Fallback sempre presente sotto il canvas: orbs neon sul ghiaccio
 .hero3d__fallback {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(560px 420px at 78% 30%, rgba(200, 99, 42, 0.2), transparent 65%),
-    radial-gradient(440px 380px at 88% 70%, rgba(255, 181, 71, 0.1), transparent 60%);
+    radial-gradient(520px 400px at 78% 28%, rgba(255, 106, 31, 0.16), transparent 65%),
+    radial-gradient(420px 360px at 90% 75%, rgba(0, 212, 212, 0.13), transparent 60%),
+    radial-gradient(340px 280px at 62% 55%, rgba(255, 181, 71, 0.12), transparent 60%);
 
   &::after {
-    content: '♠';
+    content: '♣';
     position: absolute;
     right: clamp(-2rem, 6vw, 8rem);
     top: 50%;
     transform: translateY(-50%) rotate(14deg);
     font-size: clamp(12rem, 28vw, 24rem);
     line-height: 1;
-    color: rgba(237, 228, 205, 0.04);
+    color: rgba(22, 34, 63, 0.05);
   }
 }
 

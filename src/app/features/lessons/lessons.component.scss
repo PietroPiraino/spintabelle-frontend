@@ -16,7 +16,7 @@
   border-bottom: 1px solid var(--line);
 }
 
-// Poster click-to-play: dorso di carta stilizzato
+// Poster click-to-play: mini "tavolo di notte", contrasto voluto sulle card chiare
 .lesson-card__poster {
   position: relative;
   display: grid;
@@ -26,13 +26,13 @@
   border: none;
   cursor: pointer;
   background:
-    radial-gradient(420px 200px at 50% 0%, rgba(200, 99, 42, 0.18), transparent 70%),
+    radial-gradient(420px 200px at 50% 0%, rgba(255, 106, 31, 0.22), transparent 70%),
     repeating-linear-gradient(
       45deg,
-      rgba(237, 228, 205, 0.035) 0 14px,
+      rgba(255, 255, 255, 0.04) 0 14px,
       transparent 14px 28px
     ),
-    linear-gradient(160deg, var(--navy-700), var(--bg-0));
+    linear-gradient(160deg, var(--navy-700), #0c1428);
   transition: filter var(--t-med);
 
   &:hover {
@@ -53,9 +53,9 @@
   border-radius: 50%;
   font-size: 1.3rem;
   padding-left: 4px;
-  color: #140802;
-  background: linear-gradient(135deg, var(--copper-400), var(--copper-600));
-  box-shadow: var(--glow-copper);
+  color: #2a1404;
+  background: linear-gradient(135deg, var(--copper-500), var(--gold));
+  box-shadow: 0 0 28px rgba(255, 106, 31, 0.65);
   transition: transform var(--t-med), box-shadow var(--t-med);
 }
 
@@ -70,20 +70,20 @@
   padding: 1.4rem;
   text-align: center;
   background:
-    radial-gradient(400px 220px at 50% 110%, rgba(255, 181, 71, 0.12), transparent 70%),
-    linear-gradient(160deg, rgba(7, 11, 24, 0.92), rgba(17, 26, 51, 0.95));
+    radial-gradient(400px 220px at 50% 110%, rgba(255, 181, 71, 0.18), transparent 70%),
+    linear-gradient(160deg, var(--bg-0), #e6e1d4);
 }
 
 .lesson-card__lock {
   font-size: 2.2rem;
-  color: var(--gold);
-  filter: drop-shadow(0 0 14px rgba(255, 181, 71, 0.45));
+  color: #c47e00;
+  filter: drop-shadow(0 0 14px rgba(255, 181, 71, 0.6));
 }
 
 .lesson-card__locked-title {
   font-family: var(--font-display);
   font-weight: 700;
-  color: var(--cream-100);
+  color: var(--text);
 }
 
 .lesson-card__locked-sub {

@@ -1,4 +1,4 @@
-// Reset essenziale + atmosfera di fondo
+// Reset essenziale + atmosfera di fondo (orbs neon su chiaro)
 
 *,
 *::before,
@@ -22,24 +22,24 @@ body {
   line-height: 1.6;
   color: var(--text);
   background-color: var(--bg-1);
-  // Atmosfera: brace in alto, profondità navy, vignettatura da tavolo
+  // Atmosfera: orbs neon sfocati che galleggiano sul ghiaccio
   background-image:
-    radial-gradient(1100px 520px at 82% -8%, rgba(200, 99, 42, 0.14), transparent 60%),
-    radial-gradient(900px 500px at -10% 12%, rgba(27, 42, 74, 0.85), transparent 65%),
-    radial-gradient(1600px 900px at 50% 118%, rgba(7, 11, 24, 0.95), transparent 70%);
+    radial-gradient(900px 480px at 85% -6%, rgba(255, 106, 31, 0.12), transparent 60%),
+    radial-gradient(720px 460px at -8% 18%, rgba(0, 212, 212, 0.1), transparent 62%),
+    radial-gradient(1000px 600px at 60% 115%, rgba(255, 181, 71, 0.1), transparent 65%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-// Grana sottile su tutta la pagina (texture da panno)
+// Grana leggerissima (texture carta)
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  opacity: 0.05;
+  opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
 }
 
@@ -60,22 +60,22 @@ select {
 }
 
 a {
-  color: var(--copper-400);
+  color: var(--copper-600);
   text-decoration: none;
   transition: color var(--t-fast);
 
   &:hover {
-    color: var(--ember);
+    color: var(--copper-500);
   }
 }
 
 ::selection {
   background: var(--copper-500);
-  color: var(--bg-0);
+  color: #fff;
 }
 
 :focus-visible {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--neon-cyan);
   outline-offset: 3px;
   border-radius: 4px;
 }

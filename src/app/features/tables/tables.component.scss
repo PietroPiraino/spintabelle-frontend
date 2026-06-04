@@ -35,10 +35,10 @@
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 1.3rem;
-  background: linear-gradient(160deg, #f3ead6, #d8cdb0);
+  background: #ffffff;
   color: var(--navy-700);
-  border: 1px solid rgba(27, 42, 74, 0.3);
-  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(27, 42, 74, 0.25);
+  box-shadow: var(--shadow-pop), 0 0 18px rgba(255, 106, 31, 0.12);
   animation: shuffle 3.2s var(--ease-out) infinite;
 }
 
@@ -49,7 +49,7 @@
 
 .tables__card--2 {
   transform: rotate(2deg) translateY(-10px);
-  color: #b3402e;
+  color: var(--copper-600);
   animation-delay: 0.25s;
   z-index: 1;
 }

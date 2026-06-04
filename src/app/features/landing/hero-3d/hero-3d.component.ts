@@ -10,10 +10,15 @@ import {
 
 type ThreeModule = typeof import('three');
 
+// Dimensioni carta (unità scena) e raggio degli angoli
+const CARD_W = 2.3;
+const CARD_H = 3.22;
+const CARD_R = 0.16;
+
 /**
- * Hero 3D: le carte del "fish" (7-4 offsuit, come nel logo) fluttuano sul
- * tavolo. Three.js è importato dinamicamente (chunk lazy) solo se il contesto
- * lo consente; sotto il canvas c'è sempre un fallback CSS.
+ * Hero 3D: la mano del "fish" (7♣ 4♣, come nel logo) fluttua sul tavolo.
+ * Three.js è importato dinamicamente (chunk lazy) solo se il contesto lo
+ * consente; sotto il canvas c'è sempre un fallback CSS.
  */
 @Component({
   selector: 'app-hero-3d',
@@ -58,7 +63,11 @@ export class Hero3dComponent implements OnDestroy {
     }
   }
 
-  /** Disegna la faccia di una carta su canvas (texture nitida senza asset). */
+  /**
+   * Faccia di una carta su canvas (texture nitida senza asset).
+   * L'intero canvas viene riempito: gli angoli arrotondati sono dati dalla
+   * geometria, non dalla texture (niente più spigoli neri).
+   */
   private drawCardFace(rank: string, suit: string, color: string): HTMLCanvasElement {
     const w = 256;
     const h = 358;
@@ -67,12 +76,12 @@ export class Hero3dComponent implements OnDestroy {
     canvas.height = h;
     const ctx = canvas.getContext('2d')!;
 
-    ctx.fillStyle = '#f3ead6';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(22, 34, 63, 0.3)';
+    ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.roundRect(0, 0, w, h, 22);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(27,42,74,0.25)';
-    ctx.lineWidth = 4;
+    ctx.roundRect(5, 5, w - 10, h - 10, 18);
     ctx.stroke();
 
     ctx.fillStyle = color;
@@ -99,7 +108,7 @@ export class Hero3dComponent implements OnDestroy {
     return canvas;
   }
 
-  /** Dorso carta: navy con cornice rame e trama a losanghe. */
+  /** Dorso carta: navy pieno con cornice neon e trama a losanghe. */
   private drawCardBack(): HTMLCanvasElement {
     const w = 256;
     const h = 358;
@@ -109,17 +118,15 @@ export class Hero3dComponent implements OnDestroy {
     const ctx = canvas.getContext('2d')!;
 
     ctx.fillStyle = '#16223f';
-    ctx.beginPath();
-    ctx.roundRect(0, 0, w, h, 22);
-    ctx.fill();
+    ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = '#c8632a';
+    ctx.strokeStyle = '#ff6a1f';
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.roundRect(14, 14, w - 28, h - 28, 14);
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(200, 99, 42, 0.35)';
+    ctx.strokeStyle = 'rgba(255, 106, 31, 0.35)';
     ctx.lineWidth = 2;
     for (let x = -h; x < w + h; x += 26) {
       ctx.beginPath();
@@ -154,55 +161,76 @@ export class Hero3dComponent implements OnDestroy {
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
     camera.position.set(0, 0, 14);
 
-    scene.add(new THREE.AmbientLight(0xede4cd, 0.85));
-    const key = new THREE.DirectionalLight(0xff8a3d, 1.6);
-    key.position.set(6, 8, 6);
+    // Luci per fondo chiaro: ambiente alto, tocco neon arancio
+    scene.add(new THREE.AmbientLight(0xffffff, 1.15));
+    const key = new THREE.DirectionalLight(0xffffff, 1.1);
+    key.position.set(5, 8, 7);
     scene.add(key);
-    const rim = new THREE.PointLight(0xffb547, 30, 40);
-    rim.position.set(-6, -4, 5);
-    scene.add(rim);
+    const neon = new THREE.PointLight(0xff6a1f, 22, 40);
+    neon.position.set(-6, -4, 6);
+    scene.add(neon);
 
-    // ---- carte ----
+    // ---- geometria carta: rounded rect estruso (angoli arrotondati veri) ----
+    const roundedRect = (w: number, h: number, r: number) => {
+      const shape = new THREE.Shape();
+      const x = -w / 2;
+      const y = -h / 2;
+      shape.moveTo(x + r, y);
+      shape.lineTo(x + w - r, y);
+      shape.absarc(x + w - r, y + r, r, -Math.PI / 2, 0, false);
+      shape.lineTo(x + w, y + h - r);
+      shape.absarc(x + w - r, y + h - r, r, 0, Math.PI / 2, false);
+      shape.lineTo(x + r, y + h);
+      shape.absarc(x + r, y + h - r, r, Math.PI / 2, Math.PI, false);
+      shape.lineTo(x, y + r);
+      shape.absarc(x + r, y + r, r, Math.PI, Math.PI * 1.5, false);
+      return shape;
+    };
+
+    const cardShape = roundedRect(CARD_W, CARD_H, CARD_R);
+
     const geometries: import('three').BufferGeometry[] = [];
     const materials: import('three').Material[] = [];
     const textures: import('three').Texture[] = [];
 
-    const backTexture = new THREE.CanvasTexture(this.drawCardBack());
-    backTexture.colorSpace = THREE.SRGBColorSpace;
-    textures.push(backTexture);
-
-    const makeCard = (face?: { rank: string; suit: string; color: string }) => {
-      const geometry = new THREE.BoxGeometry(2.3, 3.22, 0.03);
-      geometries.push(geometry);
-
-      const edge = new THREE.MeshStandardMaterial({ color: 0xd8cdb0 });
-      materials.push(edge);
-
-      let front: import('three').MeshStandardMaterial;
-      if (face) {
-        const tex = new THREE.CanvasTexture(
-          this.drawCardFace(face.rank, face.suit, face.color),
-        );
-        tex.colorSpace = THREE.SRGBColorSpace;
-        textures.push(tex);
-        front = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55 });
-      } else {
-        front = new THREE.MeshStandardMaterial({ map: backTexture, roughness: 0.6 });
-      }
-      const back = new THREE.MeshStandardMaterial({ map: backTexture, roughness: 0.6 });
-      materials.push(front, back);
-
-      // BoxGeometry: [+x, -x, +y, -y, +z(front), -z(back)]
-      return new THREE.Mesh(geometry, [edge, edge, edge, edge, front, back]);
+    /** Mappa la texture sulle coordinate della shape (UV = posizione xy). */
+    const fitTexture = (tex: import('three').CanvasTexture) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.repeat.set(1 / CARD_W, 1 / CARD_H);
+      tex.offset.set(0.5, 0.5);
+      textures.push(tex);
+      return tex;
     };
 
-    // La mano del fish: 7♥ 4♣ in primo piano, contorno di dorsi
+    const backTexture = fitTexture(new THREE.CanvasTexture(this.drawCardBack()));
+
+    const makeCard = (face?: { rank: string; suit: string; color: string }) => {
+      // ExtrudeGeometry: gruppo 0 = facce (fronte/retro), gruppo 1 = bordo
+      const geometry = new THREE.ExtrudeGeometry(cardShape, {
+        depth: 0.04,
+        bevelEnabled: false,
+      });
+      geometry.translate(0, 0, -0.02);
+      geometries.push(geometry);
+
+      const capTexture = face
+        ? fitTexture(new THREE.CanvasTexture(this.drawCardFace(face.rank, face.suit, face.color)))
+        : backTexture;
+      const caps = new THREE.MeshStandardMaterial({ map: capTexture, roughness: 0.5 });
+      const edge = new THREE.MeshStandardMaterial({ color: 0xf2efe6 });
+      materials.push(caps, edge);
+
+      return new THREE.Mesh(geometry, [caps, edge]);
+    };
+
+    // La mano del fish: 7♣ 4♣ in primo piano (come nel logo), contorno di dorsi
+    const navy = '#1b2a4a';
     const cards = [
-      { mesh: makeCard({ rank: '7', suit: '♥', color: '#b3402e' }), x: 2.6, y: -0.2, z: 1.5, rotZ: 0.18, speed: 0.55, phase: 0 },
-      { mesh: makeCard({ rank: '4', suit: '♣', color: '#1b2a4a' }), x: 4.6, y: 0.6, z: 0.4, rotZ: -0.22, speed: 0.7, phase: 1.4 },
-      { mesh: makeCard(), x: 6.4, y: -1.6, z: -1.6, rotZ: 0.4, speed: 0.45, phase: 2.6 },
-      { mesh: makeCard(), x: 1.2, y: 2.3, z: -2.4, rotZ: -0.35, speed: 0.6, phase: 3.4 },
-      { mesh: makeCard(), x: -0.6, y: -2.5, z: -3.2, rotZ: 0.5, speed: 0.5, phase: 4.6 },
+      { mesh: makeCard({ rank: '7', suit: '♣', color: navy }), x: 3.5, y: -0.2, z: 1.5, rotZ: 0.18, speed: 0.55, phase: 0 },
+      { mesh: makeCard({ rank: '4', suit: '♣', color: navy }), x: 5.5, y: 0.6, z: 0.4, rotZ: -0.22, speed: 0.7, phase: 1.4 },
+      { mesh: makeCard(), x: 7.2, y: -1.6, z: -1.6, rotZ: 0.4, speed: 0.45, phase: 2.6 },
+      { mesh: makeCard(), x: 4.4, y: 3.3, z: -2.4, rotZ: -0.35, speed: 0.6, phase: 3.4 },
+      { mesh: makeCard(), x: -0.8, y: -3.1, z: -3.2, rotZ: 0.5, speed: 0.5, phase: 4.6 },
     ];
     for (const card of cards) {
       card.mesh.position.set(card.x, card.y, card.z);
@@ -237,7 +265,7 @@ export class Hero3dComponent implements OnDestroy {
       // parallasse leggera del puntatore
       camera.position.x += (pointer.x * 0.9 - camera.position.x) * 0.04;
       camera.position.y += (-pointer.y * 0.55 - camera.position.y) * 0.04;
-      camera.lookAt(2.5, 0, 0);
+      camera.lookAt(3.2, 0, 0);
 
       renderer.render(scene, camera);
     };
