@@ -33,6 +33,20 @@
         </a>
       }
 
+      <button
+        type="button"
+        class="header__theme"
+        (click)="themeService.toggle()"
+        [attr.aria-label]="themeService.theme() === 'light' ? 'Attiva il tema scuro' : 'Attiva il tema chiaro'"
+        [title]="themeService.theme() === 'light' ? 'Tema scuro' : 'Tema chiaro'"
+      >
+        @if (themeService.theme() === 'light') {
+          <span aria-hidden="true">☾</span>
+        } @else {
+          <span aria-hidden="true">☀</span>
+        }
+      </button>
+
       <div class="header__auth">
         @if (!auth.ready()) {
           <!-- sessione in ripristino: evita il lampeggio Accedi → nickname -->

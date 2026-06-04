@@ -26,9 +26,9 @@
   padding: 1.6rem;
 }
 
-// Vetro bianco per header/overlay
+// Vetro per header/overlay (colore per-tema)
 .glass {
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--glass-bg);
   backdrop-filter: blur(14px) saturate(1.4);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
 }
@@ -54,12 +54,22 @@
   border-color: rgba(0, 169, 110, 0.45);
   color: #007a4f;
   background: rgba(0, 169, 110, 0.08);
+
+  [data-theme='dark'] & {
+    color: #5fe6b4;
+    background: rgba(0, 169, 110, 0.14);
+  }
 }
 
 .badge--premium {
   border-color: rgba(255, 181, 71, 0.7);
   color: #9a6303;
   background: rgba(255, 181, 71, 0.14);
+
+  [data-theme='dark'] & {
+    color: var(--gold);
+    background: rgba(255, 181, 71, 0.12);
+  }
 }
 
 .badge--tag {

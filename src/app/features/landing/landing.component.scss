@@ -29,12 +29,7 @@
     position: absolute;
     inset: -3rem -4rem -3rem -5rem;
     z-index: -1;
-    background: radial-gradient(
-      closest-side,
-      rgba(247, 245, 240, 0.95),
-      rgba(247, 245, 240, 0.7) 65%,
-      transparent
-    );
+    background: radial-gradient(closest-side, var(--halo), transparent 78%);
     filter: blur(4px);
   }
 }

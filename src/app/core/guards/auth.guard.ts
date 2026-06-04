@@ -1,7 +1,6 @@
 import { inject } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
-import { Observable, filter, map, take } from 'rxjs';
+import { Observable, map, take } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { Role } from '../models/api.models';
 
@@ -13,11 +12,7 @@ function whenReady(
   auth: AuthService,
   decide: () => boolean | UrlTree,
 ): Observable<boolean | UrlTree> {
-  return toObservable(auth.ready).pipe(
-    filter(Boolean),
-    take(1),
-    map(decide),
-  );
+  return auth.ready$.pipe(take(1), map(decide));
 }
 
 /** Richiede una sessione attiva; altrimenti rimanda al login con redirect. */

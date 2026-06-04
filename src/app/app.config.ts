@@ -4,6 +4,8 @@ import localeIt from '@angular/common/locales/it';
 import {
   ApplicationConfig,
   LOCALE_ID,
+  inject,
+  provideEnvironmentInitializer,
   provideZonelessChangeDetection,
 } from '@angular/core';
 import {
@@ -15,6 +17,7 @@ import {
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { AuthService } from './core/services/auth.service';
 
 registerLocaleData(localeIt);
 
@@ -36,5 +39,10 @@ export const appConfig: ApplicationConfig = {
     ),
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: LOCALE_ID, useValue: 'it' },
+    // Avvia il ripristino sessione in background (senza await: non blocca
+    // il primo render; i guard aspettano ready$ solo sulle rotte protette)
+    provideEnvironmentInitializer(() => {
+      inject(AuthService).bootstrap().subscribe();
+    }),
   ],
 };

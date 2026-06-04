@@ -34,6 +34,13 @@
   --line: rgba(22, 34, 63, 0.1);
   --line-strong: rgba(22, 34, 63, 0.2);
 
+  // Superfici speciali per-tema
+  --glass-bg: rgba(255, 255, 255, 0.78); // header/overlay vetro
+  --glass-strong: rgba(255, 255, 255, 0.96); // menu mobile
+  --btn-ghost-bg: rgba(255, 255, 255, 0.7);
+  --gold-text: #b06f00; // oro leggibile come testo
+  --halo: rgba(247, 245, 240, 0.95); // alone di protezione testo hero
+
   // Tipografia
   --font-display: 'Bricolage Grotesque', 'Segoe UI', sans-serif;
   --font-body: 'Instrument Sans', 'Segoe UI', sans-serif;
@@ -58,4 +65,48 @@
   --t-med: 320ms var(--ease-out);
 
   color-scheme: light;
+}
+
+// ============================================================
+// Tema scuro — "il tavolo da gioco di notte"
+// Stessi token, valori ribaltati: navy profondo, testo crema,
+// neon arancio/ciano più accesi
+// ============================================================
+
+:root[data-theme='dark'] {
+  --bg-0: #070b18;
+  --bg-1: #0b1124;
+  --surface-1: #121a33;
+  --surface-2: #16223f;
+  --surface-glass: rgba(18, 26, 51, 0.7);
+
+  --copper-600: #ff8a5c; // arancio per testo/link su scuro
+  --copper-500: #ff6a1f;
+  --copper-400: #ff7d36;
+  --neon-cyan: #2ee6e6;
+  --felt: #2fce96;
+  --danger: #ff7a66;
+
+  --cream-100: #ede4cd;
+  --cream-300: #d8cdb0;
+  --text: #ede4cd;
+  --text-muted: rgba(237, 228, 205, 0.65);
+  --text-faint: rgba(237, 228, 205, 0.4);
+
+  --line: rgba(237, 228, 205, 0.1);
+  --line-strong: rgba(237, 228, 205, 0.22);
+
+  --glass-bg: rgba(11, 17, 36, 0.78);
+  --glass-strong: rgba(7, 11, 24, 0.96);
+  --btn-ghost-bg: rgba(237, 228, 205, 0.05);
+  --gold-text: #ffb547;
+  --halo: rgba(11, 17, 36, 0.92);
+
+  --glow-copper: 0 0 40px rgba(255, 106, 31, 0.35);
+  --glow-copper-strong: 0 8px 44px rgba(255, 106, 31, 0.5);
+  --glow-cyan: 0 0 0 3px rgba(46, 230, 230, 0.3);
+  --shadow-card: 0 18px 50px rgba(4, 7, 16, 0.55);
+  --shadow-pop: 0 24px 70px rgba(4, 7, 16, 0.75);
+
+  color-scheme: dark;
 }

@@ -77,7 +77,29 @@
 }
 
 .header__link--admin {
-  color: #b06f00;
+  color: var(--gold-text);
+}
+
+.header__theme {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--btn-ghost-bg);
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+
+  &:hover {
+    border-color: var(--copper-500);
+    color: var(--copper-600);
+    box-shadow: 0 0 14px rgba(255, 106, 31, 0.3);
+    transform: rotate(15deg);
+  }
 }
 
 .header__auth {
@@ -176,7 +198,7 @@
     align-items: stretch;
     gap: 0.3rem;
     padding: 1.2rem 1.4rem 1.6rem;
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--glass-strong);
     backdrop-filter: blur(18px);
     border-bottom: 1px solid var(--line);
     transform: translateY(-110%);

@@ -48,7 +48,7 @@
 
 // Secondario: contorno navy su bianco, hover neon
 .btn--ghost {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--btn-ghost-bg);
   border-color: var(--line-strong);
   color: var(--text);
 

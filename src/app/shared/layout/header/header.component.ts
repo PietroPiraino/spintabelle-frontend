@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-header',
@@ -11,6 +12,7 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class HeaderComponent {
   protected readonly auth = inject(AuthService);
+  protected readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
 
   protected readonly menuOpen = signal(false);

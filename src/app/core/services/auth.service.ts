@@ -1,6 +1,16 @@
 import { HttpClient, HttpContext, HttpContextToken } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import {
+  Observable,
+  ReplaySubject,
+  catchError,
+  finalize,
+  map,
+  of,
+  shareReplay,
+  switchMap,
+  tap,
+} from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthResponse, RegisterPayload, User } from '../models/api.models';
 
@@ -18,11 +28,15 @@ export class AuthService {
   readonly user = signal<User | null>(null);
   /** true quando il tentativo di ripristino sessione all'avvio è concluso */
   readonly ready = signal(false);
+  // Variante observable per i guard (toObservable su signal non emette
+  // in modo affidabile nei guard con zoneless change detection)
+  private readonly readySubject = new ReplaySubject<void>(1);
+  readonly ready$ = this.readySubject.asObservable();
 
-  constructor() {
-    // Ripristino sessione in background: non blocca il primo render
-    this.bootstrap().subscribe();
-  }
+  // NB: il bootstrap NON parte dal costruttore — la chiamata HTTP passerebbe
+  // dall'authInterceptor che inietta AuthService ancora in costruzione
+  // (dipendenza circolare). Viene avviato da provideEnvironmentInitializer
+  // in app.config.ts, sempre in background.
 
   readonly isAuthenticated = computed(() => this.user() !== null);
   readonly isSubscriber = computed(() => {
@@ -50,7 +64,10 @@ export class AuthService {
       switchMap(() => this.loadMe()),
       map(() => undefined),
       catchError(() => of(undefined)),
-      finalize(() => this.ready.set(true)),
+      finalize(() => {
+        this.ready.set(true);
+        this.readySubject.next();
+      }),
     );
   }
 
