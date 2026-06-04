@@ -1,9 +1,11 @@
+// ---- HERO ----
 .hero {
   position: relative;
   display: flex;
   align-items: center;
-  min-height: calc(100dvh - 120px);
+  min-height: min(calc(100dvh - 64px), 860px);
   overflow: hidden;
+  border-bottom: 1px solid var(--line);
 }
 
 .hero__inner {
@@ -13,9 +15,83 @@
 }
 
 .hero__copy {
-  max-width: 640px;
+  max-width: 620px;
   display: flex;
   flex-direction: column;
   gap: 1.4rem;
   align-items: flex-start;
+}
+
+.hero__hint {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+
+  span {
+    color: var(--copper-400);
+  }
+}
+
+// ---- VALUE PROPS ----
+.value-prop {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+
+  p {
+    font-size: 0.94rem;
+    color: var(--text-muted);
+  }
+}
+
+.value-prop__suit {
+  font-size: 1.7rem;
+  color: var(--copper-400);
+  filter: drop-shadow(0 0 12px rgba(224, 125, 60, 0.5));
+}
+
+// ---- OFFERTA ----
+.offer__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+  min-height: 240px;
+
+  .btn {
+    margin-top: auto;
+  }
+}
+
+.offer__card--tables {
+  background:
+    radial-gradient(380px 220px at 90% -10%, rgba(255, 181, 71, 0.12), transparent 70%),
+    linear-gradient(160deg, var(--surface-2), var(--surface-1) 70%);
+}
+
+.offer__card--lessons {
+  background:
+    radial-gradient(380px 220px at 90% -10%, rgba(200, 99, 42, 0.18), transparent 70%),
+    linear-gradient(160deg, var(--surface-2), var(--surface-1) 70%);
+}
+
+// ---- COMMUNITY ----
+.community {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding: clamp(1.8rem, 4vw, 3rem);
+  background:
+    radial-gradient(500px 280px at 8% 120%, rgba(46, 139, 99, 0.14), transparent 70%),
+    linear-gradient(160deg, var(--surface-2), var(--surface-1) 70%);
+}
+
+.community__copy {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
 }

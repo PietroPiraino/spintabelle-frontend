@@ -1,17 +1,117 @@
+<!-- HERO -->
 <section class="hero">
+  <app-hero-3d />
   <div class="container hero__inner">
     <div class="hero__copy">
       <span class="eyebrow rise">Scuola di poker · Spin &amp; Go / Twister</span>
       <h1 class="rise" style="animation-delay: 80ms">
-        Smetti di essere il <span class="text-gradient">fish</span> del tavolo.
+        Smetti di essere il<br /><span class="text-gradient">fish</span> del tavolo.
       </h1>
       <p class="lead rise" style="animation-delay: 160ms">
-        Best Fish Forever è il gruppo studio italiano dedicato agli Spin &amp; Go:
-        lezioni video dei coach, tabelle di gioco e una community che analizza ogni spot.
+        Best Fish Forever è il gruppo studio italiano dedicato agli
+        Spin&nbsp;&amp;&nbsp;Go: lezioni video dei coach, tabelle di gioco e una
+        community che analizza ogni spot.
       </p>
       <div class="row rise" style="animation-delay: 240ms">
-        <a routerLink="/registrazione" class="btn btn--primary">Inizia ora</a>
-        <a routerLink="/lezioni" class="btn btn--ghost">Scopri le lezioni</a>
+        @if (auth.isAuthenticated()) {
+          <a routerLink="/lezioni" class="btn btn--primary">Vai alle lezioni</a>
+          <a routerLink="/tabelle" class="btn btn--ghost">Tabelle</a>
+        } @else {
+          <a routerLink="/registrazione" class="btn btn--primary">Inizia ora — è gratis</a>
+          <a routerLink="/lezioni" class="btn btn--ghost">Scopri le lezioni</a>
+        }
+      </div>
+      <p class="hero__hint rise" style="animation-delay: 320ms">
+        <span aria-hidden="true">7♥ 4♣</span> — anche la mano peggiore si può giocare bene.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- VALUE PROPS -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Perché BFF</span>
+      <h2>Tutto quello che serve per salire di livello</h2>
+    </div>
+    <div class="grid grid--3">
+      @for (prop of valueProps; track prop.title; let i = $index) {
+        <div class="card card--pad card--hover value-prop rise" [style.animation-delay.ms]="i * 100">
+          <span class="value-prop__suit" aria-hidden="true">{{ prop.suit }}</span>
+          <h3>{{ prop.title }}</h3>
+          <p>{{ prop.text }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- OFFERTA -->
+<section class="section offer">
+  <div class="container grid grid--2">
+    <div class="card card--pad offer__card offer__card--tables">
+      <span class="eyebrow">In arrivo</span>
+      <h2>Le Tabelle</h2>
+      <p class="text-muted">
+        Range GTO per ogni profondità di stack, ottimizzati per Spin &amp; Go e
+        Twister. Stiamo preparando il viewer: intanto riserva il tuo posto.
+      </p>
+      <a routerLink="/tabelle" class="btn btn--ghost">Scopri di più</a>
+    </div>
+    <div class="card card--pad offer__card offer__card--lessons">
+      <span class="eyebrow">Disponibile</span>
+      <h2>Le Lezioni</h2>
+      <p class="text-muted">
+        Video lezioni dei coach con tag e ricerca: contenuti base per tutti gli
+        iscritti e percorsi premium per gli abbonati.
+      </p>
+      <a routerLink="/lezioni" class="btn btn--primary">Entra in aula</a>
+    </div>
+  </div>
+</section>
+
+<!-- ULTIME NEWS -->
+@if (latestNews().length > 0) {
+  <section class="section">
+    <div class="container">
+      <div class="section-head spread">
+        <div class="stack" style="gap: 0.9rem">
+          <span class="eyebrow">Dal tavolo</span>
+          <h2>Ultime news</h2>
+        </div>
+        <a routerLink="/news" class="btn btn--ghost btn--sm">Tutte le news</a>
+      </div>
+      <div class="grid grid--3">
+        @for (news of latestNews(); track news._id; let i = $index) {
+          <div class="rise" [style.animation-delay.ms]="i * 100">
+            <app-news-card [news]="news" />
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+}
+
+<!-- CTA COMMUNITY -->
+<section class="section">
+  <div class="container">
+    <div class="card card--pad community">
+      <div class="community__copy">
+        <span class="eyebrow">Community</span>
+        <h2>Il poker si studia meglio in branco</h2>
+        <p class="text-muted">
+          Unisciti al Discord della scuola e segui il canale YouTube: review,
+          live e contenuti gratuiti ogni settimana.
+        </p>
+      </div>
+      <div class="row">
+        <a [href]="discordUrl" target="_blank" rel="noopener" class="btn btn--primary">
+          Entra nel Discord
+        </a>
+        <a [href]="youtubeUrl" target="_blank" rel="noopener" class="btn btn--ghost">
+          ▶ YouTube
+        </a>
       </div>
     </div>
   </div>
