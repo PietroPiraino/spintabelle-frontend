@@ -11,6 +11,20 @@ export const routes: Routes = [
     title: 'Best Fish Forever — Scuola di Poker Spin & Go',
   },
   {
+    path: 'tabelle',
+    loadComponent: () =>
+      import('./features/tables/tables.component').then(
+        (m) => m.TablesComponent,
+      ),
+    title: 'Tabelle — Best Fish Forever',
+  },
+  {
+    path: 'chi-siamo',
+    loadComponent: () =>
+      import('./features/about/about.component').then((m) => m.AboutComponent),
+    title: 'Chi siamo — Best Fish Forever',
+  },
+  {
     path: 'lezioni',
     loadComponent: () =>
       import('./features/lessons/lessons.component').then(
@@ -68,5 +82,13 @@ export const routes: Routes = [
         './features/auth/resend-verification/resend-verification.component'
       ).then((m) => m.ResendVerificationComponent),
     title: 'Reinvia verifica — Best Fish Forever',
+  },
+  {
+    path: '**',
+    loadComponent: () =>
+      import('./features/not-found/not-found.component').then(
+        (m) => m.NotFoundComponent,
+      ),
+    title: 'Pagina non trovata — Best Fish Forever',
   },
 ];

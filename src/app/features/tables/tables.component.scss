@@ -1,0 +1,71 @@
+.tables {
+  display: flex;
+  align-items: center;
+  min-height: calc(100dvh - 220px);
+}
+
+.tables__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.3rem;
+
+  .lead {
+    margin-inline: auto;
+  }
+
+  .row {
+    justify-content: center;
+  }
+}
+
+// Tris di carte che "mescolano"
+.tables__cards {
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.tables__card {
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 104px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.3rem;
+  background: linear-gradient(160deg, #f3ead6, #d8cdb0);
+  color: var(--navy-700);
+  border: 1px solid rgba(27, 42, 74, 0.3);
+  box-shadow: var(--shadow-card);
+  animation: shuffle 3.2s var(--ease-out) infinite;
+}
+
+.tables__card--1 {
+  transform: rotate(-12deg) translateX(12px);
+  animation-delay: 0s;
+}
+
+.tables__card--2 {
+  transform: rotate(2deg) translateY(-10px);
+  color: #b3402e;
+  animation-delay: 0.25s;
+  z-index: 1;
+}
+
+.tables__card--3 {
+  transform: rotate(14deg) translateX(-12px);
+  animation-delay: 0.5s;
+}
+
+@keyframes shuffle {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -12px;
+  }
+}

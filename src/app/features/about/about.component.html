@@ -1,0 +1,47 @@
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">La scuola</span>
+      <h1>Chi siamo</h1>
+    </div>
+
+    <div class="about__story card card--pad rise">
+      <img src="logo-256.png" alt="Logo Best Fish Forever" width="120" height="120" />
+      <div class="stack" style="gap: 0.9rem">
+        <h2>Best Fish Forever</h2>
+        <!-- TODO: sostituire con la storia reale della scuola -->
+        <p class="text-muted">
+          Siamo un gruppo studio italiano nato attorno a una convinzione semplice:
+          nel poker il talento conta, ma lo studio vince. Ci dedichiamo agli
+          Spin&nbsp;&amp;&nbsp;Go e ai Twister, formati veloci dove ogni errore pesa
+          e ogni edge si moltiplica.
+        </p>
+        <p class="text-muted">
+          Il nome è un manifesto: tutti partiamo fish. Quello che conta è come si
+          studia, mano dopo mano, per smettere di esserlo — restando una squadra.
+        </p>
+      </div>
+    </div>
+
+    <div class="section-head" style="margin-top: 4rem">
+      <span class="eyebrow">Il banco</span>
+      <h2>I coach</h2>
+    </div>
+
+    <div class="grid grid--3">
+      @for (coach of coaches; track coach.nickname; let i = $index) {
+        <div class="card card--pad card--hover coach rise" [style.animation-delay.ms]="i * 100">
+          <div class="coach__avatar" aria-hidden="true">{{ coach.suit }}</div>
+          <h3>{{ coach.nickname }}</h3>
+          <p class="coach__role">{{ coach.role }}</p>
+          <p class="coach__bio">{{ coach.bio }}</p>
+        </div>
+      }
+    </div>
+
+    <div class="row about__cta">
+      <a routerLink="/registrazione" class="btn btn--primary">Unisciti alla scuola</a>
+      <a routerLink="/lezioni" class="btn btn--ghost">Guarda le lezioni</a>
+    </div>
+  </div>
+</section>
