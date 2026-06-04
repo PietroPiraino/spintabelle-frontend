@@ -58,17 +58,27 @@ export class AuthService {
   /**
    * Ripristino silenzioso della sessione all'avvio: se il cookie di refresh
    * è valido otteniamo un nuovo access token, altrimenti restiamo sloggati.
+   * Se il backend è lento (cold start di Render), dopo 8s l'interfaccia
+   * mostra comunque lo stato sloggato: il ripristino continua in background
+   * e, se riesce, l'header si aggiorna da solo.
    */
   bootstrap(): Observable<void> {
+    const readyCap = setTimeout(() => this.markReady(), 8000);
     return this.refresh().pipe(
       switchMap(() => this.loadMe()),
       map(() => undefined),
       catchError(() => of(undefined)),
       finalize(() => {
-        this.ready.set(true);
-        this.readySubject.next();
+        clearTimeout(readyCap);
+        this.markReady();
       }),
     );
+  }
+
+  private markReady(): void {
+    if (this.ready()) return;
+    this.ready.set(true);
+    this.readySubject.next();
   }
 
   login(email: string, password: string): Observable<User> {
