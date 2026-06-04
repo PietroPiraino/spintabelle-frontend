@@ -20,6 +20,22 @@ export const routes: Routes = [
     title: 'Lezioni — Best Fish Forever',
   },
   {
+    path: 'news',
+    loadComponent: () =>
+      import('./features/news/news-list/news-list.component').then(
+        (m) => m.NewsListComponent,
+      ),
+    title: 'News — Best Fish Forever',
+  },
+  {
+    path: 'news/:id',
+    loadComponent: () =>
+      import('./features/news/news-detail/news-detail.component').then(
+        (m) => m.NewsDetailComponent,
+      ),
+    title: 'News — Best Fish Forever',
+  },
+  {
     path: 'login',
     loadComponent: () =>
       import('./features/auth/login/login.component').then(

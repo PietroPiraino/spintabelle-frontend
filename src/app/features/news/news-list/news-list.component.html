@@ -1,0 +1,33 @@
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Dal tavolo</span>
+      <h1>News della scuola</h1>
+    </div>
+
+    @if (!items()) {
+      <div class="spinner" role="status" aria-label="Caricamento news"></div>
+    } @else if (items()!.length === 0) {
+      <div class="empty-state">
+        <div class="empty-state__suit" aria-hidden="true">♦</div>
+        <p>Nessuna news pubblicata, torna a trovarci presto.</p>
+      </div>
+    } @else {
+      <div class="grid grid--3">
+        @for (news of items()!; track news._id; let i = $index) {
+          <div class="rise" [style.animation-delay.ms]="(i % 9) * 60">
+            <app-news-card [news]="news" />
+          </div>
+        }
+      </div>
+
+      @if (hasMore()) {
+        <div class="row" style="justify-content: center; margin-top: 2.5rem">
+          <button type="button" class="btn btn--ghost" (click)="loadMore()" [disabled]="loadingMore()">
+            {{ loadingMore() ? 'Caricamento…' : 'Carica altre' }}
+          </button>
+        </div>
+      }
+    }
+  </div>
+</section>

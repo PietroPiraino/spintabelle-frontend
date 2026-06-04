@@ -1,0 +1,30 @@
+<section class="section">
+  <div class="container news-detail">
+    @if (notFound()) {
+      <div class="empty-state">
+        <div class="empty-state__suit" aria-hidden="true">♠</div>
+        <p>News non trovata: forse è stata rimossa.</p>
+        <a routerLink="/news" class="btn btn--ghost" style="margin-top: 1rem">Tutte le news</a>
+      </div>
+    } @else if (!news()) {
+      <div class="spinner" role="status" aria-label="Caricamento"></div>
+    } @else {
+      <article class="news-detail__article rise">
+        <a routerLink="/news" class="btn btn--link">← Tutte le news</a>
+
+        <header class="news-detail__head">
+          <time class="news-detail__date" [attr.datetime]="news()!.createdAt">
+            {{ news()!.createdAt | date: 'dd MMMM yyyy' }}
+          </time>
+          <h1>{{ news()!.title }}</h1>
+        </header>
+
+        @if (news()!.coverImageUrl; as cover) {
+          <img class="news-detail__cover" [src]="cover" alt="" />
+        }
+
+        <div class="news-detail__body">{{ news()!.body }}</div>
+      </article>
+    }
+  </div>
+</section>
