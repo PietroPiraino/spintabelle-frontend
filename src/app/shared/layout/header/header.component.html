@@ -1,0 +1,50 @@
+<header class="header glass">
+  <div class="container header__inner">
+    <a routerLink="/" class="header__brand" (click)="closeMenu()" aria-label="Best Fish Forever — home">
+      <img src="logo-96.png" alt="" width="42" height="42" />
+      <span class="header__brand-text">
+        Best Fish <em>Forever</em>
+      </span>
+    </a>
+
+    <button
+      type="button"
+      class="header__burger"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen()"
+      aria-controls="nav-principale"
+      aria-label="Apri o chiudi il menu"
+    >
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav id="nav-principale" class="header__nav" [class.is-open]="menuOpen()" aria-label="Navigazione principale">
+      @for (link of navLinks; track link.path) {
+        <a
+          [routerLink]="link.path"
+          routerLinkActive="is-active"
+          (click)="closeMenu()"
+          class="header__link"
+        >{{ link.label }}</a>
+      }
+      @if (auth.isAdmin()) {
+        <a routerLink="/admin" routerLinkActive="is-active" (click)="closeMenu()" class="header__link header__link--admin">
+          Admin
+        </a>
+      }
+
+      <div class="header__auth">
+        @if (auth.isAuthenticated()) {
+          <span class="header__user" title="{{ auth.user()?.email }}">
+            <span class="header__user-dot" aria-hidden="true"></span>
+            {{ auth.displayName() }}
+          </span>
+          <button type="button" class="btn btn--ghost btn--sm" (click)="logout()">Esci</button>
+        } @else {
+          <a routerLink="/login" (click)="closeMenu()" class="header__link">Accedi</a>
+          <a routerLink="/registrazione" (click)="closeMenu()" class="btn btn--primary btn--sm">Registrati</a>
+        }
+      </div>
+    </nav>
+  </div>
+</header>

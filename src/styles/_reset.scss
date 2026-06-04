@@ -1,0 +1,96 @@
+// Reset essenziale + atmosfera di fondo
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text);
+  background-color: var(--bg-1);
+  // Atmosfera: brace in alto, profondità navy, vignettatura da tavolo
+  background-image:
+    radial-gradient(1100px 520px at 82% -8%, rgba(200, 99, 42, 0.14), transparent 60%),
+    radial-gradient(900px 500px at -10% 12%, rgba(27, 42, 74, 0.85), transparent 65%),
+    radial-gradient(1600px 900px at 50% 118%, rgba(7, 11, 24, 0.95), transparent 70%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+// Grana sottile su tutta la pagina (texture da panno)
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+img,
+svg,
+video,
+iframe {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--copper-400);
+  text-decoration: none;
+  transition: color var(--t-fast);
+
+  &:hover {
+    color: var(--ember);
+  }
+}
+
+::selection {
+  background: var(--copper-500);
+  color: var(--bg-0);
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+// Kill-switch globale per chi preferisce meno animazioni
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}

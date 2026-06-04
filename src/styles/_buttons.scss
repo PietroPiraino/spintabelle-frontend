@@ -1,0 +1,92 @@
+// Bottoni
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.78rem 1.6rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    transform var(--t-fast),
+    box-shadow var(--t-fast),
+    background-color var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast);
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}
+
+// CTA principale: rame incandescente
+.btn--primary {
+  background: linear-gradient(135deg, var(--copper-400), var(--copper-600));
+  color: #140802;
+  box-shadow: var(--glow-copper);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: var(--glow-copper-strong);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
+
+// Secondario: contorno crema su vetro
+.btn--ghost {
+  background: rgba(237, 228, 205, 0.04);
+  border-color: var(--line-strong);
+  color: var(--cream-100);
+
+  &:hover:not(:disabled) {
+    border-color: var(--copper-400);
+    color: var(--ember);
+    transform: translateY(-2px);
+  }
+}
+
+// Variante piccola (toolbar, card)
+.btn--sm {
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+}
+
+// Pericolo (eliminazioni admin)
+.btn--danger {
+  background: transparent;
+  border-color: rgba(226, 91, 74, 0.4);
+  color: var(--danger);
+
+  &:hover:not(:disabled) {
+    background: rgba(226, 91, 74, 0.12);
+    border-color: var(--danger);
+  }
+}
+
+// Link-bottone testuale
+.btn--link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--copper-400);
+  font-family: var(--font-body);
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    color: var(--ember);
+  }
+}

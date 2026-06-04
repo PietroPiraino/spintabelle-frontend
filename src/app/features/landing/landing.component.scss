@@ -1,0 +1,21 @@
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: calc(100dvh - 120px);
+  overflow: hidden;
+}
+
+.hero__inner {
+  position: relative;
+  z-index: 2;
+  padding-block: clamp(3rem, 9vw, 7rem);
+}
+
+.hero__copy {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  align-items: flex-start;
+}

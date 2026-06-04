@@ -1,0 +1,98 @@
+// Card e superfici
+
+.card {
+  position: relative;
+  background: linear-gradient(160deg, var(--surface-2), var(--surface-1) 70%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  transition:
+    transform var(--t-med),
+    border-color var(--t-med),
+    box-shadow var(--t-med);
+
+  &:hover {
+    border-color: rgba(224, 125, 60, 0.35);
+  }
+}
+
+.card--hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-pop), var(--glow-copper);
+}
+
+.card--pad {
+  padding: 1.6rem;
+}
+
+// Vetro per header/overlay
+.glass {
+  background: rgba(11, 17, 36, 0.72);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+
+// Badge
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-strong);
+  color: var(--text-muted);
+}
+
+.badge--free {
+  border-color: rgba(46, 139, 99, 0.5);
+  color: #6fd4a8;
+  background: rgba(46, 139, 99, 0.12);
+}
+
+.badge--premium {
+  border-color: rgba(255, 181, 71, 0.45);
+  color: var(--gold);
+  background: rgba(255, 181, 71, 0.1);
+}
+
+.badge--tag {
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast), background-color var(--t-fast);
+
+  &:hover,
+  &.is-active {
+    border-color: var(--copper-400);
+    color: var(--ember);
+    background: rgba(224, 125, 60, 0.1);
+  }
+}
+
+// Separatore con semi di carte
+.suit-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-faint);
+  font-size: 0.8rem;
+  letter-spacing: 0.8em;
+  justify-content: center;
+  margin: 0 auto;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    max-width: 180px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong));
+  }
+
+  &::after {
+    background: linear-gradient(90deg, var(--line-strong), transparent);
+  }
+}

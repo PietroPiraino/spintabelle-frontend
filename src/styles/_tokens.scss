@@ -1,0 +1,58 @@
+// ============================================================
+// Design tokens — "il tavolo da gioco di notte"
+// Palette derivata dal logo BFF: navy profondo, rame/brace, crema
+// ============================================================
+
+:root {
+  // Fondali
+  --bg-0: #070b18; // abisso
+  --bg-1: #0b1124; // fondo pagina
+  --surface-1: #111a33;
+  --surface-2: #16223f;
+  --surface-glass: rgba(22, 34, 63, 0.55);
+
+  // Brand
+  --navy-700: #1b2a4a;
+  --copper-600: #b05420;
+  --copper-500: #c8632a;
+  --copper-400: #e07d3c;
+  --ember: #ff8a3d;
+  --gold: #ffb547;
+  --felt: #2e8b63; // verde feltro: badge "gratis" / successi
+  --danger: #e25b4a;
+
+  // Testo
+  --cream-100: #ede4cd;
+  --cream-300: #d8cdb0;
+  --text: var(--cream-100);
+  --text-muted: rgba(237, 228, 205, 0.62);
+  --text-faint: rgba(237, 228, 205, 0.38);
+
+  // Bordi e linee
+  --line: rgba(237, 228, 205, 0.09);
+  --line-strong: rgba(237, 228, 205, 0.18);
+
+  // Tipografia
+  --font-display: 'Bricolage Grotesque', 'Segoe UI', sans-serif;
+  --font-body: 'Instrument Sans', 'Segoe UI', sans-serif;
+  --font-mono: 'Spline Sans Mono', 'Consolas', monospace;
+
+  // Geometria
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --container: 1180px;
+
+  // Ombre e bagliori
+  --glow-copper: 0 0 44px rgba(224, 125, 60, 0.22);
+  --glow-copper-strong: 0 6px 36px rgba(224, 125, 60, 0.38);
+  --shadow-card: 0 18px 50px rgba(4, 7, 16, 0.55);
+  --shadow-pop: 0 24px 70px rgba(4, 7, 16, 0.75);
+
+  // Transizioni
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 160ms var(--ease-out);
+  --t-med: 320ms var(--ease-out);
+
+  color-scheme: dark;
+}

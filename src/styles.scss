@@ -1,1 +1,8 @@
-/* You can add global styles to this file, and also import other style files */
+// Design system "Best Fish Forever" — il tavolo da gioco di notte
+@use 'styles/tokens';
+@use 'styles/reset';
+@use 'styles/typography';
+@use 'styles/buttons';
+@use 'styles/cards';
+@use 'styles/forms';
+@use 'styles/utilities';

@@ -1,0 +1,37 @@
+<footer class="footer">
+  <div class="container">
+    <div class="suit-divider" aria-hidden="true">♠ ♥ ♣ ♦</div>
+
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <img src="logo-96.png" alt="" width="56" height="56" />
+        <p class="footer__tagline">
+          La scuola italiana di poker per <strong>Spin&nbsp;&amp;&nbsp;Go</strong> e
+          <strong>Twister</strong>. Studio, tabelle e una community che gioca per vincere.
+        </p>
+      </div>
+
+      <nav class="footer__col" aria-label="Mappa del sito">
+        <h4>Esplora</h4>
+        <a routerLink="/tabelle">Tabelle</a>
+        <a routerLink="/lezioni">Lezioni</a>
+        <a routerLink="/news">News</a>
+        <a routerLink="/chi-siamo">Chi siamo</a>
+      </nav>
+
+      <div class="footer__col">
+        <h4>Community</h4>
+        <a [href]="youtubeUrl" target="_blank" rel="noopener">
+          <span aria-hidden="true">▶</span> YouTube
+        </a>
+        <a [href]="discordUrl" target="_blank" rel="noopener">
+          <span aria-hidden="true">⌗</span> Discord
+        </a>
+      </div>
+    </div>
+
+    <p class="footer__legal">
+      © {{ year }} Best Fish Forever — spintabelle.it · Gioca responsabilmente.
+    </p>
+  </div>
+</footer>
