@@ -1,0 +1,63 @@
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+.rg {
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  gap: clamp(1px, 0.35cqw, 3px);
+  padding: clamp(4px, 0.8cqw, 10px);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+.rg__cell {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-radius: clamp(2px, 0.5cqw, 5px);
+  font-family: var(--font-mono);
+  font-size: clamp(0.4rem, 2.1cqw, 0.8rem);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform var(--t-fast), box-shadow var(--t-fast);
+
+  &:hover,
+  &:focus-visible {
+    transform: scale(1.14);
+    z-index: 2;
+    box-shadow: 0 0 0 2px var(--neon-cyan), 0 6px 16px rgba(10, 16, 30, 0.3);
+    outline: none;
+  }
+}
+
+// scrim scuro dietro l'etichetta: bianco leggibile su QUALSIASI colore
+// di segmento (anche oro o grigio chiaro), in entrambi i temi
+.rg__label {
+  display: inline-block;
+  padding: 0.14em 0.28em;
+  border-radius: 0.45em;
+  background: rgba(10, 16, 30, 0.5);
+  color: #ffffff;
+}
+
+// mano che non raggiunge mai questo nodo: cella spenta
+.rg__cell--off {
+  background: var(--bg-0);
+
+  .rg__label {
+    background: none;
+    color: var(--text-faint);
+  }
+}
+
+.rg__cell--sel {
+  box-shadow: 0 0 0 2px var(--neon-cyan), var(--glow-cyan);
+  z-index: 1;
+}

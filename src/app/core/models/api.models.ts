@@ -63,3 +63,64 @@ export interface Paginated<T> {
   limit: number;
   totalPages: number;
 }
+
+// ----- Tabelle preflop (soluzioni GTO) -----
+
+export type PreflopFormat = 'spin' | 'husng' | 'spin_2x_nolimp';
+
+export interface PreflopFormatMeta {
+  format: PreflopFormat;
+  /** profondità disponibili, in big blind (es. "1.5", "25") */
+  depths: string[];
+}
+
+export interface PreflopMeta {
+  formats: PreflopFormatMeta[];
+}
+
+export interface PreflopPlayer {
+  position: string;
+  stack: number;
+  is_active: boolean;
+}
+
+export interface PreflopAction {
+  /** codice azione: chiave in freq/ev e segmento del percorso (es. F, C, X, R2.5, RAI) */
+  code: string;
+  type: 'FOLD' | 'CALL' | 'CHECK' | 'RAISE';
+  betsize: number;
+  betsize_by_pot: number | null;
+  display: string;
+  simple_group: string;
+  advanced_group: string;
+  next_position: string | null;
+  is_hand_end: boolean;
+  next_street: boolean;
+  /** true: l'azione chiude la mano, non c'è un nodo successivo da esplorare */
+  is_terminal: boolean;
+  /** frequenza dell'azione sull'intero range (0..1) */
+  total_freq: number;
+}
+
+export interface PreflopHandData {
+  /** frequenza per codice azione (0..1; tutte ≈0 se la mano non arriva mai qui) */
+  freq: Record<string, number>;
+  /** EV in big blind per codice azione */
+  ev: Record<string, number>;
+  hand_ev: number;
+}
+
+export interface PreflopNode {
+  format: PreflopFormat;
+  depth: number;
+  depth_label: string;
+  stacks: string;
+  /** percorso dalla radice, codici separati da "-" (vuoto = radice) */
+  preflop_actions: string;
+  history: string[];
+  active_position: string;
+  pot: number;
+  players: PreflopPlayer[];
+  actions: PreflopAction[];
+  hands: Record<string, PreflopHandData>;
+}

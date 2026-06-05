@@ -1,0 +1,17 @@
+<div class="rg" role="group" aria-label="Matrice delle 169 mani iniziali">
+  @for (cell of cells(); track cell.hand) {
+    <button
+      type="button"
+      class="rg__cell"
+      [class.rg__cell--off]="!cell.reached"
+      [class.rg__cell--sel]="cell.hand === selected()"
+      [style.background]="cell.background"
+      [attr.aria-label]="cell.aria"
+      (mouseenter)="handHover.emit(cell.hand)"
+      (mouseleave)="onLeave()"
+      (focus)="handHover.emit(cell.hand)"
+      (blur)="onLeave()"
+      (click)="handPick.emit(cell.hand)"
+    ><span class="rg__label">{{ cell.hand }}</span></button>
+  }
+</div>

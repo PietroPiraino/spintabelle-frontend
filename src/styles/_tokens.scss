@@ -52,6 +52,15 @@
   --radius-lg: 22px;
   --container: 1180px;
 
+  // Colori azione del viewer tabelle (dal passivo all'aggressivo)
+  --act-fold: #b6bfd2;
+  --act-check: #00b3a4;
+  --act-call: #00a96e;
+  --act-raise-1: #ffb547; // raise piccolo
+  --act-raise-2: #ff6a1f;
+  --act-raise-3: #e25510; // raise grande
+  --act-allin: #d61f5e;
+
   // Ombre e bagliori neon
   --glow-copper: 0 0 32px rgba(255, 106, 31, 0.3);
   --glow-copper-strong: 0 8px 40px rgba(255, 106, 31, 0.45);
@@ -101,6 +110,14 @@
   --btn-ghost-bg: rgba(237, 228, 205, 0.05);
   --gold-text: #ffb547;
   --halo: rgba(11, 17, 36, 0.92);
+
+  --act-fold: #38456b;
+  --act-check: #0bc9b9;
+  --act-call: #15bd80;
+  --act-raise-1: #ffb547;
+  --act-raise-2: #ff6a1f;
+  --act-raise-3: #f25410;
+  --act-allin: #ff3d71;
 
   --glow-copper: 0 0 40px rgba(255, 106, 31, 0.35);
   --glow-copper-strong: 0 8px 44px rgba(255, 106, 31, 0.5);

@@ -1,14 +1,345 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
+import {
+  PreflopAction,
+  PreflopFormat,
+  PreflopMeta,
+  PreflopNode,
+} from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
+import { PreflopService } from '../../core/services/preflop.service';
+import {
+  FORMAT_LABELS,
+  actionColorMap,
+  actionLabel,
+  displayActions,
+  formatBb,
+  formatEv,
+  formatFreq,
+} from './preflop-display';
+import { RangeGridComponent } from './range-grid/range-grid.component';
+
+/** Un passo del breadcrumb: chi ha agito, cosa ha fatto, con che colore. */
+interface PathStep {
+  index: number;
+  position: string;
+  label: string;
+  colorVar: string;
+}
+
+interface DetailRow {
+  label: string;
+  colorVar: string;
+  freq: string;
+  ev: string;
+  evSign: -1 | 0 | 1;
+}
+
+const DEFAULT_DEPTH = 25; // stack di partenza di uno Spin & Go
 
 @Component({
   selector: 'app-tables',
-  imports: [RouterLink],
+  imports: [RouterLink, RangeGridComponent],
   templateUrl: './tables.component.html',
   styleUrl: './tables.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TablesComponent {
   protected readonly auth = inject(AuthService);
+  private readonly preflop = inject(PreflopService);
+  private readonly router = inject(Router);
+
+  // Query param legati dal router (withComponentInputBinding):
+  // /tabelle?formato=spin&stack=25&azioni=R2-RAI → link condivisibili
+  readonly formato = input<string>();
+  readonly stack = input<string>();
+  readonly azioni = input<string>();
+
+  protected readonly meta = signal<PreflopMeta | null>(null);
+  protected readonly metaError = signal(false);
+  protected readonly node = signal<PreflopNode | null>(null);
+  protected readonly pathNodes = signal<PreflopNode[]>([]);
+  protected readonly loading = signal(true);
+  protected readonly error = signal(false);
+  /** mano fissata con un click (resta selezionata navigando l'albero) */
+  protected readonly selectedHand = signal<string | null>(null);
+  protected readonly hoverHand = signal<string | null>(null);
+
+  protected readonly formatLabels = FORMAT_LABELS;
+  protected readonly formats = computed(() => this.meta()?.formats ?? []);
+
+  protected readonly resolvedFormat = computed<PreflopFormat>(() => {
+    const requested = this.formato();
+    return (
+      this.formats().find((f) => f.format === requested)?.format ?? 'spin'
+    );
+  });
+
+  protected readonly depths = computed(() => {
+    const list =
+      this.formats().find((f) => f.format === this.resolvedFormat())?.depths ??
+      [];
+    // ordinamento numerico esplicito: lo stepper +/− assume la lista crescente
+    return [...list].sort((a, b) => parseFloat(a) - parseFloat(b));
+  });
+
+  protected readonly resolvedDepth = computed<string | null>(() => {
+    const list = this.depths();
+    if (!list.length) return null;
+    const requested = this.stack();
+    if (requested && list.includes(requested)) return requested;
+    return nearestDepth(list, requested ? parseFloat(requested) : DEFAULT_DEPTH);
+  });
+
+  protected readonly canPrevDepth = computed(
+    () => this.depthIndex() > 0,
+  );
+  protected readonly canNextDepth = computed(
+    () => this.depthIndex() < this.depths().length - 1,
+  );
+
+  protected readonly colorMap = computed(() =>
+    actionColorMap(this.node()?.actions ?? []),
+  );
+
+  /** Azioni del nodo in ordine di visualizzazione (all-in → fold). */
+  protected readonly nodeActions = computed(() =>
+    displayActions(this.node()?.actions ?? []),
+  );
+
+  protected readonly steps = computed<PathStep[]>(() => {
+    const current = this.node();
+    const nodes = this.pathNodes();
+    if (!current) return [];
+    return current.history.map((code, i) => {
+      const at = nodes[i];
+      const action = at?.actions.find((a) => a.code === code);
+      return {
+        index: i,
+        position: at?.active_position ?? '',
+        label: action ? actionLabel(action) : code,
+        colorVar: at && action ? actionColorMap(at.actions)[code] : '--act-fold',
+      };
+    });
+  });
+
+  /** Mano mostrata nel pannello di dettaglio: hover momentaneo o selezione fissata. */
+  protected readonly detailHand = computed(
+    () => this.hoverHand() ?? this.selectedHand(),
+  );
+
+  protected readonly detail = computed(() => {
+    const node = this.node();
+    const hand = this.detailHand();
+    const data = node && hand ? node.hands[hand] : null;
+    if (!node || !hand || !data) return null;
+    const colors = this.colorMap();
+    const rows: DetailRow[] = displayActions(node.actions).map((a) => {
+      const ev = data.ev[a.code] ?? 0;
+      return {
+        label: actionLabel(a),
+        colorVar: colors[a.code],
+        freq: formatFreq(data.freq[a.code] ?? 0),
+        ev: formatEv(ev),
+        evSign: ev > 0.005 ? 1 : ev < -0.005 ? -1 : 0,
+      };
+    });
+    const reached = Object.values(data.freq).some((f) => f > 0.0005);
+    return {
+      hand,
+      rows,
+      reached,
+      handEv: formatEv(data.hand_ev),
+      handEvSign: data.hand_ev > 0.005 ? 1 : data.hand_ev < -0.005 ? -1 : 0,
+    };
+  });
+
+  /** Pulsanti azione (e legenda): colore, etichetta e frequenza di range. */
+  protected readonly actionButtons = computed(() => {
+    const colors = this.colorMap();
+    return this.nodeActions().map((a) => ({
+      action: a,
+      label: actionLabel(a),
+      colorVar: colors[a.code],
+      freq: formatFreq(a.total_freq),
+    }));
+  });
+
+  /** celle segnaposto per lo scheletro di caricamento */
+  protected readonly skeletonCells = Array.from({ length: 169 }, (_, i) => i);
+
+  private loadSeq = 0;
+
+  constructor() {
+    // La meta serve a popolare i selettori: parte appena l'utente è loggato
+    effect(() => {
+      if (!this.auth.user() || this.meta() || this.metaError()) return;
+      untracked(() =>
+        this.preflop.getMeta().subscribe({
+          next: (m) => this.meta.set(m),
+          error: () => this.metaError.set(true),
+        }),
+      );
+    });
+
+    // Ricarica il nodo a ogni cambio di formato / stack / percorso azioni
+    effect(() => {
+      const meta = this.meta();
+      const user = this.auth.user();
+      const format = this.resolvedFormat();
+      const depth = this.resolvedDepth();
+      const path = this.azioni() ?? '';
+      if (!meta || !user || !depth) return;
+      untracked(() => this.load(format, depth, path));
+    });
+  }
+
+  private load(format: PreflopFormat, depth: string, path: string): void {
+    const seq = ++this.loadSeq;
+    this.loading.set(true);
+    this.error.set(false);
+    // nodo corrente + tutti i prefissi del percorso (etichette del breadcrumb);
+    // in navigazione normale sono già tutti in cache
+    const prefixes = pathPrefixes(path);
+    forkJoin(
+      prefixes.map((p) => this.preflop.getNode(format, depth, p)),
+    ).subscribe({
+      next: (nodes) => {
+        if (seq !== this.loadSeq) return;
+        const current = nodes[nodes.length - 1];
+        this.pathNodes.set(nodes);
+        this.node.set(current);
+        this.loading.set(false);
+        this.preflop.prefetchChildren(current);
+      },
+      error: (err: unknown) => {
+        if (seq !== this.loadSeq) return;
+        const status = (err as { status?: number })?.status;
+        if (status === 404 && path) {
+          // percorso inesistente a questa profondità (le size cambiano):
+          // si riparte dalla radice della stessa tabella
+          this.navigate(format, depth, '', true);
+          return;
+        }
+        this.loading.set(false);
+        this.error.set(true);
+      },
+    });
+  }
+
+  private navigate(
+    format: PreflopFormat,
+    depth: string,
+    path: string,
+    replaceUrl = false,
+  ): void {
+    void this.router.navigate([], {
+      queryParams: {
+        formato: format,
+        stack: depth,
+        azioni: path || null,
+      },
+      replaceUrl,
+    });
+  }
+
+  protected setFormat(format: PreflopFormat): void {
+    if (format === this.resolvedFormat()) return;
+    const target = this.formats().find((f) => f.format === format);
+    if (!target?.depths.length) return;
+    // mantiene la profondità più vicina; il percorso si azzera (alberi diversi)
+    const current = parseFloat(this.resolvedDepth() ?? String(DEFAULT_DEPTH));
+    this.navigate(format, nearestDepth(target.depths, current), '');
+  }
+
+  protected setDepth(depth: string): void {
+    if (!depth || depth === this.resolvedDepth()) return;
+    // il percorso si tenta di mantenere: se a questa profondità non esiste,
+    // load() ripiega sulla radice
+    this.navigate(this.resolvedFormat(), depth, this.azioni() ?? '');
+  }
+
+  protected onDepthChange(event: Event): void {
+    this.setDepth((event.target as HTMLSelectElement).value);
+  }
+
+  protected stepDepth(dir: -1 | 1): void {
+    const list = this.depths();
+    const next = list[this.depthIndex() + dir];
+    if (next) this.setDepth(next);
+  }
+
+  protected onAction(action: PreflopAction): void {
+    const node = this.node();
+    if (!node || action.is_terminal) return;
+    const path = node.preflop_actions
+      ? `${node.preflop_actions}-${action.code}`
+      : action.code;
+    this.navigate(node.format, node.depth_label, path);
+  }
+
+  /** Torna allo stato dopo le prime `count` azioni (0 = inizio mano). */
+  protected crumbTo(count: number): void {
+    const node = this.node();
+    if (!node || count >= node.history.length) return;
+    this.navigate(
+      this.resolvedFormat(),
+      this.resolvedDepth() ?? node.depth_label,
+      node.history.slice(0, count).join('-'),
+    );
+  }
+
+  protected onHandPick(hand: string): void {
+    // click sulla mano già selezionata = deseleziona
+    this.selectedHand.update((curr) => (curr === hand ? null : hand));
+  }
+
+  protected retry(): void {
+    const depth = this.resolvedDepth();
+    if (this.metaError()) {
+      this.metaError.set(false); // l'effect della meta riparte
+      return;
+    }
+    if (depth) this.load(this.resolvedFormat(), depth, this.azioni() ?? '');
+  }
+
+  protected formatBbLabel(value: number | string): string {
+    return formatBb(value);
+  }
+
+  private depthIndex(): number {
+    const depth = this.resolvedDepth();
+    return depth ? this.depths().indexOf(depth) : -1;
+  }
+}
+
+/** ['', 'R2', 'R2-RAI'] per "R2-RAI": tutti i nodi dalla radice inclusa. */
+function pathPrefixes(path: string): string[] {
+  if (!path) return [''];
+  const codes = path.split('-');
+  return ['', ...codes.map((_, i) => codes.slice(0, i + 1).join('-'))];
+}
+
+/** La profondità della lista più vicina al valore richiesto. */
+function nearestDepth(list: string[], target: number): string {
+  let best = list[0];
+  let bestDist = Math.abs(parseFloat(best) - target);
+  for (const d of list) {
+    const dist = Math.abs(parseFloat(d) - target);
+    if (dist < bestDist) {
+      best = d;
+      bestDist = dist;
+    }
+  }
+  return best;
 }

@@ -1,15 +1,43 @@
-.tables {
+// ------------------------------------------------------------
+// Viewer delle tabelle preflop
+// ------------------------------------------------------------
+
+.pf__boot {
   display: flex;
   align-items: center;
-  min-height: calc(100dvh - 220px);
+  justify-content: center;
+  gap: 0.7rem;
+  min-height: 40dvh;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
 }
 
-.tables__inner {
+.pf__spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--copper-500);
+  animation: pf-spin 0.8s linear infinite;
+}
+
+@keyframes pf-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+// ---------- teaser per i visitatori non registrati ----------
+
+.pf__teaser {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 1.3rem;
+  min-height: calc(100dvh - 280px);
+  justify-content: center;
 
   .lead {
     margin-inline: auto;
@@ -20,13 +48,12 @@
   }
 }
 
-// Tris di carte che "mescolano"
-.tables__cards {
+.pf__teaser-cards {
   display: flex;
   margin-bottom: 1rem;
 }
 
-.tables__card {
+.pf__card {
   display: grid;
   place-items: center;
   width: 74px;
@@ -39,27 +66,26 @@
   color: var(--navy-700);
   border: 1px solid rgba(27, 42, 74, 0.25);
   box-shadow: var(--shadow-pop), 0 0 18px rgba(255, 106, 31, 0.12);
-  animation: shuffle 3.2s var(--ease-out) infinite;
+  animation: pf-shuffle 3.2s var(--ease-out) infinite;
 }
 
-.tables__card--1 {
+.pf__card--1 {
   transform: rotate(-12deg) translateX(12px);
-  animation-delay: 0s;
 }
 
-.tables__card--2 {
+.pf__card--2 {
   transform: rotate(2deg) translateY(-10px);
   color: var(--copper-600);
   animation-delay: 0.25s;
   z-index: 1;
 }
 
-.tables__card--3 {
+.pf__card--3 {
   transform: rotate(14deg) translateX(-12px);
   animation-delay: 0.5s;
 }
 
-@keyframes shuffle {
+@keyframes pf-shuffle {
   0%,
   100% {
     translate: 0 0;
@@ -67,5 +93,482 @@
 
   50% {
     translate: 0 -12px;
+  }
+}
+
+// ---------- intestazione e toolbar ----------
+
+.pf__head {
+  margin-bottom: 1.6rem;
+
+  h1 {
+    margin-top: 0.4rem;
+  }
+}
+
+.pf__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.pf__formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pf__format {
+  padding: 0.5rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--btn-ghost-bg);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-fast);
+
+  &:hover {
+    border-color: var(--copper-500);
+    color: var(--text);
+  }
+
+  &.is-active {
+    border-color: var(--copper-500);
+    color: var(--text);
+    background: var(--surface-1);
+    box-shadow: 0 0 14px rgba(255, 106, 31, 0.25);
+  }
+}
+
+.pf__depth {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.pf__depth-label {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.pf__stepper {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--btn-ghost-bg);
+  color: var(--text);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast);
+
+  &:hover:not(:disabled) {
+    border-color: var(--copper-500);
+    color: var(--copper-600);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+
+.pf__select {
+  padding: 0.45rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-1);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--glow-cyan);
+  }
+}
+
+// ---------- breadcrumb del percorso d'azione ----------
+
+.pf__path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1.1rem;
+}
+
+.pf__crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--btn-ghost-bg);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast);
+
+  &:hover:not(:disabled) {
+    border-color: var(--neon-cyan);
+    color: var(--text);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &.is-current {
+    border-color: var(--line-strong);
+    background: var(--surface-1);
+    color: var(--text);
+  }
+}
+
+.pf__sep {
+  color: var(--text-faint);
+  font-size: 0.8rem;
+}
+
+// ---------- layout principale ----------
+
+.pf__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.3rem;
+  align-items: start;
+}
+
+.pf__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.pf__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+
+  p {
+    margin: 0;
+    color: var(--text-muted);
+  }
+}
+
+// situazione al tavolo
+.pf__table {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.7rem 1rem;
+}
+
+.pf__seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.pf__seat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+
+  b {
+    color: var(--text);
+  }
+
+  &.is-active {
+    border-color: var(--copper-500);
+    color: var(--text);
+    box-shadow: 0 0 12px rgba(255, 106, 31, 0.25);
+  }
+}
+
+.pf__pot {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+
+  b {
+    color: var(--text);
+  }
+}
+
+// pulsanti azione
+.pf__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pf__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-1);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+
+  &:hover:not(:disabled) {
+    border-color: var(--copper-500);
+    box-shadow: 0 0 16px rgba(255, 106, 31, 0.25);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.pf__action--end {
+  opacity: 0.78;
+}
+
+.pf__action-end-note {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.pf__action-freq {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.pf__action-go {
+  color: var(--copper-600);
+}
+
+.pf__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+// matrice + scheletro
+.pf__grid-zone {
+  transition: opacity var(--t-fast);
+
+  &.is-loading {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+}
+
+.pf__skeleton {
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  gap: 2px;
+  padding: 8px;
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+
+  span {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: linear-gradient(100deg, var(--bg-0) 30%, var(--line) 50%, var(--bg-0) 70%);
+    background-size: 220% 100%;
+    animation: pf-shimmer 1.4s linear infinite;
+  }
+}
+
+@keyframes pf-shimmer {
+  to {
+    background-position: -120% 0;
+  }
+}
+
+// ---------- colonna laterale ----------
+
+.pf__side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  position: sticky;
+  top: 76px;
+}
+
+.pf__detail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.pf__detail-hand {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.pf__detail-ev {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.pf__detail-note {
+  font-size: 0.8rem;
+  color: var(--gold-text);
+  margin-bottom: 0.5rem;
+}
+
+.pf__detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+
+  th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
+    padding: 0.3rem 0.2rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  td {
+    padding: 0.42rem 0.2rem;
+    border-bottom: 1px solid var(--line);
+
+    .pf__dot {
+      display: inline-block;
+      vertical-align: -1px;
+      margin-right: 0.35rem;
+    }
+
+    &:nth-child(2),
+    &:nth-child(3) {
+      font-family: var(--font-mono);
+      text-align: right;
+      white-space: nowrap;
+    }
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.is-pos {
+  color: var(--felt);
+}
+
+.is-neg {
+  color: var(--danger);
+}
+
+// testo istruttivo: --text-muted, non --text-faint (contrasto AA su card bianca)
+.pf__detail-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0.6rem 0 0;
+}
+
+.pf__detail-empty {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.pf__legend {
+  h2 {
+    font-size: 0.95rem;
+    margin-bottom: 0.6rem;
+  }
+}
+
+.pf__legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.28rem;
+  font-size: 0.84rem;
+}
+
+.pf__legend-freq {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.pf__legend-note {
+  margin-top: 0.6rem;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+// ---------- responsive ----------
+
+@media (max-width: 1020px) {
+  .pf__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .pf__side {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .pf__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pf__depth {
+    justify-content: space-between;
+  }
+
+  .pf__select {
+    flex: 1;
+  }
+
+  .pf__pot {
+    width: 100%;
+    justify-content: space-between;
   }
 }

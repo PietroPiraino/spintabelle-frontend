@@ -1,29 +1,238 @@
-<section class="section tables">
-  <div class="container tables__inner">
-    <div class="tables__cards" aria-hidden="true">
-      <span class="tables__card tables__card--1">A♠</span>
-      <span class="tables__card tables__card--2">K♦</span>
-      <span class="tables__card tables__card--3">Q♣</span>
-    </div>
+<section class="section pf">
+  <div class="container">
+    @if (!auth.ready()) {
+      <div class="pf__boot" role="status">
+        <span class="pf__spinner" aria-hidden="true"></span>
+        Controllo della sessione…
+      </div>
+    } @else if (!auth.isAuthenticated()) {
+      <!-- Visitatori: le tabelle sono riservate agli iscritti -->
+      <div class="pf__teaser">
+        <div class="pf__teaser-cards" aria-hidden="true">
+          <span class="pf__card pf__card--1">A♣</span>
+          <span class="pf__card pf__card--2">7♣</span>
+          <span class="pf__card pf__card--3">4♣</span>
+        </div>
+        <span class="eyebrow rise">Tabelle preflop</span>
+        <h1 class="rise" style="animation-delay: 80ms">
+          Le tabelle sono <span class="text-gradient">al tavolo</span>.
+        </h1>
+        <p class="lead rise" style="animation-delay: 160ms">
+          Range GTO per Spin &amp; Go e Heads-Up a ogni profondità di stack,
+          con frequenze ed EV di ogni singola mano. La consultazione è
+          riservata agli iscritti: registrarsi è gratis.
+        </p>
+        <div class="row rise" style="animation-delay: 240ms">
+          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
+          <a routerLink="/login" class="btn btn--ghost">Accedi</a>
+        </div>
+      </div>
+    } @else {
+      <header class="pf__head">
+        <span class="eyebrow">Tabelle preflop</span>
+        <h1>Range <span class="text-gradient">GTO</span> a ogni profondità</h1>
+      </header>
 
-    <span class="eyebrow rise">Work in progress</span>
-    <h1 class="rise" style="animation-delay: 80ms">
-      Le tabelle stanno <span class="text-gradient">mescolando</span>.
-    </h1>
-    <p class="lead rise" style="animation-delay: 160ms">
-      Il viewer delle tabelle GTO per Spin &amp; Go e Twister è in costruzione:
-      range per ogni profondità di stack, consultabili da qualsiasi dispositivo.
-    </p>
-
-    <div class="row rise" style="animation-delay: 240ms">
-      @if (auth.isAuthenticated()) {
-        <a routerLink="/lezioni" class="btn btn--primary">Intanto, studia le lezioni</a>
+      @if (metaError()) {
+        <div class="card card--pad pf__error">
+          <p>Le tabelle non sono raggiungibili in questo momento.</p>
+          <button type="button" class="btn btn--primary" (click)="retry()">Riprova</button>
+        </div>
+      } @else if (!meta()) {
+        <div class="pf__boot" role="status">
+          <span class="pf__spinner" aria-hidden="true"></span>
+          Carico le tabelle…
+        </div>
       } @else {
-        <a routerLink="/registrazione" class="btn btn--primary">
-          Registrati per essere tra i primi
-        </a>
+        <div class="pf__toolbar">
+          <div class="pf__formats" role="group" aria-label="Formato di gioco">
+            @for (f of formats(); track f.format) {
+              <button
+                type="button"
+                class="pf__format"
+                [class.is-active]="f.format === resolvedFormat()"
+                (click)="setFormat(f.format)"
+              >{{ formatLabels[f.format] }}</button>
+            }
+          </div>
+
+          <div class="pf__depth">
+            <label class="pf__depth-label" for="pf-depth">Stack</label>
+            <button
+              type="button"
+              class="pf__stepper"
+              (click)="stepDepth(-1)"
+              [disabled]="!canPrevDepth()"
+              aria-label="Stack più corto"
+            >−</button>
+            <select id="pf-depth" class="pf__select" (change)="onDepthChange($event)">
+              @for (d of depths(); track d) {
+                <option [value]="d" [selected]="d === resolvedDepth()">
+                  {{ formatBbLabel(d) }} bb
+                </option>
+              }
+            </select>
+            <button
+              type="button"
+              class="pf__stepper"
+              (click)="stepDepth(1)"
+              [disabled]="!canNextDepth()"
+              aria-label="Stack più profondo"
+            >+</button>
+          </div>
+        </div>
+
+        <nav class="pf__path" aria-label="Sequenza di azioni">
+          <button
+            type="button"
+            class="pf__crumb"
+            [class.is-current]="!steps().length"
+            [disabled]="!steps().length"
+            (click)="crumbTo(0)"
+          >Inizio mano</button>
+          @for (s of steps(); track s.index) {
+            <span class="pf__sep" aria-hidden="true">→</span>
+            <button
+              type="button"
+              class="pf__crumb"
+              [class.is-current]="s.index === steps().length - 1"
+              [disabled]="s.index === steps().length - 1"
+              (click)="crumbTo(s.index + 1)"
+            >
+              <i class="pf__dot" [style.background]="'var(' + s.colorVar + ')'" aria-hidden="true"></i>
+              {{ s.position }} · {{ s.label }}
+            </button>
+          }
+        </nav>
+
+        @if (error()) {
+          <div class="card card--pad pf__error">
+            <p>Tabella non disponibile al momento.</p>
+            <button type="button" class="btn btn--primary" (click)="retry()">Riprova</button>
+          </div>
+        }
+
+        <div class="pf__layout">
+          <div class="pf__main">
+            @if (node(); as n) {
+              <div class="pf__table card">
+                <div class="pf__seats">
+                  @for (p of n.players; track p.position) {
+                    <span class="pf__seat" [class.is-active]="p.position === n.active_position">
+                      <b>{{ p.position }}</b>
+                      <span>{{ formatBbLabel(p.stack) }} bb</span>
+                    </span>
+                  }
+                </div>
+                <div class="pf__pot">
+                  <span>Piatto <b>{{ formatBbLabel(n.pot) }} bb</b></span>
+                  <span class="pf__turn">Decide <b>{{ n.active_position }}</b></span>
+                </div>
+              </div>
+
+              <div class="pf__actions" role="group" aria-label="Azioni disponibili">
+                @for (b of actionButtons(); track b.action.code) {
+                  <button
+                    type="button"
+                    class="pf__action"
+                    [class.pf__action--end]="b.action.is_terminal"
+                    [disabled]="b.action.is_terminal"
+                    (click)="onAction(b.action)"
+                    [attr.aria-label]="b.action.is_terminal ? b.label + ', qui la mano si chiude' : null"
+                    [attr.title]="b.action.is_terminal ? null : 'Esplora il seguito'"
+                  >
+                    <i class="pf__dot" [style.background]="'var(' + b.colorVar + ')'" aria-hidden="true"></i>
+                    <span class="pf__action-label">{{ b.label }}</span>
+                    <span class="pf__action-freq">{{ b.freq }}</span>
+                    @if (b.action.is_terminal) {
+                      <span class="pf__action-end-note">· fine mano</span>
+                    } @else {
+                      <span class="pf__action-go" aria-hidden="true">→</span>
+                    }
+                  </button>
+                }
+              </div>
+
+              <div class="pf__grid-zone" [class.is-loading]="loading()">
+                <app-range-grid
+                  [node]="n"
+                  [colorMap]="colorMap()"
+                  [selected]="selectedHand()"
+                  (handHover)="hoverHand.set($event)"
+                  (handPick)="onHandPick($event)"
+                />
+              </div>
+            } @else if (loading()) {
+              <div class="pf__skeleton" aria-hidden="true">
+                @for (i of skeletonCells; track i) {
+                  <span></span>
+                }
+              </div>
+            }
+          </div>
+
+          <aside class="pf__side">
+            <div class="card card--pad pf__detail">
+              @if (detail(); as d) {
+                <div class="pf__detail-head">
+                  <span class="pf__detail-hand">{{ d.hand }}</span>
+                  <span
+                    class="pf__detail-ev"
+                    [class.is-pos]="d.handEvSign === 1"
+                    [class.is-neg]="d.handEvSign === -1"
+                  >EV {{ d.handEv }} bb</span>
+                </div>
+                @if (!d.reached) {
+                  <p class="pf__detail-note">
+                    Giocando la strategia ottimale questa mano non arriva (quasi)
+                    mai a questo punto: gli EV restano indicativi.
+                  </p>
+                }
+                <table class="pf__detail-table">
+                  <thead>
+                    <tr><th>Azione</th><th>Freq.</th><th>EV (bb)</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (r of d.rows; track r.label) {
+                      <tr>
+                        <td>
+                          <i class="pf__dot" [style.background]="'var(' + r.colorVar + ')'" aria-hidden="true"></i>
+                          {{ r.label }}
+                        </td>
+                        <td>{{ r.freq }}</td>
+                        <td [class.is-pos]="r.evSign === 1" [class.is-neg]="r.evSign === -1">{{ r.ev }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+                <p class="pf__detail-hint">Un click sulla casella la fissa, un secondo click la libera.</p>
+              } @else {
+                <p class="pf__detail-empty">
+                  Passa il mouse — o tocca — una casella della matrice per
+                  leggere frequenze ed EV della singola mano. Un click la fissa.
+                </p>
+              }
+            </div>
+
+            @if (node()) {
+              <div class="card card--pad pf__legend">
+                <h2>Legenda</h2>
+                @for (b of actionButtons(); track b.action.code) {
+                  <div class="pf__legend-row">
+                    <i class="pf__dot" [style.background]="'var(' + b.colorVar + ')'" aria-hidden="true"></i>
+                    <span>{{ b.label }}</span>
+                    <span class="pf__legend-freq">{{ b.freq }} del range</span>
+                  </div>
+                }
+                <p class="pf__legend-note">
+                  Ogni casella è divisa in segmenti proporzionali alle frequenze
+                  delle azioni. Le caselle spente non arrivano mai a questo punto.
+                </p>
+              </div>
+            }
+          </aside>
+        </div>
       }
-      <a routerLink="/news" class="btn btn--ghost">Segui gli aggiornamenti</a>
-    </div>
+    }
   </div>
 </section>
