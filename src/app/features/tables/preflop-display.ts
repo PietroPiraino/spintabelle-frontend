@@ -1,11 +1,55 @@
 // Helper puri di presentazione per il viewer delle tabelle preflop.
 import { PreflopAction, PreflopFormat } from '../../core/models/api.models';
 
-export const FORMAT_LABELS: Record<PreflopFormat, string> = {
+/** I due giochi base; le varianti (ante, raise only) sono interruttori. */
+export type PreflopBase = 'spin' | 'husng';
+
+export const BASE_LABELS: Record<PreflopBase, string> = {
   spin: 'Spin & Go',
   husng: 'Heads-Up',
-  spin_2x_nolimp: 'Spin & Go BvB 2x raise only',
 };
+
+/**
+ * Offset dell'ante sulle etichette di profondità: nei dati gli stack dei
+ * formati ante sono "base + ante" (spin: 10 → "10.17", HU: 10 → "10.125").
+ * In interfaccia mostriamo lo stack base, l'URL conserva l'etichetta reale.
+ */
+export const ANTE_OFFSET: Record<PreflopBase, number> = {
+  spin: 0.17,
+  husng: 0.125,
+};
+
+export interface FormatParts {
+  base: PreflopBase;
+  ante: boolean;
+  raiseOnly: boolean;
+}
+
+/** "spin_ante_2x_nolimp" → { base: spin, ante: true, raiseOnly: true } */
+export function parseFormat(format: PreflopFormat): FormatParts {
+  return {
+    base: format.startsWith('husng') ? 'husng' : 'spin',
+    ante: format.includes('_ante'),
+    raiseOnly: format.includes('_2x_nolimp'),
+  };
+}
+
+export function composeFormat(parts: FormatParts): PreflopFormat {
+  return `${parts.base}${parts.ante ? '_ante' : ''}${
+    parts.raiseOnly ? '_2x_nolimp' : ''
+  }` as PreflopFormat;
+}
+
+/** Offset ante del formato (0 per i formati senza ante). */
+export function anteOffset(format: PreflopFormat): number {
+  const parts = parseFormat(format);
+  return parts.ante ? ANTE_OFFSET[parts.base] : 0;
+}
+
+/** Etichetta di profondità da mostrare: senza l'offset ante ("10.17" → "10"). */
+export function depthDisplay(label: string, format: PreflopFormat): string {
+  return formatBb(parseFloat(label) - anteOffset(format));
+}
 
 const RANKS = [
   'A',

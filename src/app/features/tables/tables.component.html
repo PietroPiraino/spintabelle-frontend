@@ -45,15 +45,44 @@
         </div>
       } @else {
         <div class="pf__toolbar">
-          <div class="pf__formats" role="group" aria-label="Formato di gioco">
-            @for (f of formats(); track f.format) {
+          <div class="pf__formats" role="group" aria-label="Gioco">
+            @for (b of bases(); track b) {
               <button
                 type="button"
                 class="pf__format"
-                [class.is-active]="f.format === resolvedFormat()"
-                (click)="setFormat(f.format)"
-              >{{ formatLabels[f.format] }}</button>
+                [class.is-active]="b === parts().base"
+                (click)="setBase(b)"
+              >{{ baseLabels[b] }}</button>
             }
+          </div>
+
+          <div class="pf__variants" role="group" aria-label="Varianti">
+            <button
+              type="button"
+              class="pf__switch"
+              role="switch"
+              [attr.aria-checked]="parts().ante"
+              [class.is-on]="parts().ante"
+              [disabled]="!canToggleAnte()"
+              (click)="toggleAnte()"
+              [attr.title]="canToggleAnte() ? null : 'Variante non disponibile per questo gioco'"
+            >
+              <span class="pf__switch-track" aria-hidden="true"><span class="pf__switch-knob"></span></span>
+              Ante
+            </button>
+            <button
+              type="button"
+              class="pf__switch"
+              role="switch"
+              [attr.aria-checked]="parts().raiseOnly"
+              [class.is-on]="parts().raiseOnly"
+              [disabled]="!canToggleRaiseOnly()"
+              (click)="toggleRaiseOnly()"
+              [attr.title]="canToggleRaiseOnly() ? null : 'Variante non disponibile per questo gioco'"
+            >
+              <span class="pf__switch-track" aria-hidden="true"><span class="pf__switch-knob"></span></span>
+              Raise only
+            </button>
           </div>
 
           <div class="pf__depth">
@@ -68,7 +97,7 @@
             <select id="pf-depth" class="pf__select" (change)="onDepthChange($event)">
               @for (d of depths(); track d) {
                 <option [value]="d" [selected]="d === resolvedDepth()">
-                  {{ formatBbLabel(d) }} bb
+                  {{ depthLabel(d) }} bb
                 </option>
               }
             </select>
@@ -79,6 +108,9 @@
               [disabled]="!canNextDepth()"
               aria-label="Stack più profondo"
             >+</button>
+            @if (parts().ante) {
+              <span class="pf__ante-note">ante inclusa nel piatto</span>
+            }
           </div>
         </div>
 

@@ -66,7 +66,13 @@ export interface Paginated<T> {
 
 // ----- Tabelle preflop (soluzioni GTO) -----
 
-export type PreflopFormat = 'spin' | 'husng' | 'spin_2x_nolimp';
+export type PreflopFormat =
+  | 'spin'
+  | 'spin_2x_nolimp'
+  | 'spin_ante'
+  | 'spin_ante_2x_nolimp'
+  | 'husng'
+  | 'husng_ante';
 
 export interface PreflopFormatMeta {
   format: PreflopFormat;

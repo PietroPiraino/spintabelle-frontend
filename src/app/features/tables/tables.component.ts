@@ -19,13 +19,18 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { PreflopService } from '../../core/services/preflop.service';
 import {
-  FORMAT_LABELS,
+  BASE_LABELS,
+  PreflopBase,
   actionColorMap,
   actionLabel,
+  anteOffset,
+  composeFormat,
+  depthDisplay,
   displayActions,
   formatBb,
   formatEv,
   formatFreq,
+  parseFormat,
 } from './preflop-display';
 import { RangeGridComponent } from './range-grid/range-grid.component';
 
@@ -86,7 +91,7 @@ export class TablesComponent {
   protected readonly selectedHand = signal<string | null>(null);
   protected readonly hoverHand = signal<string | null>(null);
 
-  protected readonly formatLabels = FORMAT_LABELS;
+  protected readonly baseLabels = BASE_LABELS;
   protected readonly formats = computed(() => this.meta()?.formats ?? []);
 
   protected readonly resolvedFormat = computed<PreflopFormat>(() => {
@@ -94,6 +99,28 @@ export class TablesComponent {
     return (
       this.formats().find((f) => f.format === requested)?.format ?? 'spin'
     );
+  });
+
+  /** gioco base + varianti attive, derivati dal formato corrente */
+  protected readonly parts = computed(() => parseFormat(this.resolvedFormat()));
+
+  /** giochi base disponibili nella meta (pill della toolbar) */
+  protected readonly bases = computed<PreflopBase[]>(() => {
+    const available = new Set(this.formats().map((f) => f.format));
+    return (['spin', 'husng'] as PreflopBase[]).filter((b) =>
+      available.has(b),
+    );
+  });
+
+  // un interruttore è attivabile solo se la variante esiste nei dati
+  // (es. raise only non esiste su Heads-Up; ante solo dopo il nuovo import)
+  protected readonly canToggleAnte = computed(() => {
+    const p = this.parts();
+    return this.hasFormat(composeFormat({ ...p, ante: !p.ante }));
+  });
+  protected readonly canToggleRaiseOnly = computed(() => {
+    const p = this.parts();
+    return this.hasFormat(composeFormat({ ...p, raiseOnly: !p.raiseOnly }));
   });
 
   protected readonly depths = computed(() => {
@@ -132,20 +159,27 @@ export class TablesComponent {
     const current = this.node();
     const nodes = this.pathNodes();
     if (!current) return [];
-    // gli stack nei dati sono quelli iniziali: il residuo si ricava dal
-    // contributo corrente di ciascuno (blind, poi il betsize dell'ultima
-    // azione, che nei dati è l'importo TOTALE portato nel piatto)
-    const contributions: Record<string, number> = { ...BLINDS };
+    // gli stack nei dati sono quelli iniziali: il residuo si ricava dai
+    // versamenti di ciascuno — l'ante (dedotta dal piatto alla radice:
+    // tutto ciò che eccede i blind), il blind, poi il betsize dell'ultima
+    // azione (che nei dati è l'importo TOTALE portato nel piatto)
+    const root = nodes[0];
+    const ante = root
+      ? Math.max(0, (root.pot - 1.5) / root.players.length)
+      : 0;
+    const bets: Record<string, number> = { ...BLINDS };
     const initialStack = (pos: string) =>
       current.players.find((p) => p.position === pos)?.stack ?? current.depth;
+    const remaining = (pos: string) =>
+      initialStack(pos) - ante - (bets[pos] ?? 0);
 
     const steps: TimelineStep[] = current.history.map((code, i) => {
       const at = nodes[i];
       const pos = at?.active_position ?? '';
-      const stack = initialStack(pos) - (contributions[pos] ?? 0);
+      const stack = remaining(pos);
       const action = at?.actions.find((a) => a.code === code);
       if (action && pos) {
-        contributions[pos] = Math.max(contributions[pos] ?? 0, action.betsize);
+        bets[pos] = Math.max(bets[pos] ?? 0, action.betsize);
       }
       return {
         index: i,
@@ -162,7 +196,7 @@ export class TablesComponent {
     steps.push({
       index: current.history.length,
       position: pos,
-      stack: initialStack(pos) - (contributions[pos] ?? 0),
+      stack: remaining(pos),
       label: null,
       colorVar: null,
       current: true,
@@ -290,13 +324,59 @@ export class TablesComponent {
     });
   }
 
-  protected setFormat(format: PreflopFormat): void {
-    if (format === this.resolvedFormat()) return;
-    const target = this.formats().find((f) => f.format === format);
-    if (!target?.depths.length) return;
-    // mantiene la profondità più vicina; il percorso si azzera (alberi diversi)
-    const current = parseFloat(this.resolvedDepth() ?? String(DEFAULT_DEPTH));
-    this.navigate(format, nearestDepth(target.depths, current), '');
+  protected setBase(base: PreflopBase): void {
+    const p = this.parts();
+    if (base === p.base) return;
+    // mantiene le varianti compatibili col nuovo gioco, scartando quelle
+    // che lì non esistono (es. raise only passando a Heads-Up)
+    const candidates: PreflopFormat[] = [
+      composeFormat({ base, ante: p.ante, raiseOnly: p.raiseOnly }),
+      composeFormat({ base, ante: p.ante, raiseOnly: false }),
+      composeFormat({ base, ante: false, raiseOnly: false }),
+    ];
+    const target = candidates.find((f) => this.hasFormat(f));
+    if (!target) return;
+    // gioco diverso: percorso azzerato, stack equivalente mantenuto
+    this.navigate(target, this.mappedDepth(target), '');
+  }
+
+  protected toggleAnte(): void {
+    const p = this.parts();
+    this.switchVariant(composeFormat({ ...p, ante: !p.ante }));
+  }
+
+  protected toggleRaiseOnly(): void {
+    const p = this.parts();
+    this.switchVariant(composeFormat({ ...p, raiseOnly: !p.raiseOnly }));
+  }
+
+  /** Cambio di variante: stack equivalente e percorso mantenuti (404 → radice). */
+  private switchVariant(target: PreflopFormat): void {
+    if (!this.hasFormat(target)) return;
+    this.navigate(target, this.mappedDepth(target), this.azioni() ?? '');
+  }
+
+  private hasFormat(format: PreflopFormat): boolean {
+    return this.formats().some((f) => f.format === format);
+  }
+
+  /**
+   * La profondità del formato di destinazione equivalente a quella corrente,
+   * al netto degli offset ante (es. spin 10 → spin_ante "10.17").
+   */
+  private mappedDepth(target: PreflopFormat): string {
+    const list = this.formats().find((f) => f.format === target)?.depths ?? [];
+    const current = this.resolvedDepth();
+    if (!list.length) return current ?? String(DEFAULT_DEPTH);
+    const baseValue = current
+      ? parseFloat(current) - anteOffset(this.resolvedFormat())
+      : DEFAULT_DEPTH;
+    return nearestDepth(list, baseValue + anteOffset(target));
+  }
+
+  /** Etichetta di profondità mostrata (senza offset ante: "10.17" → "10"). */
+  protected depthLabel(depth: string): string {
+    return depthDisplay(depth, this.resolvedFormat());
   }
 
   protected setDepth(depth: string): void {
