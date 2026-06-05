@@ -4,20 +4,18 @@ export type Theme = 'light' | 'tramonto' | 'dark';
 
 const STORAGE_KEY = 'bff-theme';
 
-/** ordine del ciclo: giorno → tramonto → notte */
-const ORDER: Theme[] = ['light', 'tramonto', 'dark'];
+export interface ThemeOption {
+  value: Theme;
+  name: string;
+  icon: string;
+}
 
-const NAMES: Record<Theme, string> = {
-  light: 'Ghiaccio',
-  tramonto: 'Tramonto',
-  dark: 'Notte',
-};
-
-const ICONS: Record<Theme, string> = {
-  light: '☀',
-  tramonto: '🌇',
-  dark: '☾',
-};
+/** i temi disponibili, nell'ordine del menù */
+const OPTIONS: ThemeOption[] = [
+  { value: 'light', name: 'Ghiaccio', icon: '☀' },
+  { value: 'tramonto', name: 'Tramonto', icon: '🌇' },
+  { value: 'dark', name: 'Notte', icon: '☾' },
+];
 
 /** colore della cornice browser (meta theme-color) per ogni tema */
 const META_COLORS: Record<Theme, string> = {
@@ -33,14 +31,13 @@ const META_COLORS: Record<Theme, string> = {
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
+  readonly options = OPTIONS;
   readonly theme = signal<Theme>(this.initialTheme());
 
-  /** il tema che si attiverebbe al prossimo click (per icona e tooltip) */
-  readonly next = computed<Theme>(
-    () => ORDER[(ORDER.indexOf(this.theme()) + 1) % ORDER.length],
+  /** icona del tema attivo (trigger del menù) */
+  readonly icon = computed(
+    () => OPTIONS.find((o) => o.value === this.theme())?.icon ?? '☀',
   );
-  readonly nextName = computed(() => NAMES[this.next()]);
-  readonly nextIcon = computed(() => ICONS[this.next()]);
 
   constructor() {
     effect(() => {
@@ -57,13 +54,14 @@ export class ThemeService {
     });
   }
 
-  /** passa al tema successivo del ciclo */
-  cycle(): void {
-    this.theme.set(this.next());
+  set(theme: Theme): void {
+    this.theme.set(theme);
   }
 
   private initialTheme(): Theme {
     const current = document.documentElement.dataset['theme'];
-    return ORDER.includes(current as Theme) ? (current as Theme) : 'light';
+    return OPTIONS.some((o) => o.value === current)
+      ? (current as Theme)
+      : 'light';
   }
 }

@@ -1,7 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostListener,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { ThemeService } from '../../../core/services/theme.service';
+import { Theme, ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-header',
@@ -16,6 +22,8 @@ export class HeaderComponent {
   private readonly router = inject(Router);
 
   protected readonly menuOpen = signal(false);
+  /** tendina dei temi aperta via click/tap (su desktop basta l'hover) */
+  protected readonly themeMenuOpen = signal(false);
 
   protected readonly navLinks = [
     { path: '/tabelle', label: 'Tabelle' },
@@ -30,6 +38,31 @@ export class HeaderComponent {
 
   protected closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  protected toggleThemeMenu(): void {
+    this.themeMenuOpen.update((open) => !open);
+  }
+
+  protected setTheme(theme: Theme): void {
+    this.themeService.set(theme);
+    this.themeMenuOpen.set(false);
+  }
+
+  // chiude la tendina dei temi cliccando altrove o premendo Esc
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    if (
+      this.themeMenuOpen() &&
+      !(event.target as Element | null)?.closest('.header__theme-wrap')
+    ) {
+      this.themeMenuOpen.set(false);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    this.themeMenuOpen.set(false);
   }
 
   protected logout(): void {

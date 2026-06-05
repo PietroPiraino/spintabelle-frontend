@@ -80,6 +80,10 @@
   color: var(--gold-text);
 }
 
+.header__theme-wrap {
+  position: relative;
+}
+
 .header__theme {
   display: grid;
   place-items: center;
@@ -92,14 +96,88 @@
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
-  transition: border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+  transition: border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-fast);
 
   &:hover {
     border-color: var(--copper-500);
     color: var(--copper-600);
     box-shadow: 0 0 14px rgba(255, 106, 31, 0.3);
-    transform: rotate(15deg);
   }
+}
+
+// tendina dei temi: appare all'hover/focus (desktop) o al click/tap
+.header__theme-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 156px;
+  padding: 0.35rem;
+  margin-top: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--glass-strong);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-pop);
+  opacity: 0;
+  translate: 0 -4px;
+  pointer-events: none;
+  transition: opacity var(--t-fast), translate var(--t-fast);
+  z-index: 60;
+
+  // ponte invisibile: niente richiusura nel tragitto bottone → tendina
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -10px 0 auto;
+    height: 10px;
+  }
+}
+
+.header__theme-wrap:hover .header__theme-menu,
+.header__theme-wrap:focus-within .header__theme-menu,
+.header__theme-wrap.is-open .header__theme-menu {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+
+.header__theme-option {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 3px);
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+
+  &:hover {
+    background: var(--btn-ghost-bg);
+    color: var(--text);
+  }
+
+  &.is-active {
+    color: var(--text);
+    background: rgba(255, 106, 31, 0.1);
+    font-weight: 600;
+
+    &::after {
+      content: '✓';
+      margin-left: auto;
+      color: var(--copper-600);
+    }
+  }
+}
+
+.header__theme-icon {
+  width: 1.2em;
+  text-align: center;
 }
 
 .header__auth {
@@ -226,5 +304,54 @@
     padding-top: 1rem;
     margin-top: 0.6rem;
     justify-content: space-between;
+  }
+
+  // su mobile niente tendina: i temi sono una riga di scelte dirette
+  .header__theme-wrap {
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+    margin-top: 0.6rem;
+  }
+
+  .header__theme {
+    display: none; // il trigger non serve: le opzioni sono già visibili
+  }
+
+  .header__theme-menu {
+    position: static;
+    display: flex;
+    gap: 0.4rem;
+    min-width: 0;
+    margin-top: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    opacity: 1;
+    translate: 0 0;
+    pointer-events: auto;
+
+    &::before {
+      content: none;
+    }
+  }
+
+  .header__theme-option {
+    flex: 1;
+    justify-content: center;
+    padding: 0.55rem 0.4rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    font-size: 0.82rem;
+
+    &.is-active {
+      border-color: var(--copper-500);
+      box-shadow: 0 0 12px rgba(255, 106, 31, 0.25);
+
+      &::after {
+        content: none; // niente spunta: basta il bordo acceso
+      }
+    }
   }
 }
