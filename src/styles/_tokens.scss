@@ -77,6 +77,62 @@
 }
 
 // ============================================================
+// Tema tramonto — "golden hour"
+// Chiaro caldo: rosa sabbia, testo prugna, neon rosa shocking
+// + corallo, lavanda al posto del ciano
+// ============================================================
+
+:root[data-theme='tramonto'] {
+  --bg-0: #f9e0d2; // pesca chiaro (zone in rilievo)
+  --bg-1: #fdeee4; // rosa sabbia (fondo pagina)
+  --surface-1: #fffaf6;
+  --surface-2: #fef4ee;
+  --surface-glass: rgba(255, 250, 246, 0.7);
+
+  --navy-700: #46213c; // prugna (carte, testi brand)
+  --copper-600: #d62360; // rosa profondo per testo/link
+  --copper-500: #f43f7f; // rosa shocking (neon 1)
+  --copper-400: #f75f93;
+  --ember: #f43f7f;
+  --gold: #ffb547;
+  --neon-cyan: #a06bf0; // lavanda: focus, dettagli
+  --felt: #00a070;
+  --danger: #d9442f;
+
+  --cream-100: #46213c; // testo principale prugna
+  --cream-300: #65395a;
+  --text: #46213c;
+  --text-muted: rgba(70, 33, 60, 0.66);
+  --text-faint: rgba(70, 33, 60, 0.4);
+
+  --line: rgba(70, 33, 60, 0.12);
+  --line-strong: rgba(70, 33, 60, 0.22);
+
+  --glass-bg: rgba(255, 248, 244, 0.78);
+  --glass-strong: rgba(255, 250, 246, 0.96);
+  --btn-ghost-bg: rgba(255, 255, 255, 0.65);
+  --gold-text: #a05f00;
+  --halo: rgba(253, 238, 228, 0.95);
+
+  // matrice tabelle: fold malva, raise corallo, all-in magenta
+  --act-fold: #cdb4c5;
+  --act-check: #00b3a4;
+  --act-call: #00a96e;
+  --act-raise-1: #ffb547;
+  --act-raise-2: #ff7a45;
+  --act-raise-3: #ef5526;
+  --act-allin: #d6177c;
+
+  --glow-copper: 0 0 32px rgba(244, 63, 127, 0.3);
+  --glow-copper-strong: 0 8px 40px rgba(244, 63, 127, 0.45);
+  --glow-cyan: 0 0 0 3px rgba(160, 107, 240, 0.28);
+  --shadow-card: 0 14px 40px rgba(70, 33, 60, 0.1);
+  --shadow-pop: 0 22px 60px rgba(70, 33, 60, 0.16);
+
+  color-scheme: light;
+}
+
+// ============================================================
 // Tema scuro — "il tavolo da gioco di notte"
 // Stessi token, valori ribaltati: navy profondo, testo crema,
 // neon arancio/ciano più accesi

@@ -30,6 +30,14 @@ body {
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+
+  // tramonto: orbs rosa/lavanda/oro al posto di arancio/ciano
+  :root[data-theme='tramonto'] & {
+    background-image:
+      radial-gradient(900px 480px at 85% -6%, rgba(244, 63, 127, 0.14), transparent 60%),
+      radial-gradient(720px 460px at -8% 18%, rgba(160, 107, 240, 0.12), transparent 62%),
+      radial-gradient(1000px 600px at 60% 115%, rgba(255, 181, 71, 0.14), transparent 65%);
+  }
 }
 
 // Grana leggerissima (texture carta)

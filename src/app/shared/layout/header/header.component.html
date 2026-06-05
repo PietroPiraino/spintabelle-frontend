@@ -33,18 +33,15 @@
         </a>
       }
 
+      <!-- cicla i temi: Ghiaccio → Tramonto → Notte; mostra il prossimo -->
       <button
         type="button"
         class="header__theme"
-        (click)="themeService.toggle()"
-        [attr.aria-label]="themeService.theme() === 'light' ? 'Attiva il tema scuro' : 'Attiva il tema chiaro'"
-        [title]="themeService.theme() === 'light' ? 'Tema scuro' : 'Tema chiaro'"
+        (click)="themeService.cycle()"
+        [attr.aria-label]="'Attiva il tema ' + themeService.nextName()"
+        [title]="'Tema ' + themeService.nextName()"
       >
-        @if (themeService.theme() === 'light') {
-          <span aria-hidden="true">☾</span>
-        } @else {
-          <span aria-hidden="true">☀</span>
-        }
+        <span aria-hidden="true">{{ themeService.nextIcon() }}</span>
       </button>
 
       <div class="header__auth">
