@@ -29,13 +29,24 @@ import {
 } from './preflop-display';
 import { RangeGridComponent } from './range-grid/range-grid.component';
 
-/** Un passo del breadcrumb: chi ha agito, cosa ha fatto, con che colore. */
-interface PathStep {
+/**
+ * Una casella della timeline della mano: chi decideva, con che stack
+ * (al netto di blind e puntate già versate), cosa ha scelto.
+ * L'ultima casella è quella attiva: il giocatore che decide ora.
+ */
+interface TimelineStep {
   index: number;
   position: string;
-  label: string;
-  colorVar: string;
+  /** stack rimasto al momento di decidere, in bb */
+  stack: number;
+  /** azione scelta (null per la casella attiva, che deve ancora decidere) */
+  label: string | null;
+  colorVar: string | null;
+  current: boolean;
 }
+
+/** blind forzati: contributi al piatto prima di qualsiasi decisione */
+const BLINDS: Record<string, number> = { BTN: 0, SB: 0.5, BB: 1 };
 
 interface DetailRow {
   label: string;
@@ -117,20 +128,46 @@ export class TablesComponent {
     displayActions(this.node()?.actions ?? []),
   );
 
-  protected readonly steps = computed<PathStep[]>(() => {
+  protected readonly timeline = computed<TimelineStep[]>(() => {
     const current = this.node();
     const nodes = this.pathNodes();
     if (!current) return [];
-    return current.history.map((code, i) => {
+    // gli stack nei dati sono quelli iniziali: il residuo si ricava dal
+    // contributo corrente di ciascuno (blind, poi il betsize dell'ultima
+    // azione, che nei dati è l'importo TOTALE portato nel piatto)
+    const contributions: Record<string, number> = { ...BLINDS };
+    const initialStack = (pos: string) =>
+      current.players.find((p) => p.position === pos)?.stack ?? current.depth;
+
+    const steps: TimelineStep[] = current.history.map((code, i) => {
       const at = nodes[i];
+      const pos = at?.active_position ?? '';
+      const stack = initialStack(pos) - (contributions[pos] ?? 0);
       const action = at?.actions.find((a) => a.code === code);
+      if (action && pos) {
+        contributions[pos] = Math.max(contributions[pos] ?? 0, action.betsize);
+      }
       return {
         index: i,
-        position: at?.active_position ?? '',
+        position: pos,
+        stack,
         label: action ? actionLabel(action) : code,
-        colorVar: at && action ? actionColorMap(at.actions)[code] : '--act-fold',
+        colorVar: at && action ? actionColorMap(at.actions)[code] : null,
+        current: false,
       };
     });
+
+    // la casella attiva: chi decide nel nodo corrente
+    const pos = current.active_position;
+    steps.push({
+      index: current.history.length,
+      position: pos,
+      stack: initialStack(pos) - (contributions[pos] ?? 0),
+      label: null,
+      colorVar: null,
+      current: true,
+    });
+    return steps;
   });
 
   /** Mano mostrata nel pannello di dettaglio: hover momentaneo o selezione fissata. */

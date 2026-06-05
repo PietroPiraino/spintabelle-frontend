@@ -199,51 +199,6 @@
   }
 }
 
-// ---------- breadcrumb del percorso d'azione ----------
-
-.pf__path {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  margin-bottom: 1.1rem;
-}
-
-.pf__crumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--btn-ghost-bg);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  cursor: pointer;
-  transition: border-color var(--t-fast), color var(--t-fast);
-
-  &:hover:not(:disabled) {
-    border-color: var(--neon-cyan);
-    color: var(--text);
-  }
-
-  &:disabled {
-    cursor: default;
-  }
-
-  &.is-current {
-    border-color: var(--line-strong);
-    background: var(--surface-1);
-    color: var(--text);
-  }
-}
-
-.pf__sep {
-  color: var(--text-faint);
-  font-size: 0.8rem;
-}
-
 // ---------- layout principale ----------
 
 .pf__layout {
@@ -274,54 +229,141 @@
   }
 }
 
-// situazione al tavolo
-.pf__table {
+// timeline della mano: una casella per ogni decisione
+.pf__timeline {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem 0.85rem;
+}
+
+.pf__timeline-head {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.7rem;
-  padding: 0.7rem 1rem;
+  gap: 1rem;
 }
 
-.pf__seats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-}
-
-.pf__seat {
+.pf__restart {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.3rem 0.7rem;
+  padding: 0.32rem 0.8rem;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
+  border: 1px solid var(--line-strong);
+  background: var(--btn-ghost-bg);
   color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast);
 
-  b {
-    color: var(--text);
-  }
-
-  &.is-active {
+  &:hover {
     border-color: var(--copper-500);
-    color: var(--text);
-    box-shadow: 0 0 12px rgba(255, 106, 31, 0.25);
+    color: var(--copper-600);
   }
 }
 
+.pf__timeline-title {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
 .pf__pot {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
   font-size: 0.85rem;
   color: var(--text-muted);
+  white-space: nowrap;
 
   b {
     color: var(--text);
   }
+}
+
+.pf__steps {
+  display: flex;
+  align-items: stretch;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding-bottom: 2px; // spazio per l'ombra al hover
+}
+
+.pf__step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  min-width: 92px;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-1);
+  color: var(--text);
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+button.pf__step {
+  cursor: pointer;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+
+  &:hover {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 4px 14px rgba(10, 16, 30, 0.14);
+    transform: translateY(-2px);
+  }
+}
+
+.pf__step-pos {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.pf__step-stack {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.pf__step-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+// la casella di chi decide ora
+.pf__step--active {
+  border-color: var(--copper-500);
+  box-shadow: 0 0 14px rgba(255, 106, 31, 0.3);
+}
+
+.pf__step-action--wait {
+  color: var(--copper-600);
+  animation: pf-deciding 1.6s ease-in-out infinite;
+}
+
+@keyframes pf-deciding {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.pf__step-sep {
+  align-self: center;
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: 0.85rem;
 }
 
 // pulsanti azione
@@ -567,8 +609,4 @@
     flex: 1;
   }
 
-  .pf__pot {
-    width: 100%;
-    justify-content: space-between;
-  }
 }

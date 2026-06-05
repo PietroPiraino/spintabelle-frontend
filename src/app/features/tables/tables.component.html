@@ -82,29 +82,6 @@
           </div>
         </div>
 
-        <nav class="pf__path" aria-label="Sequenza di azioni">
-          <button
-            type="button"
-            class="pf__crumb"
-            [class.is-current]="!steps().length"
-            [disabled]="!steps().length"
-            (click)="crumbTo(0)"
-          >Inizio mano</button>
-          @for (s of steps(); track s.index) {
-            <span class="pf__sep" aria-hidden="true">→</span>
-            <button
-              type="button"
-              class="pf__crumb"
-              [class.is-current]="s.index === steps().length - 1"
-              [disabled]="s.index === steps().length - 1"
-              (click)="crumbTo(s.index + 1)"
-            >
-              <i class="pf__dot" [style.background]="'var(' + s.colorVar + ')'" aria-hidden="true"></i>
-              {{ s.position }} · {{ s.label }}
-            </button>
-          }
-        </nav>
-
         @if (error()) {
           <div class="card card--pad pf__error">
             <p>Tabella non disponibile al momento.</p>
@@ -115,18 +92,46 @@
         <div class="pf__layout">
           <div class="pf__main">
             @if (node(); as n) {
-              <div class="pf__table card">
-                <div class="pf__seats">
-                  @for (p of n.players; track p.position) {
-                    <span class="pf__seat" [class.is-active]="p.position === n.active_position">
-                      <b>{{ p.position }}</b>
-                      <span>{{ formatBbLabel(p.stack) }} bb</span>
-                    </span>
+              <!-- timeline della mano: una casella per ogni decisione -->
+              <div class="pf__timeline card">
+                <div class="pf__timeline-head">
+                  @if (timeline().length > 1) {
+                    <button type="button" class="pf__restart" (click)="crumbTo(0)">
+                      <span aria-hidden="true">⟲</span> Ricomincia
+                    </button>
+                  } @else {
+                    <span class="pf__timeline-title">Inizio mano</span>
                   }
+                  <span class="pf__pot">Piatto <b>{{ formatBbLabel(n.pot) }} bb</b></span>
                 </div>
-                <div class="pf__pot">
-                  <span>Piatto <b>{{ formatBbLabel(n.pot) }} bb</b></span>
-                  <span class="pf__turn">Decide <b>{{ n.active_position }}</b></span>
+                <div class="pf__steps" aria-label="Sequenza delle decisioni">
+                  @for (s of timeline(); track s.index) {
+                    @if (!s.current) {
+                      <button
+                        type="button"
+                        class="pf__step"
+                        (click)="crumbTo(s.index)"
+                        [attr.aria-label]="'Torna a: ' + s.position + ' con ' + formatBbLabel(s.stack) + ' bb, ' + s.label"
+                        title="Torna a questa decisione"
+                      >
+                        <b class="pf__step-pos">{{ s.position }}</b>
+                        <span class="pf__step-stack">{{ formatBbLabel(s.stack) }} bb</span>
+                        <span class="pf__step-action">
+                          @if (s.colorVar) {
+                            <i class="pf__dot" [style.background]="'var(' + s.colorVar + ')'" aria-hidden="true"></i>
+                          }
+                          {{ s.label }}
+                        </span>
+                      </button>
+                      <span class="pf__step-sep" aria-hidden="true">→</span>
+                    } @else {
+                      <span class="pf__step pf__step--active" aria-current="step">
+                        <b class="pf__step-pos">{{ s.position }}</b>
+                        <span class="pf__step-stack">{{ formatBbLabel(s.stack) }} bb</span>
+                        <span class="pf__step-action pf__step-action--wait">decide…</span>
+                      </span>
+                    }
+                  }
                 </div>
               </div>
 
