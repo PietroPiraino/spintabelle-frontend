@@ -210,6 +210,39 @@
   transform: translateX(16px);
 }
 
+// mini-selettore della taglia di raise (visibile solo con più taglie)
+.pf__sizes {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--btn-ghost-bg);
+}
+
+.pf__size {
+  padding: 0.18rem 0.6rem;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &.is-active {
+    background: var(--copper-500);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 106, 31, 0.35);
+  }
+}
+
 .pf__ante-note {
   font-family: var(--font-mono);
   font-size: 0.72rem;

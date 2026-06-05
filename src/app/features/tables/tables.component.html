@@ -74,8 +74,8 @@
               type="button"
               class="pf__switch"
               role="switch"
-              [attr.aria-checked]="parts().raiseOnly"
-              [class.is-on]="parts().raiseOnly"
+              [attr.aria-checked]="!!parts().raiseSize"
+              [class.is-on]="!!parts().raiseSize"
               [disabled]="!canToggleRaiseOnly()"
               (click)="toggleRaiseOnly()"
               [attr.title]="canToggleRaiseOnly() ? null : 'Variante non disponibile per questo gioco'"
@@ -83,6 +83,18 @@
               <span class="pf__switch-track" aria-hidden="true"><span class="pf__switch-knob"></span></span>
               Raise only
             </button>
+            @if (parts().raiseSize && raiseSizes().length > 1) {
+              <div class="pf__sizes" role="group" aria-label="Taglia del raise">
+                @for (s of raiseSizes(); track s) {
+                  <button
+                    type="button"
+                    class="pf__size"
+                    [class.is-active]="s === parts().raiseSize"
+                    (click)="setRaiseSize(s)"
+                  >{{ s }}</button>
+                }
+              </div>
+            }
           </div>
 
           <div class="pf__depth">

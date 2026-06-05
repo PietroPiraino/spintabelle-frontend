@@ -22,22 +22,26 @@ export const ANTE_OFFSET: Record<PreflopBase, number> = {
 export interface FormatParts {
   base: PreflopBase;
   ante: boolean;
-  raiseOnly: boolean;
+  /** taglia del raise-only ("2x", "2.5x", …) oppure null = albero completo */
+  raiseSize: string | null;
 }
 
-/** "spin_ante_2x_nolimp" → { base: spin, ante: true, raiseOnly: true } */
+const FORMAT_RE = /^(spin|husng)(_ante)?(?:_(\d+(?:\.\d+)?x)_nolimp)?$/;
+
+/** "spin_ante_2.5x_nolimp" → { base: spin, ante: true, raiseSize: "2.5x" } */
 export function parseFormat(format: PreflopFormat): FormatParts {
+  const m = FORMAT_RE.exec(format);
   return {
-    base: format.startsWith('husng') ? 'husng' : 'spin',
-    ante: format.includes('_ante'),
-    raiseOnly: format.includes('_2x_nolimp'),
+    base: (m?.[1] as PreflopBase) ?? 'spin',
+    ante: !!m?.[2],
+    raiseSize: m?.[3] ?? null,
   };
 }
 
 export function composeFormat(parts: FormatParts): PreflopFormat {
   return `${parts.base}${parts.ante ? '_ante' : ''}${
-    parts.raiseOnly ? '_2x_nolimp' : ''
-  }` as PreflopFormat;
+    parts.raiseSize ? `_${parts.raiseSize}_nolimp` : ''
+  }`;
 }
 
 /** Offset ante del formato (0 per i formati senza ante). */

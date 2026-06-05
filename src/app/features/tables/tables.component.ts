@@ -116,11 +116,19 @@ export class TablesComponent {
   // (es. raise only non esiste su Heads-Up; ante solo dopo il nuovo import)
   protected readonly canToggleAnte = computed(() => {
     const p = this.parts();
-    return this.hasFormat(composeFormat({ ...p, ante: !p.ante }));
+    return this.resolveWithAnte(p.base, !p.ante, p.raiseSize) !== null;
   });
   protected readonly canToggleRaiseOnly = computed(() => {
     const p = this.parts();
-    return this.hasFormat(composeFormat({ ...p, raiseOnly: !p.raiseOnly }));
+    return p.raiseSize
+      ? this.hasFormat(composeFormat({ ...p, raiseSize: null }))
+      : this.sizesFor(p.base, p.ante).length > 0;
+  });
+
+  /** taglie raise-only disponibili per il gioco/ante correnti (es. ["2x","2.5x"]) */
+  protected readonly raiseSizes = computed(() => {
+    const p = this.parts();
+    return this.sizesFor(p.base, p.ante);
   });
 
   protected readonly depths = computed(() => {
@@ -329,12 +337,9 @@ export class TablesComponent {
     if (base === p.base) return;
     // mantiene le varianti compatibili col nuovo gioco, scartando quelle
     // che lì non esistono (es. raise only passando a Heads-Up)
-    const candidates: PreflopFormat[] = [
-      composeFormat({ base, ante: p.ante, raiseOnly: p.raiseOnly }),
-      composeFormat({ base, ante: p.ante, raiseOnly: false }),
-      composeFormat({ base, ante: false, raiseOnly: false }),
-    ];
-    const target = candidates.find((f) => this.hasFormat(f));
+    const target =
+      this.resolveWithAnte(base, p.ante, p.raiseSize) ??
+      this.resolveWithAnte(base, false, p.raiseSize);
     if (!target) return;
     // gioco diverso: percorso azzerato, stack equivalente mantenuto
     this.navigate(target, this.mappedDepth(target), '');
@@ -342,12 +347,27 @@ export class TablesComponent {
 
   protected toggleAnte(): void {
     const p = this.parts();
-    this.switchVariant(composeFormat({ ...p, ante: !p.ante }));
+    const target = this.resolveWithAnte(p.base, !p.ante, p.raiseSize);
+    if (target) this.switchVariant(target);
   }
 
   protected toggleRaiseOnly(): void {
     const p = this.parts();
-    this.switchVariant(composeFormat({ ...p, raiseOnly: !p.raiseOnly }));
+    if (p.raiseSize) {
+      this.switchVariant(composeFormat({ ...p, raiseSize: null }));
+      return;
+    }
+    const sizes = this.sizesFor(p.base, p.ante);
+    const size = sizes.includes('2x') ? '2x' : sizes[0];
+    if (size) {
+      this.switchVariant(composeFormat({ ...p, raiseSize: size }));
+    }
+  }
+
+  protected setRaiseSize(size: string): void {
+    const p = this.parts();
+    if (size === p.raiseSize) return;
+    this.switchVariant(composeFormat({ ...p, raiseSize: size }));
   }
 
   /** Cambio di variante: stack equivalente e percorso mantenuti (404 → radice). */
@@ -358,6 +378,40 @@ export class TablesComponent {
 
   private hasFormat(format: PreflopFormat): boolean {
     return this.formats().some((f) => f.format === format);
+  }
+
+  /** taglie raise-only esistenti nella meta per (gioco, ante), ordinate */
+  private sizesFor(base: PreflopBase, ante: boolean): string[] {
+    const sizes = new Set<string>();
+    for (const f of this.formats()) {
+      const p = parseFormat(f.format);
+      if (p.base === base && p.ante === ante && p.raiseSize) {
+        sizes.add(p.raiseSize);
+      }
+    }
+    return [...sizes].sort((a, b) => parseFloat(a) - parseFloat(b));
+  }
+
+  /**
+   * Il miglior formato esistente con l'ante richiesta: stessa taglia di
+   * raise-only se c'è, altrimenti un'altra taglia, altrimenti albero completo.
+   */
+  private resolveWithAnte(
+    base: PreflopBase,
+    ante: boolean,
+    preferredSize: string | null,
+  ): PreflopFormat | null {
+    const sizes = preferredSize
+      ? [
+          preferredSize,
+          ...this.sizesFor(base, ante).filter((s) => s !== preferredSize),
+        ]
+      : [];
+    const candidates = [
+      ...sizes.map((s) => composeFormat({ base, ante, raiseSize: s })),
+      composeFormat({ base, ante, raiseSize: null }),
+    ];
+    return candidates.find((f) => this.hasFormat(f)) ?? null;
   }
 
   /**

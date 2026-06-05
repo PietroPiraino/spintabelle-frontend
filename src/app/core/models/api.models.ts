@@ -66,13 +66,12 @@ export interface Paginated<T> {
 
 // ----- Tabelle preflop (soluzioni GTO) -----
 
-export type PreflopFormat =
-  | 'spin'
-  | 'spin_2x_nolimp'
-  | 'spin_ante'
-  | 'spin_ante_2x_nolimp'
-  | 'husng'
-  | 'husng_ante';
+/**
+ * Identificatore di formato: gioco base (spin|husng) + varianti opzionali,
+ * es. "spin", "husng_ante", "spin_ante_2.5x_nolimp". L'elenco reale arriva
+ * dalla meta; la composizione/scomposizione è in preflop-display.ts.
+ */
+export type PreflopFormat = string;
 
 export interface PreflopFormatMeta {
   format: PreflopFormat;
