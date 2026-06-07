@@ -47,11 +47,6 @@ export interface SuitPointsOptions {
   /** Quota di semi rossi ♥♦ (default 0.32: il banco resta elegante). */
   redShare?: number;
   /**
-   * Ampiezza del brillìo per-particella (0 = nessuno, default 0.56 = look
-   * storico: alpha che pulsa fra ~0.44 e 1). Abbassalo per polveri "calme".
-   */
-  twinkle?: number;
-  /**
    * Camera prospettica: attiva l'attenuazione della taglia con la distanza
    * (gl_PointSize ∝ attenRef / -z). Default false = ortografica in pixel.
    */
@@ -84,7 +79,6 @@ export function createSuitPoints(
     sizeMin = 1.7,
     sizeSpan = 2.6,
     redShare = 0.32,
-    twinkle = 0.56,
     perspective = false,
     attenRef = 10,
   }: SuitPointsOptions,
@@ -118,11 +112,6 @@ export function createSuitPoints(
 
   const atlas = res.track(new THREE.CanvasTexture(drawSuitAtlas()));
   atlas.flipY = false; // v verso il basso, come gl_PointCoord
-  // NIENTE mipmap: è un ATLANTE 2×2, ai livelli mip grossolani le quattro celle
-  // si mescolano fra loro (il ♦ si sporca di ♠/♣ scuri) e, col variare della
-  // taglia dello sprite, il livello mip oscilla → flicker "appare/sparisce".
-  atlas.generateMipmaps = false;
-  atlas.minFilter = THREE.LinearFilter;
 
   const material = res.track(
     new THREE.ShaderMaterial({
@@ -132,7 +121,6 @@ export function createSuitPoints(
         uTime: { value: 0 },
         uPixelRatio: { value: 1 },
         uOpacity: { value: 0 },
-        uTwinkle: { value: twinkle },
         uSizeFactor: { value: sizeFactor },
         uPerspective: { value: perspective ? 1 : 0 },
         uAttenRef: { value: attenRef },
@@ -169,7 +157,6 @@ export function createSuitPoints(
       fragmentShader: /* glsl */ `
         uniform float uTime;
         uniform float uOpacity;
-        uniform float uTwinkle;
         uniform sampler2D uAtlas;
         uniform vec3 uColorA;
         uniform vec3 uColorB;
@@ -189,9 +176,8 @@ export function createSuitPoints(
           float row = floor(vSuit / 2.0 + 0.001);
           float body = texture2D(uAtlas, (uv + vec2(col, row)) * 0.5).a;
           if (body < 0.05) discard;
-          // brillio individuale lento (ampiezza pilotata da uTwinkle; default
-          // 0.56 = pulsa fra ~0.44 e 1, identico al look storico)
-          float tw = (1.0 - uTwinkle) + uTwinkle * (0.5 + 0.5 * sin(uTime * (1.2 + vSeed * 2.2) + vSeed * 40.0));
+          // brillio individuale lento
+          float tw = 0.72 + 0.28 * sin(uTime * (1.2 + vSeed * 2.2) + vSeed * 40.0);
           // bicromia da carte: ♥♦ (1 e 2) nel colore caldo, ♠♣ nel base
           float red = step(0.5, vSuit) * step(vSuit, 2.5);
           vec3 color = mix(uColorA, uColorB, red);
