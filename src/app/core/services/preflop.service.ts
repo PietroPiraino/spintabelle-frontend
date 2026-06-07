@@ -44,19 +44,24 @@ export class PreflopService {
     return this.meta$;
   }
 
-  /** Un nodo dell'albero (percorso vuoto = radice), con cache e dedup richieste. */
+  /**
+   * Un nodo dell'albero (percorso vuoto = radice), con cache e dedup richieste.
+   * `stacks` ("25-25-12") è richiesto solo per i formati asimmetrici.
+   */
   getNode(
     format: PreflopFormat,
     depth: string,
     actions = '',
+    stacks?: string,
   ): Observable<PreflopNode> {
-    const key = `${format}|${depth}|${actions}`;
+    const key = `${format}|${depth}|${stacks ?? ''}|${actions}`;
     const cached = this.nodeCache.get(key);
     if (cached) return of(cached);
 
     let req = this.inFlight.get(key);
     if (!req) {
       let params = new HttpParams().set('format', format).set('depth', depth);
+      if (stacks) params = params.set('stacks', stacks);
       if (actions) params = params.set('actions', actions);
       req = this.http.get<PreflopNode>(`${API}/preflop/node`, { params }).pipe(
         tap((node) => this.nodeCache.set(key, node)),
@@ -70,12 +75,19 @@ export class PreflopService {
 
   /** Scalda la cache con i figli del nodo: il click sull'azione diventa istantaneo. */
   prefetchChildren(node: PreflopNode): void {
+    // stacks va passato SOLO per gli asimmetrici, esattamente come fa il
+    // caricamento reale: i nodi simmetrici hanno comunque uno stacks valorizzato
+    // (es. "33-33-33"), ma il click li interroga senza, quindi includerlo qui
+    // metterebbe il prefetch sotto una chiave di cache diversa (mai riletta)
+    const stacks = node.format.includes('_asymmetric')
+      ? node.stacks
+      : undefined;
     for (const action of node.actions) {
       if (action.is_terminal) continue;
       const path = node.preflop_actions
         ? `${node.preflop_actions}-${action.code}`
         : action.code;
-      this.getNode(node.format, node.depth_label, path).subscribe({
+      this.getNode(node.format, node.depth_label, path, stacks).subscribe({
         error: () => {
           /* prefetch best-effort: l'eventuale errore riemerge al click */
         },

@@ -21,27 +21,55 @@ export const ANTE_OFFSET: Record<PreflopBase, number> = {
 
 export interface FormatParts {
   base: PreflopBase;
+  /** stack asimmetrici (uno dei tre giocatori è corto) */
+  asymmetric: boolean;
   ante: boolean;
   /** taglia del raise-only ("2x", "2.5x", …) oppure null = albero completo */
   raiseSize: string | null;
 }
 
-const FORMAT_RE = /^(spin|husng)(_ante)?(?:_(\d+(?:\.\d+)?x)_nolimp)?$/;
+const FORMAT_RE =
+  /^(spin|husng)(_asymmetric)?(_ante)?(?:_(\d+(?:\.\d+)?x)_nolimp)?$/;
 
-/** "spin_ante_2.5x_nolimp" → { base: spin, ante: true, raiseSize: "2.5x" } */
+/** "spin_asymmetric_ante" → { base: spin, asymmetric: true, ante: true, … } */
 export function parseFormat(format: PreflopFormat): FormatParts {
   const m = FORMAT_RE.exec(format);
   return {
     base: (m?.[1] as PreflopBase) ?? 'spin',
-    ante: !!m?.[2],
-    raiseSize: m?.[3] ?? null,
+    asymmetric: !!m?.[2],
+    ante: !!m?.[3],
+    raiseSize: m?.[4] ?? null,
   };
 }
 
 export function composeFormat(parts: FormatParts): PreflopFormat {
-  return `${parts.base}${parts.ante ? '_ante' : ''}${
-    parts.raiseSize ? `_${parts.raiseSize}_nolimp` : ''
-  }`;
+  return `${parts.base}${parts.asymmetric ? '_asymmetric' : ''}${
+    parts.ante ? '_ante' : ''
+  }${parts.raiseSize ? `_${parts.raiseSize}_nolimp` : ''}`;
+}
+
+/** Chi è il giocatore corto in una combo "BTN-SB-BB" (BTN resta sempre pieno). */
+export type ShortSeat = 'SB' | 'BB';
+
+export interface StackCombo {
+  /** etichetta originale dei dati, es. "25-25-12" — va nell'URL e nella query */
+  raw: string;
+  short: ShortSeat;
+  /** stack del giocatore corto, al netto dell'offset ante */
+  shortValue: number;
+}
+
+/**
+ * Scompone una combinazione "BTN-SB-BB" indicando chi è corto e di quanto
+ * (al netto dell'offset ante, per mostrare numeri puliti). BTN è sempre pieno.
+ */
+export function parseCombo(raw: string, format: PreflopFormat): StackCombo {
+  const [, sb, bb] = raw.split('-').map(Number);
+  const off = anteOffset(format);
+  const btn = parseFloat(raw.split('-')[0]);
+  return sb < btn
+    ? { raw, short: 'SB', shortValue: sb - off }
+    : { raw, short: 'BB', shortValue: bb - off };
 }
 
 /** Offset ante del formato (0 per i formati senza ante). */

@@ -90,11 +90,26 @@
                     type="button"
                     class="pf__size"
                     [class.is-active]="s === parts().raiseSize"
+                    [attr.aria-pressed]="s === parts().raiseSize"
+                    [attr.aria-label]="'Apertura ' + s"
                     (click)="setRaiseSize(s)"
                   >{{ s }}</button>
                 }
               </div>
             }
+            <button
+              type="button"
+              class="pf__switch"
+              role="switch"
+              [attr.aria-checked]="isAsymmetric()"
+              [class.is-on]="isAsymmetric()"
+              [disabled]="!canToggleAsym()"
+              (click)="toggleAsymmetric()"
+              [attr.title]="canToggleAsym() ? 'Uno dei giocatori è più corto' : 'Variante non disponibile per questo gioco'"
+            >
+              <span class="pf__switch-track" aria-hidden="true"><span class="pf__switch-knob"></span></span>
+              Asimmetrico
+            </button>
           </div>
 
           <div class="pf__depth">
@@ -124,6 +139,45 @@
               <span class="pf__ante-note">ante inclusa nel piatto</span>
             }
           </div>
+
+          @if (isAsymmetric()) {
+            <div class="pf__short">
+              <span class="pf__depth-label">Corto</span>
+              <div class="pf__short-seats" role="group" aria-label="Giocatore corto">
+                @for (seat of shortSeats(); track seat) {
+                  <button
+                    type="button"
+                    class="pf__size"
+                    [class.is-active]="seat === currentShort()"
+                    [attr.aria-pressed]="seat === currentShort()"
+                    [attr.aria-label]="(seat === 'SB' ? 'Small blind' : 'Big blind') + ' corto'"
+                    (click)="setShortSeat(seat)"
+                  >{{ seat }}</button>
+                }
+              </div>
+              <button
+                type="button"
+                class="pf__stepper"
+                (click)="stepShort(-1)"
+                [disabled]="!canPrevShort()"
+                aria-label="Riduci lo stack del giocatore corto"
+              >−</button>
+              <select class="pf__select" aria-label="Stack del giocatore corto" (change)="onShortChange($event)">
+                @for (o of shortValues(); track o.raw) {
+                  <option [value]="o.raw" [selected]="o.raw === resolvedCombo()">
+                    {{ o.label }} bb
+                  </option>
+                }
+              </select>
+              <button
+                type="button"
+                class="pf__stepper"
+                (click)="stepShort(1)"
+                [disabled]="!canNextShort()"
+                aria-label="Aumenta lo stack del giocatore corto"
+              >+</button>
+            </div>
+          }
         </div>
 
         @if (error()) {
@@ -145,6 +199,11 @@
                     </button>
                   } @else {
                     <span class="pf__timeline-title">Inizio mano</span>
+                  }
+                  @if (loadedAsym(); as c) {
+                    <span class="pf__asym-badge" title="Stack asimmetrici">
+                      Asimmetrico · {{ c.short }} corto {{ formatBbLabel(c.shortValue) }} bb
+                    </span>
                   }
                   <span class="pf__pot">Piatto <b>{{ formatBbLabel(n.pot) }} bb</b></span>
                 </div>

@@ -44,3 +44,4 @@ e2e-*.mjs
 e2e-shots/
 shot-*.mjs
 shots-chi-siamo/
+static-serve.mjs

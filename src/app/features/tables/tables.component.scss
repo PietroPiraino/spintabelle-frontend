@@ -250,10 +250,26 @@
   white-space: nowrap;
 }
 
-.pf__depth {
+.pf__depth,
+.pf__short {
   display: flex;
   align-items: center;
   gap: 0.45rem;
+}
+
+// il selettore del corto si stacca dallo Stack con un filo di separazione
+.pf__short {
+  padding-left: 0.7rem;
+  border-left: 1px solid var(--line);
+}
+
+.pf__short-seats {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--btn-ghost-bg);
 }
 
 .pf__depth-label {
@@ -375,6 +391,20 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
+}
+
+// badge che distingue a colpo d'occhio le tabelle asimmetriche
+.pf__asym-badge {
+  margin-right: auto;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--copper-500);
+  background: rgba(255, 106, 31, 0.1);
+  color: var(--copper-600);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .pf__pot {
@@ -710,8 +740,14 @@ button.pf__step {
     justify-content: space-between;
   }
 
+  // a piena larghezza il filo verticale di separazione non serve più
+  .pf__short {
+    justify-content: space-between;
+    padding-left: 0;
+    border-left: none;
+  }
+
   .pf__select {
     flex: 1;
   }
-
 }

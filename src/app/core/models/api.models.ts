@@ -77,6 +77,11 @@ export interface PreflopFormatMeta {
   format: PreflopFormat;
   /** profondità disponibili, in big blind (es. "1.5", "25") */
   depths: string[];
+  /**
+   * Solo formati asimmetrici: combinazioni di stack "BTN-SB-BB" per
+   * profondità (es. "25" → ["25-1-25", …, "25-25-22"]).
+   */
+  stacksByDepth?: Record<string, string[]>;
 }
 
 export interface PreflopMeta {
