@@ -277,6 +277,7 @@ export class Hero3dComponent implements OnDestroy {
       sizeMin: 2.4, // sprite più grossi: il seme si riconosce a colpo d'occhio
       sizeSpan: 3.4, // taglia 2.4..5.8 (default 1.7..4.3 era troppo minuto)
       redShare: 0.32,
+      twinkle: 0.18, // polvere CALMA: niente pulsare fastidioso (era 0.56)
     });
     sp.points.name = 'hero-dust';
     sp.points.renderOrder = -1; // dietro le carte nel sort trasparente
@@ -312,7 +313,7 @@ export class Hero3dComponent implements OnDestroy {
       dustPhase[i] = rand() * Math.PI * 2;
       dustSwayAmp[i] = 0.25 + rand() * 0.45; // ondeggio orizzontale leggero
       dustRiseSpeed[i] = 0.06 + rand() * 0.08; // deriva 0.06..0.14 verso l'alto
-      dustAngAmp[i] = 0.25 + rand() * 0.1; // rotazione ±0.35
+      dustAngAmp[i] = 0.08 + rand() * 0.07; // rotazione ±0.08..0.15: niente sfarfallio ai bordi
       // alpha per-particella alto: presenza netta (basta col subliminale)
       alphas[i] = 0.72 + rand() * 0.25; // 0.72..0.97
     }
