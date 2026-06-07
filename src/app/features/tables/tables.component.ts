@@ -123,6 +123,21 @@ export class TablesComponent {
     );
   });
 
+  // uno switch di variante esiste solo se quel gioco la prevede nei dati:
+  // su Heads-Up Raise only e Asimmetrico non compaiono proprio (mai possibili)
+  protected readonly showRaiseOnly = computed(() =>
+    this.formats().some((f) => {
+      const p = parseFormat(f.format);
+      return p.base === this.parts().base && p.raiseSize !== null;
+    }),
+  );
+  protected readonly showAsym = computed(() =>
+    this.formats().some((f) => {
+      const p = parseFormat(f.format);
+      return p.base === this.parts().base && p.asymmetric;
+    }),
+  );
+
   // un interruttore è attivabile solo se la variante esiste nei dati
   protected readonly canToggleAnte = computed(() => {
     const p = this.parts();

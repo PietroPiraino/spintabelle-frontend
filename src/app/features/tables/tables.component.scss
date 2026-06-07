@@ -145,11 +145,12 @@
   }
 }
 
-// interruttori delle varianti (ante / raise only)
+// interruttori delle varianti (ante / raise only / asimmetrico)
 .pf__variants {
   display: flex;
+  flex-wrap: wrap; // su schermi stretti gli switch vanno a capo, non fuori vista
   align-items: center;
-  gap: 0.9rem;
+  gap: 0.6rem 0.9rem;
 }
 
 .pf__switch {
@@ -360,9 +361,9 @@
 
 .pf__timeline-head {
   display: flex;
+  flex-wrap: wrap; // il piatto va a capo invece di uscire dalla card
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem 1rem;
 }
 
 .pf__restart {
@@ -395,7 +396,6 @@
 
 // badge che distingue a colpo d'occhio le tabelle asimmetriche
 .pf__asym-badge {
-  margin-right: auto;
   padding: 0.28rem 0.7rem;
   border-radius: 999px;
   border: 1px solid var(--copper-500);
@@ -407,7 +407,9 @@
   white-space: nowrap;
 }
 
+// il piatto resta sempre allineato a destra (o va a capo se non c'è spazio)
 .pf__pot {
+  margin-left: auto;
   font-size: 0.85rem;
   color: var(--text-muted);
   white-space: nowrap;
@@ -737,7 +739,14 @@ button.pf__step {
   }
 
   .pf__depth {
+    flex-wrap: wrap;
     justify-content: space-between;
+  }
+
+  // la nota dell'ante va sulla propria riga invece di uscire a destra
+  .pf__ante-note {
+    flex-basis: 100%;
+    text-align: right;
   }
 
   // a piena larghezza il filo verticale di separazione non serve più

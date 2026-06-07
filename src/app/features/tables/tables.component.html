@@ -70,46 +70,50 @@
               <span class="pf__switch-track" aria-hidden="true"><span class="pf__switch-knob"></span></span>
               Ante
             </button>
-            <button
-              type="button"
-              class="pf__switch"
-              role="switch"
-              [attr.aria-checked]="!!parts().raiseSize"
-              [class.is-on]="!!parts().raiseSize"
-              [disabled]="!canToggleRaiseOnly()"
-              (click)="toggleRaiseOnly()"
-              [attr.title]="canToggleRaiseOnly() ? null : 'Variante non disponibile per questo gioco'"
-            >
-              <span class="pf__switch-track" aria-hidden="true"><span class="pf__switch-knob"></span></span>
-              Raise only
-            </button>
-            @if (parts().raiseSize && raiseSizes().length > 1) {
-              <div class="pf__sizes" role="group" aria-label="Taglia del raise">
-                @for (s of raiseSizes(); track s) {
-                  <button
-                    type="button"
-                    class="pf__size"
-                    [class.is-active]="s === parts().raiseSize"
-                    [attr.aria-pressed]="s === parts().raiseSize"
-                    [attr.aria-label]="'Apertura ' + s"
-                    (click)="setRaiseSize(s)"
-                  >{{ s }}</button>
-                }
-              </div>
+            @if (showRaiseOnly()) {
+              <button
+                type="button"
+                class="pf__switch"
+                role="switch"
+                [attr.aria-checked]="!!parts().raiseSize"
+                [class.is-on]="!!parts().raiseSize"
+                [disabled]="!canToggleRaiseOnly()"
+                (click)="toggleRaiseOnly()"
+                [attr.title]="canToggleRaiseOnly() ? null : 'Variante non disponibile in questa combinazione'"
+              >
+                <span class="pf__switch-track" aria-hidden="true"><span class="pf__switch-knob"></span></span>
+                Raise only
+              </button>
+              @if (parts().raiseSize && raiseSizes().length > 1) {
+                <div class="pf__sizes" role="group" aria-label="Taglia del raise">
+                  @for (s of raiseSizes(); track s) {
+                    <button
+                      type="button"
+                      class="pf__size"
+                      [class.is-active]="s === parts().raiseSize"
+                      [attr.aria-pressed]="s === parts().raiseSize"
+                      [attr.aria-label]="'Apertura ' + s"
+                      (click)="setRaiseSize(s)"
+                    >{{ s }}</button>
+                  }
+                </div>
+              }
             }
-            <button
-              type="button"
-              class="pf__switch"
-              role="switch"
-              [attr.aria-checked]="isAsymmetric()"
-              [class.is-on]="isAsymmetric()"
-              [disabled]="!canToggleAsym()"
-              (click)="toggleAsymmetric()"
-              [attr.title]="canToggleAsym() ? 'Uno dei giocatori è più corto' : 'Variante non disponibile per questo gioco'"
-            >
-              <span class="pf__switch-track" aria-hidden="true"><span class="pf__switch-knob"></span></span>
-              Asimmetrico
-            </button>
+            @if (showAsym()) {
+              <button
+                type="button"
+                class="pf__switch"
+                role="switch"
+                [attr.aria-checked]="isAsymmetric()"
+                [class.is-on]="isAsymmetric()"
+                [disabled]="!canToggleAsym()"
+                (click)="toggleAsymmetric()"
+                title="Uno dei giocatori è più corto"
+              >
+                <span class="pf__switch-track" aria-hidden="true"><span class="pf__switch-knob"></span></span>
+                Asimmetrico
+              </button>
+            }
           </div>
 
           <div class="pf__depth">
