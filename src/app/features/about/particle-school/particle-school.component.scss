@@ -1,0 +1,20 @@
+// Il banco vive dietro TUTTA la pagina: canvas fisso a piena viewport,
+// trasparente, mai interattivo (il contenuto sopra resta cliccabile).
+:host {
+  display: contents;
+}
+
+.ps__canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+
+  &.is-on {
+    opacity: 1;
+  }
+}

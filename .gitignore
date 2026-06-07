@@ -42,3 +42,5 @@ testem.log
 Thumbs.db
 e2e-*.mjs
 e2e-shots/
+shot-*.mjs
+shots-chi-siamo/

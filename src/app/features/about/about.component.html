@@ -1,16 +1,33 @@
-<section class="section">
-  <div class="container">
-    <div class="section-head">
-      <span class="eyebrow">La scuola</span>
-      <h1>Chi siamo</h1>
-    </div>
+<!-- Il banco di particelle vive dietro tutta la pagina -->
+<app-particle-school />
 
-    <div class="about__story card card--pad rise">
-      <img src="logo-256.png" alt="Logo Best Fish Forever" width="120" height="120" />
-      <div class="stack" style="gap: 0.9rem">
-        <h2>Best Fish Forever</h2>
+<section class="section about">
+  <div class="container">
+    <!-- Cover -->
+    <header class="about__cover">
+      <span class="eyebrow rise">La scuola</span>
+      <h1 class="rise" style="animation-delay: 80ms">
+        Il banco <span class="text-gradient">Best Fish</span>
+      </h1>
+      <p class="lead rise" style="animation-delay: 160ms">
+        Tre coach, tre modi di leggere il gioco, una sola convinzione: tutti
+        partiamo fish — quello che conta è come si studia per smettere di esserlo.
+      </p>
+      <div class="about__cover-meta rise" style="animation-delay: 240ms">
+        <span class="badge">Spin &amp; Go</span>
+        <span class="badge">Twister</span>
+        <span class="badge badge--free">3 coach</span>
+      </div>
+    </header>
+
+    <!-- Manifesto (storia della scuola — testo placeholder in attesa dei testi reali) -->
+    <div class="about__story rise" style="animation-delay: 320ms">
+      <div class="about__story-aside">
+        <span class="eyebrow">Il manifesto</span>
+      </div>
+      <div class="about__story-body">
         <!-- TODO: sostituire con la storia reale della scuola -->
-        <p class="text-muted">
+        <p class="about__story-lead">
           Siamo un gruppo studio italiano nato attorno a una convinzione semplice:
           nel poker il talento conta, ma lo studio vince. Ci dedichiamo agli
           Spin&nbsp;&amp;&nbsp;Go e ai Twister, formati veloci dove ogni errore pesa
@@ -23,25 +40,75 @@
       </div>
     </div>
 
-    <div class="section-head" style="margin-top: 4rem">
-      <span class="eyebrow">Il banco</span>
-      <h2>I coach</h2>
+    <!-- Annuncio roster -->
+    <div class="about__roster-head spread">
+      <div class="section-head about__roster-title">
+        <span class="eyebrow">Il banco</span>
+        <h2>Tre modi di smettere di essere fish</h2>
+      </div>
+      <span class="about__roster-count" aria-hidden="true">03</span>
     </div>
+  </div>
 
-    <div class="grid grid--3">
-      @for (coach of coaches; track coach.nickname; let i = $index) {
-        <div class="card card--pad card--hover coach rise" [style.animation-delay.ms]="i * 100">
-          <div class="coach__avatar" aria-hidden="true">{{ coach.suit }}</div>
-          <h3>{{ coach.nickname }}</h3>
-          <p class="coach__role">{{ coach.role }}</p>
-          <p class="coach__bio">{{ coach.bio }}</p>
+  <!-- Pannelli coach: testo da un lato, spazio per l'emblema dall'altro.
+       Il banco di pesci si riforma nell'emblema quando il pannello è al centro. -->
+  @for (coach of coaches; track coach.id; let i = $index) {
+    <article
+      class="coachpanel"
+      [attr.data-side]="i % 2 === 0 ? 'left' : 'right'"
+      [attr.data-coach]="coach.id"
+    >
+      <div class="coachpanel__grid">
+        <div
+          class="coachpanel__emblem"
+          [attr.data-emblem]="emblems[coach.id]"
+          aria-hidden="true"
+        ></div>
+
+        <div class="coachpanel__copy">
+          <span class="coachpanel__num" aria-hidden="true">{{ coach.num }}</span>
+          <span class="eyebrow">{{ coach.eyebrow }}</span>
+          @if (coach.isFounder) {
+            <span class="badge badge--premium coachpanel__founder">
+              Ha creato la scuola e il sito
+            </span>
+          }
+          <h2 class="coachpanel__name">{{ coach.nickname }}</h2>
+          <p class="coachpanel__tag">{{ coach.tag }}</p>
+          <p class="coachpanel__bio">{{ coach.bio }}</p>
+          <blockquote class="coachpanel__quote">{{ coach.quote }}</blockquote>
+          <dl class="coachpanel__stats">
+            @for (stat of coach.stats; track stat.label) {
+              <div class="statchip">
+                <dt>{{ stat.label }}</dt>
+                <dd>{{ stat.value }}</dd>
+              </div>
+            }
+          </dl>
         </div>
-      }
-    </div>
+      </div>
+    </article>
+  }
 
-    <div class="row about__cta">
-      <a routerLink="/registrazione" class="btn btn--primary">Unisciti alla scuola</a>
-      <a routerLink="/lezioni" class="btn btn--ghost">Guarda le lezioni</a>
+  <div class="container">
+    <div class="suit-divider about__divider" aria-hidden="true">♠ ♥ ♦ ♣</div>
+
+    <!-- CTA: il banco si raccoglie nel fiore del club -->
+    <div class="about__cta-wrap">
+      <div class="about__cta-emblem" data-emblem="club" aria-hidden="true"></div>
+      <div class="card about__cta">
+        <div class="about__cta-copy">
+          <h2>Siediti al tavolo con noi</h2>
+          <p class="text-muted">
+            Le tabelle GTO, le lezioni e il banco dei coach ti aspettano: si parte
+            fish, si resta squadra.
+          </p>
+        </div>
+        <div class="row">
+          <a routerLink="/registrazione" class="btn btn--primary">Unisciti alla scuola</a>
+          <a routerLink="/lezioni" class="btn btn--ghost">Guarda le lezioni</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>

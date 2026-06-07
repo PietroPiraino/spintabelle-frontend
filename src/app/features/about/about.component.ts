@@ -1,40 +1,60 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnDestroy,
+  afterNextRender,
+  inject,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
-
-interface Coach {
-  nickname: string;
-  role: string;
-  bio: string;
-  suit: string;
-}
+import { ParticleSchoolComponent } from './particle-school/particle-school.component';
+import { COACHES } from './coaches.data';
+import type { EmblemId } from './particle-school/emblem-shapes';
 
 @Component({
   selector: 'app-about',
-  imports: [RouterLink],
+  imports: [RouterLink, ParticleSchoolComponent],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AboutComponent {
-  // TODO: sostituire con i coach reali (nickname, ruolo, bio, foto)
-  protected readonly coaches: Coach[] = [
-    {
-      nickname: 'Coach Uno',
-      role: 'Head Coach · Spin & Go',
-      bio: 'Regular dei mid-high stakes, cura il percorso di studio preflop e la teoria GTO della scuola.',
-      suit: '♠',
-    },
-    {
-      nickname: 'Coach Due',
-      role: 'Coach · Twister',
-      bio: 'Specialista del formato a tre, guida le review di sessione e l’analisi degli spot postflop.',
-      suit: '♥',
-    },
-    {
-      nickname: 'Coach Tre',
-      role: 'Coach · Mental game',
-      bio: 'Si occupa di gestione del bankroll, tilt e routine: la parte del gioco che non si vede nelle tabelle.',
-      suit: '♣',
-    },
-  ];
+export class AboutComponent implements OnDestroy {
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private revealObserver?: IntersectionObserver;
+
+  protected readonly coaches = COACHES;
+  /** Seme che il banco di particelle forma per ogni coach (♣ alla CTA). */
+  protected readonly emblems: Record<string, EmblemId> = {
+    exivezz: 'spade',
+    nagato: 'heart', // il cuore della scuola: l'ha fondata lui
+    bastogne: 'diamond',
+  };
+
+  constructor() {
+    // Reveal dei pannelli allo scroll: aggiunge .is-visible una volta sola.
+    // Imperativo sul DOM, nessun segnale toccato → zero CD in zoneless.
+    afterNextRender(() => {
+      const panels = (this.host.nativeElement as HTMLElement).querySelectorAll('.coachpanel');
+      if (panels.length === 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        panels.forEach((panel) => panel.classList.add('is-visible'));
+        return;
+      }
+      this.revealObserver = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              this.revealObserver?.unobserve(entry.target);
+            }
+          }
+        },
+        { threshold: 0.18 },
+      );
+      panels.forEach((panel) => this.revealObserver!.observe(panel));
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.revealObserver?.disconnect();
+  }
 }
