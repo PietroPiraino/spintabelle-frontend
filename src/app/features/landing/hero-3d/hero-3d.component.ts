@@ -7,6 +7,9 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
+import { SceneResources } from '../../../shared/three/disposable-scene';
+import { seededRandom } from '../../../shared/three/seeded-random';
+import { bindSuitPalette, createSuitPoints } from '../../../shared/three/suit-points';
 
 type ThreeModule = typeof import('three');
 
@@ -254,11 +257,111 @@ export class Hero3dComponent implements OnDestroy {
       scene.add(card.mesh);
     }
 
+    // ---- polvere di semi + scia dal cursore (stesso canvas, factory condivisa) ----
+    // Un unico SuitPoints: indici [0..DUST) = pulviscolo in controluce dietro
+    // le carte, indici [DUST..DUST+TRAIL) = pool della scia davanti alle carte.
+    const finePointer = matchMedia('(pointer: fine)').matches;
+    const DUST = innerWidth < 600 ? 240 : 500;
+    const TRAIL = 24;
+    const TOTAL = DUST + TRAIL;
+
+    const res = new SceneResources();
+    this.cleanupFns.push(() => res.disposeAll());
+
+    const sp = createSuitPoints(THREE, res, {
+      count: TOTAL,
+      seed: 0xb1f ^ 0x70e5,
+      perspective: true,
+      attenRef: 10,
+      sizeFactor: 6, // i semi devono leggersi come FORME, non come punti
+      sizeMin: 2.4, // sprite più grossi: il seme si riconosce a colpo d'occhio
+      sizeSpan: 3.4, // taglia 2.4..5.8 (default 1.7..4.3 era troppo minuto)
+      redShare: 0.32,
+    });
+    sp.points.name = 'hero-dust';
+    sp.points.renderOrder = -1; // dietro le carte nel sort trasparente
+    scene.add(sp.points);
+    this.cleanupFns.push(bindSuitPalette(sp.material));
+
+    const { positions, angles, alphas, seeds } = sp;
+
+    // Stato della polvere: home y (per il wrap), fase d'ondeggio, ampiezze.
+    const rand = seededRandom(0xb1f);
+    const dustBaseX = new Float32Array(DUST);
+    const dustY = new Float32Array(DUST);
+    const dustZ = new Float32Array(DUST);
+    const dustPhase = new Float32Array(DUST);
+    const dustSwayAmp = new Float32Array(DUST);
+    const dustRiseSpeed = new Float32Array(DUST);
+    const dustAngAmp = new Float32Array(DUST);
+    // Volume dietro le carte, ma VICINO alla camera: a z più profondi la
+    // prospettiva li rimpiccioliva fino a sparire. Più stretto in z = più grossi.
+    // X confinato alla BANDA VISIBILE a questa profondità (camera fov 38 @ z14
+    // su (3.2,0,0)): fuori da ~[-2.5, 9.5] i semi cadevano oltre il bordo e
+    // metà polvere finiva sprecata fuori frame.
+    const DUST_X0 = -2.5;
+    const DUST_X1 = 9.5;
+    const DUST_Y0 = -5;
+    const DUST_Y1 = 5;
+    const DUST_Z0 = -4.5;
+    const DUST_Z1 = -1.8;
+    for (let i = 0; i < DUST; i++) {
+      dustBaseX[i] = DUST_X0 + rand() * (DUST_X1 - DUST_X0);
+      dustY[i] = DUST_Y0 + rand() * (DUST_Y1 - DUST_Y0);
+      dustZ[i] = DUST_Z0 + rand() * (DUST_Z1 - DUST_Z0);
+      dustPhase[i] = rand() * Math.PI * 2;
+      dustSwayAmp[i] = 0.25 + rand() * 0.45; // ondeggio orizzontale leggero
+      dustRiseSpeed[i] = 0.06 + rand() * 0.08; // deriva 0.06..0.14 verso l'alto
+      dustAngAmp[i] = 0.25 + rand() * 0.1; // rotazione ±0.35
+      // alpha per-particella alto: presenza netta (basta col subliminale)
+      alphas[i] = 0.72 + rand() * 0.25; // 0.72..0.97
+    }
+
+    // Pool della scia: vita, posizione e velocità per particella.
+    const trailLife = new Float32Array(TRAIL); // tempo (s) di morte; <=t = spenta
+    const trailBornAt = new Float32Array(TRAIL);
+    const trailX = new Float32Array(TRAIL);
+    const trailY = new Float32Array(TRAIL);
+    const trailZ = new Float32Array(TRAIL).fill(2); // piano davanti alle carte
+    const trailVX = new Float32Array(TRAIL);
+    const trailVY = new Float32Array(TRAIL);
+    const TRAIL_DURATION = 0.85;
+    for (let i = 0; i < TRAIL; i++) {
+      const g = DUST + i;
+      positions[g * 3] = trailX[i];
+      positions[g * 3 + 1] = trailY[i];
+      positions[g * 3 + 2] = trailZ[i];
+      alphas[g] = 0; // a riposo nel pool: invisibili
+    }
+    sp.markDirty();
+
     // ---- interazione e ciclo di render ----
     const pointer = { x: 0, y: 0 };
+    // posizione cursore in pixel CSS relativi al canvas (per l'unproject).
+    // La velocità si misura PER FRAME nel loop (cursor.x vs frameX): robusto
+    // anche con più pointermove fra due rAF.
+    const cursor = { x: 0, y: 0, has: false };
+    let frameX = 0; // posizione del cursore all'inizio del frame precedente
+    let frameY = 0;
+    // ray riusabile per l'unproject — nessuna allocazione nel loop
+    const ndc = new THREE.Vector3();
+    const rayDir = new THREE.Vector3();
+    let lastSpawnAt = -1;
+    let nextTrail = 0;
     const onPointerMove = (event: PointerEvent) => {
       pointer.x = (event.clientX / innerWidth) * 2 - 1;
       pointer.y = (event.clientY / innerHeight) * 2 - 1;
+      if (finePointer) {
+        const rect = hostEl.getBoundingClientRect();
+        cursor.x = event.clientX - rect.left;
+        cursor.y = event.clientY - rect.top;
+        if (!cursor.has) {
+          // primo evento: niente delta spurio al frame successivo
+          frameX = cursor.x;
+          frameY = cursor.y;
+        }
+        cursor.has = true;
+      }
     };
     addEventListener('pointermove', onPointerMove, { passive: true });
     this.cleanupFns.push(() => removeEventListener('pointermove', onPointerMove));
@@ -268,12 +371,16 @@ export class Hero3dComponent implements OnDestroy {
 
     // niente THREE.Clock (deprecato): basta il tempo trascorso
     const start = performance.now();
+    let lastT = 0;
     const loop = () => {
       if (this.disposed) return;
       this.rafId = requestAnimationFrame(loop);
       if (!running || !visible) return;
 
       const t = (performance.now() - start) / 1000;
+      const dt = Math.min(Math.max(t - lastT, 0), 0.066);
+      lastT = t;
+
       for (const card of cards) {
         card.mesh.position.y = card.y + Math.sin(t * card.speed + card.phase) * 0.45;
         card.mesh.rotation.y = Math.sin(t * card.speed * 0.6 + card.phase) * 0.38;
@@ -284,6 +391,75 @@ export class Hero3dComponent implements OnDestroy {
       camera.position.y += (-pointer.y * 0.55 - camera.position.y) * 0.04;
       camera.lookAt(3.2, 0, 0);
 
+      // ---- polvere: deriva verso l'alto + ondeggio + rotazione, tutto lento ----
+      for (let i = 0; i < DUST; i++) {
+        // deriva verticale lentissima con wrap quando esce in alto
+        dustY[i] += dustRiseSpeed[i] * dt;
+        if (dustY[i] > DUST_Y1) dustY[i] = DUST_Y0;
+        const sway = Math.sin(t * 0.18 + dustPhase[i]) * dustSwayAmp[i];
+        positions[i * 3] = dustBaseX[i] + sway;
+        positions[i * 3 + 1] = dustY[i];
+        positions[i * 3 + 2] = dustZ[i];
+        angles[i] = Math.sin(t * 0.22 + dustPhase[i]) * dustAngAmp[i];
+      }
+
+      // ---- scia dal cursore: spawn su movimento veloce, poi vita 0.85s ----
+      if (finePointer && cursor.has) {
+        const mx = cursor.x - frameX;
+        const my = cursor.y - frameY;
+        frameX = cursor.x;
+        frameY = cursor.y;
+        const moved = Math.hypot(mx, my);
+        // velocità > ~25px per frame e rate-limit ~1 spawn / 30ms
+        if (moved > 25 && t - lastSpawnAt > 0.03) {
+          lastSpawnAt = t;
+          // unproject del cursore sul piano z=+2 (davanti alle carte)
+          const rect = hostEl.getBoundingClientRect();
+          const nx = rect.width > 0 ? (cursor.x / rect.width) * 2 - 1 : 0;
+          const ny = rect.height > 0 ? -(cursor.y / rect.height) * 2 + 1 : 0;
+          ndc.set(nx, ny, 0.5).unproject(camera);
+          rayDir.copy(ndc).sub(camera.position).normalize();
+          const tHit = (2 - camera.position.z) / rayDir.z;
+          const sx = camera.position.x + rayDir.x * tHit;
+          const sy = camera.position.y + rayDir.y * tHit;
+          const slot = nextTrail;
+          nextTrail = (nextTrail + 1) % TRAIL;
+          trailBornAt[slot] = t;
+          trailLife[slot] = t + TRAIL_DURATION;
+          trailX[slot] = sx;
+          trailY[slot] = sy;
+          // direzione del movimento (px → scena, y invertita) * piccolo + deriva giù
+          const inv = 1 / (moved || 1);
+          trailVX[slot] = mx * inv * 1.4;
+          trailVY[slot] = -my * inv * 1.4 - 0.6;
+        }
+      }
+      // integrazione + alpha della pool della scia
+      for (let i = 0; i < TRAIL; i++) {
+        const g = DUST + i;
+        if (trailLife[i] > t) {
+          trailX[i] += trailVX[i] * dt;
+          trailY[i] += trailVY[i] * dt;
+          trailVY[i] -= 1.2 * dt; // deriva verso il basso che accelera piano
+          const prog = (t - trailBornAt[i]) / TRAIL_DURATION;
+          alphas[g] = Math.sin(Math.PI * prog) * 0.95;
+          positions[g * 3] = trailX[i];
+          positions[g * 3 + 1] = trailY[i];
+          positions[g * 3 + 2] = 2;
+          angles[g] = Math.atan2(trailVY[i], trailVX[i]) * 0.3;
+        } else if (alphas[g] !== 0) {
+          alphas[g] = 0; // rientro nel pool: invisibile
+        }
+      }
+
+      sp.markDirty();
+      sp.material.uniforms['uTime'].value = t;
+      // fade-in globale del pulviscolo; boost per-tema (il teal su navy e il
+      // navy su crema si perdono entrambi, in misura diversa)
+      const opTarget = document.documentElement.dataset['theme'] === 'dark' ? 1.5 : 1.35;
+      const op = sp.material.uniforms['uOpacity'];
+      op.value = Math.min(opTarget, op.value + dt / 1.4);
+
       renderer.render(scene, camera);
     };
 
@@ -293,6 +469,9 @@ export class Hero3dComponent implements OnDestroy {
       renderer.setSize(clientWidth, clientHeight, false);
       camera.aspect = clientWidth / clientHeight;
       camera.updateProjectionMatrix();
+      // la polvere/scia usano l'attenuazione prospettica in pixel: tieni il
+      // uPixelRatio allineato al renderer dopo ogni resize
+      sp.material.uniforms['uPixelRatio'].value = renderer.getPixelRatio();
     };
     resize();
     const resizeObserver = new ResizeObserver(resize);

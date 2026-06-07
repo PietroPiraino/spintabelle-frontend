@@ -108,3 +108,9 @@
   flex-direction: column;
   gap: 0.8rem;
 }
+
+// ---- elementi coi micro-semi ----
+.landing__divider {
+  display: block;
+  margin-block: clamp(0.5rem, 2vw, 1.5rem);
+}

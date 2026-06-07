@@ -11,7 +11,8 @@ import { DIORAMA_CAPABILITIES } from '../../../shared/three/three-capabilities';
 import { THREE_LOADER } from '../../../shared/three/three-loader';
 import { SceneResources } from '../../../shared/three/disposable-scene';
 import { seededRandom } from '../../../shared/three/seeded-random';
-import { drawSuitAtlas, sampleEmblemPoints, type EmblemId } from './emblem-shapes';
+import { bindSuitPalette, createSuitPoints } from '../../../shared/three/suit-points';
+import { sampleEmblemPoints, type EmblemId } from './emblem-shapes';
 
 /**
  * Il banco di Best Fish Forever: un unico organismo di particelle-pesce che
@@ -89,29 +90,22 @@ export class ParticleSchoolComponent implements OnDestroy {
     const isMobile = () => innerWidth < 600;
     const COUNT = isMobile() ? 3500 : 9000;
 
-    // ---- attributi statici (seedati: il banco è sempre lo stesso) ----
-    const rand = seededRandom(0xbff);
-    const positions = new Float32Array(COUNT * 3);
-    const angles = new Float32Array(COUNT);
-    const seeds = new Float32Array(COUNT);
-    const sizes = new Float32Array(COUNT);
-    const suits = new Float32Array(COUNT);
+    const rand = seededRandom(0xbff ^ 0x51ed);
+    // ---- il banco: micro-semi ♠♥♦♣ dalla factory condivisa ----
+    const sp = createSuitPoints(THREE, res, { count: COUNT, seed: 0xbff });
+    const { positions, angles, seeds } = sp;
+    const material = sp.material;
+    sp.points.name = 'fish-school';
+    scene.add(sp.points);
+
+    // stato dinamico per-particella (seed separato da quello della factory)
     const px = new Float32Array(COUNT);
     const py = new Float32Array(COUNT);
     const vx = new Float32Array(COUNT);
     const vy = new Float32Array(COUNT);
     const streamU = new Float32Array(COUNT);
     const streamBand = new Float32Array(COUNT);
-
     for (let i = 0; i < COUNT; i++) {
-      seeds[i] = rand();
-      // tre "profondità": semi piccoli lontani, medi, grandi vicini
-      const layer = rand();
-      sizes[i] = 1.7 + layer * 2.6;
-      // ♠/♥/♦/♣ per particella, sbilanciati sui neri (~68%): il banco resta
-      // elegante e i semi rossi sono i lampi caldi che lo attraversano
-      const suitRoll = rand();
-      suits[i] = suitRoll < 0.34 ? 0 : suitRoll < 0.5 ? 1 : suitRoll < 0.66 ? 2 : 3;
       streamU[i] = rand();
       streamBand[i] = (rand() - 0.5) * 2; // -1..1: larghezza del banco
       px[i] = rand() * innerWidth;
@@ -119,87 +113,6 @@ export class ParticleSchoolComponent implements OnDestroy {
       vx[i] = (rand() - 0.5) * 60;
       vy[i] = (rand() - 0.5) * 60;
     }
-
-    const geometry = res.track(new THREE.BufferGeometry());
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('aAngle', new THREE.BufferAttribute(angles, 1));
-    geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
-    geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
-    geometry.setAttribute('aSuit', new THREE.BufferAttribute(suits, 1));
-
-    // atlante ♠♥♦♣: ogni particella del banco è un micro-seme
-    const atlas = res.track(new THREE.CanvasTexture(drawSuitAtlas()));
-    atlas.flipY = false; // v verso il basso, come gl_PointCoord
-
-    const material = res.track(
-      new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        uniforms: {
-          uTime: { value: 0 },
-          uPixelRatio: { value: 1 },
-          uOpacity: { value: 0 },
-          uAtlas: { value: atlas },
-          uColorA: { value: new THREE.Color(0x1b2a4a) },
-          uColorB: { value: new THREE.Color(0xff6a1f) },
-          uColorC: { value: new THREE.Color(0x00d4d4) },
-        },
-        vertexShader: /* glsl */ `
-          attribute float aAngle;
-          attribute float aSeed;
-          attribute float aSize;
-          attribute float aSuit;
-          uniform float uPixelRatio;
-          varying float vAngle;
-          varying float vSeed;
-          varying float vSuit;
-          void main() {
-            vAngle = aAngle;
-            vSeed = aSeed;
-            vSuit = aSuit;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = aSize * uPixelRatio * 3.3;
-          }
-        `,
-        fragmentShader: /* glsl */ `
-          uniform float uTime;
-          uniform float uOpacity;
-          uniform sampler2D uAtlas;
-          uniform vec3 uColorA;
-          uniform vec3 uColorB;
-          uniform vec3 uColorC;
-          varying float vAngle;
-          varying float vSeed;
-          varying float vSuit;
-          void main() {
-            // micro-seme ♠♥♦♣: cella dell'atlante, leggermente inclinato
-            // lungo la direzione di nuoto
-            vec2 pc = gl_PointCoord - 0.5;
-            float ca = cos(vAngle);
-            float sa = sin(vAngle);
-            vec2 uv = vec2(pc.x * ca + pc.y * sa, -pc.x * sa + pc.y * ca) + 0.5;
-            if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) discard;
-            float col = mod(vSuit, 2.0);
-            float row = floor(vSuit / 2.0 + 0.001);
-            float body = texture2D(uAtlas, (uv + vec2(col, row)) * 0.5).a;
-            if (body < 0.05) discard;
-            // brillio individuale lento
-            float tw = 0.72 + 0.28 * sin(uTime * (1.2 + vSeed * 2.2) + vSeed * 40.0);
-            // bicromia da carte: ♥♦ (celle 1 e 2) nel colore caldo, ♠♣ nel base
-            float red = step(0.5, vSuit) * step(vSuit, 2.5);
-            vec3 color = mix(uColorA, uColorB, red);
-            // qualche seme "raro" nel colore accento
-            color = mix(color, uColorC, step(0.95, vSeed));
-            gl_FragColor = vec4(color, body * tw * uOpacity);
-          }
-        `,
-      }),
-    );
-
-    const points = new THREE.Points(geometry, material);
-    points.frustumCulled = false;
-    points.name = 'fish-school';
-    scene.add(points);
 
     // ---- emblemi: nuvole di punti campionate, una per stazione ----
     const anchors = Array.from(
@@ -211,26 +124,7 @@ export class ParticleSchoolComponent implements OnDestroy {
     }));
 
     // ---- palette per-tema: il banco segue Ghiaccio/Tramonto/Notte ----
-    const applyTheme = () => {
-      const css = getComputedStyle(document.documentElement);
-      const token = (name: string) => css.getPropertyValue(name).trim();
-      const dark = document.documentElement.dataset['theme'] === 'dark';
-      const u = material.uniforms;
-      (u['uColorA'].value as InstanceType<typeof THREE.Color>).set(
-        token(dark ? '--neon-cyan' : '--navy-700'),
-      );
-      (u['uColorB'].value as InstanceType<typeof THREE.Color>).set(token('--copper-500'));
-      (u['uColorC'].value as InstanceType<typeof THREE.Color>).set(
-        token(dark ? '--gold' : '--neon-cyan'),
-      );
-    };
-    applyTheme();
-    const themeObserver = new MutationObserver(applyTheme);
-    themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme'],
-    });
-    this.cleanupFns.push(() => themeObserver.disconnect());
+    this.cleanupFns.push(bindSuitPalette(material));
 
     // ---- input: cursore (fuga) e visibilità della scheda ----
     const mouse = { x: -9999, y: -9999 };
@@ -273,13 +167,6 @@ export class ParticleSchoolComponent implements OnDestroy {
     this.cleanupFns.push(() => window.removeEventListener('resize', resize));
 
     // ---- simulazione ----
-    const positionAttr = geometry.getAttribute('position') as InstanceType<
-      typeof THREE.BufferAttribute
-    >;
-    const angleAttr = geometry.getAttribute('aAngle') as InstanceType<
-      typeof THREE.BufferAttribute
-    >;
-
     const start = performance.now();
     let lastT = 0;
 
@@ -391,8 +278,7 @@ export class ParticleSchoolComponent implements OnDestroy {
         angles[i] += (targetAngle - angles[i]) * Math.min(1, 5 * dt);
       }
 
-      positionAttr.needsUpdate = true;
-      angleAttr.needsUpdate = true;
+      sp.markDirty();
 
       material.uniforms['uTime'].value = t;
       // fade-in del banco al primo arrivo

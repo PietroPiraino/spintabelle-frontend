@@ -1,0 +1,64 @@
+// Divisore "semi nitidi + alone vivo": i glifi ♠♥♦♣ sono il contenuto reale,
+// sempre leggibili; il canvas dietro disegna solo l'alone di micro-semi.
+// Senza canvas attivo (no WebGL / reduced-motion) restano i glifi nitidi.
+:host {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: 116px;
+  margin: 0 auto;
+}
+
+.sdl__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+
+// fila dei quattro semi, centrata, con filetti laterali come il design system
+.sdl__row {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.6rem, 5vw, 2.8rem);
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    max-width: 120px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong));
+  }
+
+  &::after {
+    background: linear-gradient(90deg, var(--line-strong), transparent);
+  }
+}
+
+.sdl__glyph {
+  font-size: clamp(1.7rem, 4.5vw, 2.2rem);
+  line-height: 1;
+  color: var(--text);
+  // alone statico di base: dà profondità anche prima/senza le particelle
+  text-shadow: 0 0 14px color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+// ♥ e ♦ nel caldo del brand (rosso da carte reinterpretato per i tre temi)
+.sdl__glyph--warm {
+  color: var(--copper-600);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--copper-500) 30%, transparent);
+}
+
+// canvas attivo → svela l'alone vivo
+:host(.is-on) .sdl__canvas {
+  opacity: 1;
+}

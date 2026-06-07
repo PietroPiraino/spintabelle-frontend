@@ -6,11 +6,12 @@ import { News } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { NewsService } from '../../core/services/news.service';
 import { NewsCardComponent } from '../../shared/ui/news-card/news-card.component';
+import { SuitDividerLiveComponent } from '../../shared/suit-divider-live/suit-divider-live.component';
 import { Hero3dComponent } from './hero-3d/hero-3d.component';
 
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink, Hero3dComponent, NewsCardComponent],
+  imports: [RouterLink, Hero3dComponent, NewsCardComponent, SuitDividerLiveComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

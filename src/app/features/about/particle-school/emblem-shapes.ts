@@ -30,33 +30,6 @@ const EMBLEMS: Record<EmblemId, DrawFn> = {
 };
 
 /**
- * Atlante 2×2 dei semi per le PARTICELLE: ogni pesce del banco è un
- * micro-seme. Celle: ♠ in alto-sx, ♥ in alto-dx, ♦ in basso-sx, ♣ in
- * basso-dx; ♥♦ sono i "rossi" (indice 1 e 2) per la bicromia da carte.
- */
-export function drawSuitAtlas(size = 256): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
-  const cell = size / 2;
-  ctx.fillStyle = '#fff';
-  ctx.font = `${Math.round(cell * 0.82)}px serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const suits: Array<[string, number, number]> = [
-    ['♠', 0, 0],
-    ['♥', 1, 0],
-    ['♦', 0, 1],
-    ['♣', 1, 1],
-  ];
-  for (const [symbol, col, row] of suits) {
-    ctx.fillText(symbol, col * cell + cell / 2, row * cell + cell / 2 + cell * 0.04);
-  }
-  return canvas;
-}
-
-/**
  * Campiona la sagoma in `count` punti normalizzati in [-0.5, 0.5]² (y verso
  * il basso, come i pixel). Deterministico: stesso emblema+seed → stessi punti.
  */
