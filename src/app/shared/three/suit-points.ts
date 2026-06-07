@@ -172,8 +172,16 @@ export function createSuitPoints(
           float sa = sin(vAngle);
           vec2 uv = vec2(pc.x * ca + pc.y * sa, -pc.x * sa + pc.y * ca) + 0.5;
           if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) discard;
-          float col = mod(vSuit, 2.0);
-          float row = floor(vSuit / 2.0 + 0.001);
+          // vSuit è un varying: con la camera PROSPETTICA la correzione
+          // prospettica lo interpola dividendo per w, introducendo un errore di
+          // ~1 ULP. Per il ♦ (vSuit=2) basta che scivoli a 1.9999999 perché
+          // mod(vSuit,2.0) valga ~2 invece di 0 → campiona la cella sbagliata
+          // in modo intermittente = sfarfallio (solo su GPU il cui interpolatore
+          // arrotonda verso il basso). Con la camera ORTO (chi-siamo, w=1) non
+          // succede. Fix: arrotonda all'intero e deriva la cella senza mod.
+          float s = floor(vSuit + 0.5);
+          float row = floor(s * 0.5 + 0.001);
+          float col = s - 2.0 * row;
           float body = texture2D(uAtlas, (uv + vec2(col, row)) * 0.5).a;
           if (body < 0.05) discard;
           // brillio individuale lento
