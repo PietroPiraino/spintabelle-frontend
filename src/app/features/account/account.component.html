@@ -1,0 +1,181 @@
+<section class="section">
+  <div class="container account">
+    <header class="account__head">
+      <span class="eyebrow">Area personale</span>
+      <h1>Il mio account</h1>
+      @if (user(); as u) {
+        <p class="account__status">
+          <strong>{{ u.email }}</strong>
+          @if (verified()) {
+            <span class="account__badge account__badge--ok">Email verificata</span>
+          } @else {
+            <span class="account__badge account__badge--warn">
+              Email non verificata · <a routerLink="/recupera-verifica">reinvia il link</a>
+            </span>
+          }
+        </p>
+      }
+    </header>
+
+    <!-- Dati di profilo (rettifica) -->
+    <div class="card card--pad account__card">
+      <h2>Dati di profilo</h2>
+      <p class="text-muted">Aggiorna la tua email o il tuo nickname.</p>
+
+      @if (profileMsg()) {
+        <div class="form-feedback is-success" role="status">{{ profileMsg() }}</div>
+      }
+      @if (profileError()) {
+        <div class="form-feedback is-error" role="alert">{{ profileError() }}</div>
+      }
+
+      <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+        <div class="field">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            class="input"
+            formControlName="email"
+            autocomplete="email"
+            [class.is-invalid]="profileForm.controls.email.touched && profileForm.controls.email.invalid"
+          />
+          @if (profileForm.controls.email.touched && profileForm.controls.email.invalid) {
+            <span class="field-error">Inserisci un'email valida.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="nickname">Nickname</label>
+          <input
+            id="nickname"
+            type="text"
+            class="input"
+            formControlName="nickname"
+            autocomplete="username"
+            [class.is-invalid]="profileForm.controls.nickname.touched && profileForm.controls.nickname.invalid"
+          />
+          @if (profileForm.controls.nickname.touched && profileForm.controls.nickname.invalid) {
+            <span class="field-error">
+              3–24 caratteri: lettere, numeri, punto, trattino o underscore.
+            </span>
+          }
+        </div>
+
+        <button type="submit" class="btn btn--primary" [disabled]="profileSaving()">
+          {{ profileSaving() ? 'Salvataggio…' : 'Salva modifiche' }}
+        </button>
+      </form>
+    </div>
+
+    <!-- Password -->
+    <div class="card card--pad account__card">
+      <h2>Password</h2>
+      @if (pwDone()) {
+        <div class="form-feedback is-success" role="status">
+          Password aggiornata. Per sicurezza sei stato disconnesso:
+          <a routerLink="/login">accedi con la nuova password</a>.
+        </div>
+      } @else {
+        <p class="text-muted">
+          Per cambiarla, inserisci la password attuale e quella nuova.
+        </p>
+
+        @if (pwError()) {
+          <div class="form-feedback is-error" role="alert">{{ pwError() }}</div>
+        }
+
+        <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+          <div class="field">
+            <label for="currentPassword">Password attuale</label>
+            <input
+              id="currentPassword"
+              type="password"
+              class="input"
+              formControlName="currentPassword"
+              autocomplete="current-password"
+              [class.is-invalid]="passwordForm.controls.currentPassword.touched && passwordForm.controls.currentPassword.invalid"
+            />
+          </div>
+
+          <div class="field">
+            <label for="newPassword">Nuova password</label>
+            <input
+              id="newPassword"
+              type="password"
+              class="input"
+              formControlName="newPassword"
+              autocomplete="new-password"
+              placeholder="Minimo 8 caratteri"
+              [class.is-invalid]="passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid"
+            />
+            @if (passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid) {
+              <span class="field-error">La password deve avere almeno 8 caratteri.</span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="confirm">Conferma nuova password</label>
+            <input
+              id="confirm"
+              type="password"
+              class="input"
+              formControlName="confirm"
+              autocomplete="new-password"
+              [class.is-invalid]="passwordForm.controls.confirm.touched && (passwordForm.controls.confirm.invalid || passwordForm.hasError('passwordsMismatch'))"
+            />
+            @if (passwordForm.controls.confirm.touched && passwordForm.hasError('passwordsMismatch')) {
+              <span class="field-error">Le password non coincidono.</span>
+            }
+          </div>
+
+          <button type="submit" class="btn btn--primary" [disabled]="pwSaving()">
+            {{ pwSaving() ? 'Aggiornamento…' : 'Cambia password' }}
+          </button>
+        </form>
+      }
+    </div>
+
+    <!-- Export dei dati -->
+    <div class="card card--pad account__card">
+      <h2>I tuoi dati</h2>
+      <p class="text-muted">
+        Scarica una copia di tutti i dati che trattiamo sul tuo conto, in formato
+        JSON (diritto di accesso e portabilità).
+      </p>
+      @if (exportError()) {
+        <div class="form-feedback is-error" role="alert">{{ exportError() }}</div>
+      }
+      <button type="button" class="btn btn--ghost" (click)="exportData()" [disabled]="exporting()">
+        {{ exporting() ? 'Preparazione…' : 'Scarica i miei dati' }}
+      </button>
+    </div>
+
+    <!-- Cancellazione account -->
+    <div class="card card--pad account__card account__danger">
+      <h2>Elimina account</h2>
+      <p class="text-muted">
+        Cancella definitivamente il tuo account e tutti i dati collegati (profilo,
+        sessioni e storico di allenamento). L'operazione è <strong>irreversibile</strong>.
+      </p>
+      @if (deleteError()) {
+        <div class="form-feedback is-error" role="alert">{{ deleteError() }}</div>
+      }
+      @if (confirmingDelete()) {
+        <p class="account__confirm">Sei sicuro? Questa azione non può essere annullata.</p>
+        <div class="row">
+          <button type="button" class="btn btn--danger-solid" (click)="confirmDelete()" [disabled]="deleting()">
+            {{ deleting() ? 'Eliminazione…' : 'Sì, elimina tutto' }}
+          </button>
+          <button type="button" class="btn btn--ghost" (click)="confirmingDelete.set(false)" [disabled]="deleting()">
+            Annulla
+          </button>
+        </div>
+      } @else {
+        <button type="button" class="btn btn--danger" (click)="confirmingDelete.set(true)">
+          Elimina il mio account
+        </button>
+      }
+    </div>
+  </div>
+</section>

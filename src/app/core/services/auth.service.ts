@@ -102,6 +102,14 @@ export class AuthService {
     return this.http.post(`${API}/auth/resend-verification`, { email });
   }
 
+  forgotPassword(email: string): Observable<unknown> {
+    return this.http.post(`${API}/auth/forgot-password`, { email });
+  }
+
+  resetPassword(token: string, password: string): Observable<unknown> {
+    return this.http.post(`${API}/auth/reset-password`, { token, password });
+  }
+
   /** Refresh condiviso: N richiamanti concorrenti → una sola chiamata HTTP. */
   refresh(): Observable<string> {
     this.refreshInFlight$ ??= this.http
@@ -128,6 +136,40 @@ export class AuthService {
   logout(): Observable<unknown> {
     return this.http
       .post(`${API}/auth/logout`, {}, { withCredentials: true })
+      .pipe(finalize(() => this.clearSession()));
+  }
+
+  // ----- Gestione account (diritti dell'interessato, GDPR) -----
+
+  /** Export di tutti i propri dati (accesso/portabilità). */
+  exportMyData(): Observable<unknown> {
+    return this.http.get(`${API}/account/export`);
+  }
+
+  /** Rettifica email e/o nickname; aggiorna l'utente in memoria. */
+  updateProfile(patch: {
+    email?: string;
+    nickname?: string;
+  }): Observable<User> {
+    return this.http
+      .patch<User>(`${API}/account/profile`, patch)
+      .pipe(tap((user) => this.user.set(user)));
+  }
+
+  changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Observable<unknown> {
+    return this.http.patch(`${API}/account/password`, {
+      currentPassword,
+      newPassword,
+    });
+  }
+
+  /** Cancellazione account e dati collegati (diritto all'oblio). */
+  deleteAccount(): Observable<unknown> {
+    return this.http
+      .delete(`${API}/account`, { withCredentials: true })
       .pipe(finalize(() => this.clearSession()));
   }
 

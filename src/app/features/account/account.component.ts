@@ -1,0 +1,175 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
+import { apiErrorMessage } from '../../core/utils/http-error';
+
+function passwordsMatch(group: AbstractControl): ValidationErrors | null {
+  const p = group.get('newPassword')?.value as string;
+  const c = group.get('confirm')?.value as string;
+  return p && c && p !== c ? { passwordsMismatch: true } : null;
+}
+
+@Component({
+  selector: 'app-account',
+  imports: [ReactiveFormsModule, RouterLink],
+  templateUrl: './account.component.html',
+  styleUrl: './account.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class AccountComponent {
+  private readonly fb = inject(FormBuilder);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  protected readonly user = this.auth.user;
+  protected readonly verified = computed(() => this.user()?.verified ?? false);
+
+  // ── Profilo (email + nickname) ──
+  protected readonly profileForm = this.fb.nonNullable.group({
+    email: ['', [Validators.required, Validators.email]],
+    nickname: [
+      '',
+      [
+        Validators.required,
+        Validators.minLength(3),
+        Validators.maxLength(24),
+        Validators.pattern(/^[a-zA-Z0-9_.-]+$/),
+      ],
+    ],
+  });
+  protected readonly profileSaving = signal(false);
+  protected readonly profileError = signal<string | null>(null);
+  protected readonly profileMsg = signal<string | null>(null);
+
+  // ── Password ──
+  protected readonly passwordForm = this.fb.nonNullable.group(
+    {
+      currentPassword: ['', [Validators.required]],
+      newPassword: ['', [Validators.required, Validators.minLength(8)]],
+      confirm: ['', [Validators.required]],
+    },
+    { validators: passwordsMatch },
+  );
+  protected readonly pwSaving = signal(false);
+  protected readonly pwError = signal<string | null>(null);
+  protected readonly pwDone = signal(false);
+
+  // ── Export dei dati ──
+  protected readonly exporting = signal(false);
+  protected readonly exportError = signal<string | null>(null);
+
+  // ── Cancellazione account ──
+  protected readonly confirmingDelete = signal(false);
+  protected readonly deleting = signal(false);
+  protected readonly deleteError = signal<string | null>(null);
+
+  constructor() {
+    const u = this.auth.user();
+    this.profileForm.patchValue({
+      email: u?.email ?? '',
+      nickname: u?.nickname ?? '',
+    });
+  }
+
+  protected saveProfile(): void {
+    if (this.profileForm.invalid || this.profileSaving()) {
+      this.profileForm.markAllAsTouched();
+      return;
+    }
+    this.profileSaving.set(true);
+    this.profileError.set(null);
+    this.profileMsg.set(null);
+
+    const { email, nickname } = this.profileForm.getRawValue();
+    this.auth.updateProfile({ email, nickname }).subscribe({
+      next: (user) => {
+        this.profileSaving.set(false);
+        this.profileMsg.set(
+          user.verified
+            ? 'Profilo aggiornato.'
+            : 'Profilo aggiornato. Hai cambiato email: controlla la posta per verificarla.',
+        );
+      },
+      error: (err: unknown) => {
+        this.profileSaving.set(false);
+        this.profileError.set(
+          apiErrorMessage(err, 'Aggiornamento non riuscito.'),
+        );
+      },
+    });
+  }
+
+  protected changePassword(): void {
+    if (this.passwordForm.invalid || this.pwSaving()) {
+      this.passwordForm.markAllAsTouched();
+      return;
+    }
+    this.pwSaving.set(true);
+    this.pwError.set(null);
+
+    const { currentPassword, newPassword } = this.passwordForm.getRawValue();
+    this.auth.changePassword(currentPassword, newPassword).subscribe({
+      next: () => {
+        // il cambio password revoca tutte le sessioni: disconnetti e invita al re-login
+        this.auth.logout().subscribe();
+        this.pwDone.set(true);
+      },
+      error: (err: unknown) => {
+        this.pwSaving.set(false);
+        this.pwError.set(apiErrorMessage(err, 'Cambio password non riuscito.'));
+      },
+    });
+  }
+
+  protected exportData(): void {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.exportError.set(null);
+
+    this.auth.exportMyData().subscribe({
+      next: (data) => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'best-fish-forever-i-miei-dati.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        this.exporting.set(false);
+      },
+      error: (err: unknown) => {
+        this.exporting.set(false);
+        this.exportError.set(apiErrorMessage(err, 'Export non riuscito.'));
+      },
+    });
+  }
+
+  protected confirmDelete(): void {
+    if (this.deleting()) return;
+    this.deleting.set(true);
+    this.deleteError.set(null);
+
+    this.auth.deleteAccount().subscribe({
+      next: () => void this.router.navigateByUrl('/'),
+      error: (err: unknown) => {
+        this.deleting.set(false);
+        this.deleteError.set(apiErrorMessage(err, 'Cancellazione non riuscita.'));
+      },
+    });
+  }
+}

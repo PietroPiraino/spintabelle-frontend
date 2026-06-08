@@ -78,6 +78,18 @@
   }
 }
 
+// Pericolo, variante piena (conferma di un'azione distruttiva)
+.btn--danger-solid {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(217, 68, 47, 0.35);
+  }
+}
+
 // Link-bottone testuale
 .btn--link {
   background: none;

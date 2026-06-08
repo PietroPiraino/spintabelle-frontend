@@ -68,10 +68,16 @@
           <!-- sessione in ripristino: evita il lampeggio Accedi → nickname -->
           <span class="header__auth-wait" aria-hidden="true"></span>
         } @else if (auth.isAuthenticated()) {
-          <span class="header__user" title="{{ auth.user()?.email }}">
+          <a
+            routerLink="/account"
+            routerLinkActive="is-active"
+            (click)="closeMenu()"
+            class="header__user"
+            title="Il mio account"
+          >
             <span class="header__user-dot" aria-hidden="true"></span>
             {{ auth.displayName() }}
-          </span>
+          </a>
           <button type="button" class="btn btn--ghost btn--sm" (click)="logout()">Esci</button>
         } @else {
           <a routerLink="/login" (click)="closeMenu()" class="header__link">Accedi</a>

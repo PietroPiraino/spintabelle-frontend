@@ -114,6 +114,31 @@ export const routes: Routes = [
     title: 'Reinvia verifica — Best Fish Forever',
   },
   {
+    path: 'password-dimenticata',
+    loadComponent: () =>
+      import(
+        './features/auth/forgot-password/forgot-password.component'
+      ).then((m) => m.ForgotPasswordComponent),
+    title: 'Password dimenticata — Best Fish Forever',
+  },
+  {
+    path: 'reimposta-password',
+    loadComponent: () =>
+      import('./features/auth/reset-password/reset-password.component').then(
+        (m) => m.ResetPasswordComponent,
+      ),
+    title: 'Reimposta password — Best Fish Forever',
+  },
+  {
+    path: 'account',
+    loadComponent: () =>
+      import('./features/account/account.component').then(
+        (m) => m.AccountComponent,
+      ),
+    canActivate: [authGuard],
+    title: 'Il mio account — Best Fish Forever',
+  },
+  {
     path: 'admin',
     loadComponent: () =>
       import('./features/admin/admin.component').then((m) => m.AdminComponent),
