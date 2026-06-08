@@ -1,0 +1,339 @@
+.dres {
+  padding-block: 2rem 4rem;
+  max-width: 820px;
+}
+
+.dres__head h1 {
+  margin: 0 0 1.4rem;
+}
+
+.dres__h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  margin: 2.4rem 0 1rem;
+}
+
+.dres__h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  margin: 1.6rem 0 0.8rem;
+}
+
+// ---- riquadri statistici ----
+
+.dres__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.dres__stat {
+  flex: 1;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+.dres__stat--big {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--copper-500) 12%, var(--surface-1)),
+    var(--surface-1)
+  );
+}
+
+.dres__k {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.dres__v {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.dres__sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+// ---- spot peggiori ----
+
+.dres__worst {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.dres__spot {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+}
+
+.dres__spot-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dres__spot-where {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.dres__spot-choice {
+  font-size: 0.9rem;
+}
+
+.dres__bad {
+  color: var(--act-allin);
+}
+
+.dres__spot-loss {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--act-allin);
+  white-space: nowrap;
+}
+
+// ---- bucket storici ----
+
+.dres__buckets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.dres__bucket {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-0);
+  flex-wrap: wrap;
+}
+
+.dres__bucket-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.dres__bucket-meta {
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+// ---- CTA / vuoto ----
+
+.dres__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.dres__cta--empty {
+  margin-top: 1rem;
+}
+
+.dres__empty {
+  color: var(--text-muted);
+  padding: 1rem 0;
+}
+
+// ---- storico sessioni ----
+
+.dres__sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dres__session {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+}
+
+.dres__session-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.dres__session-date {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.dres__session-cfg {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.dres__session-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dres__pill {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--felt) 16%, transparent);
+  color: var(--felt);
+}
+
+.dres__pill--loss {
+  background: color-mix(in srgb, var(--copper-500) 15%, transparent);
+  color: var(--copper-600);
+}
+
+.dres__session-n {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+// ---- filtri storico mani ----
+
+.dres__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+
+.dres__select {
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--btn-ghost-bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.dres__toggle {
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--btn-ghost-bg);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast),
+    background-color var(--t-fast),
+    color var(--t-fast);
+}
+
+.dres__toggle--on {
+  border-color: transparent;
+  background: var(--copper-500);
+  color: #2a1404;
+}
+
+// ---- storico mani ----
+
+.dres__attempts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.dres__attempt {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--act-allin);
+}
+
+.dres__attempt--ok {
+  border-left-color: var(--felt);
+}
+
+.dres__attempt-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dres__attempt-where {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.dres__attempt-choice {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.dres__sep {
+  color: var(--text-faint);
+  margin: 0 0.15rem;
+}
+
+.dres__attempt-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.dres__verdict {
+  font-weight: 800;
+  color: var(--felt);
+}
+
+.dres__verdict--ko {
+  color: var(--act-allin);
+}
+
+.dres__attempt-loss {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.dres__more {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}

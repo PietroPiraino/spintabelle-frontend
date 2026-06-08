@@ -27,6 +27,7 @@ export class HeaderComponent {
 
   protected readonly navLinks = [
     { path: '/tabelle', label: 'Tabelle' },
+    { path: '/allenamento', label: 'Allenamento' },
     { path: '/lezioni', label: 'Lezioni' },
     { path: '/news', label: 'News' },
     { path: '/chi-siamo', label: 'Chi siamo' },

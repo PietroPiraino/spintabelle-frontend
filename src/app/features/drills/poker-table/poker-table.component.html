@@ -1,0 +1,66 @@
+<div class="pt">
+  <div class="pt__felt">
+    <div class="pt__rail"></div>
+
+    <div class="pt__pot">
+      <span class="pt__pot-k">Piatto</span>
+      <span class="pt__pot-v">{{ potLabel() }}</span>
+    </div>
+
+    @for (s of seats(); track s.position) {
+      <div
+        class="pt__seat"
+        [class.pt__seat--hero]="s.isHero"
+        [class.pt__seat--folded]="s.folded"
+        [style.left.%]="s.x"
+        [style.top.%]="s.y"
+      >
+        <div class="pt__cards">
+          @if (s.isHero) {
+            @for (c of heroCards(); track $index) {
+              <span class="pt__card" [class.pt__card--red]="c.red">
+                <b class="pt__card-r">{{ c.rank }}</b>
+                <i class="pt__card-s">{{ c.suit }}</i>
+              </span>
+            }
+          } @else if (!s.folded) {
+            <span class="pt__back"></span>
+            <span class="pt__back"></span>
+          }
+        </div>
+
+        <div class="pt__plate">
+          <span class="pt__pos">{{ s.position }}</span>
+          <span class="pt__stack">{{ s.stack }} bb</span>
+          @if (s.isButton) {
+            <span class="pt__btn" title="Bottone del dealer">D</span>
+          }
+        </div>
+
+        @if (s.isHero) {
+          <span class="pt__action pt__action--turn"
+            >{{ heroSeq() ? heroSeq() + ' › ' : ''
+            }}{{ heroChoice() ?? 'tocca a te' }}</span
+          >
+        } @else if (s.actionSeq) {
+          <span
+            class="pt__action"
+            [class.pt__action--fold]="s.folded"
+            [class.pt__action--live]="!s.folded"
+            >{{ s.actionSeq }}</span
+          >
+        } @else {
+          <span class="pt__action pt__action--wait">in attesa</span>
+        }
+      </div>
+    }
+
+    <!-- fiche puntate davanti ai giocatori -->
+    @for (b of bets(); track b.position) {
+      <div class="pt__bet" [style.left.%]="b.x" [style.top.%]="b.y">
+        <span class="pt__chip"></span>
+        <span class="pt__bet-amt">{{ b.label }} bb</span>
+      </div>
+    }
+  </div>
+</div>

@@ -25,6 +25,36 @@ export const routes: Routes = [
     title: 'Chi siamo — Best Fish Forever',
   },
   {
+    path: 'allenamento',
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/drills/drill-config/drill-config.component').then(
+            (m) => m.DrillConfigComponent,
+          ),
+        title: 'Allenamento — Best Fish Forever',
+      },
+      {
+        path: 'sessione',
+        loadComponent: () =>
+          import('./features/drills/drill-runner/drill-runner.component').then(
+            (m) => m.DrillRunnerComponent,
+          ),
+        title: 'Allenamento in corso — Best Fish Forever',
+      },
+      {
+        path: 'risultati',
+        loadComponent: () =>
+          import('./features/drills/drill-results/drill-results.component').then(
+            (m) => m.DrillResultsComponent,
+          ),
+        title: 'Risultati allenamento — Best Fish Forever',
+      },
+    ],
+  },
+  {
     path: 'lezioni',
     loadComponent: () =>
       import('./features/lessons/lessons.component').then(

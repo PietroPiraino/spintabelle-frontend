@@ -1,0 +1,147 @@
+<section class="container dc">
+  <header class="dc__head">
+    <div class="dc__head-row">
+      <h1>Allenamento</h1>
+      <button class="btn btn--ghost btn--sm" (click)="viewResults()">
+        I miei risultati
+      </button>
+    </div>
+    <p class="lead">
+      Scegli quali situazioni allenare: ti serviremo una mano alla volta, tu
+      decidi l'azione e ti diciamo subito quanto eri vicino al GTO.
+    </p>
+  </header>
+
+  @if (metaError()) {
+    <div class="empty-state">
+      <div class="empty-state__suit">♠</div>
+      <p>Non riusciamo a caricare i formati disponibili.</p>
+      <button class="btn btn--ghost" (click)="retry()">Riprova</button>
+    </div>
+  } @else if (!meta()) {
+    <div class="spinner"></div>
+  } @else {
+    <!-- formati -->
+    <fieldset class="dc__group">
+      <legend class="dc__legend">Formato</legend>
+      <div class="dc__chips">
+        @for (f of formatOptions(); track f.format) {
+          <button
+            type="button"
+            class="dc__chip"
+            [class.dc__chip--on]="selectedFormats().has(f.format)"
+            (click)="toggleFormat(f.format)"
+          >
+            {{ f.label }}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <!-- profondità -->
+    @if (availableDepths().length) {
+      <fieldset class="dc__group">
+        <legend class="dc__legend">
+          Profondità (stack)
+          <span class="dc__hint">vuoto = tutte</span>
+        </legend>
+        <div class="dc__chips">
+          @for (d of availableDepths(); track d.display) {
+            <button
+              type="button"
+              class="dc__chip dc__chip--sm"
+              [class.dc__chip--on]="selectedDepths().has(d.display)"
+              (click)="toggleDepth(d.display)"
+            >
+              {{ d.display }} bb
+            </button>
+          }
+        </div>
+      </fieldset>
+    }
+
+    <!-- posizione -->
+    <fieldset class="dc__group">
+      <legend class="dc__legend">
+        Posizione dell'eroe
+        <span class="dc__hint">vuoto = tutte</span>
+      </legend>
+      <div class="dc__chips">
+        @for (p of positions; track p) {
+          <button
+            type="button"
+            class="dc__chip"
+            [class.dc__chip--on]="selectedPositions().has(p)"
+            (click)="togglePosition(p)"
+          >
+            {{ p }}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <!-- tipo di spot -->
+    <fieldset class="dc__group">
+      <legend class="dc__legend">
+        Tipo di spot
+        <span class="dc__hint">vuoto = tutti</span>
+      </legend>
+      <div class="dc__chips">
+        @for (s of spotTypes; track s) {
+          <button
+            type="button"
+            class="dc__chip"
+            [class.dc__chip--on]="selectedSpotTypes().has(s)"
+            (click)="toggleSpot(s)"
+          >
+            {{ spotLabels[s] }}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <!-- difficoltà -->
+    <fieldset class="dc__group">
+      <legend class="dc__legend">Difficoltà</legend>
+      <div class="dc__chips">
+        @for (d of difficulties; track d) {
+          <button
+            type="button"
+            class="dc__chip"
+            [class.dc__chip--on]="difficulty() === d"
+            (click)="setDifficulty(d)"
+          >
+            {{ difficultyLabels[d] }}
+          </button>
+        }
+      </div>
+      <p class="dc__note">{{ difficultyHints[difficulty()] }}</p>
+    </fieldset>
+
+    <!-- numero di mani -->
+    <fieldset class="dc__group">
+      <legend class="dc__legend">Numero di mani</legend>
+      <div class="dc__chips">
+        @for (n of questionCounts; track n) {
+          <button
+            type="button"
+            class="dc__chip"
+            [class.dc__chip--on]="questions() === n"
+            (click)="setQuestions(n)"
+          >
+            {{ n }}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <div class="dc__cta">
+      <button class="btn btn--primary" [disabled]="!canStart()" (click)="start()">
+        Inizia l'allenamento
+      </button>
+      @if (!canStart()) {
+        <span class="dc__cta-hint">Scegli almeno un formato.</span>
+      }
+    </div>
+  }
+</section>

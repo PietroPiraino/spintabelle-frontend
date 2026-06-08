@@ -1,0 +1,261 @@
+.pt {
+  display: flex;
+  justify-content: center;
+  padding: 0.4rem 0 0.2rem;
+}
+
+// il feltro è il CONTAINER: tutte le misure interne sono in cqw (% della sua
+// larghezza), così su mobile rimpicciolisce tutto in proporzione → niente overlap
+.pt__felt {
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 16 / 10;
+  border-radius: 50% / 42%;
+  border: 1.6cqw solid color-mix(in srgb, var(--navy-700) 46%, #000);
+  // feltro moderno navy/petrolio (si adatta ai temi via i token), niente verde
+  background: radial-gradient(
+    ellipse 78% 82% at 50% 30%,
+    color-mix(in srgb, var(--navy-700) 80%, var(--neon-cyan)) 0%,
+    color-mix(in srgb, var(--navy-700) 80%, #000) 54%,
+    color-mix(in srgb, var(--navy-700) 42%, #000) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 14cqw rgba(0, 0, 0, 0.5),
+    var(--shadow-pop);
+}
+
+// filo neon appena dentro il bordo (inset, niente elemento sporgente da tagliare)
+.pt__rail {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.4cqw
+    color-mix(in srgb, var(--neon-cyan) 28%, transparent);
+  pointer-events: none;
+}
+
+// ---- piatto (in cima al tavolo) ----
+
+.pt__pot {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: baseline;
+  gap: 1.2cqw;
+  padding: 0.9cqw 2.8cqw;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.34);
+  border: 1px solid color-mix(in srgb, var(--neon-cyan) 22%, transparent);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.pt__pot-k {
+  font-size: 1.85cqw;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.72;
+}
+
+.pt__pot-v {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 3cqw;
+}
+
+// ---- posti ----
+
+.pt__seat {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9cqw;
+  width: 22cqw;
+}
+
+.pt__seat--folded {
+  opacity: 0.42;
+}
+
+.pt__cards {
+  display: flex;
+  gap: 0.8cqw;
+  min-height: 8.6cqw;
+  align-items: center;
+}
+
+// carte dell'eroe (scalano col feltro)
+.pt__card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 6.4cqw;
+  height: 8.6cqw;
+  border-radius: 1.1cqw;
+  background: #fff;
+  color: #16223f;
+  border: 0.2cqw solid rgba(27, 42, 74, 0.22);
+  box-shadow: 0 0.4cqw 1.1cqw rgba(0, 0, 0, 0.32);
+  line-height: 1;
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+.pt__card--red {
+  color: #d61f5e;
+}
+
+.pt__card-r {
+  font-size: 3.3cqw;
+}
+
+.pt__card-s {
+  font-size: 2.3cqw;
+}
+
+// dorso carte avversari
+.pt__back {
+  width: 4.2cqw;
+  height: 5.8cqw;
+  border-radius: 1cqw;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--copper-600) 0 0.8cqw,
+    var(--navy-700) 0.8cqw 1.6cqw
+  );
+  border: 0.2cqw solid rgba(255, 255, 255, 0.25);
+}
+
+.pt__plate {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1cqw;
+  padding: 0.9cqw 2.4cqw;
+  border-radius: 2.4cqw;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  min-width: 15cqw;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pt__seat--hero .pt__plate {
+  background: linear-gradient(135deg, var(--copper-500), var(--copper-600));
+  color: #2a1404;
+  border-color: transparent;
+  box-shadow: var(--glow-copper);
+}
+
+.pt__pos {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 2.85cqw;
+  line-height: 1.1;
+}
+
+.pt__stack {
+  font-family: var(--font-mono);
+  font-size: 2.35cqw;
+}
+
+.pt__btn {
+  position: absolute;
+  right: -2cqw;
+  bottom: -1.6cqw;
+  width: 4.4cqw;
+  height: 4.4cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--navy-700);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 2.3cqw;
+  box-shadow: 0 0.4cqw 1.1cqw rgba(0, 0, 0, 0.4);
+}
+
+// ---- pillola azione ----
+
+.pt__action {
+  padding: 0.4cqw 1.8cqw;
+  border-radius: 999px;
+  font-size: 2.2cqw;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.pt__action--live {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--navy-700);
+}
+
+.pt__action--fold {
+  background: rgba(0, 0, 0, 0.4);
+  color: #d9d9d9;
+}
+
+.pt__action--wait {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.65);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.pt__action--turn {
+  background: var(--gold);
+  color: #2a1404;
+  animation: pt-pulse 1.4s var(--ease-out) infinite;
+}
+
+@keyframes pt-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 181, 71, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 1.5cqw rgba(255, 181, 71, 0);
+  }
+}
+
+// ---- fiche puntate ----
+
+.pt__bet {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 1cqw;
+  padding: 0.5cqw 1.6cqw 0.5cqw 0.6cqw;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.pt__chip {
+  width: 3.5cqw;
+  height: 3.5cqw;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 32%, var(--gold), var(--copper-600));
+  border: 0.4cqw dashed rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0.4cqw 1cqw rgba(0, 0, 0, 0.45);
+  flex: none;
+}
+
+.pt__bet-amt {
+  font-family: var(--font-mono);
+  font-size: 2.2cqw;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}

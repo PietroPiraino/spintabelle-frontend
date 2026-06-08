@@ -1,0 +1,259 @@
+.dr {
+  padding-block: 1.6rem 4rem;
+  max-width: 760px;
+}
+
+.dr__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+// ---- intestazione / progresso ----
+
+.dr__top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+}
+
+.dr__progress {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.dr__count {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.dr__bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.dr__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--copper-500), var(--gold));
+  transition: width var(--t-med);
+}
+
+// ---- situazione ----
+
+.dr__situation {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-card);
+  padding: 1.1rem 1.2rem;
+}
+
+.dr__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.dr__chip {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: var(--bg-0);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.dr__chip--accent {
+  background: color-mix(in srgb, var(--copper-500) 16%, transparent);
+  color: var(--copper-600);
+}
+
+.dr__table {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.dr__seat {
+  position: relative;
+  flex: 1;
+  min-width: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.7rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-0);
+  border: 1px solid transparent;
+}
+
+.dr__seat--hero {
+  border-color: var(--copper-500);
+  background: color-mix(in srgb, var(--copper-500) 10%, var(--surface-1));
+  box-shadow: var(--glow-copper);
+}
+
+.dr__seat-pos {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.dr__seat-stack {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.dr__seat-tag {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  background: var(--copper-500);
+  color: #2a1404;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+}
+
+.dr__history {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.dr__history-k {
+  color: var(--text-faint);
+  margin-right: 0.2rem;
+}
+
+.dr__history-step {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.dr__history-sep {
+  color: var(--text-faint);
+}
+
+// ---- mano ----
+
+.dr__hand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1.8rem 0 1.2rem;
+}
+
+.dr__hand-k {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.dr__prompt {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  margin: 0 0 1rem;
+}
+
+// ---- azioni ----
+
+.dr__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+}
+
+.dr__action {
+  --c: var(--text);
+  position: relative;
+  padding: 0.85rem 1.5rem;
+  border-radius: 999px;
+  border: 2px solid var(--c);
+  background: var(--surface-1);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition:
+    transform var(--t-fast),
+    box-shadow var(--t-fast),
+    background-color var(--t-fast);
+}
+
+.dr__action::before {
+  content: '';
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--c);
+  transform: translateY(-50%);
+}
+
+.dr__action {
+  padding-left: 2rem;
+}
+
+.dr__action:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--c) 14%, var(--surface-1));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.dr__action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dr__inline-error {
+  margin-top: 1rem;
+  text-align: center;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+// "Prossima mano": pulsante flottante sticky in fondo alla viewport, così è
+// sempre raggiungibile senza scorrere oltre il reveal della matrice
+.dr__next {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  margin-top: 1.4rem;
+  pointer-events: none; // i vuoti lasciano passare il click al contenuto sotto
+}
+
+.dr__next .btn {
+  pointer-events: auto;
+  box-shadow:
+    var(--shadow-pop),
+    var(--glow-copper);
+}

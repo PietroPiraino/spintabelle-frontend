@@ -1,0 +1,75 @@
+<div
+  class="fb"
+  [class.fb--ok]="result().correct"
+  [class.fb--ko]="!result().correct"
+>
+  <div class="fb__banner">
+    <span class="fb__icon">{{ result().correct ? '✓' : '✕' }}</span>
+    <div>
+      <strong class="fb__verdict">{{
+        result().correct ? 'Corretto' : 'Sbagliato'
+      }}</strong>
+      <p class="fb__sub">
+        @if (result().correct) {
+          Hai scelto <b>{{ chosenLabel() }}</b
+          >, un'opzione GTO valida qui.
+        } @else {
+          Hai scelto <b>{{ chosenLabel() }}</b
+          >, ma la giocata migliore è <b>{{ bestLabel() }}</b
+          >.
+        }
+      </p>
+    </div>
+  </div>
+
+  <div class="fb__metrics">
+    <div class="fb__metric">
+      <span class="fb__metric-k">EV persa</span>
+      <span class="fb__metric-v">{{ lossLabel() }} bb</span>
+    </div>
+    <div class="fb__metric">
+      <span class="fb__metric-k">GTO sulla tua scelta</span>
+      <span class="fb__metric-v">{{ chosenFreqLabel() }}</span>
+    </div>
+  </div>
+
+  <table class="fb__table">
+    <thead>
+      <tr>
+        <th>Azione</th>
+        <th>Freq. GTO</th>
+        <th>EV</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.code) {
+        <tr [class.fb__row--chosen]="row.isChosen">
+          <td>
+            <span class="fb__dot" [style.background]="'var(' + row.colorVar + ')'"></span>
+            {{ row.label }}
+            @if (row.isBest) {
+              <span class="fb__tag fb__tag--best">migliore</span>
+            }
+            @if (row.isChosen) {
+              <span class="fb__tag fb__tag--you">tua scelta</span>
+            }
+          </td>
+          <td>{{ row.freq }}</td>
+          <td
+            [class.fb__ev--pos]="row.evSign === 1"
+            [class.fb__ev--neg]="row.evSign === -1"
+          >
+            {{ row.ev }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  @if (node(); as n) {
+    <div class="fb__grid">
+      <p class="fb__grid-cap">Soluzione GTO completa — la tua mano è in evidenza</p>
+      <app-range-grid [node]="n" [colorMap]="gridColorMap()" [selected]="hand()" />
+    </div>
+  }
+</div>

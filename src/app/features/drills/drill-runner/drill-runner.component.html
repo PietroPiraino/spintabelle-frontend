@@ -1,0 +1,75 @@
+<section class="container dr">
+  @if (drill.errorMsg() && drill.phase() === 'idle') {
+    <div class="dr__error empty-state">
+      <div class="empty-state__suit">♠</div>
+      <p>{{ drill.errorMsg() }}</p>
+      <button class="btn btn--ghost" (click)="backToConfig()">
+        Torna alla configurazione
+      </button>
+    </div>
+  } @else if (drill.phase() === 'loading') {
+    <div class="spinner"></div>
+  } @else if (drill.question(); as q) {
+    <header class="dr__top">
+      <div class="dr__progress">
+        <span class="dr__count">{{ drill.served() }} / {{ drill.total() }}</span>
+        <div class="dr__bar">
+          <span
+            class="dr__bar-fill"
+            [style.width.%]="(drill.served() / (drill.total() || 1)) * 100"
+          ></span>
+        </div>
+      </div>
+      <button class="btn btn--link btn--sm" (click)="onQuit()">Termina</button>
+    </header>
+
+    <!-- situazione al tavolo -->
+    <div class="dr__situation">
+      <div class="dr__chips">
+        <span class="dr__chip dr__chip--accent">{{ tableLabel() }}</span>
+        <span class="dr__chip">{{ depthLabel() }} bb</span>
+        <span class="dr__chip">{{ spotLabel() }}</span>
+      </div>
+
+      <app-poker-table
+        [players]="q.players"
+        [activePosition]="q.activePosition"
+        [pot]="q.pot"
+        [hand]="q.hand"
+        [actionLog]="q.actionLog"
+        [heroChoice]="heroChoice()"
+      />
+    </div>
+
+    @if (drill.phase() === 'answering') {
+      <p class="dr__prompt">Cosa fai dalla posizione {{ q.activePosition }}?</p>
+      <div class="dr__actions">
+        @for (a of q.actions; track a.code) {
+          <button
+            class="dr__action"
+            [style.--c]="'var(' + colorMap()[a.code] + ')'"
+            [disabled]="drill.submitting()"
+            (click)="onAnswer(a.code)"
+          >
+            {{ actionLabel(a) }}
+          </button>
+        }
+      </div>
+      @if (drill.errorMsg()) {
+        <p class="dr__inline-error">{{ drill.errorMsg() }}</p>
+      }
+    } @else if (drill.phase() === 'feedback' && drill.lastResult(); as res) {
+      <app-drill-feedback
+        [result]="res"
+        [actions]="q.actions"
+        [hand]="q.hand"
+        [node]="feedbackNode()"
+      />
+      <div class="dr__next">
+        <button class="btn btn--primary" (click)="onNext()">
+          {{ res.finished ? 'Vedi i risultati' : 'Prossima mano' }}
+        </button>
+      </div>
+    }
+  }
+</section>

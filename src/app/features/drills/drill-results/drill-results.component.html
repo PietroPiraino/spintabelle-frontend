@@ -1,0 +1,207 @@
+<section class="container dres">
+  <header class="dres__head">
+    <h1>{{ hasSession() ? 'Sessione completata' : 'I tuoi risultati' }}</h1>
+  </header>
+
+  <!-- riepilogo della sessione appena conclusa -->
+  @if (hasSession()) {
+    <div class="dres__summary">
+      <div class="dres__stat dres__stat--big">
+        <span class="dres__k">Precisione</span>
+        <span class="dres__v">{{ pct(summary().accuracyPct) }}</span>
+        <span class="dres__sub"
+          >{{ summary().correct }} / {{ summary().answered }} corrette</span
+        >
+      </div>
+      <div class="dres__stat">
+        <span class="dres__k">EV persa media</span>
+        <span class="dres__v">−{{ bb(summary().avgEvLoss) }} bb</span>
+        <span class="dres__sub">per mano</span>
+      </div>
+      <div class="dres__stat">
+        <span class="dres__k">EV persa totale</span>
+        <span class="dres__v">−{{ bb(summary().totalEvLoss) }} bb</span>
+      </div>
+    </div>
+
+    @if (worstSpots().length) {
+      <h2 class="dres__h2">Errori più costosi</h2>
+      <div class="dres__worst">
+        @for (w of worstSpots(); track $index) {
+          <div class="dres__spot">
+            <app-hand-card [hand]="w.question.hand" />
+            <div class="dres__spot-info">
+              <div class="dres__spot-where">
+                {{ formatName(w.question.format) }} ·
+                {{ depth(w.question.depthLabel, w.question.format) }} bb ·
+                {{ w.question.activePosition }} ·
+                {{ spotLabels[w.question.spotType] }}
+              </div>
+              <div class="dres__spot-choice">
+                Hai scelto
+                <b class="dres__bad">{{ actionOf(w, w.result.chosenCode) }}</b>
+                · GTO: <b>{{ actionOf(w, w.result.bestCode) }}</b>
+              </div>
+            </div>
+            <div class="dres__spot-loss">−{{ bb(w.result.evLoss) }} bb</div>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="dres__cta">
+      <button class="btn btn--primary" (click)="repeat()">
+        Ripeti con la stessa configurazione
+      </button>
+      <button class="btn btn--ghost" (click)="newDrill()">
+        Nuovo allenamento
+      </button>
+    </div>
+  } @else {
+    <div class="dres__cta dres__cta--empty">
+      <button class="btn btn--primary" (click)="newDrill()">
+        Inizia un allenamento
+      </button>
+    </div>
+  }
+
+  <!-- statistiche storiche complessive -->
+  <h2 class="dres__h2">Le tue statistiche</h2>
+  @if (loadingStats()) {
+    <div class="spinner"></div>
+  } @else if (stats(); as st) {
+    @if (st.totalAnswered > 0) {
+      <div class="dres__summary">
+        <div class="dres__stat">
+          <span class="dres__k">Mani totali</span>
+          <span class="dres__v">{{ st.totalAnswered }}</span>
+        </div>
+        <div class="dres__stat">
+          <span class="dres__k">Precisione</span>
+          <span class="dres__v">{{ pct(st.accuracyPct) }}</span>
+        </div>
+        <div class="dres__stat">
+          <span class="dres__k">EV persa media</span>
+          <span class="dres__v">−{{ bb(st.avgEvLoss) }} bb</span>
+        </div>
+        <div class="dres__stat">
+          <span class="dres__k">Sessioni</span>
+          <span class="dres__v">{{ st.sessionsCompleted }}</span>
+        </div>
+      </div>
+
+      <!-- andamento nel tempo -->
+      @if (trendSessions().length >= 2) {
+        <h3 class="dres__h3">Andamento nel tempo</h3>
+        <app-drill-trend-chart [sessions]="trendSessions()" />
+      }
+
+      @if (st.worstBuckets.length) {
+        <h3 class="dres__h3">Dove perdi di più</h3>
+        <ul class="dres__buckets">
+          @for (b of st.worstBuckets; track b.key) {
+            <li class="dres__bucket">
+              <span class="dres__bucket-name">
+                {{ formatName(b.format) }} ·
+                {{ depth(b.depthLabel, b.format) }} bb
+              </span>
+              <span class="dres__bucket-meta">
+                {{ bucketAcc(b.answered, b.correct) }} · −{{ bb(b.avgEvLoss) }} bb/mano
+              </span>
+            </li>
+          }
+        </ul>
+      }
+
+      <!-- storico sessioni -->
+      <h3 class="dres__h3">Sessioni recenti</h3>
+      @if (loadingSessions()) {
+        <div class="spinner"></div>
+      } @else {
+        <div class="dres__sessions">
+          @for (s of sessions(); track s.id) {
+            <div class="dres__session">
+              <div class="dres__session-main">
+                <span class="dres__session-date">{{ fmtDate(s.createdAt) }}</span>
+                <span class="dres__session-cfg">{{ sessionLabel(s) }}</span>
+              </div>
+              <div class="dres__session-stats">
+                <span class="dres__pill">{{ pct(s.accuracyPct) }}</span>
+                <span class="dres__pill dres__pill--loss"
+                  >−{{ bb(s.avgEvLoss) }} bb</span
+                >
+                <span class="dres__session-n">{{ s.answered }} mani</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- storico mani filtrabile -->
+      <h3 class="dres__h3">Storico mani</h3>
+      <div class="dres__filters">
+        <select class="dres__select" (change)="onFormatFilter($event)">
+          <option value="">Tutti i formati</option>
+          @for (f of formatOptions(); track f.value) {
+            <option [value]="f.value">{{ f.label }}</option>
+          }
+        </select>
+        <button
+          class="dres__toggle"
+          [class.dres__toggle--on]="onlyErrors()"
+          (click)="toggleOnlyErrors()"
+        >
+          Solo errori
+        </button>
+      </div>
+
+      @if (displayedAttempts().length) {
+        <div class="dres__attempts">
+          @for (a of displayedAttempts(); track a.id) {
+            <div class="dres__attempt" [class.dres__attempt--ok]="a.correct">
+              <app-hand-card [hand]="a.hand" />
+              <div class="dres__attempt-info">
+                <div class="dres__attempt-where">
+                  {{ formatName(a.format) }} ·
+                  {{ depth(a.depthLabel, a.format) }} bb · {{ a.activePosition }}
+                </div>
+                <div class="dres__attempt-choice">
+                  {{ a.chosenCode }} <span class="dres__sep">vs</span>
+                  <b>{{ a.bestCode }}</b>
+                </div>
+              </div>
+              <div class="dres__attempt-right">
+                <span
+                  class="dres__verdict"
+                  [class.dres__verdict--ko]="!a.correct"
+                  >{{ a.correct ? '✓' : '✕' }}</span
+                >
+                <span class="dres__attempt-loss"
+                  >{{ a.evLoss > 0.005 ? '−' + bb(a.evLoss) : '0' }} bb</span
+                >
+              </div>
+            </div>
+          }
+        </div>
+        @if (canLoadMore() && !onlyErrors()) {
+          <div class="dres__more">
+            <button
+              class="btn btn--ghost btn--sm"
+              [disabled]="loadingHistory()"
+              (click)="loadMore()"
+            >
+              Carica altre
+            </button>
+          </div>
+        }
+      } @else if (!loadingHistory()) {
+        <p class="dres__empty">Nessuna mano nello storico per questo filtro.</p>
+      }
+    } @else {
+      <p class="dres__empty">
+        Non hai ancora completato nessuna mano. Inizia un allenamento per
+        costruire il tuo storico.
+      </p>
+    }
+  }
+</section>
