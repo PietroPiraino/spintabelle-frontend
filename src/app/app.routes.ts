@@ -121,6 +121,22 @@ export const routes: Routes = [
     title: 'Admin — Best Fish Forever',
   },
   {
+    path: 'privacy',
+    loadComponent: () =>
+      import('./features/legal/privacy/privacy.component').then(
+        (m) => m.PrivacyComponent,
+      ),
+    title: 'Informativa privacy — Best Fish Forever',
+  },
+  {
+    path: 'cookie-policy',
+    loadComponent: () =>
+      import('./features/legal/cookie-policy/cookie-policy.component').then(
+        (m) => m.CookiePolicyComponent,
+      ),
+    title: 'Cookie policy — Best Fish Forever',
+  },
+  {
     path: '**',
     loadComponent: () =>
       import('./features/not-found/not-found.component').then(

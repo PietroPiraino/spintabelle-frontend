@@ -89,6 +89,19 @@
           }
         </div>
 
+        <div class="field field--check">
+          <label class="check">
+            <input type="checkbox" formControlName="privacy" />
+            <span>
+              Ho letto e accetto l'<a routerLink="/privacy" target="_blank" rel="noopener">Informativa privacy</a>
+              e dichiaro di avere almeno 18 anni.
+            </span>
+          </label>
+          @if (form.controls.privacy.touched && form.controls.privacy.invalid) {
+            <span class="field-error">Devi accettare l'informativa per continuare.</span>
+          }
+        </div>
+
         <button type="submit" class="btn btn--primary" [disabled]="loading()">
           {{ loading() ? 'Creazione account…' : 'Crea account' }}
         </button>

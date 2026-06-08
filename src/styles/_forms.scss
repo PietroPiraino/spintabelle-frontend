@@ -58,6 +58,34 @@ select.input {
   color: var(--danger);
 }
 
+// Campo con checkbox (es. accettazione informativa privacy)
+.field--check .check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-muted);
+
+  input {
+    margin-top: 0.15rem;
+    width: 1.05rem;
+    height: 1.05rem;
+    flex-shrink: 0;
+    accent-color: var(--copper-500);
+  }
+
+  a {
+    color: var(--copper-600);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
 .form-feedback {
   padding: 0.85rem 1.1rem;
   border-radius: var(--radius-sm);

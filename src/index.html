@@ -22,10 +22,9 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="logo-256.png">
 
-  <!-- Font: Bricolage Grotesque (display) + Instrument Sans (testo) + Spline Sans Mono (etichette) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@500&display=swap" rel="stylesheet">
+  <!-- Font self-hostati (vedi src/styles/_fonts.scss): nessuna chiamata a Google Fonts / gstatic. -->
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/bricolage-grotesque-latin.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/instrument-sans-latin.woff2" crossorigin>
 
   <!-- Tema applicato PRIMA del paint: niente flash chiaro/scuro -->
   <script>

@@ -33,8 +33,15 @@
       </div>
     </div>
 
-    <p class="footer__legal">
-      © {{ year }} Best Fish Forever — spintabelle.it · Gioca responsabilmente.
-    </p>
+    <div class="footer__legal">
+      <nav class="footer__legal-links" aria-label="Note legali">
+        <a routerLink="/privacy">Informativa privacy</a>
+        <a routerLink="/cookie-policy">Cookie policy</a>
+      </nav>
+      <p class="footer__legal-line">
+        © {{ year }} Best Fish Forever — spintabelle.it · Titolare: Pietro Piraino
+        · 18+ · Gioca responsabilmente.
+      </p>
+    </div>
   </div>
 </footer>

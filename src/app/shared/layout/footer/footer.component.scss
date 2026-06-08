@@ -68,3 +68,22 @@
   font-size: 0.8rem;
   color: var(--text-faint);
 }
+
+.footer__legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.2rem;
+  margin-bottom: 0.7rem;
+
+  a {
+    color: var(--text-muted);
+
+    &:hover {
+      color: var(--cream-100);
+    }
+  }
+}
+
+.footer__legal-line {
+  margin: 0;
+}
