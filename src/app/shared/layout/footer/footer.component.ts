@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { SOCIAL_LINKS } from '../../../core/social-links';
 
 @Component({
   selector: 'app-footer',
@@ -9,8 +10,6 @@ import { RouterLink } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FooterComponent {
-  // TODO: sostituire con i link reali del canale e del server
-  protected readonly youtubeUrl = 'https://www.youtube.com/@bestfishforever';
-  protected readonly discordUrl = 'https://discord.gg/bestfishforever';
+  protected readonly social = SOCIAL_LINKS;
   protected readonly year = new Date().getFullYear();
 }

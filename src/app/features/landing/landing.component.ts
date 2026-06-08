@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { NewsService } from '../../core/services/news.service';
 import { NewsCardComponent } from '../../shared/ui/news-card/news-card.component';
 import { SuitDividerLiveComponent } from '../../shared/suit-divider-live/suit-divider-live.component';
+import { SOCIAL_LINKS } from '../../core/social-links';
 import { Hero3dComponent } from './hero-3d/hero-3d.component';
 
 @Component({
@@ -20,9 +21,7 @@ export class LandingComponent {
   protected readonly auth = inject(AuthService);
   private readonly newsApi = inject(NewsService);
 
-  // TODO: sostituire con i link reali (come nel footer)
-  protected readonly youtubeUrl = 'https://www.youtube.com/@bestfishforever';
-  protected readonly discordUrl = 'https://discord.gg/bestfishforever';
+  protected readonly social = SOCIAL_LINKS;
 
   protected readonly latestNews = toSignal(
     this.newsApi.getLatest(3).pipe(catchError(() => of([] as News[]))),

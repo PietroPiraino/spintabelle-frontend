@@ -5,6 +5,7 @@ import { Lesson } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { LessonsService } from '../../core/services/lessons.service';
 import { VimeoPlayerComponent } from '../../shared/ui/vimeo-player/vimeo-player.component';
+import { SOCIAL_LINKS } from '../../core/social-links';
 
 @Component({
   selector: 'app-lessons',
@@ -17,8 +18,7 @@ export class LessonsComponent {
   private readonly lessonsApi = inject(LessonsService);
   protected readonly auth = inject(AuthService);
 
-  // TODO: link reale del server Discord (come nel footer)
-  protected readonly discordUrl = 'https://discord.gg/bestfishforever';
+  protected readonly social = SOCIAL_LINKS;
 
   protected readonly lessons = toSignal(
     this.lessonsApi.getLessons().pipe(catchError(() => of(null))),
