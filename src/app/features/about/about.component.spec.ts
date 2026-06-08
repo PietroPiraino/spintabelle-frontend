@@ -47,11 +47,12 @@ describe('AboutComponent', () => {
     ]);
   });
 
-  it('mostra nickname, ruolo, bio e quote dei coach reali', () => {
+  it('mostra nickname, nome reale, ruolo, bio e quote dei coach reali', () => {
     const el = render();
     const text = el.textContent ?? '';
     for (const coach of COACHES) {
       expect(text).toContain(coach.nickname);
+      expect(text).toContain(coach.fullName);
       expect(text).toContain(coach.eyebrow);
       expect(text).toContain(coach.quote);
     }

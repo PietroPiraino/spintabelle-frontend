@@ -9,6 +9,8 @@ export interface Coach {
   id: CoachId;
   num: string;
   nickname: string;
+  /** Nome e cognome reali, mostrati sotto il nickname. */
+  fullName: string;
   eyebrow: string;
   tag: string;
   bio: string;
@@ -23,6 +25,7 @@ export const COACHES: Coach[] = [
     id: 'exivezz',
     num: '01',
     nickname: 'Exivezz',
+    fullName: 'Alessandro “Exivezz” Vendramin',
     eyebrow: 'Main Coach',
     tag: 'Twister 200 € · specialista exploit',
     bio:
@@ -43,6 +46,7 @@ export const COACHES: Coach[] = [
     id: 'nagato',
     num: '02',
     nickname: 'NagatoUzumaki',
+    fullName: 'Pietro “NagatoUzumaki” Piraino',
     eyebrow: 'Founder & Coach',
     tag: 'Twister 50 € · Software Developer',
     bio:
@@ -65,20 +69,22 @@ export const COACHES: Coach[] = [
     id: 'bastogne',
     num: '03',
     nickname: 'Bastogne87',
+    fullName: 'Pietro “Bastogne87” Bulfon',
     eyebrow: 'Coach',
     tag: 'People’s Poker · 50 e 100 €',
     bio:
-      'Coach con un debole dichiarato per l’estetica del Joker di Batman: giacca ' +
-      'viola, gilet, tutto il guardaroba — ma con la sua faccia, capelli ' +
-      'biondo-ramati e occhi azzurri. Bastogne87 gioca i 50 e i 100 euro su People’s ' +
-      'Poker e non si ferma lì: ama esplorare field diversi, anche low stakes, per ' +
-      'studiare come cambia il gioco. Curioso per natura, è il primo a provare ' +
-      'tavoli nuovi.',
-    quote: '«Mi vesto da matto, gioco da lucido.»',
+      'Genovese, classe 1987, vive di poker da sei anni: ha lasciato la Magistrale in ' +
+      'Architettura a pochissimi esami dalla fine perché nel poker aveva ormai ' +
+      'trovato la sua dimensione. Ha scalato gli Spin & Go partendo dai 5 euro fino ' +
+      'ai 100 di PokerStars — l’ultimo gradino prima dei nosebleed — e oggi grinda i ' +
+      '50 e i 100 su People’s Poker. Da oltre due anni allena, sia in privato sia ' +
+      'per chi vuole alzare il proprio livello. Specialista del gioco No Ante, ' +
+      'conosce GTO Wizard a fondo, anche in chiave exploitativa.',
+    quote: '«Studio la GTO per sapere quando vale la pena tradirla.»',
     stats: [
       { label: 'Stake', value: 'People’s 50/100 €' },
-      { label: 'Stile', value: 'Field explorer' },
-      { label: 'Firma', value: 'Estetica da Joker' },
+      { label: 'Specialità', value: 'Gioco No Ante' },
+      { label: 'Firma', value: 'GTO Wizard in chiave exploit' },
     ],
   },
 ];
