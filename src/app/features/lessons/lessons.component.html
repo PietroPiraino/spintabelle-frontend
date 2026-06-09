@@ -50,8 +50,8 @@
                     Scopri come abbonarti
                   </a>
                 </div>
-              } @else if (playingId() === lesson.id && lesson.vimeoEmbedUrl) {
-                <app-vimeo-player [url]="lesson.vimeoEmbedUrl" [videoTitle]="lesson.title" />
+              } @else if (playingId() === lesson.id && lesson.bunnyEmbedUrl) {
+                <app-bunny-player [url]="lesson.bunnyEmbedUrl" [videoTitle]="lesson.title" />
               } @else {
                 <button type="button" class="lesson-card__poster" (click)="play(lesson.id)">
                   <span class="lesson-card__play" aria-hidden="true">▶</span>

@@ -1,23 +1,33 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+} from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
-/** Player Vimeo responsive 16:9 con URL sanitizzato. */
+/**
+ * Player bunny.net (Bunny Stream) responsive 16:9, URL sanitizzato.
+ * Il player di bunny.net è cookieless: nessun cookie di profilazione di terze
+ * parti → non richiede banner di consenso.
+ */
 @Component({
-  selector: 'app-vimeo-player',
+  selector: 'app-bunny-player',
   imports: [],
   template: `
-    <div class="vimeo-frame">
+    <div class="bunny-frame">
       <iframe
         [src]="safeUrl()"
         [title]="videoTitle()"
-        allow="autoplay; fullscreen; picture-in-picture"
+        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
         allowfullscreen
         loading="lazy"
       ></iframe>
     </div>
   `,
   styles: `
-    .vimeo-frame {
+    .bunny-frame {
       position: relative;
       aspect-ratio: 16 / 9;
       border-radius: var(--radius-sm);
@@ -35,7 +45,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class VimeoPlayerComponent {
+export class BunnyPlayerComponent {
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly url = input.required<string>();

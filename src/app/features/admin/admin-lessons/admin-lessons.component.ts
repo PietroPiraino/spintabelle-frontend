@@ -26,7 +26,13 @@ export class AdminLessonsComponent {
   protected readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
     description: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(2000)]],
-    vimeoEmbedUrl: ['', [Validators.required, Validators.pattern(/^https?:\/\/.+/)]],
+    bunnyEmbedUrl: [
+      '',
+      [
+        Validators.required,
+        Validators.pattern(/^https:\/\/iframe\.mediadelivery\.net\/embed\/.+/),
+      ],
+    ],
     visibility: ['USER' as LessonVisibility, Validators.required],
     newTag: [''],
   });
@@ -72,7 +78,7 @@ export class AdminLessonsComponent {
     this.form.patchValue({
       title: lesson.title,
       description: lesson.description,
-      vimeoEmbedUrl: lesson.vimeoEmbedUrl ?? '',
+      bunnyEmbedUrl: lesson.bunnyEmbedUrl ?? '',
       visibility: lesson.visibility,
     });
     this.selectedTags.set([...lesson.tags]);
@@ -95,12 +101,12 @@ export class AdminLessonsComponent {
     this.error.set(null);
     this.feedback.set(null);
 
-    const { title, description, vimeoEmbedUrl, visibility } =
+    const { title, description, bunnyEmbedUrl, visibility } =
       this.form.getRawValue();
     const payload = {
       title,
       description,
-      vimeoEmbedUrl,
+      bunnyEmbedUrl,
       visibility,
       tags: this.selectedTags(),
     };

@@ -4,12 +4,12 @@ import { catchError, of } from 'rxjs';
 import { Lesson } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { LessonsService } from '../../core/services/lessons.service';
-import { VimeoPlayerComponent } from '../../shared/ui/vimeo-player/vimeo-player.component';
+import { BunnyPlayerComponent } from '../../shared/ui/bunny-player/bunny-player.component';
 import { SOCIAL_LINKS } from '../../core/social-links';
 
 @Component({
   selector: 'app-lessons',
-  imports: [VimeoPlayerComponent],
+  imports: [BunnyPlayerComponent],
   templateUrl: './lessons.component.html',
   styleUrl: './lessons.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

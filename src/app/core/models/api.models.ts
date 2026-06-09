@@ -27,16 +27,16 @@ export interface Lesson {
   description: string;
   tags: string[];
   visibility: LessonVisibility;
-  /** true se il ruolo corrente non sblocca il video (vimeoEmbedUrl assente) */
+  /** true se il ruolo corrente non sblocca il video (bunnyEmbedUrl assente) */
   locked: boolean;
-  vimeoEmbedUrl?: string;
+  bunnyEmbedUrl?: string;
   createdAt?: string;
 }
 
 export interface LessonPayload {
   title: string;
   description: string;
-  vimeoEmbedUrl: string;
+  bunnyEmbedUrl: string;
   tags: string[];
   visibility: LessonVisibility;
 }

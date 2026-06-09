@@ -36,15 +36,20 @@
       </div>
 
       <div class="field">
-        <label for="vimeo">Link embed Vimeo</label>
+        <label for="bunny">Link embed bunny.net</label>
         <input
-          id="vimeo"
+          id="bunny"
           type="url"
           class="input"
-          formControlName="vimeoEmbedUrl"
-          placeholder="https://player.vimeo.com/video/…"
-          [class.is-invalid]="form.controls.vimeoEmbedUrl.touched && form.controls.vimeoEmbedUrl.invalid"
+          formControlName="bunnyEmbedUrl"
+          placeholder="https://iframe.mediadelivery.net/embed/…"
+          [class.is-invalid]="form.controls.bunnyEmbedUrl.touched && form.controls.bunnyEmbedUrl.invalid"
         />
+        @if (form.controls.bunnyEmbedUrl.touched && form.controls.bunnyEmbedUrl.invalid) {
+          <span class="field-error">
+            Incolla l'URL embed di bunny.net (https://iframe.mediadelivery.net/embed/…).
+          </span>
+        }
       </div>
 
       <div class="field">
