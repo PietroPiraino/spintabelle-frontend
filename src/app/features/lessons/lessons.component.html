@@ -9,9 +9,38 @@
           class="input lessons__search"
           placeholder="Cerca per titolo, tema, tag…"
           aria-label="Cerca tra le lezioni"
+          [value]="searchTerm()"
           (input)="onSearch($event)"
         />
       </div>
+
+      @if (lessons()) {
+        <div class="spread lessons__toolbar">
+          <div class="row lessons__levels" role="group" aria-label="Filtra per livello">
+            <button
+              type="button"
+              class="badge badge--tag"
+              [class.is-active]="visibilityFilter() === 'all'"
+              (click)="setVisibility('all')"
+            >Tutte</button>
+            <button
+              type="button"
+              class="badge badge--tag"
+              [class.is-active]="visibilityFilter() === 'USER'"
+              (click)="setVisibility('USER')"
+            >Base</button>
+            <button
+              type="button"
+              class="badge badge--tag"
+              [class.is-active]="visibilityFilter() === 'SUBSCRIBER'"
+              (click)="setVisibility('SUBSCRIBER')"
+            >Premium</button>
+          </div>
+          <span class="lessons__count">
+            {{ filtered().length }} {{ filtered().length === 1 ? 'lezione' : 'lezioni' }}
+          </span>
+        </div>
+      }
 
       @if (tags().length > 0) {
         <div class="row lessons__tags" role="group" aria-label="Filtra per tag">
@@ -19,7 +48,7 @@
             <button
               type="button"
               class="badge badge--tag"
-              [class.is-active]="selectedTag() === tag"
+              [class.is-active]="selectedTags().includes(tag)"
               (click)="toggleTag(tag)"
             >{{ tag }}</button>
           }
@@ -33,6 +62,11 @@
       <div class="empty-state">
         <div class="empty-state__suit" aria-hidden="true">♠ ♥ ♣ ♦</div>
         <p>Nessuna lezione trovata con questi filtri.</p>
+        @if (hasFilters()) {
+          <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilters()">
+            Azzera i filtri
+          </button>
+        }
       </div>
     } @else {
       <div class="grid grid--2">
@@ -69,6 +103,9 @@
                   <span class="badge badge--free">Base</span>
                 }
               </div>
+              @if (lesson.videoDate) {
+                <span class="lesson-card__date">{{ lesson.videoDate | date: 'dd MMM yyyy' }}</span>
+              }
               <p class="lesson-card__desc">{{ lesson.description }}</p>
               @if (lesson.tags.length > 0) {
                 <div class="row lesson-card__taglist">
@@ -76,7 +113,7 @@
                     <button
                       type="button"
                       class="badge badge--tag"
-                      [class.is-active]="selectedTag() === tag"
+                      [class.is-active]="selectedTags().includes(tag)"
                       (click)="toggleTag(tag)"
                     >{{ tag }}</button>
                   }

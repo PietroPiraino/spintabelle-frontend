@@ -2,8 +2,29 @@
   max-width: 320px;
 }
 
+// Barra livelli (Tutte/Base/Premium) + contatore risultati
+.lessons__toolbar {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.lessons__levels {
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.lessons__count {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .lessons__tags {
   gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
 }
 
 .lesson-card {
@@ -101,6 +122,14 @@
   h3 {
     font-size: 1.15rem;
   }
+}
+
+.lesson-card__date {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 .lesson-card__desc {

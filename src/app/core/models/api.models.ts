@@ -30,6 +30,8 @@ export interface Lesson {
   /** true se il ruolo corrente non sblocca il video (bunnyEmbedUrl assente) */
   locked: boolean;
   bunnyEmbedUrl?: string;
+  /** data del video (ISO); chiave di ordinamento della lista */
+  videoDate?: string;
   createdAt?: string;
 }
 
@@ -39,6 +41,19 @@ export interface LessonPayload {
   bunnyEmbedUrl: string;
   tags: string[];
   visibility: LessonVisibility;
+  /** data del video in formato YYYY-MM-DD (obbligatoria alla creazione) */
+  videoDate: string;
+}
+
+/** Iscritto come esposto al pannello admin (mai dati sensibili). */
+export interface AdminUser {
+  id: string;
+  email: string;
+  nickname?: string;
+  role: Role;
+  verified: boolean;
+  lastActiveAt?: string;
+  createdAt?: string;
 }
 
 export interface News {

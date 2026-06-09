@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { AdminLessonsComponent } from './admin-lessons/admin-lessons.component';
 import { AdminNewsComponent } from './admin-news/admin-news.component';
+import { AdminUsersComponent } from './admin-users/admin-users.component';
 
-type AdminTab = 'lezioni' | 'news';
+type AdminTab = 'lezioni' | 'news' | 'iscritti';
 
 @Component({
   selector: 'app-admin',
-  imports: [AdminLessonsComponent, AdminNewsComponent],
+  imports: [AdminLessonsComponent, AdminNewsComponent, AdminUsersComponent],
   template: `
     <section class="section">
       <div class="container">
@@ -32,12 +33,22 @@ type AdminTab = 'lezioni' | 'news';
             [attr.aria-selected]="tab() === 'news'"
             (click)="tab.set('news')"
           >♦ News</button>
+          <button
+            type="button"
+            role="tab"
+            class="admin-tabs__tab"
+            [class.is-active]="tab() === 'iscritti'"
+            [attr.aria-selected]="tab() === 'iscritti'"
+            (click)="tab.set('iscritti')"
+          >♣ Iscritti</button>
         </div>
 
         @if (tab() === 'lezioni') {
           <app-admin-lessons />
-        } @else {
+        } @else if (tab() === 'news') {
           <app-admin-news />
+        } @else {
+          <app-admin-users />
         }
       </div>
     </section>

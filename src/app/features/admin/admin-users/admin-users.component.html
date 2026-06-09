@@ -1,0 +1,105 @@
+<div class="admin-users">
+  <div class="admin-users__head">
+    <input
+      type="search"
+      class="input admin-users__search"
+      placeholder="Cerca per email o nickname…"
+      aria-label="Cerca iscritti"
+      [formControl]="searchControl"
+    />
+    @if (page(); as p) {
+      <span class="admin-users__count">
+        {{ p.total }} {{ p.total === 1 ? 'iscritto' : 'iscritti' }}
+      </span>
+    }
+  </div>
+
+  @if (feedback()) {
+    <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
+  }
+  @if (error()) {
+    <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (!page() && loading()) {
+    <div class="spinner" role="status" aria-label="Caricamento iscritti"></div>
+  } @else if (page(); as p) {
+    @if (p.items.length === 0) {
+      <div class="empty-state">
+        <p>Nessun iscritto trovato.</p>
+      </div>
+    } @else {
+      <div class="admin-list">
+        @for (user of p.items; track user.id) {
+          <div class="card admin-item">
+            <div class="admin-item__info">
+              <div class="row admin-user__line">
+                <strong>{{ user.email }}</strong>
+                @if (user.nickname) {
+                  <span class="admin-user__nick">{{ '@' + user.nickname }}</span>
+                }
+                @if (user.verified) {
+                  <span class="badge badge--free">Verificato</span>
+                } @else {
+                  <span class="badge badge--premium">Da verificare</span>
+                }
+                @if (isSelf(user)) {
+                  <span class="badge badge--tag">Tu</span>
+                }
+              </div>
+              <span class="admin-item__meta">
+                Iscritto {{ user.createdAt | date: 'dd MMM yyyy' }} · Ultimo accesso
+                {{ user.lastActiveAt ? (user.lastActiveAt | date: 'dd MMM yyyy') : '—' }}
+              </span>
+            </div>
+
+            <div class="row admin-user__actions">
+              <label class="visually-hidden" [attr.for]="'role-' + user.id">Ruolo</label>
+              <select
+                [id]="'role-' + user.id"
+                class="input admin-user__role"
+                [disabled]="isSelf(user)"
+                (change)="changeRole(user, $event)"
+              >
+                @for (r of roles; track r) {
+                  <option [value]="r" [selected]="r === user.role">{{ roleLabels[r] }}</option>
+                }
+              </select>
+              @if (!user.verified) {
+                <button type="button" class="btn btn--ghost btn--sm" (click)="resend(user)">
+                  Reinvia verifica
+                </button>
+              }
+              <button
+                type="button"
+                class="btn btn--danger btn--sm"
+                [disabled]="isSelf(user)"
+                (click)="remove(user)"
+              >
+                Elimina
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (p.totalPages > 1) {
+        <div class="row admin-users__pager">
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            [disabled]="p.page <= 1"
+            (click)="goToPage(p.page - 1)"
+          >← Precedenti</button>
+          <span class="admin-item__meta">Pagina {{ p.page }} di {{ p.totalPages }}</span>
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            [disabled]="p.page >= p.totalPages"
+            (click)="goToPage(p.page + 1)"
+          >Successivi →</button>
+        </div>
+      }
+    }
+  }
+</div>

@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Lesson, LessonVisibility } from '../../../core/models/api.models';
@@ -6,7 +7,7 @@ import { apiErrorMessage } from '../../../core/utils/http-error';
 
 @Component({
   selector: 'app-admin-lessons',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, DatePipe],
   templateUrl: './admin-lessons.component.html',
   styleUrl: '../admin-shared.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,8 +35,14 @@ export class AdminLessonsComponent {
       ],
     ],
     visibility: ['USER' as LessonVisibility, Validators.required],
+    videoDate: ['', Validators.required],
     newTag: [''],
   });
+
+  /** Converte una data ISO nel formato YYYY-MM-DD richiesto da input[type=date]. */
+  private toDateInput(iso?: string): string {
+    return iso ? iso.slice(0, 10) : '';
+  }
 
   constructor() {
     this.reload();
@@ -80,6 +87,7 @@ export class AdminLessonsComponent {
       description: lesson.description,
       bunnyEmbedUrl: lesson.bunnyEmbedUrl ?? '',
       visibility: lesson.visibility,
+      videoDate: this.toDateInput(lesson.videoDate),
     });
     this.selectedTags.set([...lesson.tags]);
     scrollTo({ top: 0, behavior: 'smooth' });
@@ -101,13 +109,14 @@ export class AdminLessonsComponent {
     this.error.set(null);
     this.feedback.set(null);
 
-    const { title, description, bunnyEmbedUrl, visibility } =
+    const { title, description, bunnyEmbedUrl, visibility, videoDate } =
       this.form.getRawValue();
     const payload = {
       title,
       description,
       bunnyEmbedUrl,
       visibility,
+      videoDate,
       tags: this.selectedTags(),
     };
 
