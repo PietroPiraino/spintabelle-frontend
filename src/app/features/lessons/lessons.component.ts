@@ -88,6 +88,11 @@ export class LessonsComponent {
     this.playingId.set(id);
   }
 
+  /** Nasconde la copertina se non carica (video senza thumbnail) → resta il gradiente. */
+  protected onThumbError(event: Event): void {
+    (event.target as HTMLElement).style.display = 'none';
+  }
+
   protected onSearch(event: Event): void {
     this.searchTerm.set((event.target as HTMLInputElement).value);
   }

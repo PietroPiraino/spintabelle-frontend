@@ -46,6 +46,7 @@
   aspect-ratio: 16 / 9;
   border: none;
   cursor: pointer;
+  overflow: hidden;
   background:
     radial-gradient(420px 200px at 50% 0%, rgba(255, 106, 31, 0.22), transparent 70%),
     repeating-linear-gradient(
@@ -66,7 +67,28 @@
   }
 }
 
+// Copertina (thumbnail Bunny) che riempie il riquadro 16:9
+.lesson-card__thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+// Scrim scuro sopra la copertina per far risaltare il tasto play
+.lesson-card__poster.has-thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(160deg, rgba(7, 11, 24, 0.12), rgba(7, 11, 24, 0.55));
+}
+
 .lesson-card__play {
+  position: relative;
+  z-index: 2;
   display: grid;
   place-items: center;
   width: 64px;
@@ -82,6 +104,8 @@
 
 // Stato bloccato (upsell abbonati)
 .lesson-card__locked {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -93,6 +117,18 @@
   background:
     radial-gradient(400px 220px at 50% 110%, rgba(255, 181, 71, 0.18), transparent 70%),
     var(--bg-0);
+
+  // il contenuto (lucchetto, testo, CTA) resta sopra la copertina attenuata
+  > :not(.lesson-card__thumb) {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// Copertina dietro la card premium: attenuata, così il messaggio resta leggibile
+.lesson-card__thumb--dim {
+  opacity: 0.25;
+  filter: grayscale(0.3) brightness(0.7);
 }
 
 .lesson-card__lock {

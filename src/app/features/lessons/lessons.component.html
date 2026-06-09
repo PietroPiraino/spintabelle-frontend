@@ -75,6 +75,16 @@
             <div class="lesson-card__media">
               @if (lesson.locked) {
                 <div class="lesson-card__locked">
+                  @if (lesson.thumbnailUrl) {
+                    <img
+                      class="lesson-card__thumb lesson-card__thumb--dim"
+                      [src]="lesson.thumbnailUrl"
+                      alt=""
+                      loading="lazy"
+                      referrerpolicy="origin"
+                      (error)="onThumbError($event)"
+                    />
+                  }
                   <span class="lesson-card__lock" aria-hidden="true">🂠</span>
                   <p class="lesson-card__locked-title">Riservata agli abbonati</p>
                   <p class="lesson-card__locked-sub">
@@ -87,7 +97,22 @@
               } @else if (playingId() === lesson.id && lesson.bunnyEmbedUrl) {
                 <app-bunny-player [url]="lesson.bunnyEmbedUrl" [videoTitle]="lesson.title" />
               } @else {
-                <button type="button" class="lesson-card__poster" (click)="play(lesson.id)">
+                <button
+                  type="button"
+                  class="lesson-card__poster"
+                  [class.has-thumb]="lesson.thumbnailUrl"
+                  (click)="play(lesson.id)"
+                >
+                  @if (lesson.thumbnailUrl) {
+                    <img
+                      class="lesson-card__thumb"
+                      [src]="lesson.thumbnailUrl"
+                      alt=""
+                      loading="lazy"
+                      referrerpolicy="origin"
+                      (error)="onThumbError($event)"
+                    />
+                  }
                   <span class="lesson-card__play" aria-hidden="true">▶</span>
                   <span class="visually-hidden">Guarda {{ lesson.title }}</span>
                 </button>

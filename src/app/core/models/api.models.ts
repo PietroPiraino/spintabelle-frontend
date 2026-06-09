@@ -30,6 +30,8 @@ export interface Lesson {
   /** true se il ruolo corrente non sblocca il video (bunnyEmbedUrl assente) */
   locked: boolean;
   bunnyEmbedUrl?: string;
+  /** copertina del video (thumbnail.jpg sul CDN Bunny), referer-gated */
+  thumbnailUrl?: string;
   /** data del video (ISO); chiave di ordinamento della lista */
   videoDate?: string;
   createdAt?: string;
