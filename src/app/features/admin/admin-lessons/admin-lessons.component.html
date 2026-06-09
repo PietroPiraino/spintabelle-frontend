@@ -42,12 +42,12 @@
           type="url"
           class="input"
           formControlName="bunnyEmbedUrl"
-          placeholder="https://iframe.mediadelivery.net/embed/…"
+          placeholder="https://player.mediadelivery.net/embed/…"
           [class.is-invalid]="form.controls.bunnyEmbedUrl.touched && form.controls.bunnyEmbedUrl.invalid"
         />
         @if (form.controls.bunnyEmbedUrl.touched && form.controls.bunnyEmbedUrl.invalid) {
           <span class="field-error">
-            Incolla l'URL embed di bunny.net (https://iframe.mediadelivery.net/embed/…).
+            Incolla l'URL embed di bunny.net (host iframe. o player.mediadelivery.net/embed/…).
           </span>
         }
       </div>

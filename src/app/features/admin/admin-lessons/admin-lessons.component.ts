@@ -31,7 +31,9 @@ export class AdminLessonsComponent {
       '',
       [
         Validators.required,
-        Validators.pattern(/^https:\/\/iframe\.mediadelivery\.net\/embed\/.+/),
+        Validators.pattern(
+          /^https:\/\/(iframe|player)\.mediadelivery\.net\/embed\/.+/,
+        ),
       ],
     ],
     visibility: ['USER' as LessonVisibility, Validators.required],
