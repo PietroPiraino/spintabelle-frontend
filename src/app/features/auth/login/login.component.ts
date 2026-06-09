@@ -22,8 +22,10 @@ export class LoginComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly showResend = signal(false);
 
+  // L'accesso accetta email O nome utente nello stesso campo: niente validatore
+  // email (un nickname valido non lo passerebbe), solo lunghezza minima.
   protected readonly form = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
+    identifier: ['', [Validators.required, Validators.minLength(3)]],
     password: ['', [Validators.required, Validators.minLength(8)]],
   });
 
@@ -36,8 +38,8 @@ export class LoginComponent {
     this.error.set(null);
     this.showResend.set(false);
 
-    const { email, password } = this.form.getRawValue();
-    this.auth.login(email, password).subscribe({
+    const { identifier, password } = this.form.getRawValue();
+    this.auth.login(identifier, password).subscribe({
       next: () => void this.router.navigateByUrl(this.redirect() ?? '/'),
       error: (err: unknown) => {
         this.loading.set(false);

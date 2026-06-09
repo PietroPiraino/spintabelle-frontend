@@ -15,18 +15,18 @@
 
     <form [formGroup]="form" (ngSubmit)="submit()">
       <div class="field">
-        <label for="email">Email</label>
+        <label for="identifier">Email o nome utente</label>
         <input
-          id="email"
-          type="email"
+          id="identifier"
+          type="text"
           class="input"
-          formControlName="email"
-          autocomplete="email"
-          placeholder="tu@esempio.it"
-          [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+          formControlName="identifier"
+          autocomplete="username"
+          placeholder="tu@esempio.it oppure nomeutente"
+          [class.is-invalid]="form.controls.identifier.touched && form.controls.identifier.invalid"
         />
-        @if (form.controls.email.touched && form.controls.email.invalid) {
-          <span class="field-error">Inserisci un'email valida.</span>
+        @if (form.controls.identifier.touched && form.controls.identifier.invalid) {
+          <span class="field-error">Inserisci la tua email o il tuo nome utente.</span>
         }
       </div>
 

@@ -81,11 +81,12 @@ export class AuthService {
     this.readySubject.next();
   }
 
-  login(email: string, password: string): Observable<User> {
+  /** `identifier` può essere l'email oppure il nome utente (nickname). */
+  login(identifier: string, password: string): Observable<User> {
     return this.http
       .post<AuthResponse>(
         `${API}/auth/login`,
-        { email, password },
+        { identifier, password },
         { withCredentials: true, context: new HttpContext().set(SKIP_REFRESH, true) },
       )
       .pipe(
