@@ -36,6 +36,11 @@ export class AdminUsersComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly feedback = signal<string | null>(null);
 
+  /** Ruolo scelto nella select ma NON ancora salvato, per utente (chiave = id). */
+  protected readonly pendingRoles = signal<Record<string, Role>>({});
+  /** Id dell'utente per cui il salvataggio del ruolo è in corso. */
+  protected readonly savingRoleId = signal<string | null>(null);
+
   protected readonly searchControl = new FormControl('', { nonNullable: true });
   private readonly query = signal('');
   private readonly currentPage = signal(1);
@@ -60,6 +65,7 @@ export class AdminUsersComponent {
   private load(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.pendingRoles.set({});
     this.usersApi
       .list({ q: this.query() || undefined, page: this.currentPage() })
       .subscribe({
@@ -85,21 +91,56 @@ export class AdminUsersComponent {
     return user.id === this.selfId();
   }
 
-  protected changeRole(user: AdminUser, event: Event): void {
+  /** Ruolo mostrato nella select: quello in sospeso se modificato, altrimenti il salvato. */
+  protected pendingRole(user: AdminUser): Role {
+    return this.pendingRoles()[user.id] ?? user.role;
+  }
+
+  /** True se la select mostra un ruolo diverso da quello salvato (serve "Salva"). */
+  protected isRoleDirty(user: AdminUser): boolean {
+    return this.pendingRole(user) !== user.role;
+  }
+
+  /** Registra la scelta nella select SENZA salvarla: la conferma è esplicita. */
+  protected onRoleSelect(user: AdminUser, event: Event): void {
     const role = (event.target as HTMLSelectElement).value as Role;
+    this.pendingRoles.update((map) => {
+      const next = { ...map };
+      if (role === user.role) delete next[user.id];
+      else next[user.id] = role;
+      return next;
+    });
+  }
+
+  /** Scarta la modifica non salvata, riportando la select al ruolo reale. */
+  protected cancelRole(user: AdminUser): void {
+    this.pendingRoles.update((map) => {
+      const next = { ...map };
+      delete next[user.id];
+      return next;
+    });
+  }
+
+  /** Conferma e salva il nuovo ruolo dell'utente. */
+  protected saveRole(user: AdminUser): void {
+    if (this.isSelf(user)) return;
+    const role = this.pendingRole(user);
     if (role === user.role) return;
+    this.savingRoleId.set(user.id);
     this.error.set(null);
     this.feedback.set(null);
     this.usersApi.updateRole(user.id, role).subscribe({
       next: (updated) => {
+        this.savingRoleId.set(null);
+        this.cancelRole(user); // pending ora coincide col salvato
         this.patchUser(updated);
         this.feedback.set(
           `Ruolo di ${user.email} aggiornato a ${ROLE_LABELS[role]}.`,
         );
       },
       error: (err: unknown) => {
+        this.savingRoleId.set(null);
         this.error.set(apiErrorMessage(err, 'Cambio ruolo non riuscito.'));
-        this.load(); // ripristina la select al valore reale
       },
     });
   }

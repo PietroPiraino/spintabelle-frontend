@@ -124,7 +124,11 @@
 
 .admin-user__role {
   width: auto;
-  padding: 0.35rem 0.6rem;
+  min-width: 7.5rem;
+  // spazio a destra per la freccetta nativa (il padding-right del global
+  // select.input viene sovrascritto qui): evita che copra "Abbonato"
+  padding: 0.4rem 2rem 0.4rem 0.7rem;
+  background-position: right 0.65rem center;
   font-size: 0.85rem;
 }
 

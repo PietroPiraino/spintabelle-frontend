@@ -58,13 +58,31 @@
               <select
                 [id]="'role-' + user.id"
                 class="input admin-user__role"
-                [disabled]="isSelf(user)"
-                (change)="changeRole(user, $event)"
+                [disabled]="isSelf(user) || savingRoleId() === user.id"
+                (change)="onRoleSelect(user, $event)"
               >
                 @for (r of roles; track r) {
-                  <option [value]="r" [selected]="r === user.role">{{ roleLabels[r] }}</option>
+                  <option [value]="r" [selected]="r === pendingRole(user)">{{ roleLabels[r] }}</option>
                 }
               </select>
+              @if (isRoleDirty(user)) {
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  [disabled]="savingRoleId() === user.id"
+                  (click)="saveRole(user)"
+                >
+                  {{ savingRoleId() === user.id ? 'Salvataggio…' : 'Salva' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="savingRoleId() === user.id"
+                  (click)="cancelRole(user)"
+                >
+                  Annulla
+                </button>
+              }
               @if (!user.verified) {
                 <button type="button" class="btn btn--ghost btn--sm" (click)="resend(user)">
                   Reinvia verifica
