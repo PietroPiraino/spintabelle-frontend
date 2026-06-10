@@ -1,7 +1,8 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { News } from '../../../core/models/api.models';
+import { stripMarkdown } from '../../../core/utils/strip-markdown';
 
 @Component({
   selector: 'app-news-card',
@@ -18,7 +19,7 @@ import { News } from '../../../core/models/api.models';
         <h3 class="news-card__title">
           <a [routerLink]="['/news', news()._id]">{{ news().title }}</a>
         </h3>
-        <p class="news-card__excerpt">{{ news().body }}</p>
+        <p class="news-card__excerpt">{{ excerpt() }}</p>
         <a [routerLink]="['/news', news()._id]" class="btn btn--link">Leggi tutto →</a>
       </div>
     </article>
@@ -84,4 +85,7 @@ import { News } from '../../../core/models/api.models';
 })
 export class NewsCardComponent {
   readonly news = input.required<News>();
+
+  /** Anteprima in chiaro: niente sintassi markdown nel testo della card. */
+  protected readonly excerpt = computed(() => stripMarkdown(this.news().body));
 }

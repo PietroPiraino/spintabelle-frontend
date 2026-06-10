@@ -34,6 +34,51 @@
   margin-bottom: 0.6rem;
 }
 
+// ── Editor news con tab Scrivi/Anteprima ────────────────────────────────────
+
+.admin-news__editor-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.admin-news__tabs {
+  gap: 0.35rem;
+
+  .btn.is-active {
+    color: var(--copper-600);
+    border-color: var(--copper-400);
+  }
+}
+
+.admin-news__hint {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+
+  code {
+    font-family: var(--font-mono);
+    background: var(--line);
+    padding: 0.05em 0.35em;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.admin-news__preview {
+  min-height: 9rem; // ≈ rows="8": evita salti d'altezza al cambio tab
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+
+.admin-news__preview-empty {
+  color: var(--text-faint);
+  font-size: 0.9rem;
+}
+
 .admin-list {
   display: flex;
   flex-direction: column;

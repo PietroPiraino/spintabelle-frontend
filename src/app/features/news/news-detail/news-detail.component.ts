@@ -11,10 +11,11 @@ import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { News } from '../../../core/models/api.models';
 import { NewsService } from '../../../core/services/news.service';
+import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.component';
 
 @Component({
   selector: 'app-news-detail',
-  imports: [RouterLink, DatePipe],
+  imports: [RouterLink, DatePipe, MarkdownComponent],
   templateUrl: './news-detail.component.html',
   styleUrl: './news-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

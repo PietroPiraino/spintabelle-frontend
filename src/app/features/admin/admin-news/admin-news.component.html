@@ -24,15 +24,57 @@
       </div>
 
       <div class="field">
-        <label for="news-body">Testo</label>
-        <textarea
-          id="news-body"
-          class="input"
-          formControlName="body"
-          rows="8"
-          placeholder="Il contenuto della news (i paragrafi vengono mantenuti)"
-          [class.is-invalid]="form.controls.body.touched && form.controls.body.invalid"
-        ></textarea>
+        <div class="admin-news__editor-head">
+          <label for="news-body">Testo</label>
+          <div class="row admin-news__tabs" role="tablist" aria-label="Editor del testo">
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              role="tab"
+              [class.is-active]="editorTab() === 'write'"
+              [attr.aria-selected]="editorTab() === 'write'"
+              (click)="editorTab.set('write')"
+            >
+              Scrivi
+            </button>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              role="tab"
+              [class.is-active]="editorTab() === 'preview'"
+              [attr.aria-selected]="editorTab() === 'preview'"
+              (click)="editorTab.set('preview')"
+            >
+              Anteprima
+            </button>
+          </div>
+        </div>
+
+        @if (editorTab() === 'write') {
+          <textarea
+            id="news-body"
+            class="input"
+            formControlName="body"
+            rows="8"
+            placeholder="Il contenuto della news (Markdown supportato)"
+            [class.is-invalid]="form.controls.body.touched && form.controls.body.invalid"
+          ></textarea>
+          <p class="admin-news__hint">
+            Markdown: <code>## titolo</code>, <code>**grassetto**</code>,
+            <code>- elenco</code>, <code>[testo](url)</code>,
+            <code>![img](url)</code>
+          </p>
+        } @else {
+          <div class="admin-news__preview">
+            @if (bodyPreview().trim()) {
+              <app-markdown [markdown]="bodyPreview()" />
+            } @else {
+              <p class="admin-news__preview-empty">
+                Niente da mostrare: scrivi qualcosa nel testo.
+              </p>
+            }
+          </div>
+        }
       </div>
 
       <div class="field">

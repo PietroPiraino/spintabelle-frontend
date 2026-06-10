@@ -1,0 +1,167 @@
+// Tipografia per contenuti renderizzati da Markdown (corpo delle news, ecc.).
+//
+// Classe GLOBALE di proposito: i nodi iniettati via [innerHTML] NON ricevono
+// gli attributi di view-encapsulation di Angular, quindi le regole devono
+// essere globali per raggiungerli. Tutti i colori vengono dai token di
+// _tokens.scss -> resa coerente nei 3 temi (Ghiaccio / Tramonto / Notte).
+// Usata sia dal dettaglio news sia dall'anteprima del pannello admin.
+
+.prose {
+  color: var(--cream-300);
+  font-size: 1.05rem;
+  line-height: 1.75;
+
+  > :first-child {
+    margin-top: 0;
+  }
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  // ── Titoli (offset: '#' del corpo diventa h2) ──────────────────────────────
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    color: var(--cream-100);
+    line-height: 1.18;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 2rem 0 0.7rem;
+  }
+  h2 {
+    font-size: 1.65rem;
+  }
+  h3 {
+    font-size: 1.35rem;
+  }
+  h4 {
+    font-size: 1.15rem;
+  }
+  h5,
+  h6 {
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--copper-600);
+  }
+
+  // ── Paragrafi e inline ─────────────────────────────────────────────────────
+  p {
+    margin: 0 0 1.1rem;
+    text-wrap: pretty;
+  }
+  strong {
+    color: var(--cream-100);
+    font-weight: 700;
+  }
+  em {
+    font-style: italic;
+  }
+
+  // ── Link ───────────────────────────────────────────────────────────────────
+  a {
+    color: var(--copper-600);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+    transition: color var(--t-fast);
+
+    &:hover {
+      color: var(--copper-500);
+    }
+  }
+
+  // ── Elenchi ────────────────────────────────────────────────────────────────
+  ul,
+  ol {
+    margin: 0 0 1.1rem;
+    padding-left: 1.5rem;
+  }
+  li {
+    margin: 0.35rem 0;
+  }
+  li::marker {
+    color: var(--copper-400);
+  }
+  ul ul,
+  ol ol,
+  ul ol,
+  ol ul {
+    margin: 0.35rem 0;
+  }
+
+  // ── Citazioni ──────────────────────────────────────────────────────────────
+  blockquote {
+    margin: 1.4rem 0;
+    padding: 0.4rem 0 0.4rem 1.1rem;
+    border-left: 3px solid var(--line-strong);
+    color: var(--text-muted);
+    font-style: italic;
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  // ── Codice ─────────────────────────────────────────────────────────────────
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--line);
+    padding: 0.12em 0.4em;
+    border-radius: var(--radius-sm);
+  }
+  pre {
+    margin: 1.4rem 0;
+    padding: 1rem 1.1rem;
+    background: var(--bg-0);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow-x: auto;
+
+    code {
+      background: none;
+      padding: 0;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+  }
+
+  // ── Immagini (inline, dal CDN) ─────────────────────────────────────────────
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    margin: 1.2rem 0;
+  }
+
+  // ── Regola orizzontale ─────────────────────────────────────────────────────
+  hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 2rem 0;
+  }
+
+  // ── Tabelle (GFM) ──────────────────────────────────────────────────────────
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.4rem 0;
+    font-size: 0.95rem;
+  }
+  th,
+  td {
+    border: 1px solid var(--line);
+    padding: 0.5rem 0.7rem;
+    text-align: left;
+  }
+  th {
+    color: var(--cream-100);
+    font-weight: 700;
+    background: var(--bg-0);
+  }
+}

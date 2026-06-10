@@ -23,7 +23,7 @@
           <img class="news-detail__cover" [src]="cover" alt="" />
         }
 
-        <div class="news-detail__body">{{ news()!.body }}</div>
+        <app-markdown [markdown]="news()!.body" />
       </article>
     }
   </div>

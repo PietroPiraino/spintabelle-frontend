@@ -1,13 +1,15 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { News } from '../../../core/models/api.models';
 import { NewsService } from '../../../core/services/news.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.component';
 
 @Component({
   selector: 'app-admin-news',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, MarkdownComponent],
   templateUrl: './admin-news.component.html',
   styleUrl: '../admin-shared.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +28,14 @@ export class AdminNewsComponent {
     title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
     body: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(20000)]],
     coverImageUrl: [''],
+  });
+
+  /** Tab attiva dell'editor del corpo: scrittura o anteprima markdown. */
+  protected readonly editorTab = signal<'write' | 'preview'>('write');
+
+  /** Valore live del corpo come signal, per l'anteprima markdown. */
+  protected readonly bodyPreview = toSignal(this.form.controls.body.valueChanges, {
+    initialValue: this.form.controls.body.value,
   });
 
   constructor() {

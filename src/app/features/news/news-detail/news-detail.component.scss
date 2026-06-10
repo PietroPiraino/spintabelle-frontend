@@ -26,9 +26,6 @@
   border: 1px solid var(--line);
 }
 
-.news-detail__body {
-  font-size: 1.05rem;
-  line-height: 1.8;
-  color: var(--cream-300);
-  white-space: pre-line; // rispetta i paragrafi inseriti dall'admin
-}
+// Il corpo è renderizzato da <app-markdown> con la classe globale `.prose`
+// (vedi styles/_prose.scss): titoli, grassetti, elenchi, link, immagini, ecc.
+// La larghezza è già limitata dall'articolo (max-width: 760px).
