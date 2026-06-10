@@ -2,19 +2,42 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Lesson, LessonPayload } from '../models/api.models';
+import {
+  Lesson,
+  LessonPayload,
+  LessonVisibility,
+  Paginated,
+} from '../models/api.models';
 
 const API = environment.API_URL;
+
+/** Filtri/paginazione della lista lezioni (tutti applicati dal backend). */
+export interface LessonListOpts {
+  page?: number;
+  limit?: number;
+  /** ricerca substring su titolo/descrizione/tag */
+  q?: string;
+  /** tag in AND, serializzati CSV */
+  tags?: string[];
+  visibility?: LessonVisibility;
+}
 
 @Injectable({ providedIn: 'root' })
 export class LessonsService {
   private readonly http = inject(HttpClient);
 
-  getLessons(filters?: { tag?: string; q?: string }): Observable<Lesson[]> {
-    let params = new HttpParams();
-    if (filters?.tag) params = params.set('tag', filters.tag);
-    if (filters?.q) params = params.set('q', filters.q);
-    return this.http.get<Lesson[]>(`${API}/lessons`, { params });
+  /**
+   * Elenco paginato. page/limit sono SEMPRE inviati: è la presenza di questi
+   * param a far rispondere il backend con l'envelope invece dell'array legacy.
+   */
+  getLessons(opts: LessonListOpts = {}): Observable<Paginated<Lesson>> {
+    let params = new HttpParams()
+      .set('page', opts.page ?? 1)
+      .set('limit', opts.limit ?? 24);
+    if (opts.q) params = params.set('q', opts.q);
+    if (opts.tags?.length) params = params.set('tags', opts.tags.join(','));
+    if (opts.visibility) params = params.set('visibility', opts.visibility);
+    return this.http.get<Paginated<Lesson>>(`${API}/lessons`, { params });
   }
 
   getTags(): Observable<string[]> {

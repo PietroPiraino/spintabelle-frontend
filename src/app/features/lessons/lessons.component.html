@@ -9,6 +9,7 @@
           class="input lessons__search"
           placeholder="Cerca per titolo, tema, tag…"
           aria-label="Cerca tra le lezioni"
+          maxlength="100"
           [value]="searchTerm()"
           (input)="onSearch($event)"
         />
@@ -37,7 +38,7 @@
             >Premium</button>
           </div>
           <span class="lessons__count">
-            {{ filtered().length }} {{ filtered().length === 1 ? 'lezione' : 'lezioni' }}
+            {{ total() }} {{ total() === 1 ? 'lezione' : 'lezioni' }}
           </span>
         </div>
       }
@@ -56,22 +57,36 @@
       }
     </div>
 
+    @if (error()) {
+      <div class="form-feedback is-error" role="alert">
+        {{ error() }}
+        <button type="button" class="btn btn--ghost btn--sm" (click)="retry()">
+          Riprova
+        </button>
+      </div>
+    }
+
     @if (!lessons()) {
       <div class="spinner" role="status" aria-label="Caricamento lezioni"></div>
-    } @else if (filtered().length === 0) {
-      <div class="empty-state">
-        <div class="empty-state__suit" aria-hidden="true">♠ ♥ ♣ ♦</div>
-        <p>Nessuna lezione trovata con questi filtri.</p>
-        @if (hasFilters()) {
-          <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilters()">
-            Azzera i filtri
-          </button>
-        }
-      </div>
+    } @else if (lessons()!.length === 0) {
+      @if (loading()) {
+        <div class="spinner" role="status" aria-label="Caricamento lezioni"></div>
+      } @else if (!error()) {
+        <div class="empty-state">
+          <div class="empty-state__suit" aria-hidden="true">♠ ♥ ♣ ♦</div>
+          <p>Nessuna lezione trovata con questi filtri.</p>
+          @if (hasFilters()) {
+            <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilters()">
+              Azzera i filtri
+            </button>
+          }
+        </div>
+      }
     } @else {
       <div class="grid grid--2">
-        @for (lesson of filtered(); track lesson.id; let i = $index) {
-          <article class="card card--hover lesson-card rise" [style.animation-delay.ms]="i * 60">
+        @for (lesson of lessons()!; track lesson.id; let i = $index) {
+          <!-- delay relativo al batch caricato, non all'indice assoluto -->
+          <article class="card card--hover lesson-card rise" [style.animation-delay.ms]="(i % pageSize) * 60">
             <div class="lesson-card__media">
               @if (lesson.locked) {
                 <div class="lesson-card__locked">
@@ -148,6 +163,19 @@
           </article>
         }
       </div>
+
+      @if (hasMore()) {
+        <div class="row" style="justify-content: center; margin-top: 2.5rem">
+          <button
+            type="button"
+            class="btn btn--ghost"
+            (click)="loadMore()"
+            [disabled]="loading()"
+          >
+            {{ loadingMore() ? 'Caricamento…' : 'Carica altre lezioni' }}
+          </button>
+        </div>
+      }
     }
   </div>
 </section>
