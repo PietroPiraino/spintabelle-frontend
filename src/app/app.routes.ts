@@ -64,6 +64,22 @@ export const routes: Routes = [
     title: 'Lezioni — Best Fish Forever',
   },
   {
+    path: 'live',
+    loadComponent: () =>
+      import('./features/live/live.component').then((m) => m.LiveComponent),
+    canActivate: [authGuard],
+    title: 'Live — Best Fish Forever',
+  },
+  {
+    path: 'abbonati',
+    loadComponent: () =>
+      import('./features/subscribe/subscribe.component').then(
+        (m) => m.SubscribeComponent,
+      ),
+    canActivate: [authGuard],
+    title: 'Abbonati — Best Fish Forever',
+  },
+  {
     path: 'news',
     loadComponent: () =>
       import('./features/news/news-list/news-list.component').then(

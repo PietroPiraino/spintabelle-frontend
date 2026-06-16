@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   Lesson,
-  LessonVisibility,
+  LessonStakes,
   Paginated,
 } from '../../../core/models/api.models';
 import { LessonsService } from '../../../core/services/lessons.service';
@@ -48,7 +48,9 @@ export class AdminLessonsComponent {
         ),
       ],
     ],
-    visibility: ['USER' as LessonVisibility, Validators.required],
+    stakes: ['LOW' as LessonStakes, Validators.required],
+    // anteprima gratuita: la lezione resta visibile a tutti i registrati
+    freePreview: [false],
     videoDate: ['', Validators.required],
     newTag: [''],
   });
@@ -134,7 +136,9 @@ export class AdminLessonsComponent {
       title: lesson.title,
       description: lesson.description,
       bunnyEmbedUrl: lesson.bunnyEmbedUrl ?? '',
-      visibility: lesson.visibility,
+      stakes: lesson.stakes ?? 'LOW',
+      // stato "gratis" corrente: dedotto dalla visibilità USER
+      freePreview: lesson.visibility === 'USER',
       videoDate: this.toDateInput(lesson.videoDate),
     });
     this.selectedTags.set([...lesson.tags]);
@@ -143,7 +147,7 @@ export class AdminLessonsComponent {
 
   protected cancelEdit(): void {
     this.editingId.set(null);
-    this.form.reset({ visibility: 'USER' });
+    this.form.reset({ stakes: 'LOW', freePreview: false });
     this.selectedTags.set([]);
     this.error.set(null);
   }
@@ -157,13 +161,14 @@ export class AdminLessonsComponent {
     this.error.set(null);
     this.feedback.set(null);
 
-    const { title, description, bunnyEmbedUrl, visibility, videoDate } =
+    const { title, description, bunnyEmbedUrl, stakes, freePreview, videoDate } =
       this.form.getRawValue();
     const payload = {
       title,
       description,
       bunnyEmbedUrl,
-      visibility,
+      stakes,
+      freePreview,
       videoDate,
       tags: this.selectedTags(),
     };

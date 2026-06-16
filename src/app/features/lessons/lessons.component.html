@@ -17,25 +17,25 @@
 
       @if (lessons()) {
         <div class="spread lessons__toolbar">
-          <div class="row lessons__levels" role="group" aria-label="Filtra per livello">
+          <div class="row lessons__levels" role="group" aria-label="Filtra per stakes">
             <button
               type="button"
               class="badge badge--tag"
-              [class.is-active]="visibilityFilter() === 'all'"
-              (click)="setVisibility('all')"
+              [class.is-active]="stakesFilter() === 'all'"
+              (click)="setStakes('all')"
             >Tutte</button>
             <button
               type="button"
               class="badge badge--tag"
-              [class.is-active]="visibilityFilter() === 'USER'"
-              (click)="setVisibility('USER')"
-            >Base</button>
+              [class.is-active]="stakesFilter() === 'LOW'"
+              (click)="setStakes('LOW')"
+            >Low stakes</button>
             <button
               type="button"
               class="badge badge--tag"
-              [class.is-active]="visibilityFilter() === 'SUBSCRIBER'"
-              (click)="setVisibility('SUBSCRIBER')"
-            >Premium</button>
+              [class.is-active]="stakesFilter() === 'HIGH'"
+              (click)="setStakes('HIGH')"
+            >High stakes</button>
           </div>
           <span class="lessons__count">
             {{ total() }} {{ total() === 1 ? 'lezione' : 'lezioni' }}
@@ -103,9 +103,9 @@
                   <span class="lesson-card__lock" aria-hidden="true">🂠</span>
                   <p class="lesson-card__locked-title">Riservata agli abbonati</p>
                   <p class="lesson-card__locked-sub">
-                    Sblocca tutte le lezioni premium della scuola.
+                    Sblocca tutte le lezioni della scuola con un abbonamento.
                   </p>
-                  <a [href]="social.discord" target="_blank" rel="noopener" class="btn btn--primary btn--sm">
+                  <a routerLink="/abbonati" class="btn btn--primary btn--sm">
                     Scopri come abbonarti
                   </a>
                 </div>
@@ -137,11 +137,16 @@
             <div class="lesson-card__body">
               <div class="spread">
                 <h3>{{ lesson.title }}</h3>
-                @if (lesson.visibility === 'SUBSCRIBER') {
-                  <span class="badge badge--premium">Premium</span>
-                } @else {
-                  <span class="badge badge--free">Base</span>
-                }
+                <div class="row" style="gap: 0.35rem">
+                  @if (lesson.stakes === 'HIGH') {
+                    <span class="badge badge--premium">High stakes</span>
+                  } @else {
+                    <span class="badge badge--free">Low stakes</span>
+                  }
+                  @if (lesson.visibility === 'USER') {
+                    <span class="badge badge--tag">Gratis</span>
+                  }
+                </div>
               </div>
               @if (lesson.videoDate) {
                 <span class="lesson-card__date">{{ lesson.videoDate | date: 'dd MMM yyyy' }}</span>

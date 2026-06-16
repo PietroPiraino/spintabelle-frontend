@@ -7,23 +7,23 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { Subject, catchError, debounceTime, of } from 'rxjs';
-import { Lesson, LessonVisibility } from '../../core/models/api.models';
+import { Lesson, LessonStakes } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { LessonsService } from '../../core/services/lessons.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
 import { BunnyPlayerComponent } from '../../shared/ui/bunny-player/bunny-player.component';
-import { SOCIAL_LINKS } from '../../core/social-links';
 
-/** Filtro per livello: tutte, solo Base (USER) o solo Premium (SUBSCRIBER). */
-type VisibilityFilter = 'all' | LessonVisibility;
+/** Sezione stakes: tutte, solo Low o solo High. */
+type StakesFilter = 'all' | LessonStakes;
 
 /** Lezioni per pagina: la griglia è a 2 colonne → 12 righe per batch. */
 const PAGE_SIZE = 24;
 
 @Component({
   selector: 'app-lessons',
-  imports: [BunnyPlayerComponent, DatePipe],
+  imports: [BunnyPlayerComponent, DatePipe, RouterLink],
   templateUrl: './lessons.component.html',
   styleUrl: './lessons.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,7 +32,6 @@ export class LessonsComponent {
   private readonly lessonsApi = inject(LessonsService);
   protected readonly auth = inject(AuthService);
 
-  protected readonly social = SOCIAL_LINKS;
   protected readonly pageSize = PAGE_SIZE;
 
   /** Lezioni accumulate ("carica altre"); null = primo caricamento in corso. */
@@ -53,7 +52,7 @@ export class LessonsComponent {
   protected readonly searchTerm = signal('');
   /** tag selezionati: una lezione passa solo se li contiene TUTTI (logica AND) */
   protected readonly selectedTags = signal<string[]>([]);
-  protected readonly visibilityFilter = signal<VisibilityFilter>('all');
+  protected readonly stakesFilter = signal<StakesFilter>('all');
   /** id della lezione con il player aperto (click-to-play) */
   protected readonly playingId = signal<string | null>(null);
 
@@ -62,12 +61,12 @@ export class LessonsComponent {
   private requestSeq = 0;
   private readonly search$ = new Subject<string>();
 
-  /** True quando c'è almeno un filtro attivo (ricerca, tag o livello). */
+  /** True quando c'è almeno un filtro attivo (ricerca, tag o sezione stakes). */
   protected readonly hasFilters = computed(
     () =>
       this.searchTerm().trim().length > 0 ||
       this.selectedTags().length > 0 ||
-      this.visibilityFilter() !== 'all',
+      this.stakesFilter() !== 'all',
   );
 
   constructor() {
@@ -96,14 +95,14 @@ export class LessonsComponent {
     this.error.set(null);
     const term = this.searchTerm().trim();
     const tags = this.selectedTags();
-    const vis = this.visibilityFilter();
+    const stakes = this.stakesFilter();
     this.lessonsApi
       .getLessons({
         page: this.page,
         limit: PAGE_SIZE,
         q: term || undefined,
         tags: tags.length > 0 ? tags : undefined,
-        visibility: vis === 'all' ? undefined : vis,
+        stakes: stakes === 'all' ? undefined : stakes,
       })
       .subscribe({
         next: (res) => {
@@ -158,9 +157,9 @@ export class LessonsComponent {
     this.reload();
   }
 
-  protected setVisibility(filter: VisibilityFilter): void {
-    if (this.visibilityFilter() === filter) return;
-    this.visibilityFilter.set(filter);
+  protected setStakes(filter: StakesFilter): void {
+    if (this.stakesFilter() === filter) return;
+    this.stakesFilter.set(filter);
     this.reload();
   }
 
@@ -170,7 +169,7 @@ export class LessonsComponent {
     // non deve "risorgere" 300ms dopo); la guardia '' === '' evita il doppio reload
     this.search$.next('');
     this.selectedTags.set([]);
-    this.visibilityFilter.set('all');
+    this.stakesFilter.set('all');
     this.reload();
   }
 

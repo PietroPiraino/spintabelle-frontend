@@ -1,13 +1,27 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+} from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AdminLessonsComponent } from './admin-lessons/admin-lessons.component';
+import { AdminLiveComponent } from './admin-live/admin-live.component';
 import { AdminNewsComponent } from './admin-news/admin-news.component';
+import { AdminSubscriptionRequestsComponent } from './admin-subscription-requests/admin-subscription-requests.component';
 import { AdminUsersComponent } from './admin-users/admin-users.component';
 
-type AdminTab = 'lezioni' | 'news' | 'iscritti';
+type AdminTab = 'lezioni' | 'live' | 'news' | 'iscritti' | 'richieste';
 
 @Component({
   selector: 'app-admin',
-  imports: [AdminLessonsComponent, AdminNewsComponent, AdminUsersComponent],
+  imports: [
+    AdminLessonsComponent,
+    AdminLiveComponent,
+    AdminNewsComponent,
+    AdminUsersComponent,
+    AdminSubscriptionRequestsComponent,
+  ],
   template: `
     <section class="section">
       <div class="container">
@@ -23,15 +37,23 @@ type AdminTab = 'lezioni' | 'news' | 'iscritti';
             class="admin-tabs__tab"
             [class.is-active]="tab() === 'lezioni'"
             [attr.aria-selected]="tab() === 'lezioni'"
-            (click)="tab.set('lezioni')"
+            (click)="setTab('lezioni')"
           >♠ Lezioni</button>
+          <button
+            type="button"
+            role="tab"
+            class="admin-tabs__tab"
+            [class.is-active]="tab() === 'live'"
+            [attr.aria-selected]="tab() === 'live'"
+            (click)="setTab('live')"
+          >▶ Live</button>
           <button
             type="button"
             role="tab"
             class="admin-tabs__tab"
             [class.is-active]="tab() === 'news'"
             [attr.aria-selected]="tab() === 'news'"
-            (click)="tab.set('news')"
+            (click)="setTab('news')"
           >♦ News</button>
           <button
             type="button"
@@ -39,16 +61,28 @@ type AdminTab = 'lezioni' | 'news' | 'iscritti';
             class="admin-tabs__tab"
             [class.is-active]="tab() === 'iscritti'"
             [attr.aria-selected]="tab() === 'iscritti'"
-            (click)="tab.set('iscritti')"
+            (click)="setTab('iscritti')"
           >♣ Iscritti</button>
+          <button
+            type="button"
+            role="tab"
+            class="admin-tabs__tab"
+            [class.is-active]="tab() === 'richieste'"
+            [attr.aria-selected]="tab() === 'richieste'"
+            (click)="setTab('richieste')"
+          >♥ Richieste</button>
         </div>
 
         @if (tab() === 'lezioni') {
           <app-admin-lessons />
+        } @else if (tab() === 'live') {
+          <app-admin-live />
         } @else if (tab() === 'news') {
           <app-admin-news />
-        } @else {
+        } @else if (tab() === 'iscritti') {
           <app-admin-users />
+        } @else {
+          <app-admin-subscription-requests />
         }
       </div>
     </section>
@@ -56,6 +90,7 @@ type AdminTab = 'lezioni' | 'news' | 'iscritti';
   styles: `
     .admin-tabs {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.5rem;
       margin-bottom: 2.2rem;
       border-bottom: 1px solid var(--line);
@@ -86,5 +121,34 @@ type AdminTab = 'lezioni' | 'news' | 'iscritti';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminComponent {
-  protected readonly tab = signal<AdminTab>('lezioni');
+  private static readonly TABS: AdminTab[] = [
+    'lezioni',
+    'live',
+    'news',
+    'iscritti',
+    'richieste',
+  ];
+
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  // Tab deep-linkabile via ?tab= (es. il link nell'email all'owner → richieste).
+  protected readonly tab = signal<AdminTab>(this.initialTab());
+
+  private initialTab(): AdminTab {
+    const q = this.route.snapshot.queryParamMap.get('tab') ?? '';
+    return (AdminComponent.TABS as string[]).includes(q)
+      ? (q as AdminTab)
+      : 'lezioni';
+  }
+
+  protected setTab(tab: AdminTab): void {
+    this.tab.set(tab);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
 }

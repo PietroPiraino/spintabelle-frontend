@@ -1,0 +1,152 @@
+<div class="admin-grid">
+  <!-- FORM -->
+  <div class="card card--pad admin-form">
+    <h2>{{ editingId() ? 'Modifica sessione' : 'Nuova sessione live' }}</h2>
+
+    @if (feedback()) {
+      <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
+    }
+    @if (error()) {
+      <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="field">
+        <label for="title">Titolo</label>
+        <input
+          id="title"
+          type="text"
+          class="input"
+          formControlName="title"
+          placeholder="Es. Review mani 50bb"
+          [class.is-invalid]="form.controls.title.touched && form.controls.title.invalid"
+        />
+      </div>
+
+      <div class="field">
+        <label for="description">Descrizione (opzionale)</label>
+        <textarea
+          id="description"
+          class="input"
+          formControlName="description"
+          rows="3"
+        ></textarea>
+      </div>
+
+      <div class="field">
+        <label for="stakes">Stakes</label>
+        <select id="stakes" class="input" formControlName="stakes">
+          <option value="LOW">Low stakes — abbonati Pesce Rosso e Squalo</option>
+          <option value="HIGH">High stakes — solo abbonati Squalo</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="startsAt">Data e ora di inizio</label>
+        <input
+          id="startsAt"
+          type="datetime-local"
+          class="input"
+          formControlName="startsAt"
+          [class.is-invalid]="form.controls.startsAt.touched && form.controls.startsAt.invalid"
+        />
+      </div>
+
+      <div class="field">
+        <label for="durationMin">Durata (minuti, opzionale)</label>
+        <input
+          id="durationMin"
+          type="number"
+          class="input"
+          formControlName="durationMin"
+          min="0"
+          max="1440"
+        />
+      </div>
+
+      <div class="field">
+        <label for="platform">Piattaforma (opzionale)</label>
+        <input
+          id="platform"
+          type="text"
+          class="input"
+          formControlName="platform"
+          placeholder="Zoom, Discord, Twitch…"
+        />
+      </div>
+
+      <div class="field">
+        <label for="joinUrl">Link di accesso</label>
+        <input
+          id="joinUrl"
+          type="url"
+          class="input"
+          formControlName="joinUrl"
+          placeholder="https://…"
+          [class.is-invalid]="form.controls.joinUrl.touched && form.controls.joinUrl.invalid"
+        />
+        @if (form.controls.joinUrl.touched && form.controls.joinUrl.invalid) {
+          <span class="field-error">Inserisci un URL http(s) valido.</span>
+        }
+      </div>
+
+      <div class="row">
+        <button type="submit" class="btn btn--primary" [disabled]="saving()">
+          {{ saving() ? 'Salvataggio…' : editingId() ? 'Salva modifiche' : 'Crea sessione' }}
+        </button>
+        @if (editingId()) {
+          <button type="button" class="btn btn--ghost" (click)="cancelEdit()">Annulla</button>
+        }
+      </div>
+    </form>
+  </div>
+
+  <!-- LISTA -->
+  <div class="admin-list">
+    <div class="spread">
+      <h2>Sessioni in programma</h2>
+    </div>
+    @if (listError()) {
+      <div class="form-feedback is-error" role="alert">{{ listError() }}</div>
+    }
+    @if (!sessions() && listLoading()) {
+      <div class="spinner" role="status" aria-label="Caricamento"></div>
+    } @else if (sessions() && sessions()!.length === 0) {
+      <div class="empty-state">
+        <p>Nessuna sessione in programma: creane una dal form.</p>
+      </div>
+    } @else if (sessions()) {
+      @for (s of sessions()!; track s.id) {
+        <div class="card admin-item" [class.is-editing]="editingId() === s.id">
+          <div class="admin-item__info">
+            <div class="row" style="gap: 0.6rem">
+              <strong>{{ s.title }}</strong>
+              @if (s.stakes === 'HIGH') {
+                <span class="badge badge--premium">High stakes</span>
+              } @else {
+                <span class="badge badge--free">Low stakes</span>
+              }
+            </div>
+            <span class="admin-item__meta">
+              {{ s.startsAt | date: 'dd MMM yyyy · HH:mm' }}
+              @if (s.platform) {
+                · {{ s.platform }}
+              }
+              @if (s.durationMin) {
+                · {{ s.durationMin }} min
+              }
+            </span>
+          </div>
+          <div class="row" style="gap: 0.5rem">
+            <button type="button" class="btn btn--ghost btn--sm" (click)="edit(s)">
+              Modifica
+            </button>
+            <button type="button" class="btn btn--danger btn--sm" (click)="remove(s)">
+              Elimina
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>

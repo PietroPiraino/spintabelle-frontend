@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   Lesson,
   LessonPayload,
+  LessonStakes,
   LessonVisibility,
   Paginated,
 } from '../models/api.models';
@@ -20,6 +21,8 @@ export interface LessonListOpts {
   /** tag in AND, serializzati CSV */
   tags?: string[];
   visibility?: LessonVisibility;
+  /** sezione stakes (Low/High) */
+  stakes?: LessonStakes;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -37,6 +40,7 @@ export class LessonsService {
     if (opts.q) params = params.set('q', opts.q);
     if (opts.tags?.length) params = params.set('tags', opts.tags.join(','));
     if (opts.visibility) params = params.set('visibility', opts.visibility);
+    if (opts.stakes) params = params.set('stakes', opts.stakes);
     return this.http.get<Paginated<Lesson>>(`${API}/lessons`, { params });
   }
 

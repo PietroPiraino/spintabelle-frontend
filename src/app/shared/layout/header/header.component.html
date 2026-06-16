@@ -70,6 +70,13 @@
         } @else if (auth.isAuthenticated()) {
           <a
             routerLink="/account"
+            (click)="closeMenu()"
+            class="badge badge--tag header__points"
+            title="Punti BFF"
+            aria-label="Punti BFF"
+          >★ {{ auth.points() }}</a>
+          <a
+            routerLink="/account"
             routerLinkActive="is-active"
             (click)="closeMenu()"
             class="header__user"

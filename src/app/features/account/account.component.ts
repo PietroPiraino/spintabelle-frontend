@@ -12,8 +12,11 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
+import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { MyPoints } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
+import { PointsService } from '../../core/services/points.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
@@ -24,7 +27,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-account',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe],
   templateUrl: './account.component.html',
   styleUrl: './account.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,10 +35,30 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 export class AccountComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+  private readonly pointsApi = inject(PointsService);
   private readonly router = inject(Router);
 
   protected readonly user = this.auth.user;
   protected readonly verified = computed(() => this.user()?.verified ?? false);
+
+  // ── Punti BFF ──
+  protected readonly myPoints = signal<MyPoints | null>(null);
+  protected readonly pointsBalance = computed(
+    () => this.myPoints()?.balance ?? this.user()?.points ?? 0,
+  );
+
+  // ── Abbonamento (dal ruolo/scadenza già in auth.user) ──
+  protected readonly isAdmin = this.auth.isAdmin;
+  /** Etichetta del piano se l'utente è abbonato, altrimenti null. */
+  protected readonly planLabel = computed(() => {
+    const role = this.user()?.role;
+    if (role === 'SQUALO') return 'Squalo';
+    if (role === 'PESCE_ROSSO') return 'Pesce Rosso';
+    return null;
+  });
+  protected readonly subExpires = computed(
+    () => this.user()?.subscriptionExpiresAt ?? null,
+  );
 
   // ── Profilo (email + nickname) ──
   protected readonly profileForm = this.fb.nonNullable.group({
@@ -81,6 +104,11 @@ export class AccountComponent {
     this.profileForm.patchValue({
       email: u?.email ?? '',
       nickname: u?.nickname ?? '',
+    });
+    // saldo + storico punti (best-effort: il saldo cade su auth.user se fallisce)
+    this.pointsApi.myPoints().subscribe({
+      next: (p) => this.myPoints.set(p),
+      error: () => undefined,
     });
   }
 

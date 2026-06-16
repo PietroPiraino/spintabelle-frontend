@@ -1,0 +1,145 @@
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Abbonamenti</span>
+      <h1>Diventa Pesce Rosso o Squalo</h1>
+      <p class="subscribe__intro">
+        Scegli il piano, paga con PayPal o Skrill e invia la richiesta: la
+        attiviamo a mano appena verificato l'incasso. Ti avvisiamo via email.
+      </p>
+    </div>
+
+    @if (loading()) {
+      <div class="spinner" role="status" aria-label="Caricamento"></div>
+    } @else if (loadError()) {
+      <div class="form-feedback is-error" role="alert">{{ loadError() }}</div>
+    } @else {
+      @if (pending(); as p) {
+        <div class="card card--pad subscribe__status">
+          <h2>Richiesta in attesa di approvazione</h2>
+          <p>
+            Hai richiesto il piano <strong>{{ p.tierLabel }}</strong> con
+            pagamento {{ p.paymentMethod === 'skrill' ? 'Skrill' : 'PayPal' }}.
+            Ti avviseremo via email appena la richiesta sarà approvata.
+          </p>
+        </div>
+      } @else {
+        @if (me()?.tier; as t) {
+          <div class="card card--pad subscribe__status">
+            <p>
+              Sei abbonato <strong>{{ labelFor(t) }}</strong>
+              @if (me()?.subscriptionExpiresAt) {
+                fino al
+                <strong>{{ me()!.subscriptionExpiresAt | date: 'dd MMM yyyy' }}</strong>
+              }.
+            </p>
+            <p class="subscribe__muted">
+              Puoi rinnovare o passare a un altro piano qui sotto: la nuova
+              durata si somma a quella residua.
+            </p>
+          </div>
+        }
+
+        <div class="grid grid--2 subscribe__tiers">
+          @for (tier of tierOrder; track tier) {
+            <article
+              class="card card--pad subscribe__tier"
+              [class.is-selected]="selectedTier() === tier"
+            >
+              <div class="spread">
+                <h2>{{ labelFor(tier) }}</h2>
+                @if (tier === 'SQUALO') {
+                  <span class="badge badge--premium">High stakes</span>
+                } @else {
+                  <span class="badge badge--free">Low stakes</span>
+                }
+              </div>
+              <p class="subscribe__price">
+                <strong>€{{ priceFor(tier) }}</strong> <span>/ mese</span>
+              </p>
+              <ul class="subscribe__features">
+                @for (f of features[tier]; track f) {
+                  <li>{{ f }}</li>
+                }
+              </ul>
+              <button
+                type="button"
+                class="btn btn--primary"
+                (click)="choose(tier)"
+                [disabled]="selectedTier() === tier"
+              >
+                {{ selectedTier() === tier ? 'Selezionato' : 'Scegli ' + labelFor(tier) }}
+              </button>
+            </article>
+          }
+        </div>
+
+        @if (selectedTier()) {
+          <div class="card card--pad subscribe__pay">
+            <h2>Completa la richiesta — {{ selectedLabel() }}</h2>
+            <ol class="subscribe__steps">
+              <li>Scegli il metodo di pagamento.</li>
+              <li>
+                Invia <strong>€{{ selectedPrice() }}</strong> all'indirizzo qui
+                sotto via {{ methodLabel() }}.
+              </li>
+              <li>
+                Inserisci il riferimento del pagamento e invia la richiesta:
+                la approveremo dopo aver verificato l'incasso.
+              </li>
+            </ol>
+
+            <div class="field">
+              <span class="subscribe__label">Metodo di pagamento</span>
+              <div class="row subscribe__methods">
+                <label class="subscribe__method">
+                  <input type="radio" [formControl]="method" value="paypal" />
+                  PayPal
+                </label>
+                <label class="subscribe__method">
+                  <input type="radio" [formControl]="method" value="skrill" />
+                  Skrill
+                </label>
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="subscribe__label">Invia il pagamento a</span>
+              <p class="subscribe__receiver">{{ receiverEmail() }}</p>
+            </div>
+
+            <div class="field">
+              <label for="reference">Riferimento del pagamento (consigliato)</label>
+              <input
+                id="reference"
+                type="text"
+                class="input"
+                [formControl]="reference"
+                maxlength="200"
+                placeholder="ID transazione o nota"
+              />
+            </div>
+
+            @if (submitError()) {
+              <div class="form-feedback is-error" role="alert">{{ submitError() }}</div>
+            }
+
+            <div class="row">
+              <button
+                type="button"
+                class="btn btn--primary"
+                (click)="submit()"
+                [disabled]="submitting()"
+              >
+                {{ submitting() ? 'Invio…' : 'Invia richiesta' }}
+              </button>
+              <button type="button" class="btn btn--ghost" (click)="cancelChoice()">
+                Annulla
+              </button>
+            </div>
+          </div>
+        }
+      }
+    }
+  </div>
+</section>

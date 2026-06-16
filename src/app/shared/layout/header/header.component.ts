@@ -29,6 +29,8 @@ export class HeaderComponent {
     { path: '/tabelle', label: 'Tabelle' },
     { path: '/allenamento', label: 'Allenamento' },
     { path: '/lezioni', label: 'Lezioni' },
+    { path: '/live', label: 'Live' },
+    { path: '/abbonati', label: 'Abbonati' },
     { path: '/news', label: 'News' },
     { path: '/chi-siamo', label: 'Chi siamo' },
   ];

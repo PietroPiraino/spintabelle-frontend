@@ -1,0 +1,83 @@
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Dal vivo</span>
+      <h1>Lezioni live</h1>
+      <p class="live__intro">
+        Le sessioni dal vivo settimanali. Gli abbonati Pesce Rosso seguono le
+        live low stakes; gli Squalo tutte, anche le high stakes.
+      </p>
+    </div>
+
+    @if (error()) {
+      <div class="form-feedback is-error" role="alert">
+        {{ error() }}
+        <button type="button" class="btn btn--ghost btn--sm" (click)="load()">
+          Riprova
+        </button>
+      </div>
+    }
+
+    @if (!sessions()) {
+      <div class="spinner" role="status" aria-label="Caricamento sessioni"></div>
+    } @else if (sessions()!.length === 0) {
+      @if (!error()) {
+        <div class="empty-state">
+          <div class="empty-state__suit" aria-hidden="true">♠ ♥ ♣ ♦</div>
+          <p>Nessuna sessione live in programma al momento.</p>
+        </div>
+      }
+    } @else {
+      <div class="live__list">
+        @for (s of sessions()!; track s.id) {
+          <article class="card card--pad live-card" [class.is-locked]="s.locked">
+            <div class="live-card__when">
+              <span class="live-card__date">{{ s.startsAt | date: 'dd MMM yyyy' }}</span>
+              <span class="live-card__time">{{ s.startsAt | date: 'HH:mm' }}</span>
+            </div>
+            <div class="live-card__body">
+              <div class="spread">
+                <h3>{{ s.title }}</h3>
+                @if (s.stakes === 'HIGH') {
+                  <span class="badge badge--premium">High stakes</span>
+                } @else {
+                  <span class="badge badge--free">Low stakes</span>
+                }
+              </div>
+              @if (s.description) {
+                <p class="live-card__desc">{{ s.description }}</p>
+              }
+              <p class="live-card__meta">
+                @if (s.platform) {
+                  <span>{{ s.platform }}</span>
+                }
+                @if (s.platform && s.durationMin) {
+                  <span aria-hidden="true"> · </span>
+                }
+                @if (s.durationMin) {
+                  <span>{{ s.durationMin }} min</span>
+                }
+              </p>
+
+              @if (s.locked) {
+                <div class="live-card__locked">
+                  <span aria-hidden="true">🔒</span>
+                  Riservata agli abbonati
+                  {{ s.stakes === 'HIGH' ? 'Squalo' : 'Pesce Rosso o Squalo' }}.
+                  <a routerLink="/abbonati" class="btn btn--primary btn--sm">Abbonati</a>
+                </div>
+              } @else if (s.joinUrl) {
+                <a
+                  [href]="s.joinUrl"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn--primary btn--sm"
+                >Entra nella live</a>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
+</section>

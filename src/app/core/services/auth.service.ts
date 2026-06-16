@@ -39,11 +39,23 @@ export class AuthService {
   // in app.config.ts, sempre in background.
 
   readonly isAuthenticated = computed(() => this.user() !== null);
+  /** Abbonato di qualunque tier (Pesce Rosso o Squalo) — o admin. */
   readonly isSubscriber = computed(() => {
     const role = this.user()?.role;
-    return role === 'SUBSCRIBER' || role === 'ADMIN';
+    return role === 'PESCE_ROSSO' || role === 'SQUALO' || role === 'ADMIN';
+  });
+  /** Tier Squalo (accesso pieno, incluso high stakes) — o admin. */
+  readonly isSqualo = computed(() => {
+    const role = this.user()?.role;
+    return role === 'SQUALO' || role === 'ADMIN';
   });
   readonly isAdmin = computed(() => this.user()?.role === 'ADMIN');
+  /** Scadenza dell'abbonamento corrente (ISO) o null. */
+  readonly subscriptionExpiresAt = computed(
+    () => this.user()?.subscriptionExpiresAt ?? null,
+  );
+  /** Saldo punti BFF dell'utente loggato. */
+  readonly points = computed(() => this.user()?.points ?? 0);
   /** Nome mostrato in interfaccia (fallback per account senza nickname) */
   readonly displayName = computed(
     () => this.user()?.nickname ?? this.user()?.email ?? '',

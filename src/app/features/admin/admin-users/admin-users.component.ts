@@ -12,11 +12,13 @@ import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { AdminUser, Paginated, Role } from '../../../core/models/api.models';
 import { AdminUsersService } from '../../../core/services/admin-users.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { PointsService } from '../../../core/services/points.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
 
 const ROLE_LABELS: Record<Role, string> = {
   USER: 'Iscritto',
-  SUBSCRIBER: 'Abbonato',
+  PESCE_ROSSO: 'Pesce Rosso',
+  SQUALO: 'Squalo',
   ADMIN: 'Admin',
 };
 
@@ -29,7 +31,14 @@ const ROLE_LABELS: Record<Role, string> = {
 })
 export class AdminUsersComponent {
   private readonly usersApi = inject(AdminUsersService);
+  private readonly pointsApi = inject(PointsService);
   private readonly auth = inject(AuthService);
+
+  // ── Rettifica punti per utente ──
+  protected readonly adjustingId = signal<string | null>(null);
+  protected readonly adjusting = signal(false);
+  protected readonly deltaControl = new FormControl<number | null>(null);
+  protected readonly reasonControl = new FormControl('', { nonNullable: true });
 
   protected readonly page = signal<Paginated<AdminUser> | null>(null);
   protected readonly loading = signal(false);
@@ -45,7 +54,7 @@ export class AdminUsersComponent {
   private readonly query = signal('');
   private readonly currentPage = signal(1);
 
-  protected readonly roles: Role[] = ['USER', 'SUBSCRIBER', 'ADMIN'];
+  protected readonly roles: Role[] = ['USER', 'PESCE_ROSSO', 'SQUALO', 'ADMIN'];
   protected readonly roleLabels = ROLE_LABELS;
 
   /** Id dell'admin loggato: non può agire sul proprio account. */
@@ -172,6 +181,43 @@ export class AdminUsersComponent {
       next: () => this.feedback.set(`Email di verifica reinviata a ${user.email}.`),
       error: (err: unknown) =>
         this.error.set(apiErrorMessage(err, 'Reinvio non riuscito.')),
+    });
+  }
+
+  /** Apre il pannello di rettifica punti per un utente. */
+  protected openAdjust(user: AdminUser): void {
+    this.adjustingId.set(user.id);
+    this.deltaControl.reset(null);
+    this.reasonControl.reset('');
+    this.feedback.set(null);
+    this.error.set(null);
+  }
+
+  protected cancelAdjust(): void {
+    this.adjustingId.set(null);
+  }
+
+  /** Applica un accredito/storno punti all'utente. */
+  protected applyAdjust(user: AdminUser): void {
+    const delta = this.deltaControl.value;
+    const reason = this.reasonControl.value.trim();
+    if (!delta || !reason || this.adjusting()) return;
+    this.adjusting.set(true);
+    this.error.set(null);
+    this.feedback.set(null);
+    this.pointsApi.adjust(user.id, delta, reason).subscribe({
+      next: (res) => {
+        this.adjusting.set(false);
+        this.adjustingId.set(null);
+        this.patchUser({ ...user, points: res.balance });
+        this.feedback.set(
+          `Saldo di ${user.email} aggiornato a ${res.balance} punti.`,
+        );
+      },
+      error: (err: unknown) => {
+        this.adjusting.set(false);
+        this.error.set(apiErrorMessage(err, 'Rettifica punti non riuscita.'));
+      },
     });
   }
 

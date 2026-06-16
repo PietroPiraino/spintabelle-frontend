@@ -46,17 +46,19 @@ describe('LessonsService', () => {
     expect(req.request.params.has('q')).toBeFalse();
     expect(req.request.params.has('tags')).toBeFalse();
     expect(req.request.params.has('visibility')).toBeFalse();
+    expect(req.request.params.has('stakes')).toBeFalse();
     req.flush(emptyPage);
   });
 
-  it('serializza i filtri: tags in CSV, q e visibility solo se presenti', () => {
+  it('serializza i filtri: tags in CSV, q/visibility/stakes solo se presenti', () => {
     service
       .getLessons({
         page: 3,
         limit: 10,
         q: 'icm',
         tags: ['icm', '3bet'],
-        visibility: 'SUBSCRIBER',
+        visibility: 'SQUALO',
+        stakes: 'HIGH',
       })
       .subscribe();
 
@@ -65,7 +67,8 @@ describe('LessonsService', () => {
     expect(req.request.params.get('limit')).toBe('10');
     expect(req.request.params.get('q')).toBe('icm');
     expect(req.request.params.get('tags')).toBe('icm,3bet');
-    expect(req.request.params.get('visibility')).toBe('SUBSCRIBER');
+    expect(req.request.params.get('visibility')).toBe('SQUALO');
+    expect(req.request.params.get('stakes')).toBe('HIGH');
     req.flush({ ...emptyPage, page: 3, limit: 10 });
   });
 });

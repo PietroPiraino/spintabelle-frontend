@@ -17,6 +17,46 @@
       }
     </header>
 
+    <!-- Abbonamento -->
+    <div class="card card--pad account__card">
+      <h2>Abbonamento</h2>
+      @if (isAdmin()) {
+        <p class="text-muted">Hai accesso completo come amministratore.</p>
+      } @else if (planLabel(); as plan) {
+        <p>
+          Piano attivo: <strong>{{ plan }}</strong>
+          @if (subExpires()) {
+            — valido fino al <strong>{{ subExpires() | date: 'dd MMM yyyy' }}</strong>
+          }
+        </p>
+        <a routerLink="/abbonati" class="btn btn--ghost">Gestisci o rinnova</a>
+      } @else {
+        <p class="text-muted">Non hai un abbonamento attivo.</p>
+        <a routerLink="/abbonati" class="btn btn--primary">Scopri gli abbonamenti</a>
+      }
+    </div>
+
+    <!-- Punti BFF -->
+    <div class="card card--pad account__card">
+      <h2>Punti BFF</h2>
+      <p>Saldo: <strong>{{ pointsBalance() }}</strong> punti</p>
+      @if (myPoints()?.history?.length) {
+        <ul style="list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.4rem">
+          @for (e of myPoints()!.history; track e.id) {
+            <li class="spread" style="gap: 1rem">
+              <span class="text-muted">
+                @if (e.createdAt) { {{ e.createdAt | date: 'dd MMM yyyy' }} · }
+                {{ e.reason }}
+              </span>
+              <strong>{{ e.delta > 0 ? '+' : '' }}{{ e.delta }}</strong>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="text-muted">Nessun movimento ancora.</p>
+      }
+    </div>
+
     <!-- Dati di profilo (rettifica) -->
     <div class="card card--pad account__card">
       <h2>Dati di profilo</h2>

@@ -1,4 +1,9 @@
-export type Role = 'USER' | 'SUBSCRIBER' | 'ADMIN';
+/**
+ * Ruoli in scala: ADMIN ≥ SQUALO ≥ PESCE_ROSSO ≥ USER.
+ * I due tier a pagamento (Pesce Rosso = low stakes, Squalo = tutto) gateano i
+ * contenuti tramite il rango, come lato backend (roles.enum.ts).
+ */
+export type Role = 'USER' | 'PESCE_ROSSO' | 'SQUALO' | 'ADMIN';
 
 export interface User {
   id: string;
@@ -7,6 +12,31 @@ export interface User {
   nickname?: string;
   role: Role;
   verified: boolean;
+  /** scadenza abbonamento (ISO) se tier attivo; null/assente per USER e ADMIN */
+  subscriptionExpiresAt?: string | null;
+  /** saldo punti BFF */
+  points?: number;
+}
+
+// ----- Punti BFF -----
+
+export interface PointsLedgerEntry {
+  id: string;
+  /** variazione: positiva = accredito, negativa = storno */
+  delta: number;
+  reason: string;
+  balanceAfter: number;
+  createdAt?: string;
+}
+
+export interface MyPoints {
+  balance: number;
+  history: PointsLedgerEntry[];
+}
+
+export interface AdjustPointsResult {
+  balance: number;
+  entry: PointsLedgerEntry;
 }
 
 export interface AuthResponse {
@@ -19,7 +49,10 @@ export interface RegisterPayload {
   nickname: string;
 }
 
-export type LessonVisibility = 'USER' | 'SUBSCRIBER';
+/** Tier minimo per vedere il video: USER = anteprima gratis, poi i due tier. */
+export type LessonVisibility = 'USER' | 'PESCE_ROSSO' | 'SQUALO';
+/** Livello stakes: guida le due sezioni Low/High della libreria. */
+export type LessonStakes = 'LOW' | 'HIGH';
 
 export interface Lesson {
   id: string;
@@ -27,6 +60,8 @@ export interface Lesson {
   description: string;
   tags: string[];
   visibility: LessonVisibility;
+  /** livello stakes (Low/High) della lezione */
+  stakes?: LessonStakes;
   /** true se il ruolo corrente non sblocca il video (bunnyEmbedUrl assente) */
   locked: boolean;
   bunnyEmbedUrl?: string;
@@ -42,7 +77,10 @@ export interface LessonPayload {
   description: string;
   bunnyEmbedUrl: string;
   tags: string[];
-  visibility: LessonVisibility;
+  /** livello stakes (obbligatorio): da cui il backend deriva la visibilità */
+  stakes: LessonStakes;
+  /** anteprima gratuita: se true la lezione è visibile a tutti i registrati */
+  freePreview?: boolean;
   /** data del video in formato YYYY-MM-DD (obbligatoria alla creazione) */
   videoDate: string;
 }
@@ -54,8 +92,87 @@ export interface AdminUser {
   nickname?: string;
   role: Role;
   verified: boolean;
+  /** scadenza abbonamento (ISO) se tier attivo; assente per USER/ADMIN */
+  subscriptionExpiresAt?: string;
+  /** saldo punti BFF */
+  points?: number;
   lastActiveAt?: string;
   createdAt?: string;
+}
+
+// ----- Abbonamenti -----
+
+/** I due tier acquistabili (sottoinsieme di Role). */
+export type SubscriptionTier = 'PESCE_ROSSO' | 'SQUALO';
+export type PaymentMethod = 'paypal' | 'skrill';
+export type SubscriptionRequestStatus = 'pending' | 'approved' | 'rejected';
+
+/** Richiesta di abbonamento come esposta a client/admin. */
+export interface SubscriptionRequest {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userNickname?: string;
+  tier: SubscriptionTier;
+  tierLabel: string;
+  paymentMethod: PaymentMethod;
+  paymentReference?: string;
+  status: SubscriptionRequestStatus;
+  decidedAt?: string;
+  decisionNote?: string;
+  resultingExpiresAt?: string;
+  createdAt?: string;
+}
+
+/** Stato abbonamento dell'utente loggato (pagina /abbonati e account). */
+export interface MySubscription {
+  role: Role;
+  /** tier corrente se abbonato, altrimenti null */
+  tier: SubscriptionTier | null;
+  subscriptionExpiresAt: string | null;
+  pendingRequest: SubscriptionRequest | null;
+}
+
+/** Info di pagamento per la pagina /abbonati (email destinatarie + prezzi). */
+export interface PaymentInfo {
+  tiers: { tier: SubscriptionTier; label: string; priceEur: number }[];
+  receivers: { paypal: string; skrill: string };
+  durationDays: number;
+}
+
+/** Payload di richiesta abbonamento (dopo il pagamento off-site). */
+export interface CreateSubscriptionRequest {
+  tier: SubscriptionTier;
+  paymentMethod: PaymentMethod;
+  paymentReference?: string;
+}
+
+// ----- Sessioni live -----
+
+export interface LiveSession {
+  id: string;
+  title: string;
+  description?: string;
+  stakes: LessonStakes;
+  /** data/ora di inizio (ISO) */
+  startsAt: string;
+  durationMin?: number;
+  platform?: string;
+  /** true se il tier corrente non sblocca il link di accesso */
+  locked: boolean;
+  joinUrl?: string;
+  createdAt?: string;
+}
+
+export interface LiveSessionPayload {
+  title: string;
+  description?: string;
+  stakes: LessonStakes;
+  /** data/ora di inizio in ISO (il client converte da datetime-local) */
+  startsAt: string;
+  durationMin?: number;
+  platform?: string;
+  joinUrl: string;
 }
 
 export interface News {

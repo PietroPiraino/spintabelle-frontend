@@ -53,11 +53,18 @@
       </div>
 
       <div class="field">
-        <label for="visibility">Visibilità</label>
-        <select id="visibility" class="input" formControlName="visibility">
-          <option value="USER">Base — tutti gli utenti registrati</option>
-          <option value="SUBSCRIBER">Premium — solo abbonati</option>
+        <label for="stakes">Stakes</label>
+        <select id="stakes" class="input" formControlName="stakes">
+          <option value="LOW">Low stakes — abbonati Pesce Rosso e Squalo</option>
+          <option value="HIGH">High stakes — solo abbonati Squalo</option>
         </select>
+      </div>
+
+      <div class="field">
+        <label class="row" style="gap: 0.5rem; align-items: center; cursor: pointer">
+          <input type="checkbox" formControlName="freePreview" />
+          <span>Anteprima gratuita — visibile a tutti gli utenti registrati</span>
+        </label>
       </div>
 
       <div class="field">
@@ -140,10 +147,13 @@
           <div class="admin-item__info">
             <div class="row" style="gap: 0.6rem">
               <strong>{{ lesson.title }}</strong>
-              @if (lesson.visibility === 'SUBSCRIBER') {
-                <span class="badge badge--premium">Premium</span>
+              @if (lesson.stakes === 'HIGH') {
+                <span class="badge badge--premium">High stakes</span>
               } @else {
-                <span class="badge badge--free">Base</span>
+                <span class="badge badge--free">Low stakes</span>
+              }
+              @if (lesson.visibility === 'USER') {
+                <span class="badge badge--tag">Gratis</span>
               }
             </div>
             <span class="admin-item__meta">

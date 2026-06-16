@@ -50,6 +50,10 @@
               <span class="admin-item__meta">
                 Iscritto {{ user.createdAt | date: 'dd MMM yyyy' }} · Ultimo accesso
                 {{ user.lastActiveAt ? (user.lastActiveAt | date: 'dd MMM yyyy') : '—' }}
+                · Punti: {{ user.points ?? 0 }}
+                @if (user.subscriptionExpiresAt) {
+                  · Abbonato fino al {{ user.subscriptionExpiresAt | date: 'dd MMM yyyy' }}
+                }
               </span>
             </div>
 
@@ -88,6 +92,9 @@
                   Reinvia verifica
                 </button>
               }
+              <button type="button" class="btn btn--ghost btn--sm" (click)="openAdjust(user)">
+                Punti
+              </button>
               <button
                 type="button"
                 class="btn btn--danger btn--sm"
@@ -98,6 +105,48 @@
               </button>
             </div>
           </div>
+          @if (adjustingId() === user.id) {
+            <div class="card card--pad">
+              <h3 style="margin-top: 0">
+                Punti di {{ user.email }} — saldo {{ user.points ?? 0 }}
+              </h3>
+              <div class="row" style="gap: 0.6rem; flex-wrap: wrap; align-items: flex-end">
+                <div class="field" style="margin: 0">
+                  <label [attr.for]="'delta-' + user.id">Variazione (+ accredito / − storno)</label>
+                  <input
+                    [id]="'delta-' + user.id"
+                    type="number"
+                    class="input"
+                    [formControl]="deltaControl"
+                    placeholder="es. 100 oppure -50"
+                  />
+                </div>
+                <div class="field" style="margin: 0; flex: 1; min-width: 12rem">
+                  <label [attr.for]="'reason-' + user.id">Motivo</label>
+                  <input
+                    [id]="'reason-' + user.id"
+                    type="text"
+                    class="input"
+                    [formControl]="reasonControl"
+                    maxlength="200"
+                    placeholder="es. bonus di benvenuto"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  [disabled]="adjusting()"
+                  (click)="applyAdjust(user)"
+                >{{ adjusting() ? 'Applico…' : 'Applica' }}</button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="adjusting()"
+                  (click)="cancelAdjust()"
+                >Annulla</button>
+              </div>
+            </div>
+          }
         }
       </div>
 
