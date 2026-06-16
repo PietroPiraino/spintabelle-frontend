@@ -18,6 +18,10 @@ import {
 } from '../../core/models/api.models';
 import { SubscriptionsService } from '../../core/services/subscriptions.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
+import {
+  SubscribeModelComponent,
+  SubscribeModelSpec,
+} from './subscribe-model/subscribe-model.component';
 
 /** Vantaggi mostrati per ciascun tier sulla pagina /abbonati. */
 const TIER_FEATURES: Record<SubscriptionTier, string[]> = {
@@ -35,7 +39,7 @@ const TIER_FEATURES: Record<SubscriptionTier, string[]> = {
 
 @Component({
   selector: 'app-subscribe',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, SubscribeModelComponent],
   templateUrl: './subscribe.component.html',
   styleUrl: './subscribe.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +49,24 @@ export class SubscribeComponent {
 
   protected readonly features = TIER_FEATURES;
   protected readonly tierOrder: SubscriptionTier[] = ['PESCE_ROSSO', 'SQUALO'];
+
+  /** Mascotte 3D per tier (modelli statici CC-BY da public/models). */
+  protected readonly modelByTier: Record<SubscriptionTier, SubscribeModelSpec> = {
+    PESCE_ROSSO: {
+      url: '/models/fish.glb',
+      alt: 'Pesce — piano Pesce Rosso',
+      accent: 0xff6a1f,
+      // profilo ¾ girato verso l'utente, leggera inclinazione
+      baseRotation: [-0.12, 1.25, 0],
+      tint: { match: 'Fish_01', color: 0xff7a2e }, // corpo virato arancio
+    },
+    SQUALO: {
+      url: '/models/shark.glb',
+      alt: 'Squalo — piano Squalo',
+      accent: 0x39a0c8,
+      baseRotation: [-0.12, -1.25, 0], // speculare al pesce
+    },
+  };
 
   protected readonly info = signal<PaymentInfo | null>(null);
   protected readonly me = signal<MySubscription | null>(null);

@@ -134,3 +134,16 @@
   flex-wrap: wrap;
   align-items: center;
 }
+
+// ── Crediti modelli 3D (attribuzione CC-BY) ──
+.subscribe__credits {
+  margin-top: 2.5rem;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  text-align: center;
+
+  a {
+    color: var(--text-muted);
+    text-decoration: underline;
+  }
+}

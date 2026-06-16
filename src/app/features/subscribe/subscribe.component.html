@@ -51,6 +51,10 @@
               class="card card--pad subscribe__tier"
               [class.is-selected]="selectedTier() === tier"
             >
+              <app-subscribe-model
+                [spec]="modelByTier[tier]"
+                [selected]="selectedTier() === tier"
+              />
               <div class="spread">
                 <h2>{{ labelFor(tier) }}</h2>
                 @if (tier === 'SQUALO') {
@@ -203,5 +207,15 @@
         }
       }
     }
+
+    <p class="subscribe__credits">
+      Modelli 3D:
+      <a href="https://sketchfab.com/3d-models/fish-81d01e6ce8f745778e2629bca80724af" target="_blank" rel="noopener">“Fish”</a>
+      di ethem e
+      <a href="https://sketchfab.com/3d-models/plushie-shark-875414d5e45c42f9a5323ba8a8beed19" target="_blank" rel="noopener">“Plushie Shark”</a>
+      di QuazrSCI — licenza
+      <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>,
+      via Sketchfab (modelli ridimensionati e illuminati per il sito).
+    </p>
   </div>
 </section>

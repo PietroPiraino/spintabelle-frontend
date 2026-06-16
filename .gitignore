@@ -45,3 +45,8 @@ e2e-shots/
 shot-*.mjs
 shots-chi-siamo/
 static-serve.mjs
+# tooling locale per tarare i modelli 3D abbonati (anteprima offscreen)
+_preview-*.html
+_preview-*.mjs
+_preview-*.png
+inspect-glb.mjs
