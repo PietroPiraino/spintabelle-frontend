@@ -88,6 +88,21 @@ export const routes: Routes = [
     title: 'News — Best Fish Forever',
   },
   {
+    path: 'docs',
+    loadComponent: () =>
+      import('./features/docs/docs.component').then((m) => m.DocsComponent),
+    canActivate: [authGuard],
+    title: 'Docs — Best Fish Forever',
+  },
+  {
+    path: 'affiliazioni',
+    loadComponent: () =>
+      import('./features/affiliations/affiliations.component').then(
+        (m) => m.AffiliationsComponent,
+      ),
+    title: 'Affiliazioni — Best Fish Forever',
+  },
+  {
     path: 'news/:id',
     loadComponent: () =>
       import('./features/news/news-detail/news-detail.component').then(

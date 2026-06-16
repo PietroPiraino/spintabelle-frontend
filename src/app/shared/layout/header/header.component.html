@@ -19,14 +19,54 @@
     </button>
 
     <nav id="nav-principale" class="header__nav" [class.is-open]="menuOpen()" aria-label="Navigazione principale">
-      @for (link of navLinks; track link.path) {
-        <a
-          [routerLink]="link.path"
-          routerLinkActive="is-active"
-          (click)="closeMenu()"
-          class="header__link"
-        >{{ link.label }}</a>
+      <!-- voce diretta: prodotto-core -->
+      <a
+        [routerLink]="tabelle.path"
+        routerLinkActive="is-active"
+        (click)="closeMenu()"
+        class="header__link"
+      >{{ tabelle.label }}</a>
+
+      <!-- gruppi a tendina: hover/focus su desktop, accordion (tap) su mobile -->
+      @for (group of groups; track group.id) {
+        <div class="header__has-menu header__group" [class.is-open]="openDropdown() === group.id">
+          <button
+            type="button"
+            class="header__link header__group-trigger"
+            (click)="toggleDropdown(group.id)"
+            aria-haspopup="true"
+            [attr.aria-expanded]="openDropdown() === group.id"
+          >
+            {{ group.label }}
+            <span class="header__caret" aria-hidden="true"></span>
+          </button>
+          <div class="header__menu header__group-menu" role="menu" [attr.aria-label]="group.label">
+            @for (child of group.children; track child.path) {
+              <a
+                [routerLink]="child.path"
+                routerLinkActive="is-active"
+                role="menuitem"
+                (click)="closeMenu()"
+                class="header__menu-link"
+              >
+                {{ child.label }}
+                @if (child.isNew) {
+                  <span class="header__new">Nuovo</span>
+                }
+              </a>
+            }
+          </div>
+        </div>
       }
+
+      <!-- voce diretta: conversione -->
+      <a
+        [routerLink]="abbonati.path"
+        routerLinkActive="is-active"
+        (click)="closeMenu()"
+        class="header__link"
+      >{{ abbonati.label }}</a>
+
       @if (auth.isAdmin()) {
         <a routerLink="/admin" routerLinkActive="is-active" (click)="closeMenu()" class="header__link header__link--admin">
           Admin
@@ -34,19 +74,19 @@
       }
 
       <!-- scelta tema: tendina all'hover su desktop, riga di opzioni nel menù mobile -->
-      <div class="header__theme-wrap" [class.is-open]="themeMenuOpen()">
+      <div class="header__has-menu header__theme-wrap" [class.is-open]="openDropdown() === 'tema'">
         <button
           type="button"
           class="header__theme"
-          (click)="toggleThemeMenu()"
+          (click)="toggleDropdown('tema')"
           aria-haspopup="true"
-          [attr.aria-expanded]="themeMenuOpen()"
+          [attr.aria-expanded]="openDropdown() === 'tema'"
           aria-label="Scegli il tema"
           title="Tema"
         >
           <span aria-hidden="true">{{ themeService.icon() }}</span>
         </button>
-        <div class="header__theme-menu" role="menu" aria-label="Tema">
+        <div class="header__menu header__theme-menu" role="menu" aria-label="Tema">
           @for (t of themeService.options; track t.value) {
             <button
               type="button"
@@ -68,13 +108,19 @@
           <!-- sessione in ripristino: evita il lampeggio Accedi → nickname -->
           <span class="header__auth-wait" aria-hidden="true"></span>
         } @else if (auth.isAuthenticated()) {
-          <a
-            routerLink="/account"
-            (click)="closeMenu()"
-            class="badge badge--tag header__points"
-            title="Punti BFF"
-            aria-label="Punti BFF"
-          >★ {{ auth.points() }}</a>
+          @if (auth.points() > 0) {
+            <a
+              routerLink="/account"
+              (click)="closeMenu()"
+              class="header__points"
+              title="Punti BFF"
+              [attr.aria-label]="'Punti BFF: ' + pointsFmt()"
+            >
+              <span class="header__points-coin" aria-hidden="true"></span>
+              <span class="header__points-val">{{ pointsFmt() }}</span>
+              <span class="header__points-unit" aria-hidden="true">pt</span>
+            </a>
+          }
           <a
             routerLink="/account"
             routerLinkActive="is-active"
