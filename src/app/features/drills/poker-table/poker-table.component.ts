@@ -125,20 +125,26 @@ export class PokerTableComponent {
     });
   });
 
-  /** Fiche davanti a ogni giocatore ancora in mano. I posti in colonna centrale
-   *  (eroe in basso, avversario HU in cima) hanno le info in linea: la fiche va
-   *  in una posizione fissa nella fascia libera, non "verso il centro". */
-  protected readonly bets = computed<Bet[]>(() =>
-    this.seats()
+  /**
+   * Fiche davanti a ogni giocatore ancora in mano.
+   * - HU: i due posti sono nella colonna centrale (eroe in basso, avversario in
+   *   alto). Le fiche vanno nella FASCIA LATERALE libera (a destra) per non
+   *   coprire la pillola action né il plate, sfruttando lo spazio ai lati.
+   * - 3-max: la fiche scivola dal posto "verso il centro".
+   */
+  protected readonly bets = computed<Bet[]>(() => {
+    const all = this.seats();
+    const hu = all.length <= 2;
+    return all
       .filter((s) => !s.folded && s.committed > 0.001)
       .map((s) => {
         let pos: { x: number; y: number };
-        if (s.isHero) pos = { x: 50, y: 56 };
-        else if (Math.abs(s.x - 50) < 5) pos = { x: 50, y: 47 };
+        if (hu) pos = s.isHero ? { x: 72, y: 62 } : { x: 72, y: 43 };
+        else if (s.isHero) pos = { x: 50, y: 56 };
         else pos = { x: s.x + (50 - s.x) * 0.46, y: s.y + (50 - s.y) * 0.46 };
         return { position: s.position, label: formatBb(s.committed), ...pos };
-      }),
-  );
+      });
+  });
 
   private slotsFor(n: number): { x: number; y: number }[] {
     if (n <= 2) {

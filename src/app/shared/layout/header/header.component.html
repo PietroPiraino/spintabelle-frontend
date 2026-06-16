@@ -83,7 +83,7 @@
             title="Il mio account"
           >
             <span class="header__user-dot" aria-hidden="true"></span>
-            {{ auth.displayName() }}
+            <span class="header__user-name">{{ auth.displayName() }}</span>
           </a>
           <button type="button" class="btn btn--ghost btn--sm" (click)="logout()">Esci</button>
         } @else {
