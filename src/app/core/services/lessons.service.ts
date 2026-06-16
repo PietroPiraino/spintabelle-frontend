@@ -29,10 +29,7 @@ export interface LessonListOpts {
 export class LessonsService {
   private readonly http = inject(HttpClient);
 
-  /**
-   * Elenco paginato. page/limit sono SEMPRE inviati: è la presenza di questi
-   * param a far rispondere il backend con l'envelope invece dell'array legacy.
-   */
+  /** Elenco paginato (envelope { items, total, page, limit, totalPages }). */
   getLessons(opts: LessonListOpts = {}): Observable<Paginated<Lesson>> {
     let params = new HttpParams()
       .set('page', opts.page ?? 1)

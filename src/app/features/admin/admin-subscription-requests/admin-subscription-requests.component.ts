@@ -1,5 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 import {
   Paginated,
   SubscriptionRequest,
@@ -13,13 +16,16 @@ type StatusFilter = 'all' | SubscriptionRequestStatus;
 
 @Component({
   selector: 'app-admin-subscription-requests',
-  imports: [DatePipe],
+  imports: [DatePipe, ReactiveFormsModule],
   templateUrl: './admin-subscription-requests.component.html',
   styleUrl: '../admin-shared.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminSubscriptionRequestsComponent {
   private readonly api = inject(SubscriptionsService);
+
+  protected readonly searchControl = new FormControl('', { nonNullable: true });
+  private readonly query = signal('');
 
   protected readonly page = signal<Paginated<SubscriptionRequest> | null>(null);
   protected readonly loading = signal(false);
@@ -38,6 +44,13 @@ export class AdminSubscriptionRequestsComponent {
   private readonly currentPage = signal(1);
 
   constructor() {
+    this.searchControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe((q) => {
+        this.query.set(q.trim());
+        this.currentPage.set(1);
+        this.load();
+      });
     this.load();
   }
 
@@ -48,6 +61,7 @@ export class AdminSubscriptionRequestsComponent {
     this.api
       .listRequests({
         status: status === 'all' ? undefined : status,
+        q: this.query() || undefined,
         page: this.currentPage(),
         limit: PAGE_SIZE,
       })

@@ -57,7 +57,8 @@ export class AdminLiveComponent {
   private load(): void {
     this.listLoading.set(true);
     this.listError.set(null);
-    this.liveApi.getSessions().subscribe({
+    // includePast: l'admin vede e gestisce anche le sessioni passate
+    this.liveApi.getSessions(true).subscribe({
       next: (sessions) => {
         this.sessions.set(sessions);
         this.listLoading.set(false);

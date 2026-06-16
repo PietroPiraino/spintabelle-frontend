@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -11,9 +11,14 @@ const API = environment.API_URL;
 export class LiveService {
   private readonly http = inject(HttpClient);
 
-  /** Sessioni in arrivo/in corso, ordinate per inizio crescente. */
-  getSessions(): Observable<LiveSession[]> {
-    return this.http.get<LiveSession[]>(`${API}/live`);
+  /**
+   * Sessioni: di default solo imminenti/in corso (vista utente). Con
+   * includePast l'admin riceve anche le passate (per gestirle).
+   */
+  getSessions(includePast = false): Observable<LiveSession[]> {
+    let params = new HttpParams();
+    if (includePast) params = params.set('includePast', 'true');
+    return this.http.get<LiveSession[]>(`${API}/live`, { params });
   }
 
   create(payload: LiveSessionPayload): Observable<LiveSession> {

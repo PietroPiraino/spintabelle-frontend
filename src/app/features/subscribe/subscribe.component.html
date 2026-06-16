@@ -12,7 +12,12 @@
     @if (loading()) {
       <div class="spinner" role="status" aria-label="Caricamento"></div>
     } @else if (loadError()) {
-      <div class="form-feedback is-error" role="alert">{{ loadError() }}</div>
+      <div class="form-feedback is-error" role="alert">
+        {{ loadError() }}
+        <button type="button" class="btn btn--ghost btn--sm" (click)="load()">
+          Riprova
+        </button>
+      </div>
     } @else {
       @if (pending(); as p) {
         <div class="card card--pad subscribe__status">

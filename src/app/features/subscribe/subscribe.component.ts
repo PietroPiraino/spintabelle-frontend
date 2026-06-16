@@ -95,6 +95,12 @@ export class SubscribeComponent {
   });
 
   constructor() {
+    this.load();
+  }
+
+  protected load(): void {
+    this.loading.set(true);
+    this.loadError.set(null);
     forkJoin({
       info: this.subs.paymentInfo(),
       me: this.subs.mySubscription(),
