@@ -126,32 +126,29 @@ export class PokerTableComponent {
   });
 
   /**
-   * Fiche davanti a ogni giocatore ancora in mano.
-   * - HU: i due posti sono nella colonna centrale (eroe in basso, avversario in
-   *   alto). Le fiche vanno nella FASCIA LATERALE libera (a destra) per non
-   *   coprire la pillola action né il plate, sfruttando lo spazio ai lati.
-   * - 3-max: la fiche scivola dal posto "verso il centro".
+   * Fiche davanti a ogni giocatore ancora in mano: l'eroe (in basso) le ha
+   * sopra di sé verso il centro, gli altri le hanno scivolate dal proprio posto
+   * verso il centro. Vale sia per il 3-max sia per l'HU (che ora usa lo stesso
+   * schema laterale, niente colonna centrale).
    */
-  protected readonly bets = computed<Bet[]>(() => {
-    const all = this.seats();
-    const hu = all.length <= 2;
-    return all
+  protected readonly bets = computed<Bet[]>(() =>
+    this.seats()
       .filter((s) => !s.folded && s.committed > 0.001)
       .map((s) => {
         let pos: { x: number; y: number };
-        if (hu) pos = s.isHero ? { x: 72, y: 62 } : { x: 72, y: 43 };
-        else if (s.isHero) pos = { x: 50, y: 56 };
+        if (s.isHero) pos = { x: 50, y: 56 };
         else pos = { x: s.x + (50 - s.x) * 0.46, y: s.y + (50 - s.y) * 0.46 };
         return { position: s.position, label: formatBb(s.committed), ...pos };
-      });
-  });
+      }),
+  );
 
   private slotsFor(n: number): { x: number; y: number }[] {
     if (n <= 2) {
-      // HU: eroe in basso, avversario in alto sotto il piatto
+      // HU: stesso schema del 3-max ma con un solo avversario, mostrato di LATO
+      // (slot destro), non di fronte → niente colonna centrale affollata.
       return [
         { x: 50, y: 82 },
-        { x: 50, y: 31 },
+        { x: 86, y: 33 },
       ];
     }
     // 3-max: eroe in basso; in senso orario il successivo va a SINISTRA, poi a
