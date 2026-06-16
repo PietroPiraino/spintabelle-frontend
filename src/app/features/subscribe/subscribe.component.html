@@ -84,46 +84,103 @@
             <h2>Completa la richiesta — {{ selectedLabel() }}</h2>
             <ol class="subscribe__steps">
               <li>Scegli il metodo di pagamento.</li>
-              <li>
-                Invia <strong>€{{ selectedPrice() }}</strong> all'indirizzo qui
-                sotto via {{ methodLabel() }}.
-              </li>
-              <li>
-                Inserisci il riferimento del pagamento e invia la richiesta:
-                la approveremo dopo aver verificato l'incasso.
-              </li>
+              @if (effectivePrice() === 0) {
+                <li>
+                  Con questo codice l'abbonamento è
+                  <strong>in omaggio</strong>: nessun pagamento richiesto.
+                </li>
+                <li>Invia la richiesta: la approveremo a breve.</li>
+              } @else {
+                <li>
+                  Invia
+                  @if (discount()) {
+                    <s class="subscribe__strike">€{{ selectedPrice() }}</s>
+                  }
+                  <strong>€{{ effectivePrice() }}</strong> all'indirizzo qui
+                  sotto via {{ methodLabel() }}.
+                </li>
+                <li>
+                  Inserisci il riferimento del pagamento e invia la richiesta:
+                  la approveremo dopo aver verificato l'incasso.
+                </li>
+              }
             </ol>
 
             <div class="field">
-              <span class="subscribe__label">Metodo di pagamento</span>
-              <div class="row subscribe__methods">
-                <label class="subscribe__method">
-                  <input type="radio" [formControl]="method" value="paypal" />
-                  PayPal
-                </label>
-                <label class="subscribe__method">
-                  <input type="radio" [formControl]="method" value="skrill" />
-                  Skrill
-                </label>
+              <label for="discount">Codice sconto (se ne hai uno)</label>
+              @if (!discount()) {
+                <div class="row subscribe__discount-row">
+                  <input
+                    id="discount"
+                    type="text"
+                    class="input subscribe__discount-input"
+                    [formControl]="discountControl"
+                    maxlength="40"
+                    placeholder="Es. WELCOME20"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="applyDiscount()"
+                    [disabled]="discountChecking() || !discountControl.value.trim()"
+                  >
+                    {{ discountChecking() ? 'Verifica…' : 'Applica' }}
+                  </button>
+                </div>
+                @if (discountError()) {
+                  <p class="subscribe__discount-error" role="alert">
+                    {{ discountError() }}
+                  </p>
+                }
+              } @else {
+                <div class="row subscribe__discount-applied">
+                  <span class="badge badge--free">
+                    Codice {{ discount()!.code }} applicato
+                  </span>
+                  <span class="subscribe__muted">{{ discount()!.message }}</span>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="clearDiscount()"
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              }
+            </div>
+
+            @if (effectivePrice() !== 0) {
+              <div class="field">
+                <span class="subscribe__label">Metodo di pagamento</span>
+                <div class="row subscribe__methods">
+                  <label class="subscribe__method">
+                    <input type="radio" [formControl]="method" value="paypal" />
+                    PayPal
+                  </label>
+                  <label class="subscribe__method">
+                    <input type="radio" [formControl]="method" value="skrill" />
+                    Skrill
+                  </label>
+                </div>
               </div>
-            </div>
 
-            <div class="field">
-              <span class="subscribe__label">Invia il pagamento a</span>
-              <p class="subscribe__receiver">{{ receiverEmail() }}</p>
-            </div>
+              <div class="field">
+                <span class="subscribe__label">Invia il pagamento a</span>
+                <p class="subscribe__receiver">{{ receiverEmail() }}</p>
+              </div>
 
-            <div class="field">
-              <label for="reference">Riferimento del pagamento (consigliato)</label>
-              <input
-                id="reference"
-                type="text"
-                class="input"
-                [formControl]="reference"
-                maxlength="200"
-                placeholder="ID transazione o nota"
-              />
-            </div>
+              <div class="field">
+                <label for="reference">Riferimento del pagamento (consigliato)</label>
+                <input
+                  id="reference"
+                  type="text"
+                  class="input"
+                  [formControl]="reference"
+                  maxlength="200"
+                  placeholder="ID transazione o nota"
+                />
+              </div>
+            }
 
             @if (submitError()) {
               <div class="form-feedback is-error" role="alert">{{ submitError() }}</div>

@@ -4,11 +4,13 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   CreateSubscriptionRequest,
+  DiscountValidation,
   MySubscription,
   Paginated,
   PaymentInfo,
   SubscriptionRequest,
   SubscriptionRequestStatus,
+  SubscriptionTier,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -36,6 +38,17 @@ export class SubscriptionsService {
     return this.http.post<SubscriptionRequest>(
       `${API}/subscriptions/request`,
       payload,
+    );
+  }
+
+  /** Valida un codice sconto e ottiene il prezzo scontato (prima del pagamento). */
+  validateDiscount(
+    code: string,
+    tier: SubscriptionTier,
+  ): Observable<DiscountValidation> {
+    return this.http.post<DiscountValidation>(
+      `${API}/subscriptions/validate-discount`,
+      { code, tier },
     );
   }
 

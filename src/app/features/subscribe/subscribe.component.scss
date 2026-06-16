@@ -105,3 +105,32 @@
   color: var(--ember);
   word-break: break-all;
 }
+
+// ── Codice sconto ──
+.subscribe__strike {
+  color: var(--text-faint);
+  margin-right: 0.4rem;
+}
+
+.subscribe__discount-row {
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.subscribe__discount-input {
+  max-width: 16rem;
+  text-transform: uppercase;
+}
+
+.subscribe__discount-error {
+  margin: 0.45rem 0 0;
+  color: var(--danger, #c0392b);
+  font-size: 0.85rem;
+}
+
+.subscribe__discount-applied {
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}

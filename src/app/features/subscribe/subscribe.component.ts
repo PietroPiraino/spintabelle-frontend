@@ -10,6 +10,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 import {
+  DiscountValidation,
   MySubscription,
   PaymentInfo,
   PaymentMethod,
@@ -54,6 +55,14 @@ export class SubscribeComponent {
   protected readonly submitting = signal(false);
   protected readonly submitError = signal<string | null>(null);
 
+  // ── Codice sconto ──
+  protected readonly discountControl = new FormControl<string>('', {
+    nonNullable: true,
+  });
+  protected readonly discountChecking = signal(false);
+  protected readonly discountError = signal<string | null>(null);
+  protected readonly discount = signal<DiscountValidation | null>(null);
+
   protected readonly method = new FormControl<PaymentMethod>('paypal', {
     nonNullable: true,
   });
@@ -94,6 +103,12 @@ export class SubscribeComponent {
     return info.tiers.find((t) => t.tier === tier)?.label ?? '';
   });
 
+  /** Prezzo effettivo da inviare: scontato se un codice è applicato. */
+  protected readonly effectivePrice = computed(() => {
+    const d = this.discount();
+    return d ? d.discountedPriceEur : this.selectedPrice();
+  });
+
   constructor() {
     this.load();
   }
@@ -130,11 +145,43 @@ export class SubscribeComponent {
   protected choose(tier: SubscriptionTier): void {
     this.selectedTier.set(tier);
     this.submitError.set(null);
+    // lo sconto è validato per uno specifico tier: cambiando piano si azzera
+    this.clearDiscount();
   }
 
   protected cancelChoice(): void {
     this.selectedTier.set(null);
     this.submitError.set(null);
+    this.clearDiscount();
+  }
+
+  /** Valida il codice sconto per il tier selezionato e mostra il prezzo scontato. */
+  protected applyDiscount(): void {
+    const tier = this.selectedTier();
+    const code = this.discountControl.value.trim();
+    if (!tier || !code || this.discountChecking()) return;
+    this.discountChecking.set(true);
+    this.discountError.set(null);
+    this.subs.validateDiscount(code, tier).subscribe({
+      next: (res) => {
+        this.discountChecking.set(false);
+        this.discount.set(res);
+      },
+      error: (err: unknown) => {
+        this.discountChecking.set(false);
+        this.discount.set(null);
+        this.discountError.set(
+          apiErrorMessage(err, 'Codice sconto non valido.'),
+        );
+      },
+    });
+  }
+
+  protected clearDiscount(): void {
+    this.discount.set(null);
+    this.discountError.set(null);
+    this.discountChecking.set(false);
+    this.discountControl.reset('');
   }
 
   protected submit(): void {
@@ -149,12 +196,14 @@ export class SubscribeComponent {
         tier,
         paymentMethod: this.method.value,
         paymentReference: reference || undefined,
+        discountCode: this.discount()?.code,
       })
       .subscribe({
         next: (request) => {
           this.submitting.set(false);
           this.selectedTier.set(null);
           this.reference.reset('');
+          this.clearDiscount();
           // riflette subito la richiesta pending senza un altro giro di rete
           const base = this.me();
           this.me.set({

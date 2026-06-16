@@ -140,7 +140,9 @@ export class AdminSubscriptionRequestsComponent {
   }
 
   protected methodLabel(m: string): string {
-    return m === 'skrill' ? 'Skrill' : 'PayPal';
+    if (m === 'skrill') return 'Skrill';
+    if (m === 'manuale') return 'Concesso da admin';
+    return 'PayPal';
   }
 
   protected statusLabel(s: SubscriptionRequestStatus): string {

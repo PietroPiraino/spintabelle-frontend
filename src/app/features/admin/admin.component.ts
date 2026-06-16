@@ -5,13 +5,22 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AdminAuditComponent } from './admin-audit/admin-audit.component';
+import { AdminDiscountsComponent } from './admin-discounts/admin-discounts.component';
 import { AdminLessonsComponent } from './admin-lessons/admin-lessons.component';
 import { AdminLiveComponent } from './admin-live/admin-live.component';
 import { AdminNewsComponent } from './admin-news/admin-news.component';
 import { AdminSubscriptionRequestsComponent } from './admin-subscription-requests/admin-subscription-requests.component';
 import { AdminUsersComponent } from './admin-users/admin-users.component';
 
-type AdminTab = 'lezioni' | 'live' | 'news' | 'iscritti' | 'richieste';
+type AdminTab =
+  | 'lezioni'
+  | 'live'
+  | 'news'
+  | 'iscritti'
+  | 'richieste'
+  | 'sconti'
+  | 'log';
 
 @Component({
   selector: 'app-admin',
@@ -21,6 +30,8 @@ type AdminTab = 'lezioni' | 'live' | 'news' | 'iscritti' | 'richieste';
     AdminNewsComponent,
     AdminUsersComponent,
     AdminSubscriptionRequestsComponent,
+    AdminDiscountsComponent,
+    AdminAuditComponent,
   ],
   template: `
     <section class="section">
@@ -71,6 +82,22 @@ type AdminTab = 'lezioni' | 'live' | 'news' | 'iscritti' | 'richieste';
             [attr.aria-selected]="tab() === 'richieste'"
             (click)="setTab('richieste')"
           >♥ Richieste</button>
+          <button
+            type="button"
+            role="tab"
+            class="admin-tabs__tab"
+            [class.is-active]="tab() === 'sconti'"
+            [attr.aria-selected]="tab() === 'sconti'"
+            (click)="setTab('sconti')"
+          >% Sconti</button>
+          <button
+            type="button"
+            role="tab"
+            class="admin-tabs__tab"
+            [class.is-active]="tab() === 'log'"
+            [attr.aria-selected]="tab() === 'log'"
+            (click)="setTab('log')"
+          >⛁ Log</button>
         </div>
 
         @if (tab() === 'lezioni') {
@@ -81,8 +108,12 @@ type AdminTab = 'lezioni' | 'live' | 'news' | 'iscritti' | 'richieste';
           <app-admin-news />
         } @else if (tab() === 'iscritti') {
           <app-admin-users />
-        } @else {
+        } @else if (tab() === 'richieste') {
           <app-admin-subscription-requests />
+        } @else if (tab() === 'sconti') {
+          <app-admin-discounts />
+        } @else {
+          <app-admin-audit />
         }
       </div>
     </section>
@@ -127,6 +158,8 @@ export class AdminComponent {
     'news',
     'iscritti',
     'richieste',
+    'sconti',
+    'log',
   ];
 
   private readonly route = inject(ActivatedRoute);

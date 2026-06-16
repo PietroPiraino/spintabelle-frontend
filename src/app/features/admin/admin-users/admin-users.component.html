@@ -7,6 +7,27 @@
       aria-label="Cerca iscritti"
       [formControl]="searchControl"
     />
+    <select
+      #roleSel
+      class="input admin-user__role"
+      aria-label="Filtra per ruolo"
+      (change)="setRoleFilter(roleSel.value)"
+    >
+      <option value="">Tutti i ruoli</option>
+      @for (r of roles; track r) {
+        <option [value]="r">{{ roleLabels[r] }}</option>
+      }
+    </select>
+    <select
+      #expSel
+      class="input admin-user__role"
+      aria-label="Filtra per scadenza"
+      (change)="setExpiringFilter(expSel.value)"
+    >
+      <option value="">Scadenza: tutte</option>
+      <option value="7">In scadenza ≤ 7 giorni</option>
+      <option value="30">In scadenza ≤ 30 giorni</option>
+    </select>
     @if (page(); as p) {
       <span class="admin-users__count">
         {{ p.total }} {{ p.total === 1 ? 'iscritto' : 'iscritti' }}
@@ -87,12 +108,31 @@
                   Annulla
                 </button>
               }
+              @if (!isSelf(user)) {
+                <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'expiry')">
+                  Scadenza
+                </button>
+                @if (user.role !== 'ADMIN') {
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'grant')">
+                    Concedi
+                  </button>
+                }
+                <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'discount')">
+                  Codice sconto
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'profile')">
+                  Dati
+                </button>
+              }
+              <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'history')">
+                Storico
+              </button>
               @if (!user.verified) {
                 <button type="button" class="btn btn--ghost btn--sm" (click)="resend(user)">
                   Reinvia verifica
                 </button>
               }
-              <button type="button" class="btn btn--ghost btn--sm" (click)="openAdjust(user)">
+              <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'points')">
                 Punti
               </button>
               <button
@@ -105,12 +145,12 @@
               </button>
             </div>
           </div>
-          @if (adjustingId() === user.id) {
-            <div class="card card--pad">
-              <h3 style="margin-top: 0">
-                Punti di {{ user.email }} — saldo {{ user.points ?? 0 }}
-              </h3>
-              <div class="row" style="gap: 0.6rem; flex-wrap: wrap; align-items: flex-end">
+
+          <!-- ── Pannelli inline ── -->
+          @if (isPanel(user, 'points')) {
+            <div class="card card--pad admin-panel">
+              <h3>Punti di {{ user.email }} — saldo {{ user.points ?? 0 }}</h3>
+              <div class="row admin-panel__row">
                 <div class="field" style="margin: 0">
                   <label [attr.for]="'delta-' + user.id">Variazione (+ accredito / − storno)</label>
                   <input
@@ -132,19 +172,175 @@
                     placeholder="es. bonus di benvenuto"
                   />
                 </div>
-                <button
-                  type="button"
-                  class="btn btn--primary btn--sm"
-                  [disabled]="adjusting()"
-                  (click)="applyAdjust(user)"
-                >{{ adjusting() ? 'Applico…' : 'Applica' }}</button>
-                <button
-                  type="button"
-                  class="btn btn--ghost btn--sm"
-                  [disabled]="adjusting()"
-                  (click)="cancelAdjust()"
-                >Annulla</button>
+                <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel()" (click)="applyAdjust(user)">
+                  {{ savingPanel() ? 'Applico…' : 'Applica' }}
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" [disabled]="savingPanel()" (click)="closePanel()">
+                  Annulla
+                </button>
               </div>
+            </div>
+          }
+
+          @if (isPanel(user, 'expiry')) {
+            <div class="card card--pad admin-panel">
+              <h3>Scadenza abbonamento — {{ user.email }}</h3>
+              <div class="row admin-panel__row">
+                <div class="field" style="margin: 0">
+                  <label [attr.for]="'exp-' + user.id">Valida fino al</label>
+                  <input [id]="'exp-' + user.id" type="date" class="input" [formControl]="expiryDateControl" />
+                </div>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="addToExpiry(user, 30)">+30 giorni</button>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="addToExpiry(user, 365)">+1 anno</button>
+              </div>
+              <label class="row admin-panel__check">
+                <input type="checkbox" [formControl]="notifyControl" /> Notifica l'utente via email
+              </label>
+              <div class="row admin-panel__actions">
+                <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel() || !expiryDateControl.value" (click)="saveExpiry(user)">
+                  {{ savingPanel() ? 'Salvataggio…' : 'Salva scadenza' }}
+                </button>
+                @if (user.subscriptionExpiresAt) {
+                  <button type="button" class="btn btn--ghost btn--sm" [disabled]="savingPanel()" (click)="removeExpiry(user)">
+                    Rimuovi scadenza
+                  </button>
+                }
+                <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Annulla</button>
+              </div>
+            </div>
+          }
+
+          @if (isPanel(user, 'grant')) {
+            <div class="card card--pad admin-panel">
+              <h3>Concedi abbonamento — {{ user.email }}</h3>
+              <div class="row admin-panel__row">
+                <div class="field" style="margin: 0">
+                  <label [attr.for]="'gt-' + user.id">Piano</label>
+                  <select [id]="'gt-' + user.id" class="input" [formControl]="grantTierControl">
+                    @for (t of tiers; track t) {
+                      <option [value]="t">{{ roleLabels[t] }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="field" style="margin: 0">
+                  <label [attr.for]="'gd-' + user.id">Scade il</label>
+                  <input [id]="'gd-' + user.id" type="date" class="input" [formControl]="grantDateControl" />
+                </div>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="addToGrant(30)">+30 giorni</button>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="addToGrant(365)">+1 anno</button>
+              </div>
+              <div class="field" style="margin: 0.6rem 0 0">
+                <label [attr.for]="'gn-' + user.id">Nota (facoltativa)</label>
+                <input [id]="'gn-' + user.id" type="text" class="input" [formControl]="grantNoteControl" maxlength="300" placeholder="es. omaggio promozionale" />
+              </div>
+              <div class="row admin-panel__actions">
+                <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel() || !grantDateControl.value" (click)="saveGrant(user)">
+                  {{ savingPanel() ? 'Salvataggio…' : 'Concedi' }}
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Annulla</button>
+              </div>
+            </div>
+          }
+
+          @if (isPanel(user, 'profile')) {
+            <div class="card card--pad admin-panel">
+              <h3>Modifica dati — {{ user.email }}</h3>
+              <div class="field" style="margin: 0 0 0.6rem">
+                <label [attr.for]="'pe-' + user.id">Email</label>
+                <input [id]="'pe-' + user.id" type="email" class="input" [formControl]="emailControl" />
+                <p class="admin-item__meta">
+                  Cambiare l'email riporta l'account a "da verificare" (a meno di forzare "verificato" qui sotto).
+                </p>
+              </div>
+              <div class="field" style="margin: 0 0 0.6rem">
+                <label [attr.for]="'pn-' + user.id">Nickname</label>
+                <input [id]="'pn-' + user.id" type="text" class="input" [formControl]="nickControl" maxlength="40" />
+              </div>
+              <label class="row admin-panel__check">
+                <input type="checkbox" [formControl]="verifiedControl" /> Account verificato
+              </label>
+              <div class="row admin-panel__actions">
+                <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel()" (click)="saveProfile(user)">
+                  {{ savingPanel() ? 'Salvataggio…' : 'Salva dati' }}
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Annulla</button>
+              </div>
+            </div>
+          }
+
+          @if (isPanel(user, 'discount')) {
+            <div class="card card--pad admin-panel">
+              <h3>Assegna codice sconto — {{ user.email }}</h3>
+              @if (discountCodes() === null) {
+                <div class="spinner" role="status" aria-label="Caricamento codici"></div>
+              } @else if (discountCodes()!.length === 0) {
+                <p class="admin-item__meta">
+                  Nessun codice "riservato" disponibile. Creane uno dalla tab Sconti.
+                </p>
+              } @else {
+                <div class="row admin-panel__row">
+                  <div class="field" style="margin: 0; min-width: 14rem">
+                    <label [attr.for]="'dc-' + user.id">Codice</label>
+                    <select [id]="'dc-' + user.id" class="input" [formControl]="selectedCodeId">
+                      <option value="">— scegli —</option>
+                      @for (c of discountCodes()!; track c.id) {
+                        <option [value]="c.id">
+                          {{ c.code }} ({{ c.kind === 'PERCENT' ? c.value + '%' : '€' + c.value }})
+                        </option>
+                      }
+                    </select>
+                  </div>
+                  <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel() || !selectedCodeId.value" (click)="assignDiscount(user)">
+                    {{ savingPanel() ? 'Assegno…' : 'Assegna' }}
+                  </button>
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Annulla</button>
+                </div>
+              }
+            </div>
+          }
+
+          @if (isPanel(user, 'history')) {
+            <div class="card card--pad admin-panel">
+              <h3>Storico — {{ user.email }}</h3>
+              @if (historyLoading()) {
+                <div class="spinner" role="status" aria-label="Caricamento storico"></div>
+              } @else {
+                <h4 class="admin-panel__h4">Richieste abbonamento</h4>
+                @if ((historyReqs() ?? []).length === 0) {
+                  <p class="admin-item__meta">Nessuna richiesta.</p>
+                } @else {
+                  <ul class="admin-history">
+                    @for (r of historyReqs()!; track r.id) {
+                      <li>
+                        <span class="badge badge--tag">{{ r.status }}</span>
+                        {{ r.tierLabel }} · {{ r.paymentMethod }}
+                        @if (r.discountCode) { · sconto {{ r.discountCode }} }
+                        @if (r.discountedPriceEur != null) { (€{{ r.discountedPriceEur }}) }
+                        · {{ r.createdAt | date: 'dd MMM yyyy' }}
+                        @if (r.decisionNote) { — {{ r.decisionNote }} }
+                      </li>
+                    }
+                  </ul>
+                }
+                <h4 class="admin-panel__h4">Azioni admin</h4>
+                @if ((historyAudit() ?? []).length === 0) {
+                  <p class="admin-item__meta">Nessuna azione registrata.</p>
+                } @else {
+                  <ul class="admin-history">
+                    @for (a of historyAudit()!; track a.id) {
+                      <li>
+                        {{ a.createdAt | date: 'dd MMM yyyy, HH:mm' }} ·
+                        <strong>{{ actionLabel(a.action) }}</strong>
+                        @if (a.adminEmail) { · {{ a.adminEmail }} }
+                        @if (a.reason) { — {{ a.reason }} }
+                      </li>
+                    }
+                  </ul>
+                }
+                <div class="row admin-panel__actions">
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Chiudi</button>
+                </div>
+              }
             </div>
           }
         }

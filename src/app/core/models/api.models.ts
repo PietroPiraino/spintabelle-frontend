@@ -104,7 +104,8 @@ export interface AdminUser {
 
 /** I due tier acquistabili (sottoinsieme di Role). */
 export type SubscriptionTier = 'PESCE_ROSSO' | 'SQUALO';
-export type PaymentMethod = 'paypal' | 'skrill';
+/** 'manuale' = concessione admin (mai selezionabile dall'utente). */
+export type PaymentMethod = 'paypal' | 'skrill' | 'manuale';
 export type SubscriptionRequestStatus = 'pending' | 'approved' | 'rejected';
 
 /** Richiesta di abbonamento come esposta a client/admin. */
@@ -117,6 +118,11 @@ export interface SubscriptionRequest {
   tierLabel: string;
   paymentMethod: PaymentMethod;
   paymentReference?: string;
+  /** codice sconto applicato (snapshot) */
+  discountCode?: string;
+  /** prezzo di listino e scontato (snapshot in euro) */
+  listPriceEur?: number;
+  discountedPriceEur?: number;
   status: SubscriptionRequestStatus;
   decidedAt?: string;
   decisionNote?: string;
@@ -145,6 +151,83 @@ export interface CreateSubscriptionRequest {
   tier: SubscriptionTier;
   paymentMethod: PaymentMethod;
   paymentReference?: string;
+  /** codice sconto opzionale (ri-validato lato server) */
+  discountCode?: string;
+}
+
+// ----- Codici sconto -----
+
+export type DiscountKind = 'PERCENT' | 'FIXED';
+export type DiscountAudience = 'RESTRICTED' | 'PUBLIC';
+
+/** Esito della validazione di un codice sconto (prezzo scontato da mostrare). */
+export interface DiscountValidation {
+  valid: true;
+  code: string;
+  kind: DiscountKind;
+  value: number;
+  listPriceEur: number;
+  discountedPriceEur: number;
+  message: string;
+}
+
+/** Codice sconto come esposto al pannello admin. */
+export interface DiscountCode {
+  id: string;
+  code: string;
+  kind: DiscountKind;
+  value: number;
+  audience: DiscountAudience;
+  tiers: SubscriptionTier[];
+  active: boolean;
+  validFrom?: string;
+  validUntil?: string;
+  maxRedemptions?: number;
+  redeemedCount: number;
+  note?: string;
+  /** numero di utenti ammessi (codici RESTRICTED) */
+  eligibleCount?: number;
+  createdAt?: string;
+}
+
+/** Utente ammesso a un codice (dettaglio admin). */
+export interface DiscountEligibleUser {
+  userId: string;
+  userEmail?: string;
+  redeemedAt?: string;
+}
+
+/** Codice + lista utenti ammessi (dettaglio admin). */
+export interface DiscountCodeDetail extends DiscountCode {
+  eligibles: DiscountEligibleUser[];
+}
+
+/** Payload di creazione/modifica codice sconto (admin). */
+export interface DiscountCodePayload {
+  code?: string;
+  kind: DiscountKind;
+  value: number;
+  audience: DiscountAudience;
+  tiers?: SubscriptionTier[];
+  active?: boolean;
+  validFrom?: string;
+  validUntil?: string;
+  maxRedemptions?: number;
+  note?: string;
+}
+
+// ----- Audit azioni admin -----
+
+export interface AdminActionLogEntry {
+  id: string;
+  adminEmail?: string;
+  /** email dell'utente bersaglio (presente nel log globale) */
+  userEmail?: string;
+  action: string;
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  reason?: string;
+  createdAt?: string;
 }
 
 // ----- Sessioni live -----

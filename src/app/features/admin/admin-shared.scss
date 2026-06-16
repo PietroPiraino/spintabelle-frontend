@@ -183,3 +183,52 @@
   gap: 1rem;
   margin-top: 0.6rem;
 }
+
+// ── Pannelli inline per-utente (scadenza, concedi, dati, sconto, storico) ──
+
+.admin-panel {
+  border-color: var(--copper-400);
+
+  h3 {
+    margin-top: 0;
+    font-size: 1.05rem;
+  }
+}
+
+.admin-panel__row {
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.admin-panel__check {
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.6rem;
+}
+
+.admin-panel__actions {
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.admin-panel__h4 {
+  margin: 0.8rem 0 0.4rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.admin-history {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  li {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+}

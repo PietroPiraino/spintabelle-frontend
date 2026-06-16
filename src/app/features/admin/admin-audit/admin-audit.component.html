@@ -1,0 +1,57 @@
+<div class="admin-users">
+  <div class="admin-users__head">
+    <h2 style="margin: 0; font-size: 1.2rem">Log azioni admin</h2>
+    @if (page(); as p) {
+      <span class="admin-users__count">
+        {{ p.total }} {{ p.total === 1 ? 'azione' : 'azioni' }}
+      </span>
+    }
+  </div>
+
+  @if (error()) {
+    <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (!page() && loading()) {
+    <div class="spinner" role="status" aria-label="Caricamento log"></div>
+  } @else if (page(); as p) {
+    @if (p.items.length === 0) {
+      <div class="empty-state">
+        <p>Nessuna azione registrata.</p>
+      </div>
+    } @else {
+      <div class="admin-list">
+        @for (e of p.items; track e.id) {
+          <div class="card admin-item">
+            <div class="admin-item__info">
+              <div class="row admin-user__line">
+                <strong>{{ actionLabel(e.action) }}</strong>
+                @if (e.userEmail) {
+                  <span class="admin-user__nick">su {{ e.userEmail }}</span>
+                }
+              </div>
+              <span class="admin-item__meta">
+                {{ e.createdAt | date: 'dd MMM yyyy, HH:mm' }}
+                @if (e.adminEmail) { · da {{ e.adminEmail }} }
+                @if (details(e)) { · {{ details(e) }} }
+                @if (e.reason) { · "{{ e.reason }}" }
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (p.totalPages > 1) {
+        <div class="row admin-users__pager">
+          <button type="button" class="btn btn--ghost btn--sm" [disabled]="p.page <= 1" (click)="goToPage(p.page - 1)">
+            ← Precedenti
+          </button>
+          <span class="admin-item__meta">Pagina {{ p.page }} di {{ p.totalPages }}</span>
+          <button type="button" class="btn btn--ghost btn--sm" [disabled]="p.page >= p.totalPages" (click)="goToPage(p.page + 1)">
+            Successivi →
+          </button>
+        </div>
+      }
+    }
+  }
+</div>
