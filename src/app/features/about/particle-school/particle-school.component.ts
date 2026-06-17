@@ -151,12 +151,17 @@ export class ParticleSchoolComponent implements OnDestroy {
     this.cleanupFns.push(() => document.removeEventListener('visibilitychange', onVisibility));
 
     // ---- resize ----
+    // Dimensiona sull'AREA CONTENUTO (clientWidth/Height), NON su innerWidth:
+    // il canvas è fixed con width:100%, che si risolve sull'initial containing
+    // block = innerWidth e quindi include la gutter della scrollbar (~scrollbar).
+    // Essendo fixed, quei px sfuggono a body{overflow-x:hidden} → scroll
+    // orizzontale su mobile. setSize(..., true) fissa canvas.style ai px corretti.
     const resize = () => {
-      const w = innerWidth;
-      const h = innerHeight;
+      const w = document.documentElement.clientWidth;
+      const h = document.documentElement.clientHeight;
       if (w === 0 || h === 0) return;
       renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile() ? 1.5 : 2));
-      renderer.setSize(w, h, false);
+      renderer.setSize(w, h, true);
       camera.right = w;
       camera.bottom = h;
       camera.updateProjectionMatrix();
@@ -179,8 +184,10 @@ export class ParticleSchoolComponent implements OnDestroy {
       const dt = Math.min(Math.max(t - lastT, 0), 0.066);
       lastT = t;
 
-      const w = innerWidth;
-      const h = innerHeight;
+      // stessa area-contenuto del canvas/camera (vedi resize): mai innerWidth,
+      // altrimenti i pesci nuoterebbero nei px fuori dal canvas (clippati).
+      const w = document.documentElement.clientWidth;
+      const h = document.documentElement.clientHeight;
 
       // stazione più "centrata" nello schermo in questo frame
       let bestAct = 0;
