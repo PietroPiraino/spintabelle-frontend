@@ -8,6 +8,7 @@ import {
   MySubscription,
   Paginated,
   PaymentInfo,
+  SubscriptionPlans,
   SubscriptionRequest,
   SubscriptionRequestStatus,
   SubscriptionTier,
@@ -20,9 +21,16 @@ const API = environment.API_URL;
 export class SubscriptionsService {
   private readonly http = inject(HttpClient);
 
+  // ── Pubblico ──
+
+  /** PUBBLICO: piani + prezzi + durata per le card (niente login). */
+  plans(): Observable<SubscriptionPlans> {
+    return this.http.get<SubscriptionPlans>(`${API}/subscriptions/plans`);
+  }
+
   // ── Utente ──
 
-  /** Email destinatarie PayPal/Skrill + prezzi + durata. */
+  /** Email destinatarie PayPal/Skrill + prezzi + durata (loggato). */
   paymentInfo(): Observable<PaymentInfo> {
     return this.http.get<PaymentInfo>(`${API}/subscriptions/payment-info`);
   }

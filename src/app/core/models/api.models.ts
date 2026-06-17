@@ -146,6 +146,12 @@ export interface PaymentInfo {
   durationDays: number;
 }
 
+/** Dati PUBBLICI per le card di /abbonati: prezzi + durata, senza receivers. */
+export interface SubscriptionPlans {
+  tiers: { tier: SubscriptionTier; label: string; priceEur: number }[];
+  durationDays: number;
+}
+
 /** Payload di richiesta abbonamento (dopo il pagamento off-site). */
 export interface CreateSubscriptionRequest {
   tier: SubscriptionTier;

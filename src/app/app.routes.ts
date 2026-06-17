@@ -71,12 +71,13 @@ export const routes: Routes = [
     title: 'Live — Best Fish Forever',
   },
   {
+    // Pubblica di proposito: prezzi visibili a tutti (SEO/condivisione/conversione).
+    // L'acquisto è gated lato componente (anonimo → login) + API (request/me sotto JWT).
     path: 'abbonati',
     loadComponent: () =>
       import('./features/subscribe/subscribe.component').then(
         (m) => m.SubscribeComponent,
       ),
-    canActivate: [authGuard],
     title: 'Abbonati — Best Fish Forever',
   },
   {

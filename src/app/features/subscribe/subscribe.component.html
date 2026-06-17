@@ -9,6 +9,14 @@
       </p>
     </div>
 
+    @if (!isAuth()) {
+      <p class="subscribe__guest">
+        I prezzi valgono per tutti. Per abbonarti serve un account:
+        <a routerLink="/login" [queryParams]="{ redirect: '/abbonati' }">accedi</a>
+        o <a routerLink="/registrazione">registrati</a>.
+      </p>
+    }
+
     @if (loading()) {
       <div class="spinner" role="status" aria-label="Caricamento"></div>
     } @else if (loadError()) {

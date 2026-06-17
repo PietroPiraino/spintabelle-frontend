@@ -7,8 +7,9 @@ import {
   signal,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { forkJoin } from 'rxjs';
+import { forkJoin, take } from 'rxjs';
 import {
   DiscountValidation,
   MySubscription,
@@ -16,6 +17,7 @@ import {
   PaymentMethod,
   SubscriptionTier,
 } from '../../core/models/api.models';
+import { AuthService } from '../../core/services/auth.service';
 import { SubscriptionsService } from '../../core/services/subscriptions.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
 import {
@@ -39,13 +41,18 @@ const TIER_FEATURES: Record<SubscriptionTier, string[]> = {
 
 @Component({
   selector: 'app-subscribe',
-  imports: [ReactiveFormsModule, DatePipe, SubscribeModelComponent],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe, SubscribeModelComponent],
   templateUrl: './subscribe.component.html',
   styleUrl: './subscribe.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SubscribeComponent {
   private readonly subs = inject(SubscriptionsService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  /** Sessione attiva: guida la UI (form d'acquisto vs CTA login). */
+  protected readonly isAuth = this.auth.isAuthenticated;
 
   protected readonly features = TIER_FEATURES;
   protected readonly tierOrder: SubscriptionTier[] = ['PESCE_ROSSO', 'SQUALO'];
@@ -138,13 +145,16 @@ export class SubscribeComponent {
   protected load(): void {
     this.loading.set(true);
     this.loadError.set(null);
-    forkJoin({
-      info: this.subs.paymentInfo(),
-      me: this.subs.mySubscription(),
-    }).subscribe({
-      next: ({ info, me }) => {
-        this.info.set(info);
-        this.me.set(me);
+
+    // Card pubbliche SUBITO: i prezzi non aspettano la sessione (niente attesa
+    // cold-start). `info` viene popolato con receivers vuoti finché non si è
+    // loggati — il pannello di pagamento (che li usa) è raggiungibile solo da
+    // utenti autenticati.
+    this.subs.plans().subscribe({
+      next: (plans) => {
+        if (!this.me()) {
+          this.info.set({ ...plans, receivers: { paypal: '', skrill: '' } });
+        }
         this.loading.set(false);
       },
       error: (err: unknown) => {
@@ -153,6 +163,22 @@ export class SubscribeComponent {
           apiErrorMessage(err, 'Caricamento della pagina non riuscito.'),
         );
       },
+    });
+
+    // Stato account + receivers reali solo quando la sessione è pronta e attiva.
+    this.auth.ready$.pipe(take(1)).subscribe(() => {
+      if (!this.auth.isAuthenticated()) return;
+      forkJoin({
+        info: this.subs.paymentInfo(),
+        me: this.subs.mySubscription(),
+      }).subscribe({
+        next: ({ info, me }) => {
+          this.info.set(info);
+          this.me.set(me);
+        },
+        // se fallisce restano i piani pubblici: l'utente può riprovare
+        error: () => undefined,
+      });
     });
   }
 
@@ -165,6 +191,13 @@ export class SubscribeComponent {
   }
 
   protected choose(tier: SubscriptionTier): void {
+    // Anonimo: per abbonarsi serve un account → al login, poi ritorno qui.
+    if (!this.auth.isAuthenticated()) {
+      void this.router.navigate(['/login'], {
+        queryParams: { redirect: '/abbonati' },
+      });
+      return;
+    }
     this.selectedTier.set(tier);
     this.submitError.set(null);
     // lo sconto è validato per uno specifico tier: cambiando piano si azzera
