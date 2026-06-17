@@ -2,6 +2,12 @@
 .about {
   position: relative;
   z-index: 1;
+  // Gli aloni di leggibilità (.coachpanel__copy::before, .about__story::before)
+  // sbordano oltre la colonna con inset orizzontale negativo (fino a 2.5rem):
+  // su mobile la colonna è a ~20px dal bordo, quindi l'alone usciva ~20px oltre
+  // il viewport → scroll orizzontale. clip (non hidden) taglia solo l'asse X e
+  // lascia visibili gli sbordi verticali volutamente fuori box (emblema CTA, reveal).
+  overflow-x: clip;
 }
 
 // ---- Cover ----
