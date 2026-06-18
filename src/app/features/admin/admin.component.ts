@@ -7,6 +7,7 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminAuditComponent } from './admin-audit/admin-audit.component';
 import { AdminDiscountsComponent } from './admin-discounts/admin-discounts.component';
+import { AdminDocumentsComponent } from './admin-documents/admin-documents.component';
 import { AdminLessonsComponent } from './admin-lessons/admin-lessons.component';
 import { AdminLiveComponent } from './admin-live/admin-live.component';
 import { AdminNewsComponent } from './admin-news/admin-news.component';
@@ -17,6 +18,7 @@ type AdminTab =
   | 'lezioni'
   | 'live'
   | 'news'
+  | 'documenti'
   | 'iscritti'
   | 'richieste'
   | 'sconti'
@@ -28,6 +30,7 @@ type AdminTab =
     AdminLessonsComponent,
     AdminLiveComponent,
     AdminNewsComponent,
+    AdminDocumentsComponent,
     AdminUsersComponent,
     AdminSubscriptionRequestsComponent,
     AdminDiscountsComponent,
@@ -70,6 +73,14 @@ type AdminTab =
             type="button"
             role="tab"
             class="admin-tabs__tab"
+            [class.is-active]="tab() === 'documenti'"
+            [attr.aria-selected]="tab() === 'documenti'"
+            (click)="setTab('documenti')"
+          >▤ Documenti</button>
+          <button
+            type="button"
+            role="tab"
+            class="admin-tabs__tab"
             [class.is-active]="tab() === 'iscritti'"
             [attr.aria-selected]="tab() === 'iscritti'"
             (click)="setTab('iscritti')"
@@ -106,6 +117,8 @@ type AdminTab =
           <app-admin-live />
         } @else if (tab() === 'news') {
           <app-admin-news />
+        } @else if (tab() === 'documenti') {
+          <app-admin-documents />
         } @else if (tab() === 'iscritti') {
           <app-admin-users />
         } @else if (tab() === 'richieste') {
@@ -156,6 +169,7 @@ export class AdminComponent {
     'lezioni',
     'live',
     'news',
+    'documenti',
     'iscritti',
     'richieste',
     'sconti',

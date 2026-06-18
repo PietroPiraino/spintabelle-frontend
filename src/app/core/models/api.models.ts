@@ -85,6 +85,46 @@ export interface LessonPayload {
   videoDate: string;
 }
 
+// ----- Documenti / Risorse (libreria file scaricabili, pagina /docs) -----
+
+/** Categoria/tipo di materiale (la label IT vive nel componente). */
+export type DocumentCategory =
+  | 'PT4_FILTER'
+  | 'PT4_REPORT'
+  | 'PDF'
+  | 'EXCEL'
+  | 'WORD'
+  | 'ALTRO';
+
+/** Tier minimo per scaricare: USER = tutti i registrati, poi i due tier. */
+export type DocumentVisibility = 'USER' | 'PESCE_ROSSO' | 'SQUALO';
+
+/** Documento come esposto al client: nessun campo interno (storagePath). */
+export interface DocumentResource {
+  id: string;
+  title: string;
+  description: string;
+  category: DocumentCategory;
+  visibility: DocumentVisibility;
+  fileName: string;
+  fileExt: string;
+  mimeType: string;
+  sizeBytes: number;
+  downloadCount: number;
+  /** true se il ruolo corrente non sblocca il download (card bloccata) */
+  locked: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Metadati per creare/modificare un documento (il file viaggia in multipart). */
+export interface DocumentPayload {
+  title: string;
+  description: string;
+  category: DocumentCategory;
+  visibility: DocumentVisibility;
+}
+
 /** Iscritto come esposto al pannello admin (mai dati sensibili). */
 export interface AdminUser {
   id: string;
