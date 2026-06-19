@@ -6,12 +6,12 @@
 
 ---
 
-# SCENA: Exivezz
+# SCENA: Exivezzz
 
 … (full self-contained spec below) …
 
 ================================================================
-DIORAMA 1 — EXIVEZZ, MAIN COACH
+DIORAMA 1 — EXIVEZZZ, MAIN COACH
 "Il Gigante del Bagnasciuga al tramonto"
 Spec definitiva, autosufficiente. Three.js ^0.184, procedurale al 100%.
 ================================================================
@@ -41,7 +41,7 @@ Riferimento: frontend/src/app/features/landing/hero-3d/hero-3d.component.ts.
 - IntersectionObserver → visible; document 'visibilitychange' → running. Loop: this.rafId = requestAnimationFrame(loop); if (!running || !visible) return;.
 - pointermove → parallasse (lerp 0.04), DISATTIVATA su touch: if (!matchMedia('(pointer: coarse)').matches) { addEventListener('pointermove', ...) }.
 - ngOnDestroy / dispose: cancelAnimationFrame; geometries/materials/textures .dispose(); renderer.dispose(); renderer.forceContextLoss(); rimuovere tutti i listener via cleanupFns[].
-- Tutto il diorama in UN solo THREE.Group "root" (parallasse, idle globale e dispose centralizzati). Il personaggio in un sub-group "exivezz" (idle muove tutto insieme).
+- Tutto il diorama in UN solo THREE.Group "root" (parallasse, idle globale e dispose centralizzati). Il personaggio in un sub-group "exivezzz" (idle muove tutto insieme).
 - Materiali condivisi (una sola istanza riusata su piu mesh per ridurre draw calls/GC): skinMat, sandMat, brandOrangeMat, netLineTex, ecc.
 
 ------------------------------------------------------------
@@ -81,7 +81,7 @@ Tutti MeshStandardMaterial. NIENTE ombre reali (castShadow = false ovunque) → 
 - SCINTILLE MARE (innesto da P3): InstancedMesh di ~80 micro-quad PlaneGeometry(0.1, 0.1) sparsi sulla superficie del mare, MeshBasicMaterial bianco additive, ognuno con fase random; twinkle a LAMPI netti (non sinusoide): opacita = 0.2 + 0.8 * pow(sin(t*speed + phase), 8). 1 draw call.
 
 ------------------------------------------------------------
-6. PERSONAGGIO — EXIVEZZ (il gigante; sub-group "exivezz", centrato x~+0.6)
+6. PERSONAGGIO — EXIVEZZZ (il gigante; sub-group "exivezzz", centrato x~+0.6)
 ------------------------------------------------------------
 Linguaggio comune del cast: low-poly toy, flat-ish, faccia MINIMALE (occhi nascosti dagli occhiali → zero uncanny valley, niente bocca articolata), arti a capsule/box smussati. MA proporzionato ALTO: ~5 teste, gambe lunghe ESAGERATE (e' il tratto distintivo della statura). Altezza totale ~5.5 unita scena. Pelle abbronzata (vive in spiaggia).
 Materiali: MeshStandardMaterial flatShading:true su torso/gambe/teste (look a faccette), roughness 0.7.
@@ -116,7 +116,7 @@ Materiali: MeshStandardMaterial flatShading:true su torso/gambe/teste (look a fa
 8. ANIMAZIONI IDLE (continue, pausate fuori viewport/tab nascosta)
 ------------------------------------------------------------
 Tutto su t = (performance.now()-start)/1000.
-- Coach respiro: il group "exivezz" scala Y di 1 + sin(t*1.6)*0.012 e trasla y di sin(t*1.6)*0.02. Testa micro-rotazione rotation.z = sin(t*0.8)*0.04, rotation.y = sin(t*0.5)*0.06 (guarda intorno).
+- Coach respiro: il group "exivezzz" scala Y di 1 + sin(t*1.6)*0.012 e trasla y di sin(t*1.6)*0.02. Testa micro-rotazione rotation.z = sin(t*0.8)*0.04, rotation.y = sin(t*0.5)*0.06 (guarda intorno).
 - Braccio destro (carica della schiacciata, in attesa): avambraccio oscilla rotation.x ±0.2 periodo ~2.8s (ricarica energia senza colpire). La mano segue il pallone-pesce.
 - Braccio sinistro: swing pendolo ±0.12 rad periodo ~3.5s.
 - Pallone-pesce: orbita lenta sopra la mano, ellisse ampiezza (0.25, 0.18) periodo ~2.8s sincronizzata col braccio + spin lento rotation.y costante (~0.5 rad/s) + wobble coda (§9). Sembra appeso alla minaccia della mano.
@@ -133,7 +133,7 @@ Tutto su t = (performance.now()-start)/1000.
 ------------------------------------------------------------
 9. IL MOMENTO WOW — "LA SCHIACCIATA DEL FISH" (fusione P1 pesce + P2 schiacciata)
 ------------------------------------------------------------
-IL PALLONE E' UN PESCE, E STA PER ESSERE SCHIACCIATO. Brand tie-in puro: Exivezz "exploita i fish", letteralmente e in movimento.
+IL PALLONE E' UN PESCE, E STA PER ESSERE SCHIACCIATO. Brand tie-in puro: Exivezzz "exploita i fish", letteralmente e in movimento.
 
 Geometria pesce-pallone: una SphereGeometry/IcosahedronGeometry a spicchi alternati color 0xff6a1f / crema 0xf4f1e9 / 0x26c6c6 (da lontano = pallone da beach volley; da vicino = pesce). Dettagli pesce: occhietto tondo sorpreso (sferetta bianca + pupilla nera), bocca a "O" preoccupata (TorusGeometry scuro), pinne laterali (2 ConeGeometry appiattiti), coda (ConeGeometry appiattito) che SBATTE nervosa (wobble ±0.4 rad periodo ~0.5s — e' terrorizzato). Raggio ~0.32, volutamente PICCOLO (contrasto col gigante). Rivelazione progressiva: colpo d'occhio = "tipo alto che schiaccia, bello" → sguardo ravvicinato = "...aspetta, il pallone e' un PESCE spaventato" → sorriso. Esattamente il tono BFF: ironico ma competente. Il rim light del sole accende il bordo del pesce sospeso = vero punto focale.
 
@@ -232,7 +232,7 @@ Poster statico "abisso" sempre pronto sotto il canvas: `background: radial-gradi
 
 ## 1. Composizione e camera — IL FOTOGRAMMA
 
-- **Canvas**: ~600×520 px desktop (metà pannello), full-width ~360px su mobile. Layout pannello: **scena a SINISTRA, testo a destra** (alterna rispetto al diorama precedente di Exivezz; i pannelli full-width sono a lati alternati come da decisione utente).
+- **Canvas**: ~600×520 px desktop (metà pannello), full-width ~360px su mobile. Layout pannello: **scena a SINISTRA, testo a destra** (alterna rispetto al diorama precedente di Exivezzz; i pannelli full-width sono a lati alternati come da decisione utente).
 - **Camera**: `PerspectiveCamera(42, aspect, 0.1, 120)`. Posizione base `(0, -0.6, 13)`, target `lookAt(0.5, 0.3, 0)`. Inquadratura cinematografica orizzontale, **camera leggermente sotto il sub e inclinata verso l'alto (low-angle eroico)**: la silhouette del sub si staglia contro i god-rays che piovono dall'alto. Su mobile: `fov 47`, `z 14.5` per far rientrare tutto.
 - **Regola dei terzi (tensione narrativa cacciatore↔preda)**: sub sul terzo SINISTRO in assetto orizzontale rivolto a DESTRA; banco di pesci che entra dal terzo DESTRO e converge verso il centro. La tensione vive nello spazio negativo centrale (tra punta arbalete e banco).
 - **Profondità per 3 piani** (chiave del colpo d'occhio, il fog fa il lavoro pesante a costo ~zero): foreground = sub + 1 roccia bassa vicina sfocata dal fog; midground = banco di pesci; background = colonne di god-rays + fondale roccioso che sfuma nel fog.
@@ -587,10 +587,10 @@ Verdict d'insieme: **i 3 diorami sono già una famiglia coerente**. Stesso vocab
 Sì, ed è un punto di forza da **proteggere**: chiaro caldo → blu medio-scuro → scuro caldo è una discesa luminosa coerente con un viaggio (giorno → profondità → notte teatrale). Rischio: se Bastogne resta troppo buio dopo l'abisso, lo scroll "muore" sul fondo. **Regola registica imposta:** la luminosità media percepita dei tre pannelli deve scendere in modo dolce, non a gradino. Esivezz ~alto, Nagato ~medio (NON troppo scuro: il god-ray e l'alone superficie devono tenerlo a metà strada), Bastogne ~basso ma con lo **spotlight caldo che rialza il valore locale del soggetto** così il volto resta luminoso quanto quello degli altri due. Misurare a occhio sul soggetto, non sullo sfondo: il **viso dei 3 coach deve avere luminanza simile** (è l'ancora percettiva della famiglia).
 
 ### 0.2 Nessuna scena ruba la scena
-Il rischio reale è Exivezz: ha più props, più gag, un momento wow più pirotecnico (spruzzo sabbia + flash + ring + squash). Nagato è il più sobrio (è giusto: predatore calmo). Bastogne è a metà. **Imporre parità di "rumore visivo"** — vedi correzione globale C-G3. Senza questo, lo scroll va in discesa di energia e il founder (Nagato) sembra il meno curato, che è l'opposto di quello che vuoi.
+Il rischio reale è Exivezzz: ha più props, più gag, un momento wow più pirotecnico (spruzzo sabbia + flash + ring + squash). Nagato è il più sobrio (è giusto: predatore calmo). Bastogne è a metà. **Imporre parità di "rumore visivo"** — vedi correzione globale C-G3. Senza questo, lo scroll va in discesa di energia e il founder (Nagato) sembra il meno curato, che è l'opposto di quello che vuoi.
 
 ### 0.3 Coerenza palette tra scene
-Le 3 palette condividono **due ancore brand**: il corallo/copper `#ff6a1f`/`#ff7d36` (canotta Exivezz, accenti muta/pinne/arbalete Nagato, NON in Bastogne — vedi C-B7) e il **cyan/teal** brand (`#00d4d4` lenti Exivezz, pesce-dev + monolite Nagato, asso magico Bastogne `#3fd8c8`). Questo è esattamente ciò che rende le scene "sorelle" pur con atmosfere autonome. Vincolo: **ogni scena deve contenere almeno un tocco copper E un tocco cyan/teal** anche se minimo, così l'occhio le riconosce come stessa scuola. Bastogne attualmente ha solo teal → vedi correzione C-B7.
+Le 3 palette condividono **due ancore brand**: il corallo/copper `#ff6a1f`/`#ff7d36` (canotta Exivezzz, accenti muta/pinne/arbalete Nagato, NON in Bastogne — vedi C-B7) e il **cyan/teal** brand (`#00d4d4` lenti Exivezzz, pesce-dev + monolite Nagato, asso magico Bastogne `#3fd8c8`). Questo è esattamente ciò che rende le scene "sorelle" pur con atmosfere autonome. Vincolo: **ogni scena deve contenere almeno un tocco copper E un tocco cyan/teal** anche se minimo, così l'occhio le riconosce come stessa scuola. Bastogne attualmente ha solo teal → vedi correzione C-B7.
 
 ---
 
@@ -601,55 +601,55 @@ Le 3 palette condividono **due ancore brand**: il corallo/copper `#ff6a1f`/`#ff7
 Adottare **una sola "testa canonica"** per tutto il cast così le proporzioni si leggono come stesso universo.
 
 - **Testa canonica = sfera di raggio 0.5 unità scena** (diametro 1.0). Questa è l'unità di misura ("1 testa" = 1.0 unità).
-- Altezza personaggio in piedi = **4.6 teste ≈ 4.6 unità** (Bastogne è già a questo valore: è il riferimento). Exivezz è l'**eccezione voluta**: ~5.5 unità, ma l'extra **tutto nelle GAMBE**, testa e torso restano dimensione-cast. Nagato è orizzontale ma con la **stessa testa-grande** (~0.5 raggio).
-- **Conseguenza obbligatoria sulle teste:** le tre spec usano raggi-testa diversi (Exivezz 0.42, Nagato 0.48, Bastogne 0.55). **Allinearle**: testa raggio **0.48–0.52** per tutti. Exivezz 0.42 è troppo piccola per un "toy a testa grande" → portarla a **0.48**. Bastogne 0.55 è il limite alto accettabile (resta) ma idealmente **0.52**. Questo è il singolo fix che più fa "sembrare fratelli".
+- Altezza personaggio in piedi = **4.6 teste ≈ 4.6 unità** (Bastogne è già a questo valore: è il riferimento). Exivezzz è l'**eccezione voluta**: ~5.5 unità, ma l'extra **tutto nelle GAMBE**, testa e torso restano dimensione-cast. Nagato è orizzontale ma con la **stessa testa-grande** (~0.5 raggio).
+- **Conseguenza obbligatoria sulle teste:** le tre spec usano raggi-testa diversi (Exivezzz 0.42, Nagato 0.48, Bastogne 0.55). **Allinearle**: testa raggio **0.48–0.52** per tutti. Exivezzz 0.42 è troppo piccola per un "toy a testa grande" → portarla a **0.48**. Bastogne 0.55 è il limite alto accettabile (resta) ma idealmente **0.52**. Questo è il singolo fix che più fa "sembrare fratelli".
 
 ### 1.2 Costruzione testa (identica per i 3)
 - Base: `SphereGeometry(0.48–0.52, 16, 14)`, leggermente schiacciata (`scale.y ≈ 1.05`, `scale.z ≈ 0.95`).
-- **flatShading OFF sulla testa** (faccia liscia = niente uncanny low-poly sul volto). Il resto del corpo flatShading ON. Questa regola è già in Bastogne; **estenderla esplicitamente a Exivezz e Nagato** (le loro spec dicono flatShading sulle teste → correggere: testa liscia).
-- Pelle: ognuno la sua (Exivezz abbronzato `#c98a5b`, Nagato `#e8b48f`, Bastogne `#e8c0a0`) ma stesso `roughness ≈ 0.7`, `metalness 0`.
+- **flatShading OFF sulla testa** (faccia liscia = niente uncanny low-poly sul volto). Il resto del corpo flatShading ON. Questa regola è già in Bastogne; **estenderla esplicitamente a Exivezzz e Nagato** (le loro spec dicono flatShading sulle teste → correggere: testa liscia).
+- Pelle: ognuno la sua (Exivezzz abbronzato `#c98a5b`, Nagato `#e8b48f`, Bastogne `#e8c0a0`) ma stesso `roughness ≈ 0.7`, `metalness 0`.
 
 ### 1.3 Occhi — UN SOLO METODO per tutti
-Le spec oggi divergono (Exivezz: nessun occhio, nascosti dagli occhiali; Nagato: 2 sferette dietro vetro; Bastogne: sfera bianca + iride). **Unificare la costruzione, variare solo la visibilità:**
+Le spec oggi divergono (Exivezzz: nessun occhio, nascosti dagli occhiali; Nagato: 2 sferette dietro vetro; Bastogne: sfera bianca + iride). **Unificare la costruzione, variare solo la visibilità:**
 
 - **Occhio canonico** = `SphereGeometry(0.06, 8, 6)` bianco `#f2f2ee` + iride `SphereGeometry(0.03)` colore-iride sovrapposta in avanti, posizionata sul fronte testa (z ≈ +raggio·0.9).
 - **Niente bianco dell'occhio esagerato, niente bocca articolata** per nessuno (vincolo cast già rispettato).
 - Applicazione per coach:
   - **Bastogne**: occhi visibili, iride azzurra `#3aa0e8` (firma). → tiene lo standard.
   - **Nagato**: stesso occhio canonico ma iride scura `#0a0e16`, **dietro il vetro maschera** semi-trasparente. → tiene lo standard.
-  - **Exivezz**: stesso occhio canonico **ma costruito comunque** (anche se coperto dagli occhiali) — così se la camera si muove non c'è "vuoto" sotto le lenti riflettenti. Le lenti `#26c6c6` restano sopra. Niente disegnare occhi su texture: usare la geometria canonica (coerenza > risparmio di 2 sferette).
-- **Bocca**: per tutti = al massimo una `BoxGeometry` sottilissima leggermente ruotata per un mezzo sorriso accennato (metodo Bastogne), oppure niente. **Mai** TorusGeometry "bocca a O" sul VOLTO dei coach (la bocca-O esiste solo sul pesce-pallone di Exivezz, che è un prop, ok lì).
+  - **Exivezzz**: stesso occhio canonico **ma costruito comunque** (anche se coperto dagli occhiali) — così se la camera si muove non c'è "vuoto" sotto le lenti riflettenti. Le lenti `#26c6c6` restano sopra. Niente disegnare occhi su texture: usare la geometria canonica (coerenza > risparmio di 2 sferette).
+- **Bocca**: per tutti = al massimo una `BoxGeometry` sottilissima leggermente ruotata per un mezzo sorriso accennato (metodo Bastogne), oppure niente. **Mai** TorusGeometry "bocca a O" sul VOLTO dei coach (la bocca-O esiste solo sul pesce-pallone di Exivezzz, che è un prop, ok lì).
 
 ### 1.4 Capelli — UN SOLO METODO (calotta + ciocche-cono)
-Le spec usano metodi diversi (Exivezz: mezza-sfera liscia; Bastogne: calotta + 10-12 coni; Nagato: cappuccio muta). **Standard unico** (Bastogne è il riferimento, è il più espressivo):
+Le spec usano metodi diversi (Exivezzz: mezza-sfera liscia; Bastogne: calotta + 10-12 coni; Nagato: cappuccio muta). **Standard unico** (Bastogne è il riferimento, è il più espressivo):
 
 - **Calotta base** = `SphereGeometry(raggio·1.05, 12, 10)` ritagliata a emisfero superiore (`phiStart/thetaLength`), colore capelli, flatShading ON.
 - **Ciocche** = N× `ConeGeometry(0.10–0.12, lunghezza, 4)` (4 lati = sfaccettatura coerente con tutto il cast), piantate sulla calotta con **angoli da seed FISSO deterministico** (mai `Math.random()` a runtime — vedi rischio R-4).
 - Per coach:
   - **Bastogne**: 10-12 ciocche medio-lunghe biondo-rame `#c8763a`, alcune sulla fronte. Ciocche ondeggiano (idle). → standard.
-  - **Exivezz**: stessa calotta `#3a2c22`, **poche ciocche corte (3-4)** = taglio sportivo. NON una mezza-sfera liscia: usare il metodo calotta+coni corti, così la grammatica capelli è la stessa. Sotto gli occhiali resta semplice.
+  - **Exivezzz**: stessa calotta `#3a2c22`, **poche ciocche corte (3-4)** = taglio sportivo. NON una mezza-sfera liscia: usare il metodo calotta+coni corti, così la grammatica capelli è la stessa. Sotto gli occhiali resta semplice.
   - **Nagato**: ha il cappuccio muta (no capelli visibili) → **esente**, ma il cappuccio usa la stessa `SphereGeometry` emisferica della calotta (stessa costruzione, materiale neoprene). Coerenza di metodo anche senza capelli.
 
 ### 1.5 Corpo e arti — capsule/box smussati (già allineato, fisso i numeri)
-- **Torso** = `CapsuleGeometry` (Exivezz 0.45×0.7, Nagato 0.55×1.3 orizz., Bastogne 0.5×1.0). Coerenti come metodo. Mantenere.
+- **Torso** = `CapsuleGeometry` (Exivezzz 0.45×0.7, Nagato 0.55×1.3 orizz., Bastogne 0.5×1.0). Coerenti come metodo. Mantenere.
 - **Arti** = `CapsuleGeometry` per braccia/gambe, `SphereGeometry` appiattita per mani/giunti. **Standard spessori** così non c'è chi ha arti-stecchino e chi arti-salsiccia:
   - Braccio: raggio **0.14–0.16**, lunghezza 0.7–0.85.
   - Avambraccio (dove separato): raggio 0.11–0.13.
   - Gamba (coscia): raggio **0.17–0.18**. Stinco 0.14.
   - Mano/giunto: sfera 0.14–0.16 appiattita.
-  - Exivezz può eccedere in **lunghezza** gambe (è il suo tratto) ma **non** in raggio: gambe lunghe sì, gambe grosse no.
+  - Exivezzz può eccedere in **lunghezza** gambe (è il suo tratto) ma **non** in raggio: gambe lunghe sì, gambe grosse no.
 - **Spalle**: una sferetta copri-giunto per tutti (già in tutte le spec).
-- `roughness ≈ 0.6–0.7` corpo, `metalness 0` ovunque tranne metalli espliciti (occhiali Exivezz, arbalete Nagato, bottoni/scarpe Bastogne).
+- `roughness ≈ 0.6–0.7` corpo, `metalness 0` ovunque tranne metalli espliciti (occhiali Exivezzz, arbalete Nagato, bottoni/scarpe Bastogne).
 
 ### 1.6 Silhouette = il vero portatore di carattere
 Le facce sono volutamente quasi-identiche (minimal). Il riconoscimento avviene per **silhouette + palette + posa + props**, e questo è corretto e va difeso:
-- Exivezz: verticale slanciato, braccio teso in alto, gambe lunghissime.
+- Exivezzz: verticale slanciato, braccio teso in alto, gambe lunghissime.
 - Nagato: orizzontale planante, pinne+bombola+arbalete.
 - Bastogne: verticale elegante, giacca con coda di rondine, anello di carte.
 Vincolo: ogni silhouette deve essere **riconoscibile in nero pieno a 360px**. Test obbligatorio in implementazione (vedi R-1).
 
 ### 1.7 Livello di dettaglio comune (budget tris allineato)
-Le 3 spec stimano: Exivezz ~18-22k, Nagato ~16-18k, Bastogne ~8-9k. **Bastogne è troppo "magro" rispetto agli altri due** → rischio "fratello meno curato". Non gonfiare artificialmente, ma **portarlo a ~12-15k** aggiungendo densità dove serve (più segmenti su carte/palco, qualche carta in più nell'orbita, pulviscolo del cono più ricco). Target famiglia: **tutti nella fascia 12-22k**, nessuno sotto i 12k. Mai sopra 30k (tetto duro). Vedi C-G2.
+Le 3 spec stimano: Exivezzz ~18-22k, Nagato ~16-18k, Bastogne ~8-9k. **Bastogne è troppo "magro" rispetto agli altri due** → rischio "fratello meno curato". Non gonfiare artificialmente, ma **portarlo a ~12-15k** aggiungendo densità dove serve (più segmenti su carte/palco, qualche carta in più nell'orbita, pulviscolo del cono più ricco). Target famiglia: **tutti nella fascia 12-22k**, nessuno sotto i 12k. Mai sopra 30k (tetto duro). Vedi C-G2.
 
 ---
 
@@ -657,16 +657,16 @@ Le 3 spec stimano: Exivezz ~18-22k, Nagato ~16-18k, Bastogne ~8-9k. **Bastogne �
 *(solo dove serve coesione/correttezza; il resto delle 3 spec resta valido e va eseguito com'è)*
 
 ### Correzioni GLOBALI (tutte e 3)
-- **C-G1 — Skeleton 1:1 dall'hero, alpha incluso.** Confermato dal codice reale. Attenzione: la spec Nagato impone `alpha:false`, Exivezz e Bastogne `alpha:true`. È **corretto e voluto** (Nagato ha sfondo opaco, gli altri lasciano trasparire il fallback/pagina). Mantenere la divergenza. Tutti gli altri parametri identici all'hero: `powerPreference:'low-power'`, `setPixelRatio(Math.min(devicePixelRatio,2))`, niente `THREE.Clock`, dispose completo + `forceContextLoss()`.
-- **C-G2 — Parità di dettaglio**: Bastogne sale a 12-15k tris (vedi 1.7). Exivezz e Nagato restano. Nessuno sotto 12k, nessuno sopra 30k.
-- **C-G3 — Parità di "energia" del momento wow.** Exivezz oggi è il più pirotecnico, Nagato il più sobrio. Decisione registica: **abbassare di un filo Exivezz** (lo squash 1.25 → 1.18; il flash additive opacità di picco ridotta; lo spruzzo da 14 a ~10 tetraedri) e **alzare di un filo Bastogne** (le scintille teal 6-8 → 8-10, glow leggermente più ampio). Nagato resta volutamente il più calmo (è il predatore) ma il suo wow deve avere **un singolo accento forte** (il lampo ciano della maschera al momento della schivata) ben leggibile. Obiettivo: i 3 wow hanno **intensità comparabile**, nessuno mette in ombra gli altri.
-- **C-G4 — Ogni scena ha copper E cyan/teal** (vedi 0.3). Exivezz ok (canotta copper + lenti cyan). Nagato ok (copper su muta/pinne + cyan pesce-dev). Bastogne **manca copper** → vedi C-B7.
+- **C-G1 — Skeleton 1:1 dall'hero, alpha incluso.** Confermato dal codice reale. Attenzione: la spec Nagato impone `alpha:false`, Exivezzz e Bastogne `alpha:true`. È **corretto e voluto** (Nagato ha sfondo opaco, gli altri lasciano trasparire il fallback/pagina). Mantenere la divergenza. Tutti gli altri parametri identici all'hero: `powerPreference:'low-power'`, `setPixelRatio(Math.min(devicePixelRatio,2))`, niente `THREE.Clock`, dispose completo + `forceContextLoss()`.
+- **C-G2 — Parità di dettaglio**: Bastogne sale a 12-15k tris (vedi 1.7). Exivezzz e Nagato restano. Nessuno sotto 12k, nessuno sopra 30k.
+- **C-G3 — Parità di "energia" del momento wow.** Exivezzz oggi è il più pirotecnico, Nagato il più sobrio. Decisione registica: **abbassare di un filo Exivezzz** (lo squash 1.25 → 1.18; il flash additive opacità di picco ridotta; lo spruzzo da 14 a ~10 tetraedri) e **alzare di un filo Bastogne** (le scintille teal 6-8 → 8-10, glow leggermente più ampio). Nagato resta volutamente il più calmo (è il predatore) ma il suo wow deve avere **un singolo accento forte** (il lampo ciano della maschera al momento della schivata) ben leggibile. Obiettivo: i 3 wow hanno **intensità comparabile**, nessuno mette in ombra gli altri.
+- **C-G4 — Ogni scena ha copper E cyan/teal** (vedi 0.3). Exivezzz ok (canotta copper + lenti cyan). Nagato ok (copper su muta/pinne + cyan pesce-dev). Bastogne **manca copper** → vedi C-B7.
 - **C-G5 — Allineare le teste** a raggio 0.48–0.52 e **flatShading OFF sul volto** per tutti (vedi 1.1/1.2). Questa è la correzione di coesione n°1.
 - **C-G6 — Occhi e capelli col metodo unico** della Parte 1 (1.3/1.4) anche dove la spec originale divergeva.
 - **C-G7 — Parallasse spenta su touch** con la stessa guard per tutti. Uniformare a `if (!matchMedia('(pointer: coarse)').matches)` (la spec Bastogne aggiunge `&& !('ontouchstart' in window)` — ridondante ma innocuo; tenere solo per Bastogne se già scritto, o uniformare al solo pointer-coarse: preferire **solo pointer-coarse** per coerenza con l'hero esistente).
 - **C-G8 — Seed deterministico** per ogni elemento "sparso" (ciocche, rocce, granelli, posizioni pesci/bolle/scintille). Mai `Math.random()` chiamato nel loop o in modo da cambiare tra frame. Generare una volta in init con un PRNG seedato o array di fasi costanti (vedi R-4).
 
-### Correzioni Diorama 1 — EXIVEZZ
+### Correzioni Diorama 1 — EXIVEZZZ
 - **C-E1** — Testa: `0.42 → 0.48`, **flatShading OFF** sul volto (resta ON su torso/arti/gambe). Allinea al cast.
 - **C-E2** — Capelli: NON mezza-sfera liscia; usare **calotta emisferica + 3-4 coni corti** `#3a2c22` (metodo unico 1.4).
 - **C-E3** — Occhi: **costruire la geometria canonica** (sferetta bianca + iride) **sotto** le lenti, anche se quasi invisibile, per coerenza e robustezza ai movimenti camera (1.3).
@@ -707,15 +707,15 @@ Le 3 spec stimano: Exivezz ~18-22k, Nagato ~16-18k, Bastogne ~8-9k. **Bastogne �
 
 - **R-5 — Bastogne scivola nel Joker-clown.** È il rischio creativo più alto del set: chiunque implementi "vestito alla Joker" tende ad aggiungere trucco/ghigno. Va bloccato a monte. Mitigazione: review visiva dedicata su Bastogne, checklist negativa (no bianco volto, no rosso bocca esagerato, no sopracciglia malvagie, pelle `#e8c0a0` normale, occhi azzurri visibili). Il carattere passa SOLO da abito + carte + palco.
 
-- **R-6 — Font canvas non ancora caricati.** Le texture canvas usano `Bricolage Grotesque`/`Spline Sans Mono` (cartello Exivezz, "1/200", facce carte). Se la `CanvasTexture` è generata in init **prima** che i webfont siano pronti, il testo esce in font di fallback e resta "cotto" nella texture (le texture sono generate una volta sola). Mitigazione: attendere `document.fonts.ready` (o `document.fonts.load(...)` dei font specifici) **prima** di disegnare le texture testuali, oppure rigenerare quelle texture dopo il `fonts.ready`. Riguarda tutte e 3 le scene con testo.
+- **R-6 — Font canvas non ancora caricati.** Le texture canvas usano `Bricolage Grotesque`/`Spline Sans Mono` (cartello Exivezzz, "1/200", facce carte). Se la `CanvasTexture` è generata in init **prima** che i webfont siano pronti, il testo esce in font di fallback e resta "cotto" nella texture (le texture sono generate una volta sola). Mitigazione: attendere `document.fonts.ready` (o `document.fonts.load(...)` dei font specifici) **prima** di disegnare le texture testuali, oppure rigenerare quelle texture dopo il `fonts.ready`. Riguarda tutte e 3 le scene con testo.
 
-- **R-7 — `flatShading` + `computeVertexNormals` ogni frame.** Il mare di Exivezz e le alghe di Nagato fanno vertex animation con ricalcolo normali. Su flatShading il ricalcolo è più pesante. Già mitigato (mare ogni 2 frame). Estendere la stessa disciplina alle alghe Nagato e a qualsiasi altra animazione vertici: **ricalcolo normali a frame alterni**, o saltarlo del tutto dove l'errore di shading è impercettibile.
+- **R-7 — `flatShading` + `computeVertexNormals` ogni frame.** Il mare di Exivezzz e le alghe di Nagato fanno vertex animation con ricalcolo normali. Su flatShading il ricalcolo è più pesante. Già mitigato (mare ogni 2 frame). Estendere la stessa disciplina alle alghe Nagato e a qualsiasi altra animazione vertici: **ricalcolo normali a frame alterni**, o saltarlo del tutto dove l'errore di shading è impercettibile.
 
 - **R-8 — `BufferGeometryUtils.mergeGeometries` e il trucco UV/multi-materiale.** Le spec consigliano merge per ridurre draw call, ma il merge richiede geometrie con gli **stessi gruppi-materiale** e attenzione alle UV (il trucco UV delle carte di Bastogne si basa su `repeat/offset` per-texture). Mergiare carte con texture diverse rompe l'UV. Mitigazione: mergiare **solo** mesh che condividono lo **stesso** materiale (muta navy del sub in una; accenti copper in un'altra; rocce in una; god-rays in una). Le carte con facce diverse restano `InstancedMesh` (dorsi) + mesh singole (assi). Non forzare merge dove c'è multi-materiale o UV custom.
 
 - **R-9 — `ExtrudeGeometry` (pinne Nagato, falde giacca Bastogne, carte) può generare più tris del previsto** se la `Shape` ha molti punti/curve. Le stime budget assumono shape semplici. Mitigazione: `bevelEnabled:false` (già nell'hero), `curveSegments` basso, contare i tris reali in dev (`renderer.info`).
 
-- **R-10 — Coerenza tonale del color grading.** Solo Exivezz specifica ACES + exposure 1.05. Se Nagato e Bastogne non applicano lo stesso tone mapping, i tre pannelli avranno "resa" diversa (uno filmico, due flat) e la famiglia si spezza. Mitigazione: **applicare `ACESFilmicToneMapping` + `outputColorSpace = SRGBColorSpace` a tutte e 3 le scene** (exposure può variare leggermente: ~1.05 Exivezz luminoso, ~1.0 Nagato, ~1.1 Bastogne scuro). Questa è anche una micro-correzione di coesione (aggiungere a C-G1).
+- **R-10 — Coerenza tonale del color grading.** Solo Exivezzz specifica ACES + exposure 1.05. Se Nagato e Bastogne non applicano lo stesso tone mapping, i tre pannelli avranno "resa" diversa (uno filmico, due flat) e la famiglia si spezza. Mitigazione: **applicare `ACESFilmicToneMapping` + `outputColorSpace = SRGBColorSpace` a tutte e 3 le scene** (exposure può variare leggermente: ~1.05 Exivezzz luminoso, ~1.0 Nagato, ~1.1 Bastogne scuro). Questa è anche una micro-correzione di coesione (aggiungere a C-G1).
 
 - **R-11 — Accessibilità coerente.** Tutti e 3 i canvas sono `aria-hidden` decorativi: l'informazione (chi è il coach) deve stare **nel testo del pannello**, non solo nella scena (es. "MAIN COACH €200" su texture non è letto dagli screen reader). Verificare che ogni pannello abbia il nome/ruolo/descrizione del coach come **testo HTML reale** accanto al diorama. Riguarda l'integrazione in `features/about/`, non il componente 3D, ma va segnalato a chi assembla il pannello.
 
@@ -755,20 +755,20 @@ Le 3 spec originali restano la fonte autorevole per ogni dettaglio non toccato q
 - **Sopracciglia**: `makeBrow` — tubo su curva bezier, arco morbido, MAI box squadrati.
 - **Naso**: piccola sfera/goccia liscia raccordata, MAI coni a 4 lati.
 - **Bocca**: `makeSmile` — tubo su curva bezier (sorriso asimmetrico = carattere). Ogni coach ha un'espressione SUA:
-  - Exivezz: sorriso ampio e sicuro sotto gli occhiali a specchio (che restano), sopracciglia sopra la montatura.
+  - Exivezzz: sorriso ampio e sicuro sotto gli occhiali a specchio (che restano), sopracciglia sopra la montatura.
   - Nagato: occhi rifiniti calmi dietro il vetro maschera, sopracciglia rilassate; la maschera resta protagonista.
   - Bastogne: mezzo sorriso furbo asimmetrico, palpebre leggermente abbassate (sguardo da showman), sopracciglia rame espressive MA non malvagie. SEMPRE niente trucco.
-- **Orecchie**: due semisfere piccole dove visibili (Exivezz, Bastogne).
+- **Orecchie**: due semisfere piccole dove visibili (Exivezzz, Bastogne).
 
 ## V2.4 — Capelli morbidi
 - Le ciocche-CONO della v1 sono VIETATE (erano la principale fonte di spigoli). Helper `makeHairLock`: TubeGeometry su CubicBezier (scalpo → fuori → giù col droop) + sferetta liscia sulla punta. Calotta liscia (flatShading OFF).
 - Bastogne: 10–14 lock medio-lunghe che drappeggiano con sag naturale + 2-3 lock frontali corte; ondeggio idle sulle lock (rotazioni piccole sfalsate).
-- Exivezz: calotta corta + 4-6 lock cortissime spettinate in avanti (taglio sportivo morbido).
+- Exivezzz: calotta corta + 4-6 lock cortissime spettinate in avanti (taglio sportivo morbido).
 
 ## V2.5 — Pose naturali (terzo fix richiesto)
 - VIETATA la simmetria perfetta: sempre contrapposto (peso su una gamba, bacino ruotato 3–6°, spalle controruotate), testa con tilt/yaw leggeri.
 - Gomiti e ginocchia SEMPRE leggermente flessi (≥0.15 rad) anche in idle: arti dritti = manichino.
-- Exivezz: posa da schiacciata atletica — schiena leggermente inarcata, gamba di carico flessa, braccio alto con gomito morbido, sguardo (e mento) verso il pesce.
+- Exivezzz: posa da schiacciata atletica — schiena leggermente inarcata, gamba di carico flessa, braccio alto con gomito morbido, sguardo (e mento) verso il pesce.
 - Nagato: planata viva — leggera ondulazione a S del corpo (fase sfalsata torso→gambe→pinne nel tick), braccio armato rilassato ma mirato.
 - Bastogne: showman — anca fuori asse, una gamba avanti rilassata, testa inclinata ~0.1 rad verso la carta, polso che ruota nel twirl.
 
@@ -779,7 +779,7 @@ Le 3 spec originali restano la fonte autorevole per ogni dettaglio non toccato q
 
 ## V2.7 — Cosa NON cambia
 - Ambienti, props di scena, particelle, luci, palette, camera, momenti wow (le coreografie restano; cambia la QUALITÀ del movimento).
-- Proporzioni toy (~4.6 teste, Exivezz ~5.5 con gambe lunghe), nomi-ancora dei test, determinismo, res.track, tetto luci, budget (i personaggi morbidi costeranno più tris: ok fino a 35-40k/scena, restiamo fluidi).
+- Proporzioni toy (~4.6 teste, Exivezzz ~5.5 con gambe lunghe), nomi-ancora dei test, determinismo, res.track, tetto luci, budget (i personaggi morbidi costeranno più tris: ok fino a 35-40k/scena, restiamo fluidi).
 
 
 ---
@@ -807,11 +807,11 @@ Le 3 spec originali restano la fonte autorevole per ogni dettaglio non toccato q
 - Parallasse camera: `smoothDamp` (skill) verso il target del pointer — niente lerp secco.
 
 ## R3.4 — Vestiti che vestono (errore del V2 interrotto da NON ripetere)
-- I capi sono superfici che SEGUONO il corpo: canotta/muta/giacca = lathe sullo STESSO profilo del torso, scalato +4–8%, attaccato agli stessi pivot. MAI pezzi galleggianti, MAI pelle scoperta non intenzionale tra i capi, MAI "bikini effect": la canotta di Exivezz copre il torso fino ai pantaloncini.
+- I capi sono superfici che SEGUONO il corpo: canotta/muta/giacca = lathe sullo STESSO profilo del torso, scalato +4–8%, attaccato agli stessi pivot. MAI pezzi galleggianti, MAI pelle scoperta non intenzionale tra i capi, MAI "bikini effect": la canotta di Exivezzz copre il torso fino ai pantaloncini.
 - Le maniche vivono sui pivot del braccio (seguono l'animazione), i colli/cappucci si raccordano alla testa.
 
 ## R3.5 — Vincoli di sistema (invariati)
-- Determinismo totale (clip = dati fissi; seed fissi per tutto lo sparso); `ctx.res.track` su OGNI geometry/material/texture nuova; nomi-ancora dei test preservati (exivezz/base-sabbia/cartello · sub/arbalete/fish-school/fish-dev · bastogne/card-ring/hand-card); max 6 luci; niente shadow map; nessuna allocazione nel tick (gli oggetti temporanei vivono nel closure); budget ≤ 40k tris/scena; ambienti/camera/palette/targhette invariati.
+- Determinismo totale (clip = dati fissi; seed fissi per tutto lo sparso); `ctx.res.track` su OGNI geometry/material/texture nuova; nomi-ancora dei test preservati (exivezzz/base-sabbia/cartello · sub/arbalete/fish-school/fish-dev · bastogne/card-ring/hand-card); max 6 luci; niente shadow map; nessuna allocazione nel tick (gli oggetti temporanei vivono nel closure); budget ≤ 40k tris/scena; ambienti/camera/palette/targhette invariati.
 
 
 ---
@@ -820,8 +820,8 @@ Le 3 spec originali restano la fonte autorevole per ogni dettaglio non toccato q
 
 > Dopo tre iterazioni di personaggi 3D (procedurale low-poly → procedurale morbido → modelli GLTF Quaternius), il proprietario ha chiesto un cambio totale di rotta. Scelta finale: **niente figure** — i coach sono nickname pseudonimi, gli avatar non c'entravano.
 
-**Concept**: un unico organismo — il banco di Best Fish Forever — fatto di ~9.000 particelle-pesce (micro-ellissi orientate lungo la velocità, THREE.Points + ShaderMaterial, 1 draw call) che vive DIETRO tutta la pagina su canvas fixed. Nuota come nastro sinuoso tra le sezioni, scappa dal cursore, e si riforma nell'EMBLEMA del coach quando il suo pannello è al centro: ♠ Exivezz · arbalete Nagato · cappello da jolly Bastogne · ♣ sulla CTA.
+**Concept**: un unico organismo — il banco di Best Fish Forever — fatto di ~9.000 particelle-pesce (micro-ellissi orientate lungo la velocità, THREE.Points + ShaderMaterial, 1 draw call) che vive DIETRO tutta la pagina su canvas fixed. Nuota come nastro sinuoso tra le sezioni, scappa dal cursore, e si riforma nell'EMBLEMA del coach quando il suo pannello è al centro: ♠ Exivezzz · arbalete Nagato · cappello da jolly Bastogne · ♣ sulla CTA.
 
 **Tecnica**: camera ortografica mappata 1:1 sui pixel CSS (le ancore `[data-emblem]` si misurano con getBoundingClientRect); emblemi campionati da sagome canvas (`emblem-shapes.ts`, seedato); simulazione CPU arrive+wander+fuga con attivazione a plateau per stazione; palette theme-aware via token CSS (navy/copper su chiaro, ciano/oro su Notte) con MutationObserver su data-theme; fallback = pagina senza banco (reduced-motion / no WebGL). I diorami e i modelli GLTF sono archiviati FUORI dal repo in `C:\Projects\poker-ranges\attic-chi-siamo-dioramas\`.
 
-**Aggiornamento 2026-06-07 (richiesta utente)**: emblemi = i QUATTRO SEMI (♠ Exivezz · ♥ Nagato/founder · ♦ Bastogne · ♣ CTA, l'intera quaterna in ordine di pagina) e le PARTICELLE stesse sono micro-semi (atlante canvas 2×2 campionato nel fragment shader, `drawSuitAtlas`), con bicromia da carte: ♥♦ nel colore caldo del tema, ♠♣ nel colore base, distribuzione ~68% neri / 32% rossi; inclinazione dolce lungo la direzione di nuoto, raddrizzati in formazione.
+**Aggiornamento 2026-06-07 (richiesta utente)**: emblemi = i QUATTRO SEMI (♠ Exivezzz · ♥ Nagato/founder · ♦ Bastogne · ♣ CTA, l'intera quaterna in ordine di pagina) e le PARTICELLE stesse sono micro-semi (atlante canvas 2×2 campionato nel fragment shader, `drawSuitAtlas`), con bicromia da carte: ♥♦ nel colore caldo del tema, ♠♣ nel colore base, distribuzione ~68% neri / 32% rossi; inclinazione dolce lungo la direzione di nuoto, raddrizzati in formazione.
