@@ -3,7 +3,7 @@ import { seededRandom } from '../../../shared/three/seeded-random';
 /**
  * Emblemi dei coach: i QUATTRO SEMI delle carte, campionati in nuvole di
  * punti che il banco di particelle "forma" quando il pannello è al centro
- * dello schermo. ♠ Exivezz · ♥ Nagato (il cuore/founder) · ♦ Bastogne ·
+ * dello schermo. ♠ Exivezzz · ♥ Nagato (il cuore/founder) · ♦ Bastogne ·
  * ♣ come sigillo sulla CTA.
  */
 export type EmblemId = 'spade' | 'heart' | 'diamond' | 'club';

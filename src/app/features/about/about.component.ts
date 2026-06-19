@@ -25,7 +25,7 @@ export class AboutComponent implements OnDestroy {
   protected readonly coaches = COACHES;
   /** Seme che il banco di particelle forma per ogni coach (♣ alla CTA). */
   protected readonly emblems: Record<string, EmblemId> = {
-    exivezz: 'spade',
+    exivezzz: 'spade',
     nagato: 'heart', // il cuore della scuola: l'ha fondata lui
     bastogne: 'diamond',
   };

@@ -1,4 +1,4 @@
-export type CoachId = 'exivezz' | 'nagato' | 'bastogne';
+export type CoachId = 'exivezzz' | 'nagato' | 'bastogne';
 
 export interface CoachStat {
   label: string;
@@ -22,14 +22,14 @@ export interface Coach {
 
 export const COACHES: Coach[] = [
   {
-    id: 'exivezz',
+    id: 'exivezzz',
     num: '01',
-    nickname: 'Exivezz',
-    fullName: 'Alessandro “Exivezz” Vendramin',
+    nickname: 'Exivezzz',
+    fullName: 'Alessandro “Exivezzz” Vendramin',
     eyebrow: 'Main Coach',
     tag: 'Twister 200 € · specialista exploit',
     bio:
-      'Main coach della scuola e top reg dei Twister da 200 euro. Exivezz vive di ' +
+      'Main coach della scuola e top reg dei Twister da 200 euro. Exivezzz vive di ' +
       'letture: legge i field, trova le falle e le punisce con una precisione che a ' +
       'fine sessione non lascia molto da discutere. Quando non è al tavolo, è su un ' +
       'campo di beach volley sotto il sole. Stesso schema: capire l’avversario, ' +
