@@ -32,7 +32,7 @@ export class LandingComponent {
     {
       suit: '♠',
       title: 'Studio guidato',
-      text: 'Percorsi di lezioni video tenuti dai coach della scuola: dal preflop ai spot ICM più complessi, in italiano.',
+      text: 'Percorsi di lezioni video tenuti dai coach della scuola: dal preflop agli spot postflop più complessi, in italiano.',
     },
     {
       suit: '♦',
