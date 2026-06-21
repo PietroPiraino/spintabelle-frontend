@@ -158,8 +158,10 @@ export interface SubscriptionRequest {
   tierLabel: string;
   paymentMethod: PaymentMethod;
   paymentReference?: string;
-  /** codice sconto applicato (snapshot) */
+  /** codice sconto applicato (snapshot, legacy singolo) */
   discountCode?: string;
+  /** codici sconto cumulati applicati (snapshot) */
+  discountCodes?: string[];
   /** prezzo di listino e scontato (snapshot in euro) */
   listPriceEur?: number;
   discountedPriceEur?: number;
@@ -197,8 +199,19 @@ export interface CreateSubscriptionRequest {
   tier: SubscriptionTier;
   paymentMethod: PaymentMethod;
   paymentReference?: string;
-  /** codice sconto opzionale (ri-validato lato server) */
+  /** codice sconto opzionale (legacy, singolo) */
   discountCode?: string;
+  /** codici sconto cumulati (ri-validati lato server) */
+  discountCodes?: string[];
+}
+
+/** Esito validazione di più buoni cumulati (prezzo finale da mostrare). */
+export interface DiscountsValidation {
+  valid: true;
+  codes: { code: string; kind: DiscountKind; value: number }[];
+  listPriceEur: number;
+  discountedPriceEur: number;
+  message: string;
 }
 
 // ----- Codici sconto -----
@@ -554,4 +567,103 @@ export interface DrillSessionsPage {
   page: number;
   limit: number;
   total: number;
+}
+
+// ----- Negozio (Shop, acquisti in punti BFF) -----
+
+export type ShopVoucherType = 'EUR_10' | 'EUR_25';
+export type ShopOrderType = 'VOUCHER' | 'SUBSCRIPTION' | 'GADGET';
+export type ShopOrderStatus =
+  | 'COMPLETED'
+  | 'RICEVUTO'
+  | 'SPEDITO'
+  | 'CONSEGNATO'
+  | 'ANNULLATO';
+/** Stati impostabili dall'admin sull'avanzamento di un ordine gadget. */
+export type GadgetFulfillStatus = 'RICEVUTO' | 'SPEDITO' | 'CONSEGNATO';
+
+/** Catalogo a prezzo fisso (buoni + abbonamenti) per la vetrina. */
+export interface ShopCatalog {
+  vouchers: {
+    type: ShopVoucherType;
+    label: string;
+    eurValue: number;
+    pricePoints: number;
+  }[];
+  subscriptions: {
+    tier: SubscriptionTier;
+    label: string;
+    pricePoints: number;
+  }[];
+}
+
+/** Prodotto gadget come esposto al client. */
+export interface GadgetResource {
+  id: string;
+  title: string;
+  description: string;
+  pricePoints: number;
+  /** null = stock illimitato */
+  stock: number | null;
+  active: boolean;
+  imageUrl?: string;
+  outOfStock: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Metadati per creare/modificare un gadget (l'immagine viaggia in multipart). */
+export interface GadgetPayload {
+  title: string;
+  description: string;
+  pricePoints: number;
+  stock?: number;
+  active?: boolean;
+}
+
+/** Indirizzo di spedizione di un ordine gadget. */
+export interface ShippingAddress {
+  fullName: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  zip: string;
+  province: string;
+  country: string;
+  phone: string;
+}
+
+/** Ordine del Negozio come esposto a client/admin. */
+export interface ShopOrder {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userNickname?: string;
+  type: ShopOrderType;
+  typeLabel: string;
+  status: ShopOrderStatus;
+  statusLabel: string;
+  pointsSpent: number;
+  itemLabel: string;
+  voucherCode?: string;
+  tier?: SubscriptionTier;
+  gadgetId?: string;
+  shippingAddress?: ShippingAddress;
+  trackingNote?: string;
+  decisionNote?: string;
+  refundedPoints?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Buono dell'utente (area personale + selettore /abbonati). */
+export interface MyVoucher {
+  code: string;
+  kind: DiscountKind;
+  value: number;
+  source: 'admin' | 'shop';
+  /** disponibile · riservato (in attesa) · usato · scaduto · disattivato */
+  status: 'available' | 'reserved' | 'redeemed' | 'expired' | 'inactive';
+  validUntil?: string;
+  createdAt?: string;
 }

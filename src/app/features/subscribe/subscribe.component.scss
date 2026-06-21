@@ -148,6 +148,40 @@
   gap: 0.6rem;
   flex-wrap: wrap;
   align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+// Badge di un buono applicato, con la "✕" per rimuoverlo
+.subscribe__voucher-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.subscribe__voucher-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+// Selettore dei buoni posseduti (chips "Aggiungi")
+.subscribe__voucher-picker {
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.6rem;
 }
 
 // ── Crediti modelli 3D (attribuzione CC-BY) ──

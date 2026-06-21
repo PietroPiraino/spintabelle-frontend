@@ -11,6 +11,7 @@ import { AdminDocumentsComponent } from './admin-documents/admin-documents.compo
 import { AdminLessonsComponent } from './admin-lessons/admin-lessons.component';
 import { AdminLiveComponent } from './admin-live/admin-live.component';
 import { AdminNewsComponent } from './admin-news/admin-news.component';
+import { AdminShopComponent } from './admin-shop/admin-shop.component';
 import { AdminSubscriptionRequestsComponent } from './admin-subscription-requests/admin-subscription-requests.component';
 import { AdminUsersComponent } from './admin-users/admin-users.component';
 
@@ -19,6 +20,7 @@ type AdminTab =
   | 'live'
   | 'news'
   | 'documenti'
+  | 'negozio'
   | 'iscritti'
   | 'richieste'
   | 'sconti'
@@ -31,6 +33,7 @@ type AdminTab =
     AdminLiveComponent,
     AdminNewsComponent,
     AdminDocumentsComponent,
+    AdminShopComponent,
     AdminUsersComponent,
     AdminSubscriptionRequestsComponent,
     AdminDiscountsComponent,
@@ -81,6 +84,14 @@ type AdminTab =
             type="button"
             role="tab"
             class="admin-tabs__tab"
+            [class.is-active]="tab() === 'negozio'"
+            [attr.aria-selected]="tab() === 'negozio'"
+            (click)="setTab('negozio')"
+          >🛍 Negozio</button>
+          <button
+            type="button"
+            role="tab"
+            class="admin-tabs__tab"
             [class.is-active]="tab() === 'iscritti'"
             [attr.aria-selected]="tab() === 'iscritti'"
             (click)="setTab('iscritti')"
@@ -119,6 +130,8 @@ type AdminTab =
           <app-admin-news />
         } @else if (tab() === 'documenti') {
           <app-admin-documents />
+        } @else if (tab() === 'negozio') {
+          <app-admin-shop />
         } @else if (tab() === 'iscritti') {
           <app-admin-users />
         } @else if (tab() === 'richieste') {
@@ -170,6 +183,7 @@ export class AdminComponent {
     'live',
     'news',
     'documenti',
+    'negozio',
     'iscritti',
     'richieste',
     'sconti',

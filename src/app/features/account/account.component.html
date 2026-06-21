@@ -57,6 +57,62 @@
       }
     </div>
 
+    <!-- I miei buoni (Negozio) -->
+    <div class="card card--pad account__card">
+      <h2>I miei buoni</h2>
+      @if (myVouchers().length) {
+        <ul style="list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.6rem">
+          @for (v of myVouchers(); track v.code) {
+            <li class="spread" style="gap: 1rem">
+              <span class="text-muted">
+                <strong>{{ voucherValueLabel(v) }}</strong>
+                · <code>{{ v.code }}</code>
+                @if (v.validUntil) {
+                  · scade il {{ v.validUntil | date: 'dd MMM yyyy' }}
+                }
+              </span>
+              <span class="row" style="gap: 0.5rem">
+                <span class="account__chip" [class]="'account__chip--' + v.status">
+                  {{ voucherStatusLabel(v.status) }}
+                </span>
+                @if (v.status === 'available') {
+                  <a routerLink="/abbonati" class="btn btn--ghost btn--sm">Usa</a>
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="text-muted">Non hai ancora buoni sconto.</p>
+      }
+    </div>
+
+    <!-- I miei ordini (Negozio) -->
+    <div class="card card--pad account__card">
+      <h2>I miei ordini</h2>
+      @if (myOrders().length) {
+        <ul style="list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.6rem">
+          @for (o of myOrders(); track o.id) {
+            <li class="spread" style="gap: 1rem">
+              <span class="text-muted">
+                <strong>{{ o.itemLabel }}</strong>
+                · {{ o.typeLabel }}
+                @if (o.createdAt) {
+                  · {{ o.createdAt | date: 'dd MMM yyyy' }}
+                }
+              </span>
+              <span class="row" style="gap: 0.5rem">
+                <span class="account__chip">{{ o.statusLabel }}</span>
+                <strong>−{{ o.pointsSpent }} pt</strong>
+              </span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="text-muted">Nessun ordine.</p>
+      }
+    </div>
+
     <!-- Dati di profilo (rettifica) -->
     <div class="card card--pad account__card">
       <h2>Dati di profilo</h2>

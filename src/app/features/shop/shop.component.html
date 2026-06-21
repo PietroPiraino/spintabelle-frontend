@@ -1,0 +1,364 @@
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Negozio</span>
+      <h1>Negozio</h1>
+      <p class="shop__balance">
+        Hai <strong>{{ fmt(points()) }}</strong> punti
+      </p>
+      <p class="lead">
+        Spendi i tuoi punti BFF in buoni sconto, abbonamenti e gadget.
+      </p>
+    </div>
+
+    @if (successMsg()) {
+      <div class="form-feedback is-success" role="status">{{ successMsg() }}</div>
+    }
+    @if (purchaseError()) {
+      <div class="form-feedback is-error" role="alert">{{ purchaseError() }}</div>
+    }
+
+    <!-- ── Buoni sconto ── -->
+    <section class="shop__section">
+      <h2>Buoni sconto</h2>
+      @if (catalogError()) {
+        <div class="form-feedback is-error" role="alert">{{ catalogError() }}</div>
+      } @else if (!catalog()) {
+        <div class="spinner" role="status" aria-label="Caricamento catalogo"></div>
+      } @else {
+        <div class="grid grid--2">
+          @for (v of catalog()!.vouchers; track v.type) {
+            <article class="card card--pad shop-card">
+              <div class="shop-card__body">
+                <h3>{{ v.label }}</h3>
+                <p class="shop-card__desc">
+                  Sconto di €{{ fmt(v.eurValue) }} sul tuo abbonamento
+                </p>
+              </div>
+              <div class="shop-card__foot">
+                <span class="shop-card__price">{{ fmt(v.pricePoints) }} pt</span>
+                @if (confirmingId() === 'voucher:' + v.type) {
+                  <div class="shop-card__confirm">
+                    <span>Confermi la spesa di {{ fmt(v.pricePoints) }} punti?</span>
+                    <div class="row">
+                      <button
+                        type="button"
+                        class="btn btn--primary btn--sm"
+                        (click)="buyVoucher(v.type)"
+                        [disabled]="actingId() !== null"
+                      >
+                        {{ actingId() === 'voucher:' + v.type ? 'Attendi…' : 'Conferma' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn--ghost btn--sm"
+                        (click)="cancelConfirm()"
+                        [disabled]="actingId() !== null"
+                      >
+                        Annulla
+                      </button>
+                    </div>
+                  </div>
+                } @else if (!canAfford(v.pricePoints)) {
+                  <span class="shop-card__insufficient">Punti insufficienti</span>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--sm"
+                    (click)="askConfirm('voucher:' + v.type)"
+                    [disabled]="actingId() !== null"
+                  >
+                    Acquista
+                  </button>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- ── Abbonamenti ── -->
+    @if (catalog(); as cat) {
+      @if (cat.subscriptions.length) {
+        <section class="shop__section">
+          <h2>Abbonamenti</h2>
+          <div class="grid grid--2">
+            @for (s of cat.subscriptions; track s.tier) {
+              <article class="card card--pad shop-card">
+                <div class="shop-card__body">
+                  <h3>{{ s.label }}</h3>
+                  <p class="shop-card__desc">
+                    Attiva il tier {{ s.label }} spendendo i tuoi punti.
+                  </p>
+                </div>
+                <div class="shop-card__foot">
+                  <span class="shop-card__price">{{ fmt(s.pricePoints) }} pt</span>
+                  @if (confirmingId() === 'subscription:' + s.tier) {
+                    <div class="shop-card__confirm">
+                      <span>Confermi la spesa di {{ fmt(s.pricePoints) }} punti?</span>
+                      <div class="row">
+                        <button
+                          type="button"
+                          class="btn btn--primary btn--sm"
+                          (click)="buySubscription(s.tier)"
+                          [disabled]="actingId() !== null"
+                        >
+                          {{ actingId() === 'subscription:' + s.tier ? 'Attendi…' : 'Conferma' }}
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn--ghost btn--sm"
+                          (click)="cancelConfirm()"
+                          [disabled]="actingId() !== null"
+                        >
+                          Annulla
+                        </button>
+                      </div>
+                    </div>
+                  } @else if (isDowngrade(s.tier)) {
+                    <span class="shop-card__insufficient">Già incluso nel tuo piano</span>
+                  } @else if (!canAfford(s.pricePoints)) {
+                    <span class="shop-card__insufficient">Punti insufficienti</span>
+                  } @else {
+                    <button
+                      type="button"
+                      class="btn btn--primary btn--sm"
+                      (click)="askConfirm('subscription:' + s.tier)"
+                      [disabled]="actingId() !== null"
+                    >
+                      Acquista
+                    </button>
+                  }
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      }
+    }
+
+    <!-- ── Gadget (lista accumulata, pattern /docs) ── -->
+    <section class="shop__section">
+      <div class="spread">
+        <h2>Gadget</h2>
+        <input
+          type="search"
+          class="input shop__search"
+          placeholder="Cerca un gadget…"
+          aria-label="Cerca tra i gadget"
+          maxlength="100"
+          [value]="searchTerm()"
+          (input)="onSearch($event)"
+        />
+      </div>
+
+      @if (error()) {
+        <div class="form-feedback is-error" role="alert">
+          {{ error() }}
+          <button type="button" class="btn btn--ghost btn--sm" (click)="retry()">
+            Riprova
+          </button>
+        </div>
+      }
+
+      @if (!gadgets()) {
+        <div class="spinner" role="status" aria-label="Caricamento gadget"></div>
+      } @else if (gadgets()!.length === 0) {
+        @if (loading()) {
+          <div class="spinner" role="status" aria-label="Caricamento gadget"></div>
+        } @else if (!error()) {
+          <div class="empty-state">
+            <div class="empty-state__suit" aria-hidden="true">♠ ♥ ♣ ♦</div>
+            <p>Nessun gadget disponibile al momento.</p>
+          </div>
+        }
+      } @else {
+        <div class="grid grid--2">
+          @for (g of gadgets()!; track g.id; let i = $index) {
+            <article
+              class="card card--pad card--hover gadget-card rise"
+              [style.animation-delay.ms]="(i % pageSize) * 60"
+            >
+              <div class="gadget-card__media">
+                @if (g.imageUrl) {
+                  <img [src]="g.imageUrl" [alt]="g.title" loading="lazy" />
+                } @else {
+                  <div class="gadget-card__placeholder" aria-hidden="true">🎁</div>
+                }
+                @if (g.outOfStock) {
+                  <span class="gadget-card__badge badge">Esaurito</span>
+                }
+              </div>
+
+              <div class="gadget-card__body">
+                <h3>{{ g.title }}</h3>
+                <p class="gadget-card__desc">{{ g.description }}</p>
+              </div>
+
+              <div class="gadget-card__foot">
+                <span class="shop-card__price">{{ fmt(g.pricePoints) }} pt</span>
+                @if (g.outOfStock) {
+                  <span class="shop-card__insufficient">Esaurito</span>
+                } @else if (!canAfford(g.pricePoints)) {
+                  <span class="shop-card__insufficient">Punti insufficienti</span>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--sm"
+                    (click)="openOrder(g)"
+                    [disabled]="actingId() !== null"
+                  >
+                    Ordina
+                  </button>
+                }
+              </div>
+
+              @if (orderingGadgetId() === g.id) {
+                <form
+                  class="gadget-card__order"
+                  [formGroup]="shippingForm"
+                  (ngSubmit)="submitOrder(g)"
+                >
+                  <p class="text-muted">Indirizzo di spedizione</p>
+
+                  <div class="field">
+                    <label for="fullName-{{ g.id }}">Nome e cognome</label>
+                    <input
+                      id="fullName-{{ g.id }}"
+                      type="text"
+                      class="input"
+                      formControlName="fullName"
+                      autocomplete="name"
+                      [class.is-invalid]="shippingForm.controls.fullName.touched && shippingForm.controls.fullName.invalid"
+                    />
+                  </div>
+
+                  <div class="field">
+                    <label for="line1-{{ g.id }}">Indirizzo</label>
+                    <input
+                      id="line1-{{ g.id }}"
+                      type="text"
+                      class="input"
+                      formControlName="line1"
+                      autocomplete="address-line1"
+                      [class.is-invalid]="shippingForm.controls.line1.touched && shippingForm.controls.line1.invalid"
+                    />
+                  </div>
+
+                  <div class="field">
+                    <label for="line2-{{ g.id }}">Indirizzo (riga 2) — facoltativo</label>
+                    <input
+                      id="line2-{{ g.id }}"
+                      type="text"
+                      class="input"
+                      formControlName="line2"
+                      autocomplete="address-line2"
+                    />
+                  </div>
+
+                  <div class="gadget-card__order-row">
+                    <div class="field">
+                      <label for="city-{{ g.id }}">Città</label>
+                      <input
+                        id="city-{{ g.id }}"
+                        type="text"
+                        class="input"
+                        formControlName="city"
+                        autocomplete="address-level2"
+                        [class.is-invalid]="shippingForm.controls.city.touched && shippingForm.controls.city.invalid"
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="zip-{{ g.id }}">CAP</label>
+                      <input
+                        id="zip-{{ g.id }}"
+                        type="text"
+                        class="input"
+                        formControlName="zip"
+                        autocomplete="postal-code"
+                        [class.is-invalid]="shippingForm.controls.zip.touched && shippingForm.controls.zip.invalid"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="gadget-card__order-row">
+                    <div class="field">
+                      <label for="province-{{ g.id }}">Provincia</label>
+                      <input
+                        id="province-{{ g.id }}"
+                        type="text"
+                        class="input"
+                        formControlName="province"
+                        autocomplete="address-level1"
+                        [class.is-invalid]="shippingForm.controls.province.touched && shippingForm.controls.province.invalid"
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="country-{{ g.id }}">Paese</label>
+                      <input
+                        id="country-{{ g.id }}"
+                        type="text"
+                        class="input"
+                        formControlName="country"
+                        autocomplete="country-name"
+                        [class.is-invalid]="shippingForm.controls.country.touched && shippingForm.controls.country.invalid"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label for="phone-{{ g.id }}">Telefono</label>
+                    <input
+                      id="phone-{{ g.id }}"
+                      type="tel"
+                      class="input"
+                      formControlName="phone"
+                      autocomplete="tel"
+                      [class.is-invalid]="shippingForm.controls.phone.touched && shippingForm.controls.phone.invalid"
+                    />
+                  </div>
+
+                  @if (shippingForm.invalid && shippingForm.touched) {
+                    <span class="field-error">Compila tutti i campi obbligatori.</span>
+                  }
+
+                  <div class="row">
+                    <button
+                      type="submit"
+                      class="btn btn--primary btn--sm"
+                      [disabled]="actingId() !== null"
+                    >
+                      {{ actingId() === 'gadget:' + g.id ? 'Invio…' : 'Conferma ordine (' + fmt(g.pricePoints) + ' pt)' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      (click)="closeOrder()"
+                      [disabled]="actingId() !== null"
+                    >
+                      Annulla
+                    </button>
+                  </div>
+                </form>
+              }
+            </article>
+          }
+        </div>
+
+        @if (hasMore()) {
+          <div class="row" style="justify-content: center; margin-top: 2.5rem">
+            <button
+              type="button"
+              class="btn btn--ghost"
+              (click)="loadMore()"
+              [disabled]="loading()"
+            >
+              {{ loadingMore() ? 'Caricamento…' : 'Carica altri gadget' }}
+            </button>
+          </div>
+        }
+      }
+    </section>
+  </div>
+</section>

@@ -1,0 +1,404 @@
+<div
+  class="row"
+  role="group"
+  aria-label="Sotto-sezioni del negozio"
+  style="gap: 0.5rem; margin-bottom: 1.6rem"
+>
+  <button
+    type="button"
+    class="badge badge--tag"
+    [class.is-active]="view() === 'prodotti'"
+    (click)="setView('prodotti')"
+  >Prodotti</button>
+  <button
+    type="button"
+    class="badge badge--tag"
+    [class.is-active]="view() === 'ordini'"
+    (click)="setView('ordini')"
+  >Ordini</button>
+</div>
+
+@if (view() === 'prodotti') {
+  <!-- ─────────────────────────── PRODOTTI ─────────────────────────── -->
+  <div class="admin-grid">
+    <!-- FORM -->
+    <div class="card card--pad admin-form">
+      <h2>{{ editingId() ? 'Modifica prodotto' : 'Nuovo prodotto' }}</h2>
+
+      @if (prodFeedback()) {
+        <div class="form-feedback is-success" role="status">{{ prodFeedback() }}</div>
+      }
+      @if (prodError()) {
+        <div class="form-feedback is-error" role="alert">{{ prodError() }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submitProduct()">
+        <div class="field">
+          <label for="title">Titolo</label>
+          <input
+            id="title"
+            type="text"
+            class="input"
+            formControlName="title"
+            placeholder="Es. Cappellino Best Fish Forever"
+            [class.is-invalid]="form.controls.title.touched && form.controls.title.invalid"
+          />
+        </div>
+
+        <div class="field">
+          <label for="description">Descrizione</label>
+          <textarea
+            id="description"
+            class="input"
+            formControlName="description"
+            rows="4"
+            placeholder="Descrivi il gadget"
+            [class.is-invalid]="form.controls.description.touched && form.controls.description.invalid"
+          ></textarea>
+        </div>
+
+        <div class="field">
+          <label for="pricePoints">Prezzo (punti)</label>
+          <input
+            id="pricePoints"
+            type="number"
+            min="1"
+            class="input"
+            formControlName="pricePoints"
+            [class.is-invalid]="form.controls.pricePoints.touched && form.controls.pricePoints.invalid"
+          />
+        </div>
+
+        <div class="field">
+          <label for="stock">Disponibilità</label>
+          <input
+            id="stock"
+            type="number"
+            min="0"
+            class="input"
+            formControlName="stock"
+            placeholder="Vuoto = illimitato"
+          />
+          <p class="admin-news__hint">Lascia vuoto per stock illimitato (∞).</p>
+        </div>
+
+        <label class="row admin-panel__check" style="gap: 0.4rem">
+          <input type="checkbox" formControlName="active" />
+          <span>Attivo (visibile in vetrina)</span>
+        </label>
+
+        <div class="field">
+          <label for="image">
+            Immagine{{ editingId() ? ' (lascia vuoto per mantenere quella attuale)' : '' }}
+          </label>
+          <input
+            id="image"
+            type="file"
+            accept="image/*"
+            class="input"
+            (change)="onImageChange($event)"
+          />
+          @if (selectedImage()) {
+            <span class="admin-item__meta">{{ selectedImage()!.name }}</span>
+          }
+          <p class="admin-news__hint">Max {{ maxMb }} MB. Formati immagine (jpg, png, webp…).</p>
+        </div>
+
+        <div class="row">
+          <button type="submit" class="btn btn--primary" [disabled]="saving()">
+            {{ saving() ? 'Salvataggio…' : editingId() ? 'Salva modifiche' : 'Crea prodotto' }}
+          </button>
+          @if (editingId()) {
+            <button type="button" class="btn btn--ghost" (click)="cancelEdit()">Annulla</button>
+          }
+        </div>
+      </form>
+    </div>
+
+    <!-- LISTA -->
+    <div class="admin-list">
+      <div class="spread">
+        <h2>Prodotti</h2>
+        @if (prodPage(); as p) {
+          <span class="admin-item__meta">
+            {{ p.total }} {{ p.total === 1 ? 'prodotto' : 'prodotti' }}
+          </span>
+        }
+      </div>
+      @if (prodListError()) {
+        <div class="form-feedback is-error" role="alert">{{ prodListError() }}</div>
+      }
+      @if (!prodPage() && prodLoading()) {
+        <div class="spinner" role="status" aria-label="Caricamento"></div>
+      } @else if (prodPage() && prodPage()!.items.length === 0) {
+        <div class="empty-state">
+          <p>Nessun prodotto ancora: creane uno dal form.</p>
+        </div>
+      } @else if (prodPage()) {
+        @for (g of prodPage()!.items; track g.id) {
+          <div class="card admin-item" [class.is-editing]="editingId() === g.id">
+            <div class="row" style="gap: 0.9rem; align-items: center; min-width: 0">
+              @if (g.imageUrl) {
+                <img class="shop-thumb" [src]="g.imageUrl" [alt]="g.title" />
+              } @else {
+                <span class="shop-thumb shop-thumb--empty" aria-hidden="true">♣</span>
+              }
+              <div class="admin-item__info">
+                <div class="row" style="gap: 0.6rem; flex-wrap: wrap">
+                  <strong>{{ g.title }}</strong>
+                  @if (g.active) {
+                    <span class="badge badge--free">Attivo</span>
+                  } @else {
+                    <span class="badge badge--tag">Nascosto</span>
+                  }
+                  @if (g.outOfStock) {
+                    <span class="badge badge--premium">Esaurito</span>
+                  }
+                </div>
+                <span class="admin-item__meta">
+                  {{ g.pricePoints }} pt · stock {{ stockLabel(g.stock) }}
+                  @if (g.createdAt) {
+                    · {{ g.createdAt | date: 'dd MMM yyyy' }}
+                  }
+                </span>
+              </div>
+            </div>
+            <div class="row" style="gap: 0.5rem">
+              @if (confirmDeleteId() === g.id) {
+                <span class="admin-item__meta">Eliminare?</span>
+                <button type="button" class="btn btn--danger btn--sm" (click)="confirmDelete(g)">
+                  Conferma
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="cancelDelete()">
+                  Annulla
+                </button>
+              } @else {
+                <button type="button" class="btn btn--ghost btn--sm" (click)="editProduct(g)">
+                  Modifica
+                </button>
+                <button type="button" class="btn btn--danger btn--sm" (click)="askDelete(g)">
+                  Elimina
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        @if (prodPage()!.totalPages > 1) {
+          <div class="row admin-users__pager">
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              [disabled]="prodPage()!.page <= 1 || prodLoading()"
+              (click)="goToProdPage(prodPage()!.page - 1)"
+            >← Precedenti</button>
+            <span class="admin-item__meta">
+              Pagina {{ prodPage()!.page }} di {{ prodPage()!.totalPages }}
+            </span>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              [disabled]="prodPage()!.page >= prodPage()!.totalPages || prodLoading()"
+              (click)="goToProdPage(prodPage()!.page + 1)"
+            >Successive →</button>
+          </div>
+        }
+      }
+    </div>
+  </div>
+} @else {
+  <!-- ─────────────────────────── ORDINI ─────────────────────────── -->
+  <div class="admin-list">
+    <div class="spread">
+      <h2>Ordini del negozio</h2>
+      @if (ordPage(); as p) {
+        <span class="admin-item__meta">
+          {{ p.total }} {{ p.total === 1 ? 'ordine' : 'ordini' }}
+        </span>
+      }
+    </div>
+
+    <input
+      type="search"
+      class="input"
+      placeholder="Cerca per email o nickname…"
+      aria-label="Cerca ordini"
+      [formControl]="searchControl"
+      style="margin: 0.6rem 0"
+    />
+
+    <div
+      class="row"
+      role="group"
+      aria-label="Filtra per tipo"
+      style="gap: 0.5rem; margin: 0.4rem 0"
+    >
+      @for (t of typeFilters; track t.key) {
+        <button
+          type="button"
+          class="badge badge--tag"
+          [class.is-active]="typeFilter() === t.key"
+          (click)="setTypeFilter(t.key)"
+        >{{ t.label }}</button>
+      }
+    </div>
+
+    <div
+      class="row"
+      role="group"
+      aria-label="Filtra per stato"
+      style="gap: 0.5rem; margin: 0.4rem 0 1.2rem; flex-wrap: wrap"
+    >
+      @for (s of statusFilters; track s.key) {
+        <button
+          type="button"
+          class="badge badge--tag"
+          [class.is-active]="statusFilter() === s.key"
+          (click)="setStatusFilter(s.key)"
+        >{{ s.label }}</button>
+      }
+    </div>
+
+    @if (ordFeedback()) {
+      <div class="form-feedback is-success" role="status">{{ ordFeedback() }}</div>
+    }
+    @if (ordError()) {
+      <div class="form-feedback is-error" role="alert">{{ ordError() }}</div>
+    }
+
+    @if (!ordPage() && ordLoading()) {
+      <div class="spinner" role="status" aria-label="Caricamento"></div>
+    } @else if (ordPage() && ordPage()!.items.length === 0) {
+      <div class="empty-state">
+        <p>Nessun ordine con questo filtro.</p>
+      </div>
+    } @else if (ordPage()) {
+      @for (o of ordPage()!.items; track o.id) {
+        <div class="card admin-item">
+          <div class="admin-item__info">
+            <div class="row" style="gap: 0.6rem; flex-wrap: wrap; align-items: center">
+              <strong>{{ o.userNickname || o.userEmail }}</strong>
+              <span class="badge badge--tag">{{ o.typeLabel }}</span>
+              <span [class]="statusChipClass(o.status)">{{ o.statusLabel }}</span>
+            </div>
+            <span class="admin-item__meta">
+              {{ o.itemLabel }} · −{{ o.pointsSpent }} pt
+              @if (o.createdAt) {
+                · {{ o.createdAt | date: 'dd MMM yyyy HH:mm' }}
+              }
+            </span>
+            <span class="admin-item__meta">{{ o.userEmail }}</span>
+            @if (o.shippingAddress; as addr) {
+              <span class="admin-item__meta">
+                {{ addr.fullName }} · {{ addr.line1 }}@if (addr.line2) {, {{ addr.line2 }}}
+                · {{ addr.zip }} {{ addr.city }} ({{ addr.province }}) · {{ addr.country }} · {{ addr.phone }}
+              </span>
+            }
+            @if (o.trackingNote) {
+              <span class="admin-item__meta">Tracking: {{ o.trackingNote }}</span>
+            }
+            @if (o.decisionNote) {
+              <span class="admin-item__meta">Nota: {{ o.decisionNote }}</span>
+            }
+            @if (o.status === 'ANNULLATO' && o.refundedPoints != null) {
+              <span class="admin-item__meta">Rimborsati: {{ o.refundedPoints }} pt</span>
+            }
+          </div>
+
+          @if (canFulfill(o)) {
+            <div class="shop-actions">
+              <div class="row" style="gap: 0.5rem; flex-wrap: wrap">
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="actingId() === o.id"
+                  (click)="toggleTracking(o)"
+                >Segna spedito</button>
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  [disabled]="actingId() === o.id"
+                  (click)="markDelivered(o)"
+                >Segna consegnato</button>
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  [disabled]="actingId() === o.id"
+                  (click)="toggleCancel(o)"
+                >Annulla e rimborsa</button>
+              </div>
+
+              @if (trackingId() === o.id) {
+                <div class="row" style="gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap">
+                  <input
+                    #note
+                    type="text"
+                    class="input"
+                    placeholder="Nota di tracking (opzionale)"
+                    aria-label="Nota di tracking"
+                    style="flex: 1; min-width: 180px"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--sm"
+                    [disabled]="actingId() === o.id"
+                    (click)="markShipped(o, note.value)"
+                  >Conferma spedizione</button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="toggleTracking(o)"
+                  >Chiudi</button>
+                </div>
+              }
+
+              @if (cancelId() === o.id) {
+                <div class="row" style="gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap">
+                  <input
+                    #reason
+                    type="text"
+                    class="input"
+                    placeholder="Motivo annullamento (opzionale)"
+                    aria-label="Motivo annullamento"
+                    style="flex: 1; min-width: 180px"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn--danger btn--sm"
+                    [disabled]="actingId() === o.id"
+                    (click)="confirmCancel(o, reason.value)"
+                  >Conferma annullamento</button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="toggleCancel(o)"
+                  >Chiudi</button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (ordPage()!.totalPages > 1) {
+        <div class="row admin-users__pager">
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            [disabled]="ordPage()!.page <= 1 || ordLoading()"
+            (click)="goToOrdPage(ordPage()!.page - 1)"
+          >← Precedenti</button>
+          <span class="admin-item__meta">
+            Pagina {{ ordPage()!.page }} di {{ ordPage()!.totalPages }}
+          </span>
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            [disabled]="ordPage()!.page >= ordPage()!.totalPages || ordLoading()"
+            (click)="goToOrdPage(ordPage()!.page + 1)"
+          >Successive →</button>
+        </div>
+      }
+    }
+  </div>
+}

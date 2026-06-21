@@ -22,6 +22,11 @@ const ACTION_LABELS: Record<string, string> = {
   'create-discount': 'Codice sconto creato',
   'update-discount': 'Codice sconto modificato',
   'delete-discount': 'Codice sconto eliminato',
+  'create-gadget': 'Gadget creato',
+  'update-gadget': 'Gadget modificato',
+  'delete-gadget': 'Gadget eliminato',
+  'fulfill-order': 'Ordine evaso',
+  'cancel-order': 'Ordine annullato',
 };
 
 const KEY_LABELS: Record<string, string> = {

@@ -14,9 +14,10 @@ import {
 } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { MyPoints } from '../../core/models/api.models';
+import { MyPoints, MyVoucher, ShopOrder } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { PointsService } from '../../core/services/points.service';
+import { ShopService } from '../../core/services/shop.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
@@ -36,6 +37,7 @@ export class AccountComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly pointsApi = inject(PointsService);
+  private readonly shop = inject(ShopService);
   private readonly router = inject(Router);
 
   protected readonly user = this.auth.user;
@@ -46,6 +48,10 @@ export class AccountComponent {
   protected readonly pointsBalance = computed(
     () => this.myPoints()?.balance ?? this.user()?.points ?? 0,
   );
+
+  // ── Negozio: buoni e ordini dell'utente (best-effort) ──
+  protected readonly myVouchers = signal<MyVoucher[]>([]);
+  protected readonly myOrders = signal<ShopOrder[]>([]);
 
   // ── Abbonamento (dal ruolo/scadenza già in auth.user) ──
   protected readonly isAdmin = this.auth.isAdmin;
@@ -110,6 +116,38 @@ export class AccountComponent {
       next: (p) => this.myPoints.set(p),
       error: () => undefined,
     });
+    // buoni e ordini del Negozio (best-effort: in errore restano liste vuote)
+    this.shop.myVouchers().subscribe({
+      next: (v) => this.myVouchers.set(v),
+      error: () => undefined,
+    });
+    this.shop.myOrders().subscribe({
+      next: (o) => this.myOrders.set(o),
+      error: () => undefined,
+    });
+  }
+
+  /** Etichetta IT dello stato di un buono. */
+  protected voucherStatusLabel(status: MyVoucher['status']): string {
+    switch (status) {
+      case 'available':
+        return 'Disponibile';
+      case 'reserved':
+        return 'In attesa di approvazione';
+      case 'redeemed':
+        return 'Usato';
+      case 'expired':
+        return 'Scaduto';
+      case 'inactive':
+        return 'Disattivato';
+      default:
+        return 'Non valido';
+    }
+  }
+
+  /** Valore leggibile di un buono (percentuale o importo in euro). */
+  protected voucherValueLabel(v: MyVoucher): string {
+    return v.kind === 'PERCENT' ? `${v.value}%` : `€${v.value}`;
   }
 
   protected saveProfile(): void {

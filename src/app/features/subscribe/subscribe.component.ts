@@ -11,13 +11,15 @@ import { Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { forkJoin, take } from 'rxjs';
 import {
-  DiscountValidation,
+  DiscountsValidation,
   MySubscription,
+  MyVoucher,
   PaymentInfo,
   PaymentMethod,
   SubscriptionTier,
 } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
+import { ShopService } from '../../core/services/shop.service';
 import { SubscriptionsService } from '../../core/services/subscriptions.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
 import {
@@ -48,6 +50,7 @@ const TIER_FEATURES: Record<SubscriptionTier, string[]> = {
 })
 export class SubscribeComponent {
   private readonly subs = inject(SubscriptionsService);
+  private readonly shop = inject(ShopService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -83,14 +86,29 @@ export class SubscribeComponent {
   protected readonly selectedTier = signal<SubscriptionTier | null>(null);
   protected readonly submitting = signal(false);
   protected readonly submitError = signal<string | null>(null);
+  protected readonly withdrawing = signal(false);
 
-  // ── Codice sconto ──
+  // ── Buoni sconto cumulabili ──
+  /** Codici attualmente applicati (normalizzati MAIUSCOLO). */
+  protected readonly appliedCodes = signal<string[]>([]);
+  /** Ultima validazione cumulata andata a buon fine (prezzo + buoni validati). */
+  protected readonly discounts = signal<DiscountsValidation | null>(null);
+  /** Buoni posseduti dall'utente (per il selettore "Aggiungi"). */
+  protected readonly ownedVouchers = signal<MyVoucher[]>([]);
+  protected readonly applying = signal(false);
+  protected readonly discountError = signal<string | null>(null);
+  /** Input libero per digitare un codice promo. */
   protected readonly discountControl = new FormControl<string>('', {
     nonNullable: true,
   });
-  protected readonly discountChecking = signal(false);
-  protected readonly discountError = signal<string | null>(null);
-  protected readonly discount = signal<DiscountValidation | null>(null);
+
+  /** Buoni disponibili non ancora applicati: chips "Aggiungi". */
+  protected readonly pickableVouchers = computed(() => {
+    const applied = this.appliedCodes();
+    return this.ownedVouchers().filter(
+      (v) => v.status === 'available' && !applied.includes(v.code),
+    );
+  });
 
   protected readonly method = new FormControl<PaymentMethod>('paypal', {
     nonNullable: true,
@@ -132,10 +150,10 @@ export class SubscribeComponent {
     return info.tiers.find((t) => t.tier === tier)?.label ?? '';
   });
 
-  /** Prezzo effettivo da inviare: scontato se un codice è applicato. */
+  /** Prezzo effettivo da inviare: scontato se uno o più buoni sono applicati. */
   protected readonly effectivePrice = computed(() => {
-    const d = this.discount();
-    return d ? d.discountedPriceEur : this.selectedPrice();
+    const d = this.discounts();
+    return d?.discountedPriceEur ?? this.selectedPrice();
   });
 
   constructor() {
@@ -165,16 +183,19 @@ export class SubscribeComponent {
       },
     });
 
-    // Stato account + receivers reali solo quando la sessione è pronta e attiva.
+    // Stato account + receivers reali + buoni posseduti solo quando la sessione
+    // è pronta e attiva.
     this.auth.ready$.pipe(take(1)).subscribe(() => {
       if (!this.auth.isAuthenticated()) return;
       forkJoin({
         info: this.subs.paymentInfo(),
         me: this.subs.mySubscription(),
+        vouchers: this.shop.myVouchers(),
       }).subscribe({
-        next: ({ info, me }) => {
+        next: ({ info, me, vouchers }) => {
           this.info.set(info);
           this.me.set(me);
+          this.ownedVouchers.set(vouchers);
         },
         // se fallisce restano i piani pubblici: l'utente può riprovare
         error: () => undefined,
@@ -200,42 +221,83 @@ export class SubscribeComponent {
     }
     this.selectedTier.set(tier);
     this.submitError.set(null);
-    // lo sconto è validato per uno specifico tier: cambiando piano si azzera
-    this.clearDiscount();
+    // i buoni sono validati per uno specifico tier: cambiando piano si azzerano
+    this.clearDiscounts();
   }
 
   protected cancelChoice(): void {
     this.selectedTier.set(null);
     this.submitError.set(null);
-    this.clearDiscount();
+    this.clearDiscounts();
   }
 
-  /** Valida il codice sconto per il tier selezionato e mostra il prezzo scontato. */
-  protected applyDiscount(): void {
-    const tier = this.selectedTier();
-    const code = this.discountControl.value.trim();
-    if (!tier || !code || this.discountChecking()) return;
-    this.discountChecking.set(true);
+  /** Aggiunge un buono (dal selettore o dall'input) e rivalida il cumulo. */
+  protected addCode(code: string): void {
+    const normalized = code.trim().toUpperCase();
+    if (!normalized || this.applying()) return;
+    if (this.appliedCodes().includes(normalized)) return;
+    this.appliedCodes.update((codes) => [...codes, normalized]);
+    this.discountControl.reset('');
+    this.revalidate(normalized);
+  }
+
+  /** Aggiunge il codice digitato a mano. */
+  protected addTyped(): void {
+    this.addCode(this.discountControl.value);
+  }
+
+  /** Rimuove un buono applicato e rivalida (o azzera se non ne resta nessuno). */
+  protected removeCode(code: string): void {
+    this.appliedCodes.update((codes) => codes.filter((c) => c !== code));
     this.discountError.set(null);
-    this.subs.validateDiscount(code, tier).subscribe({
+    if (this.appliedCodes().length === 0) {
+      this.discounts.set(null);
+      return;
+    }
+    this.revalidate();
+  }
+
+  /**
+   * Rivalida l'intero cumulo di buoni per il tier selezionato. In caso di
+   * errore (codice non valido o regola €-vs-% violata) mostra il messaggio del
+   * server e fa il rollback del codice appena aggiunto (`justAdded`) così da
+   * non lasciarne uno incompatibile bloccato.
+   */
+  private revalidate(justAdded?: string): void {
+    const tier = this.selectedTier();
+    const codes = this.appliedCodes();
+    if (!tier) return;
+    if (codes.length === 0) {
+      this.discounts.set(null);
+      this.discountError.set(null);
+      return;
+    }
+    this.applying.set(true);
+    this.discountError.set(null);
+    this.subs.validateDiscounts(codes, tier).subscribe({
       next: (res) => {
-        this.discountChecking.set(false);
-        this.discount.set(res);
+        this.applying.set(false);
+        this.discounts.set(res);
       },
       error: (err: unknown) => {
-        this.discountChecking.set(false);
-        this.discount.set(null);
-        this.discountError.set(
-          apiErrorMessage(err, 'Codice sconto non valido.'),
-        );
+        this.applying.set(false);
+        // niente prezzo scontato valido: azzera il cumulo per non mostrare un
+        // prezzo incoerente con i codici applicati.
+        this.discounts.set(null);
+        this.discountError.set(apiErrorMessage(err, 'Buono non valido.'));
+        // rollback del codice appena aggiunto: non resta bloccato
+        if (justAdded) {
+          this.appliedCodes.update((c) => c.filter((x) => x !== justAdded));
+        }
       },
     });
   }
 
-  protected clearDiscount(): void {
-    this.discount.set(null);
+  protected clearDiscounts(): void {
+    this.appliedCodes.set([]);
+    this.discounts.set(null);
     this.discountError.set(null);
-    this.discountChecking.set(false);
+    this.applying.set(false);
     this.discountControl.reset('');
   }
 
@@ -246,19 +308,20 @@ export class SubscribeComponent {
     this.submitError.set(null);
 
     const reference = this.reference.value.trim();
+    const codes = this.appliedCodes();
     this.subs
       .createRequest({
         tier,
         paymentMethod: this.method.value,
         paymentReference: reference || undefined,
-        discountCode: this.discount()?.code,
+        discountCodes: codes.length ? codes : undefined,
       })
       .subscribe({
         next: (request) => {
           this.submitting.set(false);
           this.selectedTier.set(null);
           this.reference.reset('');
-          this.clearDiscount();
+          this.clearDiscounts();
           // riflette subito la richiesta pending senza un altro giro di rete
           const base = this.me();
           this.me.set({
@@ -267,6 +330,8 @@ export class SubscribeComponent {
             subscriptionExpiresAt: base?.subscriptionExpiresAt ?? null,
             pendingRequest: request,
           });
+          // i buoni applicati sono ora riservati: ricarica la lista posseduti
+          this.refreshVouchers();
         },
         error: (err: unknown) => {
           this.submitting.set(false);
@@ -275,5 +340,43 @@ export class SubscribeComponent {
           );
         },
       });
+  }
+
+  /**
+   * Ritira la richiesta in attesa: libera l'utente a inviarne una nuova e
+   * rilascia i buoni riservati. Ricarica lo stato abbonamento e i buoni.
+   */
+  protected withdraw(): void {
+    if (this.withdrawing() || !this.pending()) return;
+    this.withdrawing.set(true);
+    this.submitError.set(null);
+    this.subs.withdraw().subscribe({
+      next: () => {
+        this.withdrawing.set(false);
+        this.selectedTier.set(null);
+        this.reference.reset('');
+        this.clearDiscounts();
+        this.subs.mySubscription().subscribe({
+          next: (me) => this.me.set(me),
+          error: () => undefined,
+        });
+        this.refreshVouchers();
+      },
+      error: (err: unknown) => {
+        this.withdrawing.set(false);
+        this.submitError.set(
+          apiErrorMessage(err, 'Ritiro della richiesta non riuscito.'),
+        );
+      },
+    });
+  }
+
+  /** Ricarica i buoni posseduti (best-effort: stato riservato/disponibile). */
+  private refreshVouchers(): void {
+    if (!this.auth.isAuthenticated()) return;
+    this.shop.myVouchers().subscribe({
+      next: (vouchers) => this.ownedVouchers.set(vouchers),
+      error: () => undefined,
+    });
   }
 }

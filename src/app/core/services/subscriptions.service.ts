@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   CreateSubscriptionRequest,
   DiscountValidation,
+  DiscountsValidation,
   MySubscription,
   Paginated,
   PaymentInfo,
@@ -57,6 +58,25 @@ export class SubscriptionsService {
     return this.http.post<DiscountValidation>(
       `${API}/subscriptions/validate-discount`,
       { code, tier },
+    );
+  }
+
+  /** Valida più buoni cumulati e ottiene il prezzo finale (regola €-vs-%). */
+  validateDiscounts(
+    codes: string[],
+    tier: SubscriptionTier,
+  ): Observable<DiscountsValidation> {
+    return this.http.post<DiscountsValidation>(
+      `${API}/subscriptions/validate-discounts`,
+      { codes, tier },
+    );
+  }
+
+  /** Ritira la propria richiesta in attesa (rilascia i buoni riservati). */
+  withdraw(): Observable<SubscriptionRequest> {
+    return this.http.post<SubscriptionRequest>(
+      `${API}/subscriptions/withdraw`,
+      {},
     );
   }
 

@@ -74,3 +74,37 @@
   color: var(--danger);
   margin-bottom: 1rem;
 }
+
+// Chip di stato per buoni/ordini del Negozio (stessa cifra di .account__badge)
+.account__chip {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--text-muted);
+  background: var(--surface-1);
+  white-space: nowrap;
+
+  &--available {
+    color: #007a4f;
+    border-color: rgba(0, 169, 110, 0.45);
+    background: rgba(0, 169, 110, 0.08);
+
+    [data-theme='dark'] & {
+      color: #5fe6b4;
+    }
+  }
+
+  &--reserved {
+    color: var(--copper-600);
+    border-color: rgba(255, 106, 31, 0.4);
+    background: rgba(255, 106, 31, 0.08);
+  }
+
+  &--expired,
+  &--inactive {
+    color: var(--text-faint);
+  }
+}

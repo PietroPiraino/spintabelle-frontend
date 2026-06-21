@@ -71,8 +71,9 @@ export class HeaderComponent {
       id: 'risorse',
       label: 'Risorse',
       children: [
-        { path: '/docs', label: 'Docs', isNew: true },
-        { path: '/affiliazioni', label: 'Affiliazioni', isNew: true },
+        { path: '/negozio', label: 'Negozio', isNew: true },
+        { path: '/docs', label: 'Docs' },
+        { path: '/affiliazioni', label: 'Affiliazioni' },
       ],
     },
   ];

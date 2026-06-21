@@ -104,6 +104,14 @@ export const routes: Routes = [
     title: 'Affiliazioni — Best Fish Forever',
   },
   {
+    // Spendere punti richiede una sessione → authGuard (a differenza di /abbonati).
+    path: 'negozio',
+    loadComponent: () =>
+      import('./features/shop/shop.component').then((m) => m.ShopComponent),
+    canActivate: [authGuard],
+    title: 'Negozio — Best Fish Forever',
+  },
+  {
     path: 'news/:id',
     loadComponent: () =>
       import('./features/news/news-detail/news-detail.component').then(

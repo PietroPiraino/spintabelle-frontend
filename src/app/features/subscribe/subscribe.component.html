@@ -35,6 +35,31 @@
             pagamento {{ p.paymentMethod === 'skrill' ? 'Skrill' : 'PayPal' }}.
             Ti avviseremo via email appena la richiesta sarà approvata.
           </p>
+          @if (p.discountCodes?.length) {
+            <p class="subscribe__muted">
+              Buoni applicati:
+              @for (c of p.discountCodes; track c) {
+                <span class="badge badge--free">{{ c }}</span>
+              }
+            </p>
+          }
+          @if (submitError()) {
+            <div class="form-feedback is-error" role="alert">{{ submitError() }}</div>
+          }
+          <div class="row">
+            <button
+              type="button"
+              class="btn btn--ghost"
+              (click)="withdraw()"
+              [disabled]="withdrawing()"
+            >
+              {{ withdrawing() ? 'Ritiro…' : 'Ritira richiesta' }}
+            </button>
+          </div>
+          <p class="subscribe__muted">
+            Ritirando la richiesta potrai inviarne una nuova; eventuali buoni
+            riservati tornano disponibili.
+          </p>
         </div>
       } @else {
         @if (me()?.tier; as t) {
@@ -98,14 +123,14 @@
               <li>Scegli il metodo di pagamento.</li>
               @if (effectivePrice() === 0) {
                 <li>
-                  Con questo codice l'abbonamento è
+                  Con questi buoni l'abbonamento è
                   <strong>in omaggio</strong>: nessun pagamento richiesto.
                 </li>
                 <li>Invia la richiesta: la approveremo a breve.</li>
               } @else {
                 <li>
                   Invia
-                  @if (discount()) {
+                  @if (discounts()) {
                     <s class="subscribe__strike">€{{ selectedPrice() }}</s>
                   }
                   <strong>€{{ effectivePrice() }}</strong> all'indirizzo qui
@@ -119,46 +144,84 @@
             </ol>
 
             <div class="field">
-              <label for="discount">Codice sconto (se ne hai uno)</label>
-              @if (!discount()) {
-                <div class="row subscribe__discount-row">
-                  <input
-                    id="discount"
-                    type="text"
-                    class="input subscribe__discount-input"
-                    [formControl]="discountControl"
-                    maxlength="40"
-                    placeholder="Es. WELCOME20"
-                  />
-                  <button
-                    type="button"
-                    class="btn btn--ghost btn--sm"
-                    (click)="applyDiscount()"
-                    [disabled]="discountChecking() || !discountControl.value.trim()"
-                  >
-                    {{ discountChecking() ? 'Verifica…' : 'Applica' }}
-                  </button>
-                </div>
-                @if (discountError()) {
-                  <p class="subscribe__discount-error" role="alert">
-                    {{ discountError() }}
-                  </p>
-                }
-              } @else {
+              <label for="discount">Buoni sconto (se ne hai)</label>
+
+              <!-- Buoni applicati: badge rimovibili -->
+              @if (appliedCodes().length) {
                 <div class="row subscribe__discount-applied">
-                  <span class="badge badge--free">
-                    Codice {{ discount()!.code }} applicato
-                  </span>
-                  <span class="subscribe__muted">{{ discount()!.message }}</span>
-                  <button
-                    type="button"
-                    class="btn btn--ghost btn--sm"
-                    (click)="clearDiscount()"
-                  >
-                    Rimuovi
-                  </button>
+                  @for (code of appliedCodes(); track code) {
+                    <span class="badge badge--free subscribe__voucher-tag">
+                      {{ code }}
+                      <button
+                        type="button"
+                        class="subscribe__voucher-remove"
+                        (click)="removeCode(code)"
+                        [attr.aria-label]="'Rimuovi ' + code"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  }
+                  @if (applying()) {
+                    <span class="subscribe__muted">Verifica…</span>
+                  }
+                </div>
+                @if (discounts(); as d) {
+                  @if (effectivePrice() === 0) {
+                    <p class="subscribe__muted">{{ d.message }}</p>
+                  } @else {
+                    <p class="subscribe__muted">
+                      <s class="subscribe__strike">€{{ d.listPriceEur }}</s>
+                      <strong>€{{ d.discountedPriceEur }}</strong> —
+                      {{ d.message }}
+                    </p>
+                  }
+                }
+              }
+
+              @if (discountError()) {
+                <div class="form-feedback is-error" role="alert">
+                  {{ discountError() }}
                 </div>
               }
+
+              <!-- Selettore dei buoni posseduti -->
+              @if (pickableVouchers().length) {
+                <div class="row subscribe__voucher-picker">
+                  @for (v of pickableVouchers(); track v.code) {
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      (click)="addCode(v.code)"
+                      [disabled]="applying()"
+                    >
+                      Aggiungi {{ v.code }} ·
+                      {{ v.kind === 'PERCENT' ? v.value + '%' : '€' + v.value }}
+                    </button>
+                  }
+                </div>
+              }
+
+              <!-- Inserimento manuale di un codice promo -->
+              <div class="row subscribe__discount-row">
+                <input
+                  id="discount"
+                  type="text"
+                  class="input subscribe__discount-input"
+                  [formControl]="discountControl"
+                  maxlength="40"
+                  placeholder="Es. WELCOME20"
+                  (keyup.enter)="addTyped()"
+                />
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="addTyped()"
+                  [disabled]="applying() || !discountControl.value.trim()"
+                >
+                  {{ applying() ? 'Verifica…' : 'Applica' }}
+                </button>
+              </div>
             </div>
 
             @if (effectivePrice() !== 0) {
@@ -203,7 +266,7 @@
                 type="button"
                 class="btn btn--primary"
                 (click)="submit()"
-                [disabled]="submitting()"
+                [disabled]="submitting() || applying() || !!discountError()"
               >
                 {{ submitting() ? 'Invio…' : 'Invia richiesta' }}
               </button>
