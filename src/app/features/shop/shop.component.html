@@ -27,17 +27,30 @@
         <div class="spinner" role="status" aria-label="Caricamento catalogo"></div>
       } @else {
         <div class="grid grid--2">
-          @for (v of catalog()!.vouchers; track v.type) {
-            <article class="card card--pad shop-card">
-              <div class="shop-card__body">
-                <h3>{{ v.label }}</h3>
-                <p class="shop-card__desc">
-                  Sconto di €{{ fmt(v.eurValue) }} sul tuo abbonamento
-                </p>
+          @for (v of catalog()!.vouchers; track v.type; let i = $index) {
+            <article
+              class="card card--pad card--hover shop-card voucher-card rise"
+              [style.animation-delay.ms]="i * 70"
+            >
+              <div class="voucher-card__stub" aria-hidden="true">
+                <span class="voucher-card__chip">
+                  <span class="voucher-card__chip-val">€{{ fmt(v.eurValue) }}</span>
+                </span>
+                <span class="voucher-card__tag">sconto</span>
               </div>
-              <div class="shop-card__foot">
-                <span class="shop-card__price">{{ fmt(v.pricePoints) }} pt</span>
-                @if (confirmingId() === 'voucher:' + v.type) {
+              <div class="voucher-card__main">
+                <div class="shop-card__body">
+                  <h3>{{ v.label }}</h3>
+                  <p class="shop-card__desc">
+                    Sconto di €{{ fmt(v.eurValue) }} sul tuo abbonamento.
+                  </p>
+                </div>
+                <div class="shop-card__foot">
+                  <span class="shop-card__price">
+                    <span class="chip-dot" aria-hidden="true"></span
+                    >{{ fmt(v.pricePoints) }} pt
+                  </span>
+                  @if (confirmingId() === 'voucher:' + v.type) {
                   <div class="shop-card__confirm">
                     <span>Confermi la spesa di {{ fmt(v.pricePoints) }} punti?</span>
                     <div class="row">
@@ -71,6 +84,7 @@
                     Acquista
                   </button>
                 }
+                </div>
               </div>
             </article>
           }
@@ -84,16 +98,31 @@
         <section class="shop__section">
           <h2>Abbonamenti</h2>
           <div class="grid grid--2">
-            @for (s of cat.subscriptions; track s.tier) {
-              <article class="card card--pad shop-card">
-                <div class="shop-card__body">
-                  <h3>{{ s.label }}</h3>
-                  <p class="shop-card__desc">
-                    Attiva il tier {{ s.label }} spendendo i tuoi punti.
-                  </p>
+            @for (s of cat.subscriptions; track s.tier; let i = $index) {
+              <article
+                class="card card--pad card--hover shop-card sub-card rise"
+                [class.is-squalo]="s.tier === 'SQUALO'"
+                [class.is-pesce-rosso]="s.tier === 'PESCE_ROSSO'"
+                [style.animation-delay.ms]="i * 70"
+              >
+                <span class="sub-card__strip" aria-hidden="true"></span>
+                <div class="sub-card__head">
+                  <span class="sub-card__emblem" aria-hidden="true">{{
+                    subEmblem(s.tier)
+                  }}</span>
+                  <div class="shop-card__body">
+                    <h3>{{ s.label }}</h3>
+                    <p class="shop-card__desc">
+                      Attiva il tier {{ s.label }} subito, coi tuoi punti.
+                    </p>
+                  </div>
                 </div>
+                <span class="sub-card__term">Mensile</span>
                 <div class="shop-card__foot">
-                  <span class="shop-card__price">{{ fmt(s.pricePoints) }} pt</span>
+                  <span class="shop-card__price">
+                    <span class="chip-dot" aria-hidden="true"></span
+                    >{{ fmt(s.pricePoints) }} pt
+                  </span>
                   @if (confirmingId() === 'subscription:' + s.tier) {
                     <div class="shop-card__confirm">
                       <span>Confermi la spesa di {{ fmt(s.pricePoints) }} punti?</span>
@@ -197,7 +226,10 @@
               </div>
 
               <div class="gadget-card__foot">
-                <span class="shop-card__price">{{ fmt(g.pricePoints) }} pt</span>
+                <span class="shop-card__price">
+                  <span class="chip-dot" aria-hidden="true"></span
+                  >{{ fmt(g.pricePoints) }} pt
+                </span>
                 @if (g.outOfStock) {
                   <span class="shop-card__insufficient">Esaurito</span>
                 } @else if (!canAfford(g.pricePoints)) {

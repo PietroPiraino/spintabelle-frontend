@@ -134,6 +134,11 @@ export class ShopComponent {
     return ROLE_RANK[role] > TIER_RANK[tier];
   }
 
+  /** Seme-emblema per tier (linguaggio carte del sito): Pesce Rosso ♦, Squalo ♠. */
+  protected subEmblem(tier: SubscriptionTier): string {
+    return tier === 'SQUALO' ? '♠' : '♦';
+  }
+
   // ── Lista gadget (pattern /docs) ──
 
   private reload(): void {
