@@ -291,6 +291,9 @@ export interface AdminActionLogEntry {
 
 // ----- Sessioni live -----
 
+/** EXTERNAL = link esterno (Zoom/Discord); LIVEKIT = stanza on-site. */
+export type LiveMode = 'EXTERNAL' | 'LIVEKIT';
+
 export interface LiveSession {
   id: string;
   title: string;
@@ -300,9 +303,14 @@ export interface LiveSession {
   startsAt: string;
   durationMin?: number;
   platform?: string;
-  /** true se il tier corrente non sblocca il link di accesso */
+  /** modalità: link esterno o stanza on-site */
+  mode: LiveMode;
+  /** true se il tier corrente non sblocca l'accesso */
   locked: boolean;
+  /** EXTERNAL + sbloccata: link di accesso esterno */
   joinUrl?: string;
+  /** LIVEKIT: true se il tier sblocca la stanza (il token arriva da un endpoint dedicato) */
+  canJoinLive?: boolean;
   createdAt?: string;
 }
 
@@ -314,7 +322,19 @@ export interface LiveSessionPayload {
   startsAt: string;
   durationMin?: number;
   platform?: string;
-  joinUrl: string;
+  /** modalità (default EXTERNAL lato backend se omessa) */
+  mode?: LiveMode;
+  /** richiesto solo se mode === EXTERNAL */
+  joinUrl?: string;
+  /** coach esplicito (opzionale): id utente. Se assente, qualsiasi ADMIN è coach */
+  hostUserId?: string;
+}
+
+/** Token per entrare in una stanza on-site (LIVEKIT). */
+export interface LiveRoomToken {
+  token: string;
+  url: string;
+  role: 'coach' | 'audience';
 }
 
 export interface News {

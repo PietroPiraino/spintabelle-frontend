@@ -1,0 +1,131 @@
+<section class="section live-room">
+  <div class="container">
+    <div class="live-room__top">
+      <a routerLink="/live" class="btn btn--ghost btn--sm">← Torna alle live</a>
+      @if (state() === 'connected') {
+        <span class="live-room__count" aria-live="polite">
+          👥 {{ participants() }} in sala
+          @if (role() === 'coach') {
+            <span class="badge badge--premium">Coach</span>
+          }
+        </span>
+      }
+    </div>
+
+    @if (reconnecting()) {
+      <div class="form-feedback is-error" role="status">
+        Riconnessione in corso…
+      </div>
+    }
+    @if (error()) {
+      <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+    }
+
+    @switch (state()) {
+      @case ('connecting') {
+        <div class="spinner" role="status" aria-label="Connessione alla sala"></div>
+      }
+      @case ('denied') {
+        <div class="empty-state">
+          <div class="empty-state__suit" aria-hidden="true">🔒</div>
+          <p>Questa sala è riservata agli abbonati.</p>
+          <a routerLink="/abbonati" class="btn btn--primary">Abbonati</a>
+        </div>
+      }
+      @case ('error') {
+        <div class="empty-state">
+          <div class="empty-state__suit" aria-hidden="true">⚠️</div>
+          <p>{{ error() ?? 'La sala live non è disponibile.' }}</p>
+          <button type="button" class="btn btn--ghost" (click)="leave()">
+            Torna alle live
+          </button>
+        </div>
+      }
+    }
+
+    <!-- Resta nel DOM anche durante 'connecting' così i ViewChild esistono per
+         agganciare i track non appena arrivano. -->
+    <div class="live-room__grid" [hidden]="state() !== 'connected'">
+      <div class="live-room__stagewrap">
+        <div #stage class="live-room__stage">
+          @if (!hasVideo()) {
+            <div class="live-room__placeholder">
+              @if (role() === 'coach') {
+                Attiva la fotocamera o condividi lo schermo per iniziare.
+              } @else {
+                In attesa che il coach inizi la trasmissione…
+              }
+            </div>
+          }
+        </div>
+
+        @if (needAudioGesture()) {
+          <button type="button" class="btn btn--primary btn--sm live-room__audio" (click)="enableAudio()">
+            🔊 Abilita audio
+          </button>
+        }
+
+        @if (role() === 'coach') {
+          <div class="live-room__controls">
+            <button
+              type="button"
+              class="btn btn--sm"
+              [class.btn--primary]="camOn()"
+              [class.btn--ghost]="!camOn()"
+              (click)="toggleCam()"
+            >
+              {{ camOn() ? '📷 Fotocamera ON' : '📷 Fotocamera' }}
+            </button>
+            <button
+              type="button"
+              class="btn btn--sm"
+              [class.btn--primary]="micOn()"
+              [class.btn--ghost]="!micOn()"
+              (click)="toggleMic()"
+            >
+              {{ micOn() ? '🎙️ Microfono ON' : '🎙️ Microfono' }}
+            </button>
+            <button
+              type="button"
+              class="btn btn--sm"
+              [class.btn--primary]="screenOn()"
+              [class.btn--ghost]="!screenOn()"
+              (click)="toggleScreen()"
+            >
+              {{ screenOn() ? '🖥️ Schermo ON' : '🖥️ Condividi schermo' }}
+            </button>
+          </div>
+        }
+      </div>
+
+      <aside class="live-room__chat card card--pad">
+        <h3>Chat</h3>
+        <div class="live-room__messages" aria-live="polite">
+          @for (m of messages(); track $index) {
+            <p class="live-room__msg" [class.is-me]="m.me">
+              <strong>{{ m.from }}:</strong> {{ m.text }}
+            </p>
+          } @empty {
+            <p class="live-room__msg-empty">Nessun messaggio. Scrivi qualcosa!</p>
+          }
+        </div>
+        <div class="live-room__compose">
+          <input
+            #chatInput
+            type="text"
+            class="input"
+            placeholder="Scrivi un messaggio…"
+            maxlength="500"
+            (keyup.enter)="sendChat(chatInput)"
+          />
+          <button type="button" class="btn btn--primary btn--sm" (click)="sendChat(chatInput)">
+            Invia
+          </button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- contenitore nascosto per gli elementi <audio> dei track remoti -->
+    <div #audioSink aria-hidden="true" style="display: none"></div>
+  </div>
+</section>

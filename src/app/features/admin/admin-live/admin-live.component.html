@@ -76,19 +76,42 @@
       </div>
 
       <div class="field">
-        <label for="joinUrl">Link di accesso</label>
-        <input
-          id="joinUrl"
-          type="url"
+        <label for="mode">Modalità</label>
+        <select
+          id="mode"
           class="input"
-          formControlName="joinUrl"
-          placeholder="https://…"
-          [class.is-invalid]="form.controls.joinUrl.touched && form.controls.joinUrl.invalid"
-        />
-        @if (form.controls.joinUrl.touched && form.controls.joinUrl.invalid) {
-          <span class="field-error">Inserisci un URL http(s) valido.</span>
-        }
+          formControlName="mode"
+          (change)="onModeChange()"
+        >
+          <option value="EXTERNAL">Esterna — link Zoom/Discord</option>
+          <option value="LIVEKIT">On-site — sala live nel sito</option>
+        </select>
       </div>
+
+      @if (form.controls.mode.value === 'EXTERNAL') {
+        <div class="field">
+          <label for="joinUrl">Link di accesso</label>
+          <input
+            id="joinUrl"
+            type="url"
+            class="input"
+            formControlName="joinUrl"
+            placeholder="https://…"
+            [class.is-invalid]="form.controls.joinUrl.touched && form.controls.joinUrl.invalid"
+          />
+          @if (form.controls.joinUrl.touched && form.controls.joinUrl.invalid) {
+            <span class="field-error">Inserisci un URL http(s) valido.</span>
+          }
+        </div>
+      } @else {
+        <div class="field">
+          <p class="field-hint">
+            Sala on-site: l'accesso avviene dentro il sito (nessun link da
+            incollare). Il coach sei tu (o un altro admin che entra). La
+            registrazione arriverà in una fase successiva.
+          </p>
+        </div>
+      }
 
       <div class="row">
         <button type="submit" class="btn btn--primary" [disabled]="saving()">
@@ -125,6 +148,9 @@
                 <span class="badge badge--premium">High stakes</span>
               } @else {
                 <span class="badge badge--free">Low stakes</span>
+              }
+              @if (s.mode === 'LIVEKIT') {
+                <span class="badge badge--tag">On-site</span>
               }
             </div>
             <span class="admin-item__meta">

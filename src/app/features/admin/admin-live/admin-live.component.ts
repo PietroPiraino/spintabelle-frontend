@@ -8,6 +8,7 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   LessonStakes,
+  LiveMode,
   LiveSession,
   LiveSessionPayload,
 } from '../../../core/models/api.models';
@@ -44,6 +45,7 @@ export class AdminLiveComponent {
     startsAt: ['', Validators.required],
     durationMin: [60],
     platform: ['', [Validators.maxLength(80)]],
+    mode: ['EXTERNAL' as LiveMode, Validators.required],
     joinUrl: [
       '',
       [Validators.required, Validators.pattern(/^https?:\/\/.+/)],
@@ -52,6 +54,21 @@ export class AdminLiveComponent {
 
   constructor() {
     this.load();
+  }
+
+  /** joinUrl è obbligatorio solo per le sessioni EXTERNAL; LIVEKIT lo ignora. */
+  private setJoinUrlValidators(mode: LiveMode): void {
+    const c = this.form.controls.joinUrl;
+    c.setValidators(
+      mode === 'EXTERNAL'
+        ? [Validators.required, Validators.pattern(/^https?:\/\/.+/)]
+        : [],
+    );
+    c.updateValueAndValidity();
+  }
+
+  protected onModeChange(): void {
+    this.setJoinUrlValidators(this.form.controls.mode.value);
   }
 
   private load(): void {
@@ -90,14 +107,17 @@ export class AdminLiveComponent {
       startsAt: this.toLocalInput(session.startsAt),
       durationMin: session.durationMin ?? 60,
       platform: session.platform ?? '',
+      mode: session.mode,
       joinUrl: session.joinUrl ?? '',
     });
+    this.setJoinUrlValidators(session.mode);
     scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   protected cancelEdit(): void {
     this.editingId.set(null);
-    this.form.reset({ stakes: 'LOW', durationMin: 60 });
+    this.form.reset({ stakes: 'LOW', durationMin: 60, mode: 'EXTERNAL' });
+    this.setJoinUrlValidators('EXTERNAL');
     this.error.set(null);
   }
 
@@ -119,7 +139,9 @@ export class AdminLiveComponent {
       startsAt: new Date(v.startsAt).toISOString(),
       durationMin: v.durationMin || undefined,
       platform: v.platform.trim() || undefined,
-      joinUrl: v.joinUrl,
+      mode: v.mode,
+      // joinUrl solo per EXTERNAL; LIVEKIT genera la stanza on-site lato backend
+      joinUrl: v.mode === 'EXTERNAL' ? v.joinUrl : undefined,
     };
 
     const id = this.editingId();

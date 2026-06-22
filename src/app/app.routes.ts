@@ -71,6 +71,17 @@ export const routes: Routes = [
     title: 'Live — Best Fish Forever',
   },
   {
+    // Sala on-site (LIVEKIT). Il gate per tier vero è il 403 del backend sul
+    // token; authGuard impedisce solo l'accesso da anonimo.
+    path: 'live/:id/stanza',
+    loadComponent: () =>
+      import('./features/live-room/live-room.component').then(
+        (m) => m.LiveRoomComponent,
+      ),
+    canActivate: [authGuard],
+    title: 'Sala live — Best Fish Forever',
+  },
+  {
     // Pubblica di proposito: prezzi visibili a tutti (SEO/condivisione/conversione).
     // L'acquisto è gated lato componente (anonimo → login) + API (request/me sotto JWT).
     path: 'abbonati',

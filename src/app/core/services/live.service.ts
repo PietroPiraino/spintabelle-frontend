@@ -2,7 +2,11 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LiveSession, LiveSessionPayload } from '../models/api.models';
+import {
+  LiveRoomToken,
+  LiveSession,
+  LiveSessionPayload,
+} from '../models/api.models';
 
 const API = environment.API_URL;
 
@@ -19,6 +23,15 @@ export class LiveService {
     let params = new HttpParams();
     if (includePast) params = params.set('includePast', 'true');
     return this.http.get<LiveSession[]>(`${API}/live`, { params });
+  }
+
+  /**
+   * Token per entrare in una stanza on-site (solo sessioni LIVEKIT). Va richiesto
+   * via XHR (l'interceptor allega il Bearer): l'access-token in memoria non può
+   * cavalcare una navigation, quindi NON si naviga a un URL del backend.
+   */
+  getRoomToken(id: string): Observable<LiveRoomToken> {
+    return this.http.get<LiveRoomToken>(`${API}/live/${id}/room-token`);
   }
 
   create(payload: LiveSessionPayload): Observable<LiveSession> {

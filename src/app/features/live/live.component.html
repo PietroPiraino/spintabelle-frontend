@@ -66,6 +66,11 @@
                   {{ s.stakes === 'HIGH' ? 'Squalo' : 'Pesce Rosso o Squalo' }}.
                   <a routerLink="/abbonati" class="btn btn--primary btn--sm">Abbonati</a>
                 </div>
+              } @else if (s.mode === 'LIVEKIT' && s.canJoinLive) {
+                <a
+                  [routerLink]="['/live', s.id, 'stanza']"
+                  class="btn btn--primary btn--sm"
+                >Entra nella stanza</a>
               } @else if (s.joinUrl) {
                 <a
                   [href]="s.joinUrl"
