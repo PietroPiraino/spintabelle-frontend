@@ -218,7 +218,16 @@ export class LiveRoomComponent implements OnDestroy {
   }
 
   private detach(track: Track): void {
+    // track.detach() può restituire vuoto se l'SDK ha già staccato il media
+    // all'unsubscribe/unpublish (lasciando però l'elemento NEL DOM, nero):
+    // rimuovo anche per sid così il tile sparisce sempre (schermo, webcam, remoti).
     track.detach().forEach((el) => el.remove());
+    const sid = track.sid;
+    if (sid) {
+      this.stageRef()
+        ?.nativeElement.querySelectorAll(`[data-sid="${sid}"]`)
+        .forEach((el) => el.remove());
+    }
     if (track.kind === 'video') this.recomputeStage();
   }
 

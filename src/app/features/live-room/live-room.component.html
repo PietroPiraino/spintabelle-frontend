@@ -50,10 +50,13 @@
         <div #stage class="live-room__stage" [class.is-screen-mode]="hasScreen()">
           @if (!hasVideo()) {
             <div class="live-room__placeholder">
+              <div class="live-room__placeholder-icon" aria-hidden="true">📡</div>
               @if (role() === 'coach') {
-                Attiva la fotocamera o condividi lo schermo per iniziare.
+                <p class="live-room__placeholder-title">Sei in sala</p>
+                <p>Attiva 📷 la fotocamera o 🖥️ condividi lo schermo per iniziare la trasmissione.</p>
               } @else {
-                In attesa che il coach inizi la trasmissione…
+                <p class="live-room__placeholder-title">In attesa del coach</p>
+                <p>La trasmissione non è ancora attiva. Resta in sala: comincerà a breve. Puoi intanto usare la chat.</p>
               }
             </div>
           }
