@@ -341,6 +341,8 @@ export class LiveRoomComponent implements OnDestroy {
   protected sendChat(input: HTMLInputElement): void {
     const text = input.value.trim();
     if (!text || !this.room) return;
+    this.ensureAudio(); // anche l'invio in chat è un gesto: sblocca l'audio
+
     const data = new TextEncoder().encode(JSON.stringify({ t: 'chat', m: text }));
     void this.room.localParticipant.publishData(data, { reliable: true });
     this.messages.update((l) => [
@@ -362,6 +364,7 @@ export class LiveRoomComponent implements OnDestroy {
 
   private async publish(what: 'camera' | 'mic' | 'screen'): Promise<void> {
     if (!this.room) return;
+    this.ensureAudio(); // un click su "Parla" sblocca anche la riproduzione audio
     const lp = this.room.localParticipant;
     try {
       if (what === 'camera') {
@@ -399,6 +402,22 @@ export class LiveRoomComponent implements OnDestroy {
   protected async enableAudio(): Promise<void> {
     await this.room?.startAudio();
     this.needAudioGesture.set(false);
+  }
+
+  /**
+   * Sblocca la riproduzione audio sfruttando un gesto utente già in corso (click su
+   * "Parla", invio chat, ecc.): così chi interagisce non deve premere anche
+   * "Abilita audio". Va chiamato per PRIMO nell'handler, prima di altri await,
+   * per restare dentro la finestra di user-activation del browser.
+   */
+  private ensureAudio(): void {
+    if (!this.needAudioGesture() || !this.room) return;
+    this.room
+      .startAudio()
+      .then(() => this.needAudioGesture.set(false))
+      .catch(() => {
+        /* resta disponibile il bottone "Abilita audio" */
+      });
   }
 
   /**
