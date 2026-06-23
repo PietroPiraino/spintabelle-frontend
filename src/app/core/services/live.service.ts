@@ -82,6 +82,11 @@ export class LiveService {
     return this.http.post(`${API}/live/${id}/recording/stop`, {});
   }
 
+  /** Coach/admin: riprocessa una registrazione fallita. */
+  retryRecording(id: string): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/recording/retry`, {});
+  }
+
   create(payload: LiveSessionPayload): Observable<LiveSession> {
     return this.http.post<LiveSession>(`${API}/live`, payload);
   }

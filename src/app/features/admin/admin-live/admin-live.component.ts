@@ -5,6 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   LessonStakes,
@@ -17,7 +18,7 @@ import { apiErrorMessage } from '../../../core/utils/http-error';
 
 @Component({
   selector: 'app-admin-live',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, RouterLink],
   templateUrl: './admin-live.component.html',
   styleUrl: '../admin-shared.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -182,6 +183,33 @@ export class AdminLiveComponent {
       },
       error: (err: unknown) =>
         this.error.set(apiErrorMessage(err, 'Eliminazione non riuscita.')),
+    });
+  }
+
+  /** Etichetta leggibile dello stato registrazione. */
+  protected recLabel(state: string | undefined): string {
+    return (
+      {
+        STARTING: 'in avvio',
+        ACTIVE: 'in corso',
+        PROCESSING: 'in elaborazione',
+        DONE: 'pubblicata',
+        FAILED: 'fallita',
+      }[state ?? ''] ?? state ?? ''
+    );
+  }
+
+  /** Riprocessa una registrazione fallita (rifà ingest+VOD dal file su R2). */
+  protected retryRecording(session: LiveSession): void {
+    this.feedback.set(null);
+    this.error.set(null);
+    this.liveApi.retryRecording(session.id).subscribe({
+      next: () => {
+        this.feedback.set('Riprocessamento avviato.');
+        this.load();
+      },
+      error: (err: unknown) =>
+        this.error.set(apiErrorMessage(err, 'Riprocessamento non riuscito.')),
     });
   }
 }

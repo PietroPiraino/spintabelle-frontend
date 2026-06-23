@@ -325,6 +325,8 @@ export interface LiveSession {
     | 'FAILED';
   /** LIVEKIT: id della lezione VOD creata (quando recordingState=DONE) */
   recordedLessonId?: string;
+  /** LIVEKIT, solo admin: messaggio d'errore dell'ultima registrazione fallita */
+  recordingError?: string;
   createdAt?: string;
 }
 
