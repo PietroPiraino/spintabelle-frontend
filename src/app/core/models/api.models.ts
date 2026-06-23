@@ -311,6 +311,8 @@ export interface LiveSession {
   joinUrl?: string;
   /** LIVEKIT: true se il tier sblocca la stanza (il token arriva da un endpoint dedicato) */
   canJoinLive?: boolean;
+  /** LIVEKIT: la live è stata terminata dal coach (non più entrabile) */
+  ended?: boolean;
   createdAt?: string;
 }
 

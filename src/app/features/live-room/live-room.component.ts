@@ -207,7 +207,8 @@ export class LiveRoomComponent implements OnDestroy {
         return;
       }
       if (status === 400) {
-        this.fail('Questa sessione non usa la sala on-site.');
+        // messaggio dal server: "La live è terminata" oppure "non usa la sala on-site"
+        this.fail(apiErrorMessage(err, 'Questa sessione non è più disponibile.'));
         return;
       }
       this.fail(apiErrorMessage(err, 'Impossibile entrare nella sala live.'));

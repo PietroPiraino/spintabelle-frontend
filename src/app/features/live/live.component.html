@@ -71,6 +71,8 @@
                   [routerLink]="['/live', s.id, 'stanza']"
                   class="btn btn--primary btn--sm"
                 >Entra nella stanza</a>
+              } @else if (s.mode === 'LIVEKIT' && s.ended) {
+                <span class="badge">Live terminata</span>
               } @else if (s.joinUrl) {
                 <a
                   [href]="s.joinUrl"
