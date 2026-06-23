@@ -67,6 +67,16 @@ export class LiveService {
     return this.http.post(`${API}/live/${id}/kick`, { targetUserId });
   }
 
+  /** Coach: concede/revoca la condivisione schermo (+webcam) a un partecipante. */
+  grantScreen(id: string, targetUserId: string, on: boolean): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/grant-screen`, { targetUserId, on });
+  }
+
+  /** Coach: toglie il microfono a tutti (tranne sé). */
+  muteAll(id: string): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/mute-all`, {});
+  }
+
   /** Coach: termina la live (chiude la stanza per tutti). */
   endLive(id: string): Observable<unknown> {
     return this.http.post(`${API}/live/${id}/end`, {});

@@ -327,4 +327,25 @@
       flex: 1;
     }
   }
+
+  // Pallino qualità connessione nel roster
+  &__quality {
+    font-size: 0.7em;
+    vertical-align: middle;
+    margin-right: 0.15rem;
+
+    &.is-excellent,
+    &.is-good {
+      color: #2e9e5b;
+    }
+    &.is-poor {
+      color: #d9a400;
+    }
+    &.is-lost {
+      color: #c0392b;
+    }
+    &.is-unknown {
+      color: var(--text-muted, #999);
+    }
+  }
 }

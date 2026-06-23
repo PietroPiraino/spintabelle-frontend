@@ -45,4 +45,16 @@ export class LiveComponent {
       },
     });
   }
+
+  /**
+   * "In diretta ora": iniziata da non oltre la durata prevista (default 90 min)
+   * e non terminata dal coach. Usata per il badge 🔴 nella lista.
+   */
+  protected isLiveNow(s: LiveSession): boolean {
+    if (s.ended) return false;
+    const start = new Date(s.startsAt).getTime();
+    const now = Date.now();
+    const windowMs = (s.durationMin && s.durationMin > 0 ? s.durationMin : 90) * 60_000;
+    return now >= start && now <= start + windowMs;
+  }
 }

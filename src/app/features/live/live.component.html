@@ -38,7 +38,9 @@
             <div class="live-card__body">
               <div class="spread">
                 <h3>{{ s.title }}</h3>
-                @if (s.stakes === 'HIGH') {
+                @if (isLiveNow(s)) {
+                  <span class="badge badge--live">🔴 In diretta ora</span>
+                } @else if (s.stakes === 'HIGH') {
                   <span class="badge badge--premium">High stakes</span>
                 } @else {
                   <span class="badge badge--free">Low stakes</span>

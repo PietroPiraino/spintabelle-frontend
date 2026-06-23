@@ -38,6 +38,8 @@ interface RosterEntry {
   name: string;
   canPublish: boolean;
   micActive: boolean; // microfono pubblicato e non mutato
+  canScreen: boolean; // il coach gli ha concesso lo schermo (attributo presenter)
+  quality: 'excellent' | 'good' | 'poor' | 'lost' | 'unknown'; // qualità connessione
 }
 
 /**
@@ -81,6 +83,8 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly roster = signal<RosterEntry[]>([]);
   // il pubblico può pubblicare il microfono (true di default; il coach può revocarlo)
   protected readonly canPublishNow = signal(false);
+  // il coach mi ha concesso la condivisione schermo (attributo presenter)
+  protected readonly canScreenShare = signal(false);
   // rifiniture: identità locale, chi sta parlando, presenza di uno schermo condiviso
   protected readonly myIdentity = signal('');
   protected readonly speaking = signal<Set<string>>(new Set());
@@ -89,6 +93,7 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly recordingEnabled = signal(false); // la sessione è registrabile
   protected readonly recording = signal(false); // egress attivo ora (room.isRecording)
   protected readonly recElapsed = signal(''); // durata REC (mm:ss / h:mm:ss)
+  protected readonly endingLive = signal(false); // "Termina live" in corso
   private consentGiven = false;
   // Testo del consenso fornito dal backend (versionato, GDPR art. 7); fallback se assente.
   protected readonly consentText = signal(
@@ -158,9 +163,17 @@ export class LiveRoomComponent implements OnDestroy {
         })
         .on(LK.RoomEvent.ParticipantConnected, () => this.onRosterChange())
         .on(LK.RoomEvent.ParticipantDisconnected, () => this.onRosterChange())
-        .on(LK.RoomEvent.ParticipantAttributesChanged, () =>
-          this.rebuildRoster(),
+        .on(
+          LK.RoomEvent.ParticipantAttributesChanged,
+          (_changed: unknown, participant?: { identity: string }) => {
+            // il coach mi ha concesso/revocato lo schermo (attributo presenter)
+            if (participant?.identity === room.localParticipant.identity)
+              this.refreshLocalGrants();
+            this.rebuildRoster();
+          },
         )
+        // qualità connessione nel roster (pallino verde/giallo/rosso)
+        .on(LK.RoomEvent.ConnectionQualityChanged, () => this.rebuildRoster())
         // mute/unmute: aggiorna la lista (microfono) e nascondi/mostra il tile
         // video (la camera off MUTA la traccia, non la de-pubblica → resterebbe nero)
         .on(LK.RoomEvent.TrackMuted, (pub: { trackSid?: string }) =>
@@ -180,10 +193,9 @@ export class LiveRoomComponent implements OnDestroy {
         .on(
           LK.RoomEvent.ParticipantPermissionsChanged,
           (_prev: unknown, participant: { identity: string }) => {
-            // se cambiano i MIEI permessi (microfono tolto/ridato), aggiorna i controlli
-            if (participant?.identity === room.localParticipant.identity) {
-              this.canPublishNow.set(!!room.localParticipant.permissions?.canPublish);
-            }
+            // se cambiano i MIEI permessi (microfono/schermo), aggiorna i controlli
+            if (participant?.identity === room.localParticipant.identity)
+              this.refreshLocalGrants();
             this.rebuildRoster();
           },
         )
@@ -222,8 +234,8 @@ export class LiveRoomComponent implements OnDestroy {
       this.refreshCount();
       this.rebuildRoster();
       // il pubblico nasce con il permesso microfono (tavola rotonda); il coach
-      // può revocarlo → questo flag pilota la visibilità del bottone microfono.
-      this.canPublishNow.set(!!room.localParticipant.permissions?.canPublish);
+      // può revocarlo → questi flag pilotano la visibilità di mic/schermo.
+      this.refreshLocalGrants();
     } catch (err: unknown) {
       if (this.disposed) return;
       const status = (err as { status?: number })?.status;
@@ -496,10 +508,27 @@ export class LiveRoomComponent implements OnDestroy {
         name: rp.name || rp.identity,
         canPublish: !!rp.permissions?.canPublish,
         micActive: !!micPub && !micPub.isMuted,
+        canScreen: rp.attributes?.['presenter'] === 'true',
+        quality: this.normQuality(rp.connectionQuality),
       });
     });
     list.sort((a, b) => a.name.localeCompare(b.name));
     this.roster.set(list);
+  }
+
+  /** Normalizza la qualità di connessione dell'SDK in un'etichetta stabile. */
+  private normQuality(q: unknown): RosterEntry['quality'] {
+    const v = String(q ?? '').toLowerCase();
+    if (v === 'excellent' || v === 'good' || v === 'poor' || v === 'lost')
+      return v;
+    return 'unknown';
+  }
+
+  /** Ricalcola i permessi LOCALI (microfono + schermo concesso) per i controlli. */
+  private refreshLocalGrants(): void {
+    const lp = this.room?.localParticipant;
+    this.canPublishNow.set(!!lp?.permissions?.canPublish);
+    this.canScreenShare.set(lp?.attributes?.['presenter'] === 'true');
   }
 
   /** Mostra i controlli di pubblicazione: coach, o pubblico promosso dal coach. */
@@ -541,6 +570,31 @@ export class LiveRoomComponent implements OnDestroy {
     this.liveApi.kick(this.id(), identity).subscribe({
       error: () => this.error.set('Impossibile espellere.'),
     });
+  }
+
+  /** Coach: concede/revoca la condivisione schermo (+webcam) a uno studente. */
+  protected grantScreen(identity: string, on: boolean): void {
+    this.liveApi.grantScreen(this.id(), identity, on).subscribe({
+      error: () =>
+        this.error.set(
+          on
+            ? 'Impossibile concedere lo schermo.'
+            : 'Impossibile revocare lo schermo.',
+        ),
+    });
+  }
+
+  /** Coach: toglie il microfono a tutti i partecipanti. */
+  protected muteAll(): void {
+    if (!confirm('Togliere il microfono a tutti i partecipanti?')) return;
+    this.liveApi.muteAll(this.id()).subscribe({
+      error: () => this.error.set('Operazione "muta tutti" non riuscita.'),
+    });
+  }
+
+  /** Mostra il bottone "Condividi schermo": coach, o studente a cui è stato concesso. */
+  protected canShareScreen(): boolean {
+    return this.role() === 'coach' || this.canScreenShare();
   }
 
   /** L'utente accetta il consenso alla registrazione → riprova l'ingresso. */
@@ -590,10 +644,16 @@ export class LiveRoomComponent implements OnDestroy {
 
   /** Coach: termina la live per tutti (chiude la stanza), poi torna alla lista. */
   protected endLive(): void {
+    if (this.endingLive()) return;
     if (!confirm('Terminare la live per tutti i partecipanti?')) return;
+    this.endingLive.set(true);
+    this.error.set(null);
     this.liveApi.endLive(this.id()).subscribe({
       next: () => void this.router.navigate(['/live']),
-      error: () => this.error.set('Impossibile terminare la live.'),
+      error: () => {
+        this.endingLive.set(false);
+        this.error.set('Impossibile terminare la live.');
+      },
     });
   }
 

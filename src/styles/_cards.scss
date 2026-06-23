@@ -72,6 +72,18 @@
   }
 }
 
+.badge--live {
+  border-color: rgba(220, 53, 69, 0.7);
+  color: #c0392b;
+  background: rgba(220, 53, 69, 0.12);
+  font-weight: 600;
+
+  [data-theme='dark'] & {
+    color: #ff7a85;
+    background: rgba(220, 53, 69, 0.18);
+  }
+}
+
 .badge--tag {
   cursor: pointer;
   transition: border-color var(--t-fast), color var(--t-fast), background-color var(--t-fast), box-shadow var(--t-fast);

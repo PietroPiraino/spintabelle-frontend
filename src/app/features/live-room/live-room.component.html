@@ -19,8 +19,16 @@
             </button>
           }
           @if (role() === 'coach') {
-            <button type="button" class="btn btn--danger btn--sm" (click)="endLive()">
-              Termina la live
+            <button type="button" class="btn btn--ghost btn--sm" (click)="muteAll()">
+              🔇 Muta tutti
+            </button>
+            <button
+              type="button"
+              class="btn btn--danger btn--sm"
+              [disabled]="endingLive()"
+              (click)="endLive()"
+            >
+              {{ endingLive() ? 'Termino…' : 'Termina la live' }}
             </button>
           }
         </div>
@@ -139,7 +147,7 @@
             >
               {{ micOn() ? '🎙️ Microfono ON' : '🎙️ Parla (microfono)' }}
             </button>
-            @if (role() === 'coach') {
+            @if (canShareScreen()) {
               <button
                 type="button"
                 class="btn btn--sm"
@@ -190,10 +198,19 @@
             @for (p of roster(); track p.identity) {
               <div class="live-room__roster-row">
                 <span class="live-room__roster-name" [class.is-speaking]="isSpeaking(p.identity)">
+                  <span
+                    class="live-room__quality"
+                    [class]="'live-room__quality is-' + p.quality"
+                    [title]="'Connessione: ' + p.quality"
+                    aria-hidden="true"
+                  >●</span>
                   @if (isSpeaking(p.identity)) {
                     <span aria-hidden="true">🔊</span>
                   }
                   {{ p.name }}
+                  @if (p.canScreen) {
+                    <span class="badge badge--tag" title="può condividere lo schermo">🖥️</span>
+                  }
                   @if (!p.canPublish) {
                     <span class="live-room__mic-flag" title="microfono tolto dal coach">🚫</span>
                   } @else if (!p.micActive) {
@@ -207,6 +224,11 @@
                       <button type="button" class="btn btn--ghost btn--sm" (click)="demote(p.identity)">Togli microfono</button>
                     } @else {
                       <button type="button" class="btn btn--primary btn--sm" (click)="promote(p.identity)">Ridai microfono</button>
+                    }
+                    @if (p.canScreen) {
+                      <button type="button" class="btn btn--ghost btn--sm" (click)="grantScreen(p.identity, false)">Revoca schermo</button>
+                    } @else {
+                      <button type="button" class="btn btn--ghost btn--sm" (click)="grantScreen(p.identity, true)">Consenti schermo</button>
                     }
                     <button type="button" class="btn btn--danger btn--sm" (click)="kick(p.identity)">Espelli</button>
                   </span>
