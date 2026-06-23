@@ -196,7 +196,9 @@ export class LiveRoomComponent implements OnDestroy {
   }
 
   private refreshCount(): void {
-    if (this.room) this.participants.set(this.room.numParticipants + 1);
+    // remoteParticipants = solo i remoti → +1 per sé. (room.numParticipants è il
+    // totale del server e include GIÀ il locale: usarlo darebbe un +1 di troppo.)
+    if (this.room) this.participants.set(this.room.remoteParticipants.size + 1);
   }
 
   private attach(track: Track, identity: string): void {
@@ -229,17 +231,6 @@ export class LiveRoomComponent implements OnDestroy {
     this.hasScreen.set(
       !!stage && stage.querySelector('.is-screen:not([hidden])') !== null,
     );
-  }
-
-  /** Nasconde/mostra il tile della PROPRIA webcam (camera off = mute, non unpublish). */
-  private setLocalCamHidden(hidden: boolean): void {
-    const me = this.myIdentity();
-    this.stageRef()
-      ?.nativeElement.querySelectorAll<HTMLElement>(
-        `video[data-identity="${me}"].is-cam`,
-      )
-      .forEach((el) => (el.hidden = hidden));
-    this.recomputeStage();
   }
 
   /**
@@ -334,12 +325,19 @@ export class LiveRoomComponent implements OnDestroy {
     try {
       if (what === 'camera') {
         const on = !this.camOn();
-        await lp.setCameraEnabled(on);
+        if (on) {
+          await lp.setCameraEnabled(true);
+        } else {
+          // De-pubblico la camera (come lo screen-share) così il tile sparisce
+          // dal percorso LocalTrackUnpublished→detach già funzionante.
+          // setCameraEnabled(false) si limiterebbe a MUTARE → resterebbe nero.
+          const pub = this.lk
+            ? lp.getTrackPublication(this.lk.Track.Source.Camera)
+            : undefined;
+          if (pub?.track) await lp.unpublishTrack(pub.track, true);
+          else await lp.setCameraEnabled(false);
+        }
         this.camOn.set(on);
-        // setCameraEnabled(false) MUTA la traccia (non la de-pubblica): l'evento
-        // TrackMuted può non arrivare per la traccia locale, quindi nascondo io
-        // il tile della mia webcam (e lo rimostro alla riaccensione).
-        this.setLocalCamHidden(!on);
       } else if (what === 'mic') {
         const on = !this.micOn();
         await lp.setMicrophoneEnabled(on);
