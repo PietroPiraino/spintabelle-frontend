@@ -46,8 +46,26 @@
     overflow: hidden;
     padding: 0.25rem;
 
+    // I <video> sono creati da track.attach() e aggiunti via appendChild: NON
+    // passano dal template, quindi gli stili incapsulati non li raggiungono →
+    // ::ng-deep, ma scoped sotto .live-room__stage (nessun leak globale).
+    ::ng-deep .live-room__video {
+      flex: 1 1 280px;
+      min-width: 0;
+      max-height: 70vh;
+      object-fit: contain;
+      background: #000;
+      border-radius: calc(var(--radius, 12px) - 4px);
+
+      // bordo evidente su chi sta parlando
+      &.is-speaking {
+        outline: 3px solid var(--brand, #d4a017);
+        outline-offset: -3px;
+      }
+    }
+
     // Modalità "lezione": schermo condiviso grande in alto, webcam piccole sotto.
-    &.is-screen-mode {
+    &.is-screen-mode ::ng-deep {
       .is-screen {
         flex: 1 1 100%;
         order: -1;
@@ -68,7 +86,7 @@
       align-content: center;
       justify-content: center;
 
-      .live-room__video {
+      ::ng-deep .live-room__video {
         flex: 0 1 auto;
         width: 100vw;
         height: 100vh;
@@ -78,7 +96,7 @@
       }
 
       // con schermo condiviso, l'eventuale webcam va in un riquadrino d'angolo
-      &.is-screen-mode .is-cam {
+      &.is-screen-mode ::ng-deep .is-cam {
         position: absolute;
         right: 1rem;
         bottom: 1rem;
@@ -88,21 +106,6 @@
         z-index: 2;
         border: 2px solid rgba(255, 255, 255, 0.4);
       }
-    }
-  }
-
-  &__video {
-    flex: 1 1 280px;
-    min-width: 0;
-    max-height: 70vh;
-    object-fit: contain;
-    background: #000;
-    border-radius: calc(var(--radius, 12px) - 4px);
-
-    // bordo evidente su chi sta parlando
-    &.is-speaking {
-      outline: 3px solid var(--brand, #d4a017);
-      outline-offset: -3px;
     }
   }
 
