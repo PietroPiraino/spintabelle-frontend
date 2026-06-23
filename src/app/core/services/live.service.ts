@@ -34,6 +34,39 @@ export class LiveService {
     return this.http.get<LiveRoomToken>(`${API}/live/${id}/room-token`);
   }
 
+  // ----- Moderazione stanza (Fase 2) -----
+
+  /** Il pubblico alza/abbassa la propria mano. */
+  raiseHand(id: string, raised: boolean): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/raise-hand`, { raised });
+  }
+
+  /** Coach: concede la parola (default microfono + webcam). */
+  promote(
+    id: string,
+    body: { targetUserId: string; sources?: ('mic' | 'cam' | 'screen')[] },
+  ): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/promote`, body);
+  }
+
+  /** Coach: revoca la parola. */
+  demote(id: string, targetUserId: string): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/demote`, { targetUserId });
+  }
+
+  /** Coach: muta una traccia pubblicata. */
+  mute(
+    id: string,
+    body: { targetUserId: string; trackSid: string },
+  ): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/mute`, body);
+  }
+
+  /** Coach: espelle un partecipante. */
+  kick(id: string, targetUserId: string): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/kick`, { targetUserId });
+  }
+
   create(payload: LiveSessionPayload): Observable<LiveSession> {
     return this.http.post<LiveSession>(`${API}/live`, payload);
   }

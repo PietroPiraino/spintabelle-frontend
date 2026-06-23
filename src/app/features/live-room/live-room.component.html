@@ -65,7 +65,7 @@
           </button>
         }
 
-        @if (role() === 'coach') {
+        @if (canPublish()) {
           <div class="live-room__controls">
             <button
               type="button"
@@ -85,44 +85,91 @@
             >
               {{ micOn() ? '🎙️ Microfono ON' : '🎙️ Microfono' }}
             </button>
-            <button
-              type="button"
-              class="btn btn--sm"
-              [class.btn--primary]="screenOn()"
-              [class.btn--ghost]="!screenOn()"
-              (click)="toggleScreen()"
-            >
-              {{ screenOn() ? '🖥️ Schermo ON' : '🖥️ Condividi schermo' }}
-            </button>
+            @if (role() === 'coach') {
+              <button
+                type="button"
+                class="btn btn--sm"
+                [class.btn--primary]="screenOn()"
+                [class.btn--ghost]="!screenOn()"
+                (click)="toggleScreen()"
+              >
+                {{ screenOn() ? '🖥️ Schermo ON' : '🖥️ Condividi schermo' }}
+              </button>
+            }
           </div>
+        }
+
+        <!-- Pubblico (non coach, non ancora promosso): alza la mano per parlare -->
+        @if (role() !== 'coach' && !canPublishNow()) {
+          <button
+            type="button"
+            class="btn btn--sm live-room__hand"
+            [class.btn--primary]="myHandRaised()"
+            [class.btn--ghost]="!myHandRaised()"
+            (click)="raiseHandToggle()"
+          >
+            {{ myHandRaised() ? '✋ Mano alzata (annulla)' : '✋ Alza la mano' }}
+          </button>
         }
       </div>
 
-      <aside class="live-room__chat card card--pad">
-        <h3>Chat</h3>
-        <div class="live-room__messages" aria-live="polite">
-          @for (m of messages(); track $index) {
-            <p class="live-room__msg" [class.is-me]="m.me">
-              <strong>{{ m.from }}:</strong> {{ m.text }}
-            </p>
-          } @empty {
-            <p class="live-room__msg-empty">Nessun messaggio. Scrivi qualcosa!</p>
-          }
+      <div class="live-room__side">
+        <!-- Pannello moderazione: solo il coach -->
+        @if (role() === 'coach') {
+          <div class="card card--pad live-room__roster">
+            <h3>Partecipanti ({{ roster().length }})</h3>
+            <div class="live-room__roster-list">
+              @for (p of roster(); track p.identity) {
+                <div class="live-room__roster-row" [class.is-hand]="p.handRaised">
+                  <span class="live-room__roster-name">
+                    @if (p.handRaised) {
+                      <span aria-hidden="true">✋</span>
+                    }
+                    {{ p.name }}
+                  </span>
+                  <span class="live-room__roster-actions">
+                    @if (p.canPublish) {
+                      <button type="button" class="btn btn--ghost btn--sm" (click)="demote(p.identity)">Revoca</button>
+                      <button type="button" class="btn btn--ghost btn--sm" (click)="muteParticipant(p.identity)">Muta</button>
+                    } @else {
+                      <button type="button" class="btn btn--primary btn--sm" (click)="promote(p.identity)">Concedi parola</button>
+                    }
+                    <button type="button" class="btn btn--danger btn--sm" (click)="kick(p.identity)">Espelli</button>
+                  </span>
+                </div>
+              } @empty {
+                <p class="live-room__msg-empty">Nessun partecipante in sala.</p>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="live-room__chat card card--pad">
+          <h3>Chat</h3>
+          <div class="live-room__messages" aria-live="polite">
+            @for (m of messages(); track $index) {
+              <p class="live-room__msg" [class.is-me]="m.me">
+                <strong>{{ m.from }}:</strong> {{ m.text }}
+              </p>
+            } @empty {
+              <p class="live-room__msg-empty">Nessun messaggio. Scrivi qualcosa!</p>
+            }
+          </div>
+          <div class="live-room__compose">
+            <input
+              #chatInput
+              type="text"
+              class="input"
+              placeholder="Scrivi un messaggio…"
+              maxlength="500"
+              (keyup.enter)="sendChat(chatInput)"
+            />
+            <button type="button" class="btn btn--primary btn--sm" (click)="sendChat(chatInput)">
+              Invia
+            </button>
+          </div>
         </div>
-        <div class="live-room__compose">
-          <input
-            #chatInput
-            type="text"
-            class="input"
-            placeholder="Scrivi un messaggio…"
-            maxlength="500"
-            (keyup.enter)="sendChat(chatInput)"
-          />
-          <button type="button" class="btn btn--primary btn--sm" (click)="sendChat(chatInput)">
-            Invia
-          </button>
-        </div>
-      </aside>
+      </div>
     </div>
 
     <!-- contenitore nascosto per gli elementi <audio> dei track remoti -->

@@ -10,8 +10,11 @@ import { LiveRoomComponent } from './live-room.component';
 class FakeRoom {
   numParticipants = 0;
   canPlaybackAudio = true;
+  remoteParticipants = new Map();
   localParticipant = {
     name: 'Io',
+    identity: 'me',
+    permissions: { canPublish: true },
     publishData: jasmine.createSpy('publishData'),
     setCameraEnabled: jasmine.createSpy('setCameraEnabled').and.resolveTo(undefined),
     setMicrophoneEnabled: jasmine.createSpy('setMic').and.resolveTo(undefined),

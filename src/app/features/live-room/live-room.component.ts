@@ -25,6 +25,13 @@ interface ChatMessage {
   text: string;
   me: boolean;
 }
+/** Un partecipante remoto, per il pannello di moderazione del coach. */
+interface RosterEntry {
+  identity: string;
+  name: string;
+  handRaised: boolean;
+  canPublish: boolean;
+}
 
 /**
  * Sala live on-site (LIVEKIT). Recupera il token via XHR (gate per tier lato
@@ -63,8 +70,13 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly camOn = signal(false);
   protected readonly micOn = signal(false);
   protected readonly screenOn = signal(false);
+  // moderazione (Fase 2)
+  protected readonly roster = signal<RosterEntry[]>([]);
+  protected readonly myHandRaised = signal(false);
+  protected readonly canPublishNow = signal(false); // pubblico promosso dal coach
 
   private room: Room | null = null;
+  private lk: typeof import('livekit-client') | null = null;
   private disposed = false;
 
   constructor() {
@@ -83,6 +95,7 @@ export class LiveRoomComponent implements OnDestroy {
       this.role.set(tok.role);
       const LK = await this.loadLiveKit();
       if (this.disposed) return;
+      this.lk = LK;
 
       const room = new LK.Room({ adaptiveStream: true, dynacast: true });
       this.room = room;
@@ -96,8 +109,21 @@ export class LiveRoomComponent implements OnDestroy {
         .on(LK.RoomEvent.LocalTrackUnpublished, (pub) => {
           if (pub.track) this.detach(pub.track);
         })
-        .on(LK.RoomEvent.ParticipantConnected, () => this.refreshCount())
-        .on(LK.RoomEvent.ParticipantDisconnected, () => this.refreshCount())
+        .on(LK.RoomEvent.ParticipantConnected, () => this.onRosterChange())
+        .on(LK.RoomEvent.ParticipantDisconnected, () => this.onRosterChange())
+        .on(LK.RoomEvent.ParticipantAttributesChanged, () =>
+          this.rebuildRoster(),
+        )
+        .on(
+          LK.RoomEvent.ParticipantPermissionsChanged,
+          (_prev: unknown, participant: { identity: string }) => {
+            // se cambiano i MIEI permessi (promosso/revocato), aggiorna i controlli
+            if (participant?.identity === room.localParticipant.identity) {
+              this.canPublishNow.set(!!room.localParticipant.permissions?.canPublish);
+            }
+            this.rebuildRoster();
+          },
+        )
         .on(
           LK.RoomEvent.DataReceived,
           (payload: Uint8Array, participant?: RemoteParticipant) =>
@@ -120,6 +146,7 @@ export class LiveRoomComponent implements OnDestroy {
       }
       this.state.set('connected');
       this.refreshCount();
+      this.rebuildRoster();
     } catch (err: unknown) {
       if (this.disposed) return;
       const status = (err as { status?: number })?.status;
@@ -230,6 +257,77 @@ export class LiveRoomComponent implements OnDestroy {
   protected async enableAudio(): Promise<void> {
     await this.room?.startAudio();
     this.needAudioGesture.set(false);
+  }
+
+  // ----- Moderazione (Fase 2) -----
+
+  private onRosterChange(): void {
+    this.refreshCount();
+    this.rebuildRoster();
+  }
+
+  private rebuildRoster(): void {
+    if (!this.room) return;
+    const list: RosterEntry[] = [];
+    this.room.remoteParticipants.forEach((rp) => {
+      list.push({
+        identity: rp.identity,
+        name: rp.name || rp.identity,
+        handRaised: rp.attributes?.['handRaised'] === 'true',
+        canPublish: !!rp.permissions?.canPublish,
+      });
+    });
+    // mani alzate in cima
+    list.sort((a, b) => Number(b.handRaised) - Number(a.handRaised));
+    this.roster.set(list);
+  }
+
+  /** Mostra i controlli di pubblicazione: coach, o pubblico promosso dal coach. */
+  protected canPublish(): boolean {
+    return this.role() === 'coach' || this.canPublishNow();
+  }
+
+  protected raiseHandToggle(): void {
+    const next = !this.myHandRaised();
+    this.liveApi.raiseHand(this.id(), next).subscribe({
+      next: () => this.myHandRaised.set(next),
+      error: () => this.error.set('Operazione non riuscita.'),
+    });
+  }
+
+  protected promote(identity: string): void {
+    this.liveApi
+      .promote(this.id(), { targetUserId: identity, sources: ['mic', 'cam'] })
+      .subscribe({
+        error: () => this.error.set('Impossibile concedere la parola.'),
+      });
+  }
+
+  protected demote(identity: string): void {
+    this.liveApi.demote(this.id(), identity).subscribe({
+      error: () => this.error.set('Impossibile revocare la parola.'),
+    });
+  }
+
+  protected muteParticipant(identity: string): void {
+    const rp = this.room?.remoteParticipants.get(identity);
+    const sid = this.lk
+      ? rp?.getTrackPublication(this.lk.Track.Source.Microphone)?.trackSid
+      : undefined;
+    if (!sid) {
+      this.error.set('Nessuna traccia audio da mutare per questo partecipante.');
+      return;
+    }
+    this.liveApi.mute(this.id(), { targetUserId: identity, trackSid: sid }).subscribe({
+      error: () => this.error.set('Mute non riuscito.'),
+    });
+  }
+
+  protected kick(identity: string): void {
+    if (!confirm('Espellere questo partecipante dalla stanza?')) return;
+    this.liveApi.kick(this.id(), identity).subscribe({
+      error: () => this.error.set('Impossibile espellere.'),
+    });
   }
 
   protected leave(): void {
