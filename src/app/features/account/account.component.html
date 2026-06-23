@@ -164,6 +164,30 @@
       </form>
     </div>
 
+    <!-- Notifiche -->
+    <div class="card card--pad account__card">
+      <h2>Notifiche</h2>
+      <p class="text-muted">
+        Scegli se ricevere un'email quando pubblichiamo una nuova lezione o la
+        registrazione di una live a cui hai accesso.
+      </p>
+      @if (notifyError()) {
+        <div class="form-feedback is-error" role="alert">{{ notifyError() }}</div>
+      }
+      @if (notifyMsg()) {
+        <div class="form-feedback is-success" role="status">{{ notifyMsg() }}</div>
+      }
+      <label class="account__toggle">
+        <input
+          type="checkbox"
+          [checked]="notifyNewLessons()"
+          [disabled]="notifySaving()"
+          (change)="setNotifyNewLessons($any($event.target).checked)"
+        />
+        Avvisami via email delle nuove lezioni e registrazioni
+      </label>
+    </div>
+
     <!-- Password -->
     <div class="card card--pad account__card">
       <h2>Password</h2>

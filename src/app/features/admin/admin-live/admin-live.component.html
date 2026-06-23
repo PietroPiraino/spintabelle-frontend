@@ -175,6 +175,16 @@
             ) {
               <span class="admin-item__meta">
                 🔴 Registrazione: <strong>{{ recLabel(s.recordingState) }}</strong>
+                @if (s.recordingState === 'READY') {
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--sm"
+                    [disabled]="publishing()"
+                    (click)="publishRecording(s)"
+                  >
+                    Pubblica come lezione
+                  </button>
+                }
                 @if (s.recordingState === 'DONE' && s.recordedLessonId) {
                   · <a routerLink="/lezioni">vedi lezione</a>
                 }

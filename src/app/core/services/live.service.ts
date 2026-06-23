@@ -87,6 +87,11 @@ export class LiveService {
     return this.http.post(`${API}/live/${id}/recording/retry`, {});
   }
 
+  /** Coach/admin: pubblica una registrazione pronta (READY) come lezione VOD. */
+  publishRecording(id: string): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/recording/publish`, {});
+  }
+
   create(payload: LiveSessionPayload): Observable<LiveSession> {
     return this.http.post<LiveSession>(`${API}/live`, payload);
   }

@@ -33,6 +33,7 @@ export class AdminLiveComponent {
 
   protected readonly editingId = signal<string | null>(null);
   protected readonly saving = signal(false);
+  protected readonly publishing = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly feedback = signal<string | null>(null);
 
@@ -193,13 +194,14 @@ export class AdminLiveComponent {
         STARTING: 'in avvio',
         ACTIVE: 'in corso',
         PROCESSING: 'in elaborazione',
+        READY: 'pronta da pubblicare',
         DONE: 'pubblicata',
         FAILED: 'fallita',
       }[state ?? ''] ?? state ?? ''
     );
   }
 
-  /** Riprocessa una registrazione fallita (rifà ingest+VOD dal file su R2). */
+  /** Riprocessa una registrazione fallita (rifà ingest dal file su R2). */
   protected retryRecording(session: LiveSession): void {
     this.feedback.set(null);
     this.error.set(null);
@@ -210,6 +212,32 @@ export class AdminLiveComponent {
       },
       error: (err: unknown) =>
         this.error.set(apiErrorMessage(err, 'Riprocessamento non riuscito.')),
+    });
+  }
+
+  /** Pubblica una registrazione pronta come lezione VOD (avvisa gli abbonati). */
+  protected publishRecording(session: LiveSession): void {
+    if (this.publishing()) return;
+    if (
+      !confirm(
+        `Pubblicare la registrazione di "${session.title}" come lezione? ` +
+          'Gli abbonati del tier riceveranno un avviso via email.',
+      )
+    )
+      return;
+    this.publishing.set(true);
+    this.feedback.set(null);
+    this.error.set(null);
+    this.liveApi.publishRecording(session.id).subscribe({
+      next: () => {
+        this.publishing.set(false);
+        this.feedback.set('Registrazione pubblicata come lezione.');
+        this.load();
+      },
+      error: (err: unknown) => {
+        this.publishing.set(false);
+        this.error.set(apiErrorMessage(err, 'Pubblicazione non riuscita.'));
+      },
     });
   }
 }

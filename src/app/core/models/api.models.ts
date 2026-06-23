@@ -16,6 +16,8 @@ export interface User {
   subscriptionExpiresAt?: string | null;
   /** saldo punti BFF */
   points?: number;
+  /** preferenza opt-out: avvisi email sulle nuove lezioni (default true) */
+  notifyNewLessons?: boolean;
 }
 
 // ----- Punti BFF -----
@@ -321,6 +323,7 @@ export interface LiveSession {
     | 'STARTING'
     | 'ACTIVE'
     | 'PROCESSING'
+    | 'READY'
     | 'DONE'
     | 'FAILED';
   /** LIVEKIT: id della lezione VOD creata (quando recordingState=DONE) */

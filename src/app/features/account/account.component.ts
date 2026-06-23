@@ -83,6 +83,12 @@ export class AccountComponent {
   protected readonly profileError = signal<string | null>(null);
   protected readonly profileMsg = signal<string | null>(null);
 
+  // ── Preferenze notifiche (opt-out avvisi nuove lezioni) ──
+  protected readonly notifyNewLessons = signal(true);
+  protected readonly notifySaving = signal(false);
+  protected readonly notifyError = signal<string | null>(null);
+  protected readonly notifyMsg = signal<string | null>(null);
+
   // ── Password ──
   protected readonly passwordForm = this.fb.nonNullable.group(
     {
@@ -111,6 +117,7 @@ export class AccountComponent {
       email: u?.email ?? '',
       nickname: u?.nickname ?? '',
     });
+    this.notifyNewLessons.set(u?.notifyNewLessons ?? true);
     // saldo + storico punti (best-effort: il saldo cade su auth.user se fallisce)
     this.pointsApi.myPoints().subscribe({
       next: (p) => this.myPoints.set(p),
@@ -174,6 +181,28 @@ export class AccountComponent {
         this.profileError.set(
           apiErrorMessage(err, 'Aggiornamento non riuscito.'),
         );
+      },
+    });
+  }
+
+  /** Attiva/disattiva gli avvisi email sulle nuove lezioni (salva subito). */
+  protected setNotifyNewLessons(enabled: boolean): void {
+    if (this.notifySaving()) return;
+    const previous = this.notifyNewLessons();
+    this.notifyNewLessons.set(enabled); // ottimistico
+    this.notifySaving.set(true);
+    this.notifyError.set(null);
+    this.notifyMsg.set(null);
+    this.auth.updateProfile({ notifyNewLessons: enabled }).subscribe({
+      next: (user) => {
+        this.notifySaving.set(false);
+        this.notifyNewLessons.set(user.notifyNewLessons ?? enabled);
+        this.notifyMsg.set('Preferenza salvata.');
+      },
+      error: (err: unknown) => {
+        this.notifySaving.set(false);
+        this.notifyNewLessons.set(previous); // ripristina il valore precedente
+        this.notifyError.set(apiErrorMessage(err, 'Salvataggio non riuscito.'));
       },
     });
   }

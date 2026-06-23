@@ -159,10 +159,11 @@ export class AuthService {
     return this.http.get(`${API}/account/export`);
   }
 
-  /** Rettifica email e/o nickname; aggiorna l'utente in memoria. */
+  /** Rettifica email/nickname e/o preferenze; aggiorna l'utente in memoria. */
   updateProfile(patch: {
     email?: string;
     nickname?: string;
+    notifyNewLessons?: boolean;
   }): Observable<User> {
     return this.http
       .patch<User>(`${API}/account/profile`, patch)
