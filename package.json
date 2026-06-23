@@ -17,6 +17,7 @@
     "@angular/platform-browser": "^22.0.0",
     "@angular/platform-browser-dynamic": "^22.0.0",
     "@angular/router": "^22.0.0",
+    "@livekit/krisp-noise-filter": "^0.4.3",
     "livekit-client": "^2.19.2",
     "marked": "18.0.5",
     "rxjs": "~7.8.0",

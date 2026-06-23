@@ -11,6 +11,7 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type {
+  LocalAudioTrack,
   Room,
   RemoteParticipant,
   Track,
@@ -82,6 +83,7 @@ export class LiveRoomComponent implements OnDestroy {
   private room: Room | null = null;
   private lk: typeof import('livekit-client') | null = null;
   private disposed = false;
+  private krispDone = false;
 
   constructor() {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
@@ -123,7 +125,13 @@ export class LiveRoomComponent implements OnDestroy {
         )
         .on(LK.RoomEvent.TrackUnsubscribed, (track: Track) => this.detach(track))
         .on(LK.RoomEvent.LocalTrackPublished, (pub) => {
-          if (pub.track) this.attach(pub.track, room.localParticipant.identity);
+          if (!pub.track) return;
+          if (pub.track.kind === 'video') {
+            this.attach(pub.track, room.localParticipant.identity);
+          } else if (pub.source === LK.Track.Source.Microphone) {
+            // NON aggancio l'audio locale (eviti di riascoltarti); applico Krisp al mic
+            void this.applyKrisp(pub.track);
+          }
         })
         .on(LK.RoomEvent.LocalTrackUnpublished, (pub) => {
           if (pub.track) this.detach(pub.track);
@@ -378,6 +386,23 @@ export class LiveRoomComponent implements OnDestroy {
   protected async enableAudio(): Promise<void> {
     await this.room?.startAudio();
     this.needAudioGesture.set(false);
+  }
+
+  /**
+   * Cancellazione rumore AI (Krisp) sul microfono locale: rimuove tastiera, ventola,
+   * voci d'ambiente. Caricato lazy (chunk WASM pesante). Degrada in silenzio se il
+   * browser non lo supporta o se il piano LiveKit non lo abilita → l'audio resta normale.
+   */
+  private async applyKrisp(track: Track): Promise<void> {
+    if (this.krispDone) return;
+    try {
+      const mod = await import('@livekit/krisp-noise-filter');
+      if (this.disposed || !mod.isKrispNoiseFilterSupported()) return;
+      await (track as LocalAudioTrack).setProcessor(mod.KrispNoiseFilter());
+      this.krispDone = true;
+    } catch {
+      // non supportato / piano non abilitato → microfono senza filtro AI
+    }
   }
 
   // ----- Moderazione (Fase 2) -----
