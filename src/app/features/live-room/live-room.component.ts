@@ -29,7 +29,6 @@ interface ChatMessage {
 interface RosterEntry {
   identity: string;
   name: string;
-  handRaised: boolean;
   canPublish: boolean;
 }
 
@@ -72,8 +71,8 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly screenOn = signal(false);
   // moderazione (Fase 2)
   protected readonly roster = signal<RosterEntry[]>([]);
-  protected readonly myHandRaised = signal(false);
-  protected readonly canPublishNow = signal(false); // pubblico promosso dal coach
+  // il pubblico può pubblicare il microfono (true di default; il coach può revocarlo)
+  protected readonly canPublishNow = signal(false);
 
   private room: Room | null = null;
   private lk: typeof import('livekit-client') | null = null;
@@ -147,6 +146,9 @@ export class LiveRoomComponent implements OnDestroy {
       this.state.set('connected');
       this.refreshCount();
       this.rebuildRoster();
+      // il pubblico nasce con il permesso microfono (tavola rotonda); il coach
+      // può revocarlo → questo flag pilota la visibilità del bottone microfono.
+      this.canPublishNow.set(!!room.localParticipant.permissions?.canPublish);
     } catch (err: unknown) {
       if (this.disposed) return;
       const status = (err as { status?: number })?.status;
@@ -273,12 +275,10 @@ export class LiveRoomComponent implements OnDestroy {
       list.push({
         identity: rp.identity,
         name: rp.name || rp.identity,
-        handRaised: rp.attributes?.['handRaised'] === 'true',
         canPublish: !!rp.permissions?.canPublish,
       });
     });
-    // mani alzate in cima
-    list.sort((a, b) => Number(b.handRaised) - Number(a.handRaised));
+    list.sort((a, b) => a.name.localeCompare(b.name));
     this.roster.set(list);
   }
 
@@ -287,19 +287,12 @@ export class LiveRoomComponent implements OnDestroy {
     return this.role() === 'coach' || this.canPublishNow();
   }
 
-  protected raiseHandToggle(): void {
-    const next = !this.myHandRaised();
-    this.liveApi.raiseHand(this.id(), next).subscribe({
-      next: () => this.myHandRaised.set(next),
-      error: () => this.error.set('Operazione non riuscita.'),
-    });
-  }
-
+  /** Ridà il microfono a uno studente a cui era stato revocato. */
   protected promote(identity: string): void {
     this.liveApi
-      .promote(this.id(), { targetUserId: identity, sources: ['mic', 'cam'] })
+      .promote(this.id(), { targetUserId: identity, sources: ['mic'] })
       .subscribe({
-        error: () => this.error.set('Impossibile concedere la parola.'),
+        error: () => this.error.set('Impossibile ridare il microfono.'),
       });
   }
 

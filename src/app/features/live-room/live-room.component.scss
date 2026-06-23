@@ -83,8 +83,11 @@
     min-width: 0;
   }
 
-  &__hand {
+  &__muted-note {
     align-self: center;
+    margin: 0;
+    color: var(--text-muted);
+    font-style: italic;
   }
 
   &__roster {
@@ -112,10 +115,6 @@
     padding: 0.4rem 0.5rem;
     border-radius: 8px;
     background: var(--surface-2, rgba(0, 0, 0, 0.04));
-
-    &.is-hand {
-      background: color-mix(in srgb, var(--brand, #d4a017) 20%, transparent);
-    }
   }
 
   &__roster-name {

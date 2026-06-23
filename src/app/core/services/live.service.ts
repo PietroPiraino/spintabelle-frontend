@@ -36,12 +36,7 @@ export class LiveService {
 
   // ----- Moderazione stanza (Fase 2) -----
 
-  /** Il pubblico alza/abbassa la propria mano. */
-  raiseHand(id: string, raised: boolean): Observable<unknown> {
-    return this.http.post(`${API}/live/${id}/raise-hand`, { raised });
-  }
-
-  /** Coach: concede la parola (default microfono + webcam). */
+  /** Coach: (ri)dà il permesso di pubblicazione a uno studente (es. microfono). */
   promote(
     id: string,
     body: { targetUserId: string; sources?: ('mic' | 'cam' | 'screen')[] },

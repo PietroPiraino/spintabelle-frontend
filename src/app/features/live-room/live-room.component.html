@@ -70,22 +70,22 @@
             <button
               type="button"
               class="btn btn--sm"
-              [class.btn--primary]="camOn()"
-              [class.btn--ghost]="!camOn()"
-              (click)="toggleCam()"
-            >
-              {{ camOn() ? '📷 Fotocamera ON' : '📷 Fotocamera' }}
-            </button>
-            <button
-              type="button"
-              class="btn btn--sm"
               [class.btn--primary]="micOn()"
               [class.btn--ghost]="!micOn()"
               (click)="toggleMic()"
             >
-              {{ micOn() ? '🎙️ Microfono ON' : '🎙️ Microfono' }}
+              {{ micOn() ? '🎙️ Microfono ON' : '🎙️ Parla (microfono)' }}
             </button>
             @if (role() === 'coach') {
+              <button
+                type="button"
+                class="btn btn--sm"
+                [class.btn--primary]="camOn()"
+                [class.btn--ghost]="!camOn()"
+                (click)="toggleCam()"
+              >
+                {{ camOn() ? '📷 Fotocamera ON' : '📷 Fotocamera' }}
+              </button>
               <button
                 type="button"
                 class="btn btn--sm"
@@ -99,17 +99,11 @@
           </div>
         }
 
-        <!-- Pubblico (non coach, non ancora promosso): alza la mano per parlare -->
+        <!-- Studente a cui il coach ha revocato il microfono -->
         @if (role() !== 'coach' && !canPublishNow()) {
-          <button
-            type="button"
-            class="btn btn--sm live-room__hand"
-            [class.btn--primary]="myHandRaised()"
-            [class.btn--ghost]="!myHandRaised()"
-            (click)="raiseHandToggle()"
-          >
-            {{ myHandRaised() ? '✋ Mano alzata (annulla)' : '✋ Alza la mano' }}
-          </button>
+          <p class="live-room__muted-note">
+            🔇 Il coach ti ha tolto il microfono.
+          </p>
         }
       </div>
 
@@ -120,19 +114,14 @@
             <h3>Partecipanti ({{ roster().length }})</h3>
             <div class="live-room__roster-list">
               @for (p of roster(); track p.identity) {
-                <div class="live-room__roster-row" [class.is-hand]="p.handRaised">
-                  <span class="live-room__roster-name">
-                    @if (p.handRaised) {
-                      <span aria-hidden="true">✋</span>
-                    }
-                    {{ p.name }}
-                  </span>
+                <div class="live-room__roster-row">
+                  <span class="live-room__roster-name">{{ p.name }}</span>
                   <span class="live-room__roster-actions">
                     @if (p.canPublish) {
-                      <button type="button" class="btn btn--ghost btn--sm" (click)="demote(p.identity)">Revoca</button>
                       <button type="button" class="btn btn--ghost btn--sm" (click)="muteParticipant(p.identity)">Muta</button>
+                      <button type="button" class="btn btn--ghost btn--sm" (click)="demote(p.identity)">Togli microfono</button>
                     } @else {
-                      <button type="button" class="btn btn--primary btn--sm" (click)="promote(p.identity)">Concedi parola</button>
+                      <button type="button" class="btn btn--primary btn--sm" (click)="promote(p.identity)">Ridai microfono</button>
                     }
                     <button type="button" class="btn btn--danger btn--sm" (click)="kick(p.identity)">Espelli</button>
                   </span>
