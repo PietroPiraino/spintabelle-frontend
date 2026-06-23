@@ -171,8 +171,25 @@
     color: #fff;
   }
 
-  &__audio {
-    align-self: center;
+  // Sblocco audio: overlay cliccabile sopra il video (un solo tap), non un
+  // secondo pulsante accanto a "Parla".
+  &__audio-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: none;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 1rem;
+    backdrop-filter: blur(2px);
   }
 
   &__controls {

@@ -60,13 +60,18 @@
               }
             </div>
           }
+          <!-- Sblocco audio: overlay sul video (il browser blocca l'autoplay).
+               Un tap qui basta; sparisce subito. Niente pulsante separato. -->
+          @if (needAudioGesture()) {
+            <button
+              type="button"
+              class="live-room__audio-overlay"
+              (click)="enableAudio()"
+            >
+              🔊 Tocca per attivare l'audio
+            </button>
+          }
         </div>
-
-        @if (needAudioGesture()) {
-          <button type="button" class="btn btn--primary btn--sm live-room__audio" (click)="enableAudio()">
-            🔊 Abilita audio
-          </button>
-        }
 
         <div class="live-room__bar">
           @if (hasVideo()) {
