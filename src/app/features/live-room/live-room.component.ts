@@ -300,8 +300,21 @@ export class LiveRoomComponent implements OnDestroy {
     const stage = this.stageRef()?.nativeElement;
     if (!stage) return;
     try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await stage.requestFullscreen();
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+      if (typeof stage.requestFullscreen === 'function') {
+        await stage.requestFullscreen();
+        return;
+      }
+      // iOS Safari non supporta requestFullscreen su un <div>: ripiego sul
+      // fullscreen NATIVO del video (schermo condiviso se c'è, altrimenti il primo).
+      const video = (stage.querySelector('.is-screen') ??
+        stage.querySelector('video')) as
+        | (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
+        | null;
+      video?.webkitEnterFullscreen?.();
     } catch {
       /* il browser può rifiutare la richiesta: nessun crash */
     }

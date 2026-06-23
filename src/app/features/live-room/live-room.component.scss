@@ -37,10 +37,12 @@
     position: relative;
     display: flex;
     flex-wrap: wrap;
-    align-content: flex-start;
+    align-content: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 360px;
+    // niente min-height fisso: con un video lo stage si adatta alla sua altezza
+    // (su mobile evitava la grande banda nera sotto). Quando NON c'è video è il
+    // placeholder a dare l'altezza (ha il suo min-height).
     background: #0b0b0f;
     border-radius: var(--radius, 12px);
     overflow: hidden;
