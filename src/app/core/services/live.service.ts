@@ -62,6 +62,11 @@ export class LiveService {
     return this.http.post(`${API}/live/${id}/kick`, { targetUserId });
   }
 
+  /** Coach: termina la live (chiude la stanza per tutti). */
+  endLive(id: string): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/end`, {});
+  }
+
   create(payload: LiveSessionPayload): Observable<LiveSession> {
     return this.http.post<LiveSession>(`${API}/live`, payload);
   }

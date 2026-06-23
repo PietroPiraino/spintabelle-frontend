@@ -3,12 +3,19 @@
     <div class="live-room__top">
       <a routerLink="/live" class="btn btn--ghost btn--sm">← Torna alle live</a>
       @if (state() === 'connected') {
-        <span class="live-room__count" aria-live="polite">
-          👥 {{ participants() }} in sala
+        <div class="live-room__top-right">
+          <span class="live-room__count" aria-live="polite">
+            👥 {{ participants() }} in sala
+            @if (role() === 'coach') {
+              <span class="badge badge--premium">Coach</span>
+            }
+          </span>
           @if (role() === 'coach') {
-            <span class="badge badge--premium">Coach</span>
+            <button type="button" class="btn btn--danger btn--sm" (click)="endLive()">
+              Termina la live
+            </button>
           }
-        </span>
+        </div>
       }
     </div>
 
@@ -39,6 +46,13 @@
           <button type="button" class="btn btn--ghost" (click)="leave()">
             Torna alle live
           </button>
+        </div>
+      }
+      @case ('ended') {
+        <div class="empty-state">
+          <div class="empty-state__suit" aria-hidden="true">👋</div>
+          <p>La live è terminata. Grazie per aver partecipato!</p>
+          <a routerLink="/live" class="btn btn--primary">Torna alle live</a>
         </div>
       }
     }

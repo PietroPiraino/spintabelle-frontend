@@ -20,7 +20,7 @@ import { LiveService } from '../../core/services/live.service';
 import { LIVEKIT_LOADER } from '../../shared/sdk/livekit-loader';
 import { apiErrorMessage } from '../../core/utils/http-error';
 
-type RoomState = 'connecting' | 'connected' | 'denied' | 'error';
+type RoomState = 'connecting' | 'connected' | 'denied' | 'error' | 'ended';
 interface ChatMessage {
   from: string;
   text: string;
@@ -177,9 +177,14 @@ export class LiveRoomComponent implements OnDestroy {
         .on(LK.RoomEvent.AudioPlaybackStatusChanged, () =>
           this.needAudioGesture.set(!room.canPlaybackAudio),
         )
-        .on(LK.RoomEvent.Disconnected, () => {
+        .on(LK.RoomEvent.Disconnected, (reason?: unknown) => {
           if (this.disposed) return;
-          this.fail('Disconnesso dalla sala live.');
+          // se il coach ha terminato la live, la stanza viene eliminata → messaggio dedicato
+          if (reason === LK.DisconnectReason.ROOM_DELETED) {
+            this.state.set('ended');
+          } else {
+            this.fail('Disconnesso dalla sala live.');
+          }
         });
 
       await room.connect(tok.url, tok.token);
@@ -500,6 +505,15 @@ export class LiveRoomComponent implements OnDestroy {
     if (!confirm('Espellere questo partecipante dalla stanza?')) return;
     this.liveApi.kick(this.id(), identity).subscribe({
       error: () => this.error.set('Impossibile espellere.'),
+    });
+  }
+
+  /** Coach: termina la live per tutti (chiude la stanza), poi torna alla lista. */
+  protected endLive(): void {
+    if (!confirm('Terminare la live per tutti i partecipanti?')) return;
+    this.liveApi.endLive(this.id()).subscribe({
+      next: () => void this.router.navigate(['/live']),
+      error: () => this.error.set('Impossibile terminare la live.'),
     });
   }
 
