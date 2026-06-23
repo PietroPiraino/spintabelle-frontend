@@ -231,10 +231,21 @@ export class LiveRoomComponent implements OnDestroy {
     );
   }
 
+  /** Nasconde/mostra il tile della PROPRIA webcam (camera off = mute, non unpublish). */
+  private setLocalCamHidden(hidden: boolean): void {
+    const me = this.myIdentity();
+    this.stageRef()
+      ?.nativeElement.querySelectorAll<HTMLElement>(
+        `video[data-identity="${me}"].is-cam`,
+      )
+      .forEach((el) => (el.hidden = hidden));
+    this.recomputeStage();
+  }
+
   /**
-   * Mute/unmute di una traccia. La camera off MUTA il video (non lo de-pubblica),
-   * quindi nascondo il tile relativo (per sid) invece di lasciarlo nero; all'unmute
-   * lo rimostro. Aggiorna anche la lista presenti (stato microfono).
+   * Mute/unmute di una traccia (remota). Nascondo il tile video relativo (per sid)
+   * invece di lasciarlo nero; all'unmute lo rimostro. Aggiorna anche la lista
+   * presenti (stato microfono).
    */
   private onTrackMuteChange(pub: { trackSid?: string }, muted: boolean): void {
     this.rebuildRoster();
@@ -325,6 +336,10 @@ export class LiveRoomComponent implements OnDestroy {
         const on = !this.camOn();
         await lp.setCameraEnabled(on);
         this.camOn.set(on);
+        // setCameraEnabled(false) MUTA la traccia (non la de-pubblica): l'evento
+        // TrackMuted può non arrivare per la traccia locale, quindi nascondo io
+        // il tile della mia webcam (e lo rimostro alla riaccensione).
+        this.setLocalCamHidden(!on);
       } else if (what === 'mic') {
         const on = !this.micOn();
         await lp.setMicrophoneEnabled(on);
