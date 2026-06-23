@@ -67,11 +67,7 @@
         <div class="empty-state live-room__consent">
           <div class="empty-state__suit" aria-hidden="true">🔴</div>
           <p><strong>Questa sessione live può essere registrata.</strong></p>
-          <p>
-            Entrando acconsenti alla registrazione di audio, video ed eventuale
-            condivisione schermo. La registrazione potrà diventare una lezione
-            rivedibile.
-          </p>
+          <p>{{ consentText() }}</p>
           <div class="live-room__consent-actions">
             <button type="button" class="btn btn--primary" (click)="consentAccept()">
               Accetto ed entro

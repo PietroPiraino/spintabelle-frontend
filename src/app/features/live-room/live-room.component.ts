@@ -90,6 +90,10 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly recording = signal(false); // egress attivo ora (room.isRecording)
   protected readonly recElapsed = signal(''); // durata REC (mm:ss / h:mm:ss)
   private consentGiven = false;
+  // Testo del consenso fornito dal backend (versionato, GDPR art. 7); fallback se assente.
+  protected readonly consentText = signal(
+    'Questa sessione può essere registrata. Entrando acconsenti alla registrazione di audio, video ed eventuale schermo che condividi.',
+  );
   private recTimer: ReturnType<typeof setInterval> | null = null;
   private recStartMs = 0;
 
@@ -223,9 +227,12 @@ export class LiveRoomComponent implements OnDestroy {
     } catch (err: unknown) {
       if (this.disposed) return;
       const status = (err as { status?: number })?.status;
-      const code = (err as { error?: { code?: string } })?.error?.code;
+      const body = (err as {
+        error?: { code?: string; consentText?: string };
+      })?.error;
       // 403 con codice consenso → mostra il modale di consenso (non "negato")
-      if (status === 403 && code === 'CONSENT_REQUIRED') {
+      if (status === 403 && body?.code === 'CONSENT_REQUIRED') {
+        if (body.consentText) this.consentText.set(body.consentText);
         this.state.set('consent');
         return;
       }
