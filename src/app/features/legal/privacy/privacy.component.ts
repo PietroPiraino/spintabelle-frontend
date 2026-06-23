@@ -9,5 +9,5 @@ import { RouterLink } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PrivacyComponent {
-  protected readonly aggiornata = '22 giugno 2026';
+  protected readonly aggiornata = '23 giugno 2026';
 }
