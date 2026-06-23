@@ -56,13 +56,13 @@ export class HeaderComponent {
       children: [
         { path: '/allenamento', label: 'Allenamento' },
         { path: '/lezioni', label: 'Lezioni' },
+        { path: '/live', label: 'Live' },
       ],
     },
     {
-      id: 'community',
-      label: 'Community',
+      id: 'scuola',
+      label: 'Scuola',
       children: [
-        { path: '/live', label: 'Live' },
         { path: '/news', label: 'News' },
         { path: '/chi-siamo', label: 'Chi siamo' },
       ],
