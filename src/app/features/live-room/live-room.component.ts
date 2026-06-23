@@ -101,7 +101,18 @@ export class LiveRoomComponent implements OnDestroy {
       if (this.disposed) return;
       this.lk = LK;
 
-      const room = new LK.Room({ adaptiveStream: true, dynacast: true });
+      const room = new LK.Room({
+        adaptiveStream: true,
+        dynacast: true,
+        // Filtri audio del browser espliciti (sono i default dell'SDK, ma così
+        // sono documentati e pronti per agganciare Krisp sul mic locale).
+        audioCaptureDefaults: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          voiceIsolation: true,
+        },
+      });
       this.room = room;
 
       room
@@ -353,7 +364,8 @@ export class LiveRoomComponent implements OnDestroy {
         this.micOn.set(on);
       } else {
         const on = !this.screenOn();
-        await lp.setScreenShareEnabled(on, { audio: true });
+        // contentHint 'detail' = priorità alla nitidezza (testo/tavoli) sulla fluidità
+        await lp.setScreenShareEnabled(on, { audio: true, contentHint: 'detail' });
         this.screenOn.set(on);
       }
     } catch {
