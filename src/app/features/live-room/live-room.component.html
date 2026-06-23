@@ -5,7 +5,7 @@
       @if (state() === 'connected') {
         <div class="live-room__top-right">
           @if (recording()) {
-            <span class="live-room__rec" aria-live="polite">🔴 REC</span>
+            <span class="live-room__rec" aria-live="polite">🔴 REC {{ recElapsed() }}</span>
           }
           <span class="live-room__count" aria-live="polite">
             👥 {{ participants() }} in sala

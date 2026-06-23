@@ -88,7 +88,10 @@ export class LiveRoomComponent implements OnDestroy {
   // registrazione (Fase 3)
   protected readonly recordingEnabled = signal(false); // la sessione è registrabile
   protected readonly recording = signal(false); // egress attivo ora (room.isRecording)
+  protected readonly recElapsed = signal(''); // durata REC (mm:ss / h:mm:ss)
   private consentGiven = false;
+  private recTimer: ReturnType<typeof setInterval> | null = null;
+  private recStartMs = 0;
 
   private room: Room | null = null;
   private lk: typeof import('livekit-client') | null = null;
@@ -192,7 +195,7 @@ export class LiveRoomComponent implements OnDestroy {
         )
         // REC: egress attivo sulla stanza (LiveKit lo segnala a tutti)
         .on(LK.RoomEvent.RecordingStatusChanged, (active: boolean) =>
-          this.recording.set(active),
+          this.applyRecording(active),
         )
         .on(LK.RoomEvent.Disconnected, (reason?: unknown) => {
           if (this.disposed) return;
@@ -211,7 +214,7 @@ export class LiveRoomComponent implements OnDestroy {
       }
       this.state.set('connected');
       this.myIdentity.set(room.localParticipant.identity);
-      this.recording.set(room.isRecording);
+      this.applyRecording(room.isRecording);
       this.refreshCount();
       this.rebuildRoster();
       // il pubblico nasce con il permesso microfono (tavola rotonda); il coach
@@ -552,6 +555,32 @@ export class LiveRoomComponent implements OnDestroy {
     });
   }
 
+  /** Aggiorna lo stato REC e il timer di durata. */
+  private applyRecording(active: boolean): void {
+    this.recording.set(active);
+    if (active) {
+      if (!this.recTimer) {
+        this.recStartMs = Date.now();
+        this.tickRec();
+        this.recTimer = setInterval(() => this.tickRec(), 1000);
+      }
+    } else if (this.recTimer) {
+      clearInterval(this.recTimer);
+      this.recTimer = null;
+      this.recElapsed.set('');
+    }
+  }
+
+  private tickRec(): void {
+    const s = Math.floor((Date.now() - this.recStartMs) / 1000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    this.recElapsed.set(
+      h > 0 ? `${h}:${pad(m)}:${pad(s % 60)}` : `${pad(m)}:${pad(s % 60)}`,
+    );
+  }
+
   /** Coach: termina la live per tutti (chiude la stanza), poi torna alla lista. */
   protected endLive(): void {
     if (!confirm('Terminare la live per tutti i partecipanti?')) return;
@@ -567,6 +596,7 @@ export class LiveRoomComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.disposed = true;
+    if (this.recTimer) clearInterval(this.recTimer);
     void this.room?.disconnect();
     this.room = null;
   }

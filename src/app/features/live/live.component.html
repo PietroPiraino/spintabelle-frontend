@@ -81,6 +81,12 @@
                   class="btn btn--primary btn--sm"
                 >Entra nella live</a>
               }
+
+              @if (s.recordingState === 'DONE' && s.recordedLessonId) {
+                <a routerLink="/lezioni" class="btn btn--ghost btn--sm">
+                  ▶ Rivedi la registrazione
+                </a>
+              }
             </div>
           </article>
         }
