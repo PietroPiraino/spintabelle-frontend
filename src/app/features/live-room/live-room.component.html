@@ -47,7 +47,7 @@
          agganciare i track non appena arrivano. -->
     <div class="live-room__grid" [hidden]="state() !== 'connected'">
       <div class="live-room__stagewrap">
-        <div #stage class="live-room__stage">
+        <div #stage class="live-room__stage" [class.is-screen-mode]="hasScreen()">
           @if (!hasVideo()) {
             <div class="live-room__placeholder">
               @if (role() === 'coach') {
@@ -64,6 +64,26 @@
             🔊 Abilita audio
           </button>
         }
+
+        <div class="live-room__bar">
+          @if (hasVideo()) {
+            <button type="button" class="btn btn--ghost btn--sm" (click)="toggleFullscreen()">
+              ⛶ Schermo intero
+            </button>
+          }
+          @if (canPublish()) {
+            <span
+              class="live-room__self-status"
+              [class.is-speaking]="micOn() && selfSpeaking()"
+            >
+              @if (micOn()) {
+                {{ selfSpeaking() ? '🟢 Stai parlando' : '🎙️ Microfono acceso' }}
+              } @else {
+                🔇 Microfono spento
+              }
+            </span>
+          }
+        </div>
 
         @if (canPublish()) {
           <div class="live-room__controls">
@@ -108,14 +128,36 @@
       </div>
 
       <div class="live-room__side">
-        <!-- Pannello moderazione: solo il coach -->
-        @if (role() === 'coach') {
-          <div class="card card--pad live-room__roster">
-            <h3>Partecipanti ({{ roster().length }})</h3>
-            <div class="live-room__roster-list">
-              @for (p of roster(); track p.identity) {
-                <div class="live-room__roster-row">
-                  <span class="live-room__roster-name">{{ p.name }}</span>
+        <!-- Lista presenti: visibile a tutti; le azioni solo al coach -->
+        <div class="card card--pad live-room__roster">
+          <h3>In sala ({{ roster().length + 1 }})</h3>
+          <div class="live-room__roster-list">
+            <!-- te stesso -->
+            <div class="live-room__roster-row">
+              <span class="live-room__roster-name" [class.is-speaking]="selfSpeaking()">
+                @if (selfSpeaking()) {
+                  <span aria-hidden="true">🔊</span>
+                }
+                Tu
+                @if (role() === 'coach') {
+                  <span class="badge badge--premium">Coach</span>
+                }
+              </span>
+            </div>
+            @for (p of roster(); track p.identity) {
+              <div class="live-room__roster-row">
+                <span class="live-room__roster-name" [class.is-speaking]="isSpeaking(p.identity)">
+                  @if (isSpeaking(p.identity)) {
+                    <span aria-hidden="true">🔊</span>
+                  }
+                  {{ p.name }}
+                  @if (!p.canPublish) {
+                    <span class="live-room__mic-flag" title="microfono tolto dal coach">🚫</span>
+                  } @else if (!p.micActive) {
+                    <span class="live-room__mic-flag" title="microfono spento">🔇</span>
+                  }
+                </span>
+                @if (role() === 'coach') {
                   <span class="live-room__roster-actions">
                     @if (p.canPublish) {
                       <button type="button" class="btn btn--ghost btn--sm" (click)="muteParticipant(p.identity)">Muta</button>
@@ -125,13 +167,11 @@
                     }
                     <button type="button" class="btn btn--danger btn--sm" (click)="kick(p.identity)">Espelli</button>
                   </span>
-                </div>
-              } @empty {
-                <p class="live-room__msg-empty">Nessun partecipante in sala.</p>
-              }
-            </div>
+                }
+              </div>
+            }
           </div>
-        }
+        </div>
 
         <div class="live-room__chat card card--pad">
           <h3>Chat</h3>

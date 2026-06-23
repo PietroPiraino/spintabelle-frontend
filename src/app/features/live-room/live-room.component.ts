@@ -25,11 +25,12 @@ interface ChatMessage {
   text: string;
   me: boolean;
 }
-/** Un partecipante remoto, per il pannello di moderazione del coach. */
+/** Un partecipante remoto, per la lista presenti / moderazione. */
 interface RosterEntry {
   identity: string;
   name: string;
   canPublish: boolean;
+  micActive: boolean; // microfono pubblicato e non mutato
 }
 
 /**
@@ -73,6 +74,10 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly roster = signal<RosterEntry[]>([]);
   // il pubblico può pubblicare il microfono (true di default; il coach può revocarlo)
   protected readonly canPublishNow = signal(false);
+  // rifiniture: identità locale, chi sta parlando, presenza di uno schermo condiviso
+  protected readonly myIdentity = signal('');
+  protected readonly speaking = signal<Set<string>>(new Set());
+  protected readonly hasScreen = signal(false);
 
   private room: Room | null = null;
   private lk: typeof import('livekit-client') | null = null;
@@ -100,10 +105,14 @@ export class LiveRoomComponent implements OnDestroy {
       this.room = room;
 
       room
-        .on(LK.RoomEvent.TrackSubscribed, (track: Track) => this.attach(track))
+        .on(
+          LK.RoomEvent.TrackSubscribed,
+          (track: Track, _pub: unknown, p: { identity: string }) =>
+            this.attach(track, p.identity),
+        )
         .on(LK.RoomEvent.TrackUnsubscribed, (track: Track) => this.detach(track))
         .on(LK.RoomEvent.LocalTrackPublished, (pub) => {
-          if (pub.track) this.attach(pub.track);
+          if (pub.track) this.attach(pub.track, room.localParticipant.identity);
         })
         .on(LK.RoomEvent.LocalTrackUnpublished, (pub) => {
           if (pub.track) this.detach(pub.track);
@@ -113,10 +122,21 @@ export class LiveRoomComponent implements OnDestroy {
         .on(LK.RoomEvent.ParticipantAttributesChanged, () =>
           this.rebuildRoster(),
         )
+        // stato microfono (per la lista presenti): pubblicato/mutato
+        .on(LK.RoomEvent.TrackMuted, () => this.rebuildRoster())
+        .on(LK.RoomEvent.TrackUnmuted, () => this.rebuildRoster())
+        .on(LK.RoomEvent.TrackPublished, () => this.rebuildRoster())
+        .on(LK.RoomEvent.TrackUnpublished, () => this.rebuildRoster())
+        // chi sta parlando
+        .on(
+          LK.RoomEvent.ActiveSpeakersChanged,
+          (speakers: { identity: string }[]) =>
+            this.onActiveSpeakers(speakers),
+        )
         .on(
           LK.RoomEvent.ParticipantPermissionsChanged,
           (_prev: unknown, participant: { identity: string }) => {
-            // se cambiano i MIEI permessi (promosso/revocato), aggiorna i controlli
+            // se cambiano i MIEI permessi (microfono tolto/ridato), aggiorna i controlli
             if (participant?.identity === room.localParticipant.identity) {
               this.canPublishNow.set(!!room.localParticipant.permissions?.canPublish);
             }
@@ -144,6 +164,7 @@ export class LiveRoomComponent implements OnDestroy {
         return;
       }
       this.state.set('connected');
+      this.myIdentity.set(room.localParticipant.identity);
       this.refreshCount();
       this.rebuildRoster();
       // il pubblico nasce con il permesso microfono (tavola rotonda); il coach
@@ -173,12 +194,16 @@ export class LiveRoomComponent implements OnDestroy {
     if (this.room) this.participants.set(this.room.numParticipants + 1);
   }
 
-  private attach(track: Track): void {
+  private attach(track: Track, identity: string): void {
     const el = track.attach();
     if (track.kind === 'video') {
-      el.classList.add('live-room__video');
+      const isScreen = track.source === this.lk?.Track.Source.ScreenShare;
+      el.classList.add('live-room__video', isScreen ? 'is-screen' : 'is-cam');
+      el.dataset['identity'] = identity;
+      if (this.speaking().has(identity)) el.classList.add('is-speaking');
       this.stageRef()?.nativeElement.appendChild(el);
       this.hasVideo.set(true);
+      if (isScreen) this.hasScreen.set(true);
     } else {
       this.audioRef()?.nativeElement.appendChild(el);
     }
@@ -186,9 +211,44 @@ export class LiveRoomComponent implements OnDestroy {
 
   private detach(track: Track): void {
     track.detach().forEach((el) => el.remove());
-    if (track.kind === 'video') {
-      const stage = this.stageRef()?.nativeElement;
-      this.hasVideo.set(!!stage && stage.querySelector('video') !== null);
+    if (track.kind === 'video') this.recomputeStage();
+  }
+
+  /** Ricalcola la presenza di video / schermo dopo un detach. */
+  private recomputeStage(): void {
+    const stage = this.stageRef()?.nativeElement;
+    this.hasVideo.set(!!stage && stage.querySelector('video') !== null);
+    this.hasScreen.set(!!stage && stage.querySelector('.is-screen') !== null);
+  }
+
+  /** Chi sta parlando: aggiorna il set + il bordo sui tile video. */
+  private onActiveSpeakers(speakers: { identity: string }[]): void {
+    const set = new Set(speakers.map((s) => s.identity));
+    this.speaking.set(set);
+    const stage = this.stageRef()?.nativeElement;
+    stage?.querySelectorAll('.live-room__video').forEach((el) => {
+      const id = (el as HTMLElement).dataset['identity'];
+      (el as HTMLElement).classList.toggle('is-speaking', !!id && set.has(id));
+    });
+  }
+
+  protected isSpeaking(identity: string): boolean {
+    return this.speaking().has(identity);
+  }
+
+  protected selfSpeaking(): boolean {
+    return this.speaking().has(this.myIdentity());
+  }
+
+  /** Porta il riquadro video a tutto schermo (Esc per uscire). */
+  protected async toggleFullscreen(): Promise<void> {
+    const stage = this.stageRef()?.nativeElement;
+    if (!stage) return;
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await stage.requestFullscreen();
+    } catch {
+      /* il browser può rifiutare la richiesta: nessun crash */
     }
   }
 
@@ -272,10 +332,14 @@ export class LiveRoomComponent implements OnDestroy {
     if (!this.room) return;
     const list: RosterEntry[] = [];
     this.room.remoteParticipants.forEach((rp) => {
+      const micPub = this.lk
+        ? rp.getTrackPublication(this.lk.Track.Source.Microphone)
+        : undefined;
       list.push({
         identity: rp.identity,
         name: rp.name || rp.identity,
         canPublish: !!rp.permissions?.canPublish,
+        micActive: !!micPub && !micPub.isMuted,
       });
     });
     list.sort((a, b) => a.name.localeCompare(b.name));
