@@ -122,9 +122,14 @@ export class LiveRoomComponent implements OnDestroy {
         .on(LK.RoomEvent.ParticipantAttributesChanged, () =>
           this.rebuildRoster(),
         )
-        // stato microfono (per la lista presenti): pubblicato/mutato
-        .on(LK.RoomEvent.TrackMuted, () => this.rebuildRoster())
-        .on(LK.RoomEvent.TrackUnmuted, () => this.rebuildRoster())
+        // mute/unmute: aggiorna la lista (microfono) e nascondi/mostra il tile
+        // video (la camera off MUTA la traccia, non la de-pubblica → resterebbe nero)
+        .on(LK.RoomEvent.TrackMuted, (pub: { trackSid?: string }) =>
+          this.onTrackMuteChange(pub, true),
+        )
+        .on(LK.RoomEvent.TrackUnmuted, (pub: { trackSid?: string }) =>
+          this.onTrackMuteChange(pub, false),
+        )
         .on(LK.RoomEvent.TrackPublished, () => this.rebuildRoster())
         .on(LK.RoomEvent.TrackUnpublished, () => this.rebuildRoster())
         // chi sta parlando
@@ -200,6 +205,7 @@ export class LiveRoomComponent implements OnDestroy {
       const isScreen = track.source === this.lk?.Track.Source.ScreenShare;
       el.classList.add('live-room__video', isScreen ? 'is-screen' : 'is-cam');
       el.dataset['identity'] = identity;
+      el.dataset['sid'] = track.sid ?? '';
       if (this.speaking().has(identity)) el.classList.add('is-speaking');
       this.stageRef()?.nativeElement.appendChild(el);
       this.hasVideo.set(true);
@@ -214,11 +220,30 @@ export class LiveRoomComponent implements OnDestroy {
     if (track.kind === 'video') this.recomputeStage();
   }
 
-  /** Ricalcola la presenza di video / schermo dopo un detach. */
+  /** Ricalcola la presenza di video / schermo (solo i tile VISIBILI). */
   private recomputeStage(): void {
     const stage = this.stageRef()?.nativeElement;
-    this.hasVideo.set(!!stage && stage.querySelector('video') !== null);
-    this.hasScreen.set(!!stage && stage.querySelector('.is-screen') !== null);
+    this.hasVideo.set(
+      !!stage && stage.querySelector('video:not([hidden])') !== null,
+    );
+    this.hasScreen.set(
+      !!stage && stage.querySelector('.is-screen:not([hidden])') !== null,
+    );
+  }
+
+  /**
+   * Mute/unmute di una traccia. La camera off MUTA il video (non lo de-pubblica),
+   * quindi nascondo il tile relativo (per sid) invece di lasciarlo nero; all'unmute
+   * lo rimostro. Aggiorna anche la lista presenti (stato microfono).
+   */
+  private onTrackMuteChange(pub: { trackSid?: string }, muted: boolean): void {
+    this.rebuildRoster();
+    const sid = pub?.trackSid;
+    if (!sid) return;
+    this.stageRef()
+      ?.nativeElement.querySelectorAll<HTMLElement>(`video[data-sid="${sid}"]`)
+      .forEach((el) => (el.hidden = muted));
+    this.recomputeStage();
   }
 
   /** Chi sta parlando: aggiorna il set + il bordo sui tile video. */

@@ -64,16 +64,25 @@
       }
     }
 
-    // Modalità "lezione": schermo condiviso grande in alto, webcam piccole sotto.
+    // Modalità "lezione": schermo condiviso grande, webcam in PiP sull'angolo
+    // (overlay sullo schermo, così non resta la fascia nera attorno).
     &.is-screen-mode ::ng-deep {
       .is-screen {
         flex: 1 1 100%;
-        order: -1;
-        max-height: 72vh;
+        max-height: 78vh;
       }
       .is-cam {
-        flex: 0 1 200px;
-        max-height: 150px;
+        position: absolute;
+        right: 0.6rem;
+        bottom: 0.6rem;
+        width: 22%;
+        max-width: 240px;
+        height: auto;
+        max-height: 30%;
+        z-index: 2;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-radius: 8px;
+        background: #000;
       }
     }
 
