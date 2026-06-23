@@ -1,59 +1,44 @@
-# Frontend
+# Best Fish Forever — Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.17.
+Frontend di **spintabelle.it** ("Best Fish Forever"), scuola di poker italiana per Spin & Go / Twister. SPA **Angular 22 standalone, signals, zoneless** (no NgModules, no Zone.js).
 
-## Development server
+> 📖 **L'architettura completa (pattern, header, theming, viewer tabelle, sala live, 3D) è in [`../CLAUDE.md`](../CLAUDE.md).** Questo README è il riassunto operativo.
 
-To start a local development server, run:
+## Stack & sezioni
 
-```bash
-ng serve
-```
+Angular 22 (zoneless, `provideZonelessChangeDetection`) · Three.js (hero/diorami/mascotte/banco particellare) · `livekit-client` (sala live, lazy) · 3 temi via `data-theme` (token CSS in `styles/_tokens.scss`).
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Sezioni: `/tabelle` (viewer preflop GTO, stato in query param) · `/lezioni` (video gated paginati) · `/allenamento` (drill) · `/live` + `/live/:id/stanza` (**lezioni dal vivo on-site**) · `/docs` (file scaricabili) · `/abbonati` (pubblica) · `/negozio` (punti) · `/account` · `/chi-siamo` · `/admin` (pannello a tab).
 
-## Code scaffolding
+## Prerequisiti
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- **Node 24** (il Node globale è 20). Su Windows, anteporre alla PATH nella stessa invocazione:
+  ```bash
+  export PATH="/c/Users/Pietro Piraino/AppData/Roaming/nvm/v24.16.0:$PATH"
+  ```
+- Per lo sviluppo completo: backend su `:3000` + Mongo locale (vedi `../backend/README.md`).
 
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Comandi
 
 ```bash
-ng generate --help
+npm start          # ng serve (http://localhost:4200), rebuild on change
+npm run build      # build di produzione in dist/
+npm test           # Karma; headless: npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-## Building
+`environments/environment.prod.ts` → `https://api.spintabelle.it`.
 
-To build the project run:
+### E2E (script locali, gitignorati)
 
-```bash
-ng build
-```
+`node e2e-preflop.mjs` (viewer + tabelle) · `node e2e-seed-lessons.mjs && node e2e-lessons.mjs` (lezioni) · `node e2e-shop.mjs` (negozio, solo API). Richiedono backend locale + utenti di test; alcuni anche `ng serve`. (Attenzione al throttle 10/min su `/auth/login`.)
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Pattern che contano (vedi CLAUDE.md per i dettagli)
 
-## Running unit tests
+- **Zoneless**: niente Zone.js → il rendering è async, le guardie aspettano `auth.ready$` (un `ReplaySubject`, non `toObservable(signal)`).
+- **Bootstrap sessione** da `provideEnvironmentInitializer` in `app.config.ts` (non dal costruttore di `AuthService`: ciclo DI), non bloccante (Render free fa cold-start 30-60s).
+- **Access token in memoria**, refresh via cookie; 401 → singolo refresh → retry (interceptor).
+- **Router scroll** custom: scroll-to-top solo al cambio di path (i query-param della tabella mantengono la posizione).
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+## Deploy
 
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Push su `main` → **Cloudflare Pages** (`spintabelle.it`) auto-deploy (~2 min, Node da `.node-version` = 24.16.0). Deploy del **frontend dopo** il backend, verificando che le nuove rotte API rispondano (vedi `../backend/README.md`).
