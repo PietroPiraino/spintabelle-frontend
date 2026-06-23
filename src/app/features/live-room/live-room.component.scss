@@ -59,11 +59,34 @@
       }
     }
 
-    // A tutto schermo: riempi lo schermo, niente bordi arrotondati.
+    // A tutto schermo: il video riempie lo schermo (letterbox), niente bordi.
     &:fullscreen {
       border-radius: 0;
+      padding: 0;
+      background: #000;
+      align-items: center;
+      align-content: center;
+      justify-content: center;
+
       .live-room__video {
+        flex: 0 1 auto;
+        width: 100vw;
+        height: 100vh;
+        max-width: 100vw;
         max-height: 100vh;
+        object-fit: contain;
+      }
+
+      // con schermo condiviso, l'eventuale webcam va in un riquadrino d'angolo
+      &.is-screen-mode .is-cam {
+        position: absolute;
+        right: 1rem;
+        bottom: 1rem;
+        width: 16vw;
+        height: auto;
+        max-height: 22vh;
+        z-index: 2;
+        border: 2px solid rgba(255, 255, 255, 0.4);
       }
     }
   }
