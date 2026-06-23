@@ -15,6 +15,23 @@
     flex-wrap: wrap;
   }
 
+  &__rec {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 700;
+    color: #e23;
+    letter-spacing: 0.04em;
+  }
+
+  &__consent-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+
   &__count {
     display: inline-flex;
     align-items: center;

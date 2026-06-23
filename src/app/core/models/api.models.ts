@@ -313,6 +313,18 @@ export interface LiveSession {
   canJoinLive?: boolean;
   /** LIVEKIT: la live è stata terminata dal coach (non più entrabile) */
   ended?: boolean;
+  /** LIVEKIT: la sessione è registrabile (l'ingresso richiede consenso) */
+  recordingEnabled?: boolean;
+  /** LIVEKIT: stato della registrazione */
+  recordingState?:
+    | 'NONE'
+    | 'STARTING'
+    | 'ACTIVE'
+    | 'PROCESSING'
+    | 'DONE'
+    | 'FAILED';
+  /** LIVEKIT: id della lezione VOD creata (quando recordingState=DONE) */
+  recordedLessonId?: string;
   createdAt?: string;
 }
 
@@ -330,6 +342,8 @@ export interface LiveSessionPayload {
   joinUrl?: string;
   /** coach esplicito (opzionale): id utente. Se assente, qualsiasi ADMIN è coach */
   hostUserId?: string;
+  /** abilita la registrazione su questa sessione (richiede consenso all'ingresso) */
+  recordingEnabled?: boolean;
 }
 
 /** Token per entrare in una stanza on-site (LIVEKIT). */
@@ -337,6 +351,8 @@ export interface LiveRoomToken {
   token: string;
   url: string;
   role: 'coach' | 'audience';
+  /** la sessione è registrabile → il coach vede i controlli di registrazione */
+  recordingEnabled: boolean;
 }
 
 export interface News {

@@ -107,9 +107,15 @@
         <div class="field">
           <p class="field-hint">
             Sala on-site: l'accesso avviene dentro il sito (nessun link da
-            incollare). Il coach sei tu (o un altro admin che entra). La
-            registrazione arriverà in una fase successiva.
+            incollare). Il coach sei tu (o un altro admin che entra).
           </p>
+          <label class="field" style="flex-direction: row; align-items: center; gap: 0.5rem">
+            <input type="checkbox" formControlName="recordingEnabled" />
+            <span>
+              Registra la sessione → crea una lezione VOD.
+              <strong>Richiede il consenso dei partecipanti</strong> (mostrato all'ingresso).
+            </span>
+          </label>
         </div>
       }
 

@@ -20,7 +20,13 @@ import { LiveService } from '../../core/services/live.service';
 import { LIVEKIT_LOADER } from '../../shared/sdk/livekit-loader';
 import { apiErrorMessage } from '../../core/utils/http-error';
 
-type RoomState = 'connecting' | 'connected' | 'denied' | 'error' | 'ended';
+type RoomState =
+  | 'connecting'
+  | 'connected'
+  | 'denied'
+  | 'error'
+  | 'ended'
+  | 'consent';
 interface ChatMessage {
   from: string;
   text: string;
@@ -79,6 +85,10 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly myIdentity = signal('');
   protected readonly speaking = signal<Set<string>>(new Set());
   protected readonly hasScreen = signal(false);
+  // registrazione (Fase 3)
+  protected readonly recordingEnabled = signal(false); // la sessione è registrabile
+  protected readonly recording = signal(false); // egress attivo ora (room.isRecording)
+  private consentGiven = false;
 
   private room: Room | null = null;
   private lk: typeof import('livekit-client') | null = null;
@@ -97,8 +107,11 @@ export class LiveRoomComponent implements OnDestroy {
       return;
     }
     try {
-      const tok = await firstValueFrom(this.liveApi.getRoomToken(id));
+      const tok = await firstValueFrom(
+        this.liveApi.getRoomToken(id, this.consentGiven),
+      );
       this.role.set(tok.role);
+      this.recordingEnabled.set(tok.recordingEnabled);
       const LK = await this.loadLiveKit();
       if (this.disposed) return;
       this.lk = LK;
@@ -177,6 +190,10 @@ export class LiveRoomComponent implements OnDestroy {
         .on(LK.RoomEvent.AudioPlaybackStatusChanged, () =>
           this.needAudioGesture.set(!room.canPlaybackAudio),
         )
+        // REC: egress attivo sulla stanza (LiveKit lo segnala a tutti)
+        .on(LK.RoomEvent.RecordingStatusChanged, (active: boolean) =>
+          this.recording.set(active),
+        )
         .on(LK.RoomEvent.Disconnected, (reason?: unknown) => {
           if (this.disposed) return;
           // se il coach ha terminato la live, la stanza viene eliminata → messaggio dedicato
@@ -194,6 +211,7 @@ export class LiveRoomComponent implements OnDestroy {
       }
       this.state.set('connected');
       this.myIdentity.set(room.localParticipant.identity);
+      this.recording.set(room.isRecording);
       this.refreshCount();
       this.rebuildRoster();
       // il pubblico nasce con il permesso microfono (tavola rotonda); il coach
@@ -202,6 +220,12 @@ export class LiveRoomComponent implements OnDestroy {
     } catch (err: unknown) {
       if (this.disposed) return;
       const status = (err as { status?: number })?.status;
+      const code = (err as { error?: { code?: string } })?.error?.code;
+      // 403 con codice consenso → mostra il modale di consenso (non "negato")
+      if (status === 403 && code === 'CONSENT_REQUIRED') {
+        this.state.set('consent');
+        return;
+      }
       if (status === 403) {
         this.state.set('denied');
         return;
@@ -506,6 +530,25 @@ export class LiveRoomComponent implements OnDestroy {
     if (!confirm('Espellere questo partecipante dalla stanza?')) return;
     this.liveApi.kick(this.id(), identity).subscribe({
       error: () => this.error.set('Impossibile espellere.'),
+    });
+  }
+
+  /** L'utente accetta il consenso alla registrazione → riprova l'ingresso. */
+  protected consentAccept(): void {
+    this.consentGiven = true;
+    this.error.set(null);
+    this.state.set('connecting');
+    void this.init(this.id());
+  }
+
+  /** Coach: avvia/ferma la registrazione (lo stato REC arriva poi via evento). */
+  protected toggleRecording(): void {
+    const id = this.id();
+    const req$ = this.recording()
+      ? this.liveApi.stopRecording(id)
+      : this.liveApi.startRecording(id);
+    req$.subscribe({
+      error: () => this.error.set('Operazione di registrazione non riuscita.'),
     });
   }
 

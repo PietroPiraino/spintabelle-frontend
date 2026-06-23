@@ -30,8 +30,13 @@ export class LiveService {
    * via XHR (l'interceptor allega il Bearer): l'access-token in memoria non può
    * cavalcare una navigation, quindi NON si naviga a un URL del backend.
    */
-  getRoomToken(id: string): Observable<LiveRoomToken> {
-    return this.http.get<LiveRoomToken>(`${API}/live/${id}/room-token`);
+  getRoomToken(id: string, consent = false): Observable<LiveRoomToken> {
+    const params = consent
+      ? new HttpParams().set('consent', 'true')
+      : undefined;
+    return this.http.get<LiveRoomToken>(`${API}/live/${id}/room-token`, {
+      params,
+    });
   }
 
   // ----- Moderazione stanza (Fase 2) -----
@@ -65,6 +70,16 @@ export class LiveService {
   /** Coach: termina la live (chiude la stanza per tutti). */
   endLive(id: string): Observable<unknown> {
     return this.http.post(`${API}/live/${id}/end`, {});
+  }
+
+  /** Coach: avvia la registrazione della sessione. */
+  startRecording(id: string): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/recording/start`, {});
+  }
+
+  /** Coach: ferma la registrazione in corso. */
+  stopRecording(id: string): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/recording/stop`, {});
   }
 
   create(payload: LiveSessionPayload): Observable<LiveSession> {

@@ -4,12 +4,20 @@
       <a routerLink="/live" class="btn btn--ghost btn--sm">← Torna alle live</a>
       @if (state() === 'connected') {
         <div class="live-room__top-right">
+          @if (recording()) {
+            <span class="live-room__rec" aria-live="polite">🔴 REC</span>
+          }
           <span class="live-room__count" aria-live="polite">
             👥 {{ participants() }} in sala
             @if (role() === 'coach') {
               <span class="badge badge--premium">Coach</span>
             }
           </span>
+          @if (role() === 'coach' && recordingEnabled()) {
+            <button type="button" class="btn btn--ghost btn--sm" (click)="toggleRecording()">
+              {{ recording() ? '⏹ Ferma registrazione' : '🔴 Registra' }}
+            </button>
+          }
           @if (role() === 'coach') {
             <button type="button" class="btn btn--danger btn--sm" (click)="endLive()">
               Termina la live
@@ -53,6 +61,23 @@
           <div class="empty-state__suit" aria-hidden="true">👋</div>
           <p>La live è terminata. Grazie per aver partecipato!</p>
           <a routerLink="/live" class="btn btn--primary">Torna alle live</a>
+        </div>
+      }
+      @case ('consent') {
+        <div class="empty-state live-room__consent">
+          <div class="empty-state__suit" aria-hidden="true">🔴</div>
+          <p><strong>Questa sessione live può essere registrata.</strong></p>
+          <p>
+            Entrando acconsenti alla registrazione di audio, video ed eventuale
+            condivisione schermo. La registrazione potrà diventare una lezione
+            rivedibile.
+          </p>
+          <div class="live-room__consent-actions">
+            <button type="button" class="btn btn--primary" (click)="consentAccept()">
+              Accetto ed entro
+            </button>
+            <a routerLink="/live" class="btn btn--ghost">Annulla</a>
+          </div>
         </div>
       }
     }

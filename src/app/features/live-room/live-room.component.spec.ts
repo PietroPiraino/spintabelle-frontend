@@ -10,6 +10,7 @@ import { LiveRoomComponent } from './live-room.component';
 class FakeRoom {
   numParticipants = 0;
   canPlaybackAudio = true;
+  isRecording = false;
   remoteParticipants = new Map();
   localParticipant = {
     name: 'Io',
@@ -75,7 +76,7 @@ describe('LiveRoomComponent', () => {
     const loadSpy = configure(tok);
     const fixture = create();
     await flush();
-    expect(tok).toHaveBeenCalledWith('sess-1');
+    expect(tok).toHaveBeenCalledWith('sess-1', false);
     expect((fixture.componentInstance as unknown as Probe).state()).toBe('denied');
     expect(loadSpy).not.toHaveBeenCalled();
   });
