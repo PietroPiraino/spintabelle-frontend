@@ -7,10 +7,10 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { News } from '../../../core/models/api.models';
 import { NewsService } from '../../../core/services/news.service';
+import { SeoService } from '../../../core/services/seo.service';
 import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.component';
 
 @Component({
@@ -22,7 +22,7 @@ import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.componen
 })
 export class NewsDetailComponent {
   private readonly newsApi = inject(NewsService);
-  private readonly titleService = inject(Title);
+  private readonly seo = inject(SeoService);
 
   /** Param della rotta news/:id (component input binding) */
   readonly id = input.required<string>();
@@ -38,10 +38,49 @@ export class NewsDetailComponent {
       this.newsApi.getById(id).subscribe({
         next: (news) => {
           this.news.set(news);
-          this.titleService.setTitle(`${news.title} — Best Fish Forever`);
+          this.applySeo(news);
         },
         error: () => this.notFound.set(true),
       });
     });
+  }
+
+  /** Titolo + description + immagine dinamici, e dati strutturati NewsArticle. */
+  private applySeo(news: News): void {
+    const description = this.excerpt(news.body);
+    this.seo.setSeo({
+      title: news.title,
+      description,
+      image: news.coverImageUrl,
+      path: `/news/${this.id()}`,
+    });
+    this.seo.setJsonLd('ld-news-article', {
+      '@context': 'https://schema.org',
+      '@type': 'NewsArticle',
+      headline: news.title,
+      description,
+      ...(news.coverImageUrl ? { image: [news.coverImageUrl] } : {}),
+      datePublished: news.createdAt,
+      dateModified: news.updatedAt,
+      publisher: {
+        '@type': 'Organization',
+        name: 'Best Fish Forever',
+        logo: {
+          '@type': 'ImageObject',
+          url: 'https://spintabelle.it/logo-256.png',
+        },
+      },
+    });
+  }
+
+  /** Estratto pulito dal Markdown del corpo (per description/og), ~155 caratteri. */
+  private excerpt(body: string): string {
+    const text = body
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, '') // immagini md
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // link md → testo
+      .replace(/[#>*_`~|-]/g, ' ') // simboli md
+      .replace(/\s+/g, ' ')
+      .trim();
+    return text.length > 155 ? `${text.slice(0, 152).trimEnd()}…` : text;
   }
 }

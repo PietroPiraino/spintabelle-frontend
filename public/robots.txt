@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+# Aree private/funzionali: niente valore per i motori
+Disallow: /admin
+Disallow: /account
+Disallow: /allenamento
+Disallow: /negozio
+Disallow: /login
+Disallow: /registrazione
+Disallow: /verifica-email
+Disallow: /recupera-verifica
+Disallow: /password-dimenticata
+Disallow: /reimposta-password
+
+Sitemap: https://spintabelle.it/sitemap.xml
