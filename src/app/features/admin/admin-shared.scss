@@ -190,7 +190,7 @@
   border-color: var(--copper-400);
 
   h3 {
-    margin-top: 0;
+    margin: 0 0 1rem;
     font-size: 1.05rem;
   }
 }
@@ -211,6 +211,16 @@
   gap: 0.5rem;
   margin-top: 0.8rem;
   flex-wrap: wrap;
+}
+
+// Mobile: nei pannelli inline ogni campo occupa la riga intera e i pulsanti
+// rapidi (+30 giorni/+1 anno, Applica/Annulla…) restano in linea sotto. Evita
+// l'effetto "schiacciato" dei campi affiancati e la sovrapposizione del date
+// picker nativo iOS col pulsante accanto.
+@media (max-width: 560px) {
+  .admin-panel__row .field {
+    flex: 1 1 100%;
+  }
 }
 
 .admin-panel__h4 {

@@ -53,6 +53,32 @@ select.input {
   padding-right: 2.6rem;
 }
 
+// iOS Safari: <input type="date"> ha una larghezza intrinseca del controllo nativo
+// più larga del contenitore; essendo un flex item con min-width:auto, width:100% viene
+// "clampato" verso l'alto al min-content e il campo fora il lato destro. Resettiamo
+// l'appearance e permettiamo la compressione, azzerando le pseudo interne webkit.
+input[type="date"].input,
+input[type="datetime-local"].input,
+input[type="time"].input,
+input[type="month"].input,
+input[type="week"].input {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+}
+
+input[type="date"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+  min-width: 0;
+}
+
+input[type="date"]::-webkit-datetime-edit,
+input[type="datetime-local"]::-webkit-datetime-edit {
+  padding: 0;
+}
+
 .field-error {
   font-size: 0.82rem;
   color: var(--danger);
