@@ -36,7 +36,7 @@
             Ti avviseremo via email appena la richiesta sarà approvata.
           </p>
           @if (p.discountCodes?.length) {
-            <p class="subscribe__muted">
+            <p class="subscribe__muted subscribe__applied">
               Buoni applicati:
               @for (c of p.discountCodes; track c) {
                 <span class="badge badge--free">{{ c }}</span>

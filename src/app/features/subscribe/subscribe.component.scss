@@ -19,6 +19,11 @@
 }
 
 .subscribe__status {
+  // Il reset globale azzera i margini (`* { margin: 0 }`): senza questo gap i
+  // blocchi del pannello (titolo, testo, buoni, bottone, nota) si appiccicano.
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
   margin-bottom: 2rem;
   border-left: 3px solid var(--copper-400);
 }
@@ -26,6 +31,14 @@
 .subscribe__muted {
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+// "Buoni applicati: [BFF-…]" — etichetta e badge allineati e distanziati
+.subscribe__applied {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .subscribe__tiers {
