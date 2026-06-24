@@ -39,6 +39,10 @@ npm test           # Karma; headless: npx ng test --watch=false --browsers=Chrom
 - **Access token in memoria**, refresh via cookie; 401 → singolo refresh → retry (interceptor).
 - **Router scroll** custom: scroll-to-top solo al cambio di path (i query-param della tabella mantengono la posizione).
 
+## SEO (leggera, senza SSR)
+
+`public/robots.txt` + `public/sitemap.xml` (solo pagine pubbliche). `index.html`: OG + Twitter card + canonical + JSON-LD `EducationalOrganization`. `core/services/seo.service.ts` imposta meta dinamici per-pagina + JSON-LD (usato su `news-detail`). ⚠️ Senza SSR i meta dinamici aiutano Google (esegue il JS) ma non gli scraper social puri (anteprime per-pagina → servirebbe il prerender/SSG). Dettagli e roadmap in `../CLAUDE.md` e `../PLAN-product-improvements.md`.
+
 ## Deploy
 
 Push su `main` → **Cloudflare Pages** (`spintabelle.it`) auto-deploy (~2 min, Node da `.node-version` = 24.16.0). Deploy del **frontend dopo** il backend, verificando che le nuove rotte API rispondano (vedi `../backend/README.md`).
