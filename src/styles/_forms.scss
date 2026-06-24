@@ -65,6 +65,10 @@ input[type="week"].input {
   -webkit-appearance: none;
   appearance: none;
   min-width: 0;
+  // Da vuoto, con appearance:none, il controllo nativo collassa in altezza:
+  // forziamo la stessa altezza degli input testo
+  // (line-box 1.6 + padding verticale 0.78×2 + bordi 1px×2).
+  min-height: calc(1.6rem + 1.56rem + 2px);
 }
 
 input[type="date"]::-webkit-date-and-time-value,
