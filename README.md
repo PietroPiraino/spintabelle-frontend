@@ -35,7 +35,7 @@ npm test           # Karma; headless: npx ng test --watch=false --browsers=Chrom
 ## Pattern che contano (vedi CLAUDE.md per i dettagli)
 
 - **Zoneless**: niente Zone.js → il rendering è async, le guardie aspettano `auth.ready$` (un `ReplaySubject`, non `toObservable(signal)`).
-- **Bootstrap sessione** da `provideEnvironmentInitializer` in `app.config.ts` (non dal costruttore di `AuthService`: ciclo DI), non bloccante (Render free fa cold-start 30-60s).
+- **Bootstrap sessione** da `provideEnvironmentInitializer` in `app.config.ts` (non dal costruttore di `AuthService`: ciclo DI), non bloccante (resiliente a un'API lenta / al restart dopo un deploy; il backend è su Render **Starter a pagamento**, niente cold-start del free tier).
 - **Access token in memoria**, refresh via cookie; 401 → singolo refresh → retry (interceptor).
 - **Router scroll** custom: scroll-to-top solo al cambio di path (i query-param della tabella mantengono la posizione).
 
