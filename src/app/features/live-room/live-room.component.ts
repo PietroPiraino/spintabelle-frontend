@@ -230,7 +230,11 @@ export class LiveRoomComponent implements OnDestroy {
       }
       this.state.set('connected');
       this.myIdentity.set(room.localParticipant.identity);
-      this.applyRecording(room.isRecording);
+      // Se la registrazione è GIÀ in corso al nostro ingresso, ancora il timer
+      // all'inizio reale dal backend (non al momento del join). Le transizioni
+      // osservate dal vivo in stanza arrivano poi via RecordingStatusChanged
+      // (senza ancora → Date.now(), che lì è corretto).
+      this.applyRecording(room.isRecording, tok.recordingStartedAt);
       this.refreshCount();
       this.rebuildRoster();
       // il pubblico nasce con il permesso microfono (tavola rotonda); il coach
@@ -616,12 +620,18 @@ export class LiveRoomComponent implements OnDestroy {
     });
   }
 
-  /** Aggiorna lo stato REC e il timer di durata. */
-  private applyRecording(active: boolean): void {
+  /**
+   * Aggiorna lo stato REC e il timer di durata. `anchorIso` (dal backend) è
+   * l'inizio REALE della registrazione: usato quando si entra a registrazione già
+   * in corso, così il timer non riparte dall'ingresso. Per le transizioni
+   * osservate dal vivo in stanza l'ancora è assente → si usa Date.now().
+   */
+  private applyRecording(active: boolean, anchorIso?: string | null): void {
     this.recording.set(active);
     if (active) {
       if (!this.recTimer) {
-        this.recStartMs = Date.now();
+        const anchorMs = anchorIso ? Date.parse(anchorIso) : NaN;
+        this.recStartMs = Number.isFinite(anchorMs) ? anchorMs : Date.now();
         this.tickRec();
         this.recTimer = setInterval(() => this.tickRec(), 1000);
       }
@@ -633,7 +643,9 @@ export class LiveRoomComponent implements OnDestroy {
   }
 
   private tickRec(): void {
-    const s = Math.floor((Date.now() - this.recStartMs) / 1000);
+    // clamp a 0: un'ancora di pochi secondi nel futuro (skew di clock col server)
+    // non deve produrre un tempo negativo.
+    const s = Math.max(0, Math.floor((Date.now() - this.recStartMs) / 1000));
     const pad = (n: number) => String(n).padStart(2, '0');
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);

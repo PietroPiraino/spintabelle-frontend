@@ -358,6 +358,11 @@ export interface LiveRoomToken {
   role: 'coach' | 'audience';
   /** la sessione è registrabile → il coach vede i controlli di registrazione */
   recordingEnabled: boolean;
+  /**
+   * Inizio reale della registrazione in corso (ISO), o null se non si registra ora.
+   * Ancora il timer "REC" al tempo effettivo invece che al proprio ingresso.
+   */
+  recordingStartedAt?: string | null;
 }
 
 export interface News {

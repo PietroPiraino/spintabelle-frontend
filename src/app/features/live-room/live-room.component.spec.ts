@@ -41,6 +41,10 @@ const flush = async (): Promise<void> => {
 };
 
 type Probe = { state: () => string; role: () => string };
+type RecProbe = {
+  applyRecording: (active: boolean, anchorIso?: string | null) => void;
+  recElapsed: () => string;
+};
 
 describe('LiveRoomComponent', () => {
   function configure(getRoomToken: jasmine.Spy): jasmine.Spy {
@@ -105,5 +109,44 @@ describe('LiveRoomComponent', () => {
     expect(loadSpy).toHaveBeenCalled();
     expect(probe.state()).toBe('connected');
     expect(probe.role()).toBe('coach');
+  });
+
+  it('REC: con ancora (entrato a registrazione in corso) il timer parte dall’inizio reale', async () => {
+    const tok = jasmine.createSpy('getRoomToken').and.returnValue(
+      of({
+        token: 't',
+        url: 'wss://x.livekit.cloud',
+        role: 'audience',
+        recordingEnabled: true,
+        recordingStartedAt: null,
+      }),
+    );
+    configure(tok);
+    const fixture = create();
+    await flush();
+    const probe = fixture.componentInstance as unknown as RecProbe;
+    // registrazione iniziata 125s fa lato server → 02:05 (non 00:00 dal join)
+    probe.applyRecording(true, new Date(Date.now() - 125_000).toISOString());
+    expect(probe.recElapsed()).toBe('02:05');
+    fixture.destroy(); // ngOnDestroy ferma il setInterval
+  });
+
+  it('REC: senza ancora (transizione dal vivo) il timer parte da 00:00', async () => {
+    const tok = jasmine.createSpy('getRoomToken').and.returnValue(
+      of({
+        token: 't',
+        url: 'wss://x.livekit.cloud',
+        role: 'coach',
+        recordingEnabled: true,
+        recordingStartedAt: null,
+      }),
+    );
+    configure(tok);
+    const fixture = create();
+    await flush();
+    const probe = fixture.componentInstance as unknown as RecProbe;
+    probe.applyRecording(true);
+    expect(probe.recElapsed()).toBe('00:00');
+    fixture.destroy();
   });
 });
