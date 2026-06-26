@@ -12,27 +12,6 @@
               <span class="badge badge--premium">Coach</span>
             }
           </span>
-          @if (role() === 'coach' && recordingEnabled()) {
-            <button type="button" class="btn btn--ghost btn--sm" (click)="toggleRecording()">
-              <app-icon [name]="recording() ? 'square' : 'record'" [size]="16" />
-              {{ recording() ? 'Ferma registrazione' : 'Registra' }}
-            </button>
-          }
-          @if (role() === 'coach') {
-            <button type="button" class="btn btn--ghost btn--sm" (click)="muteAll()">
-              <app-icon name="mic-off" [size]="16" />
-              Muta tutti
-            </button>
-            <button
-              type="button"
-              class="btn btn--danger btn--sm"
-              [disabled]="endingLive()"
-              (click)="endLive()"
-            >
-              <app-icon name="log-out" [size]="16" />
-              {{ endingLive() ? 'Termino…' : 'Termina la live' }}
-            </button>
-          }
         </div>
       }
     </div>
@@ -42,9 +21,8 @@
         Riconnessione in corso…
       </div>
     }
-    @if (error()) {
-      <div class="form-feedback is-error" role="alert">{{ error() }}</div>
-    }
+    <!-- gli errori d'azione usano i toast; gli errori fatali compaiono nella
+         empty-state dello stato 'error' qui sotto (niente banda duplicata) -->
     <!-- annuncio screen-reader per avvio/stop registrazione (il timer visibile è aria-hidden) -->
     <span class="sr-only" aria-live="polite">{{ recAnnounce() }}</span>
 
@@ -125,59 +103,132 @@
               Tocca per attivare l'audio
             </button>
           }
-        </div>
 
-        <div class="live-room__bar">
-          @if (hasVideo()) {
-            <button type="button" class="btn btn--ghost btn--sm" (click)="toggleFullscreen()">
-              <app-icon name="maximize" [size]="16" />
-              Schermo intero
-            </button>
-          }
-          @if (canPublish() && micOn() && selfSpeaking()) {
-            <span class="live-room__self-status is-speaking">Stai parlando</span>
-          }
-        </div>
+          <!-- PiP delle webcam in modalità schermo (popolato via relayoutTiles) -->
+          <div #pip class="live-room__pip"></div>
 
-        @if (canPublish()) {
-          <div class="live-room__controls">
-            <button
-              type="button"
-              class="btn btn--sm"
-              [class.btn--primary]="micOn()"
-              [class.btn--ghost]="!micOn()"
-              [attr.aria-pressed]="micOn()"
-              (click)="toggleMic()"
-            >
-              <app-icon [name]="micOn() ? 'mic' : 'mic-off'" [size]="18" />
-              Microfono
-            </button>
-            @if (canShareScreen()) {
+          <!-- Control bar in overlay sul video: su desktop appare al passaggio del
+               mouse / focus, su touch è sempre visibile; fissa quando manca il video.
+               Renderizzata solo se contiene almeno un controllo (niente pill vuota). -->
+          @if (canPublish() || hasVideo() || role() === 'coach') {
+          <div class="live-room__controlbar" [class.is-pinned]="!hasVideo()">
+            @if (canPublish()) {
               <button
                 type="button"
                 class="btn btn--sm"
-                [class.btn--primary]="camOn()"
-                [class.btn--ghost]="!camOn()"
-                [attr.aria-pressed]="camOn()"
-                (click)="toggleCam()"
+                [class.btn--primary]="micOn()"
+                [class.btn--ghost]="!micOn()"
+                [attr.aria-pressed]="micOn()"
+                (click)="toggleMic()"
               >
-                <app-icon [name]="camOn() ? 'video' : 'video-off'" [size]="18" />
-                Fotocamera
+                <app-icon [name]="micOn() ? 'mic' : 'mic-off'" [size]="18" />
+                Microfono
               </button>
+              @if (canShareScreen()) {
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  [class.btn--primary]="camOn()"
+                  [class.btn--ghost]="!camOn()"
+                  [attr.aria-pressed]="camOn()"
+                  (click)="toggleCam()"
+                >
+                  <app-icon [name]="camOn() ? 'video' : 'video-off'" [size]="18" />
+                  Fotocamera
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  [class.btn--primary]="screenOn()"
+                  [class.btn--ghost]="!screenOn()"
+                  [attr.aria-pressed]="screenOn()"
+                  (click)="toggleScreen()"
+                >
+                  <app-icon name="screen-share" [size]="18" />
+                  Schermo
+                </button>
+              }
+            }
+            @if (hasVideo()) {
               <button
                 type="button"
-                class="btn btn--sm"
-                [class.btn--primary]="screenOn()"
-                [class.btn--ghost]="!screenOn()"
-                [attr.aria-pressed]="screenOn()"
-                (click)="toggleScreen()"
+                class="btn btn--sm btn--ghost"
+                (click)="toggleFullscreen()"
               >
-                <app-icon name="screen-share" [size]="18" />
-                Schermo
+                <app-icon name="maximize" [size]="18" />
+                Schermo intero
               </button>
             }
+            @if (role() === 'coach') {
+              <span class="live-room__bar-sep" aria-hidden="true"></span>
+              @if (recordingEnabled()) {
+                <button
+                  type="button"
+                  class="btn btn--sm btn--ghost"
+                  [disabled]="recPending()"
+                  (click)="toggleRecording()"
+                >
+                  <app-icon [name]="recording() ? 'square' : 'record'" [size]="16" />
+                  {{ recPending() ? '…' : recording() ? 'Ferma' : 'Registra' }}
+                </button>
+              }
+              @if (isConfirming('muteAll')) {
+                <button
+                  type="button"
+                  class="btn btn--sm btn--danger"
+                  [disabled]="muteAllPending()"
+                  (click)="doMuteAll()"
+                >
+                  Conferma
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--sm btn--ghost"
+                  (click)="cancelConfirm()"
+                >
+                  Annulla
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="btn btn--sm btn--ghost"
+                  [disabled]="muteAllPending()"
+                  (click)="askConfirm('muteAll')"
+                >
+                  <app-icon name="mic-off" [size]="16" />
+                  Muta tutti
+                </button>
+              }
+              @if (isConfirming('endLive')) {
+                <button
+                  type="button"
+                  class="btn btn--sm btn--danger"
+                  [disabled]="endingLive()"
+                  (click)="doEndLive()"
+                >
+                  {{ endingLive() ? 'Termino…' : 'Conferma fine' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--sm btn--ghost"
+                  (click)="cancelConfirm()"
+                >
+                  Annulla
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="btn btn--sm btn--danger"
+                  (click)="askConfirm('endLive')"
+                >
+                  <app-icon name="log-out" [size]="16" />
+                  Termina
+                </button>
+              }
+            }
           </div>
-        }
+          }
+        </div>
 
         <!-- Studente a cui il coach ha revocato il microfono -->
         @if (role() !== 'coach' && !canPublishNow()) {
@@ -248,7 +299,12 @@
                     } @else {
                       <button type="button" class="btn btn--ghost btn--sm" (click)="grantScreen(p.identity, true)">Consenti schermo</button>
                     }
-                    <button type="button" class="btn btn--danger btn--sm" (click)="kick(p.identity)">Espelli</button>
+                    @if (isConfirming('kick:' + p.identity)) {
+                      <button type="button" class="btn btn--danger btn--sm" (click)="doKick(p.identity)">Conferma</button>
+                      <button type="button" class="btn btn--ghost btn--sm" (click)="cancelConfirm()">Annulla</button>
+                    } @else {
+                      <button type="button" class="btn btn--danger btn--sm" (click)="askConfirm('kick:' + p.identity)">Espelli</button>
+                    }
                   </span>
                 }
               </div>

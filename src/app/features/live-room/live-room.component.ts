@@ -21,6 +21,7 @@ import { LiveService } from '../../core/services/live.service';
 import { LIVEKIT_LOADER } from '../../shared/sdk/livekit-loader';
 import { apiErrorMessage } from '../../core/utils/http-error';
 import { IconComponent } from '../../shared/ui/icon/icon.component';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 
 type RoomState =
   | 'connecting'
@@ -62,6 +63,7 @@ export class LiveRoomComponent implements OnDestroy {
   private readonly router = inject(Router);
   private readonly liveApi = inject(LiveService);
   private readonly loadLiveKit = inject(LIVEKIT_LOADER);
+  private readonly toast = inject(ToastService);
 
   private readonly stageRef =
     viewChild<ElementRef<HTMLDivElement>>('stage');
@@ -69,6 +71,7 @@ export class LiveRoomComponent implements OnDestroy {
     viewChild<ElementRef<HTMLDivElement>>('audioSink');
   private readonly messagesRef =
     viewChild<ElementRef<HTMLDivElement>>('msgList');
+  private readonly pipRef = viewChild<ElementRef<HTMLDivElement>>('pip');
 
   protected readonly id = signal('');
   protected readonly state = signal<RoomState>('connecting');
@@ -99,6 +102,10 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly recElapsed = signal(''); // durata REC (mm:ss / h:mm:ss)
   protected readonly recAnnounce = signal(''); // annuncio sr-only avvio/stop REC
   protected readonly endingLive = signal(false); // "Termina live" in corso
+  // inline-confirm azioni distruttive (chiave attiva, es. 'muteAll'/'endLive'/'kick:<id>') o null
+  protected readonly confirming = signal<string | null>(null);
+  protected readonly recPending = signal(false); // avvio/stop registrazione in corso
+  protected readonly muteAllPending = signal(false); // "muta tutti" in corso
   private consentGiven = false;
   // Testo del consenso fornito dal backend (versionato, GDPR art. 7); fallback se assente.
   protected readonly consentText = signal(
@@ -378,6 +385,30 @@ export class LiveRoomComponent implements OnDestroy {
         stage.querySelector('.live-room__tile.is-screen:not([hidden])') !==
           null,
     );
+    this.relayoutTiles();
+  }
+
+  /**
+   * In modalità schermo le webcam vanno nel contenitore PiP (impilate in colonna,
+   * niente sovrapposizione anche con più presenter); in modalità normale tornano
+   * nel flusso flex dello stage. I tile schermo restano sempre nello stage.
+   */
+  private relayoutTiles(): void {
+    const stage = this.stageRef()?.nativeElement;
+    const pip = this.pipRef()?.nativeElement;
+    if (!stage || !pip) return;
+    const target = this.hasScreen() ? pip : stage;
+    const cams = [
+      ...Array.from(
+        stage.querySelectorAll<HTMLElement>(':scope > .live-room__tile.is-cam'),
+      ),
+      ...Array.from(
+        pip.querySelectorAll<HTMLElement>('.live-room__tile.is-cam'),
+      ),
+    ];
+    for (const t of cams) {
+      if (t.parentElement !== target) target.appendChild(t);
+    }
   }
 
   /**
@@ -514,7 +545,7 @@ export class LiveRoomComponent implements OnDestroy {
         this.screenOn.set(on);
       }
     } catch {
-      this.error.set(
+      this.toast.error(
         'Permesso negato: consenti fotocamera/microfono/schermo per trasmettere.',
       );
     }
@@ -626,13 +657,15 @@ export class LiveRoomComponent implements OnDestroy {
     this.liveApi
       .promote(this.id(), { targetUserId: identity, sources: ['mic'] })
       .subscribe({
-        error: () => this.error.set('Impossibile ridare il microfono.'),
+        next: () => this.toast.success('Microfono restituito'),
+        error: () => this.toast.error('Impossibile ridare il microfono.'),
       });
   }
 
   protected demote(identity: string): void {
     this.liveApi.demote(this.id(), identity).subscribe({
-      error: () => this.error.set('Impossibile revocare la parola.'),
+      next: () => this.toast.success('Microfono revocato'),
+      error: () => this.toast.error('Impossibile revocare la parola.'),
     });
   }
 
@@ -642,26 +675,44 @@ export class LiveRoomComponent implements OnDestroy {
       ? rp?.getTrackPublication(this.lk.Track.Source.Microphone)?.trackSid
       : undefined;
     if (!sid) {
-      this.error.set('Nessuna traccia audio da mutare per questo partecipante.');
+      this.toast.error(
+        'Nessuna traccia audio da mutare per questo partecipante.',
+      );
       return;
     }
     this.liveApi.mute(this.id(), { targetUserId: identity, trackSid: sid }).subscribe({
-      error: () => this.error.set('Mute non riuscito.'),
+      next: () => this.toast.success('Partecipante mutato'),
+      error: () => this.toast.error('Mute non riuscito.'),
     });
   }
 
-  protected kick(identity: string): void {
-    if (!confirm('Espellere questo partecipante dalla stanza?')) return;
+  /** Inline-confirm delle azioni distruttive (niente confirm() nativi). */
+  protected isConfirming(key: string): boolean {
+    return this.confirming() === key;
+  }
+  protected askConfirm(key: string): void {
+    this.confirming.set(key);
+  }
+  protected cancelConfirm(): void {
+    this.confirming.set(null);
+  }
+
+  /** Coach: espelle un partecipante (dopo conferma inline). */
+  protected doKick(identity: string): void {
+    this.cancelConfirm();
     this.liveApi.kick(this.id(), identity).subscribe({
-      error: () => this.error.set('Impossibile espellere.'),
+      next: () => this.toast.success('Partecipante espulso'),
+      error: () => this.toast.error('Impossibile espellere.'),
     });
   }
 
   /** Coach: concede/revoca la condivisione schermo (+webcam) a uno studente. */
   protected grantScreen(identity: string, on: boolean): void {
     this.liveApi.grantScreen(this.id(), identity, on).subscribe({
+      next: () =>
+        this.toast.success(on ? 'Schermo concesso' : 'Schermo revocato'),
       error: () =>
-        this.error.set(
+        this.toast.error(
           on
             ? 'Impossibile concedere lo schermo.'
             : 'Impossibile revocare lo schermo.',
@@ -669,11 +720,19 @@ export class LiveRoomComponent implements OnDestroy {
     });
   }
 
-  /** Coach: toglie il microfono a tutti i partecipanti. */
-  protected muteAll(): void {
-    if (!confirm('Togliere il microfono a tutti i partecipanti?')) return;
+  /** Coach: toglie il microfono a tutti (dopo conferma inline + stato pending). */
+  protected doMuteAll(): void {
+    this.cancelConfirm();
+    this.muteAllPending.set(true);
     this.liveApi.muteAll(this.id()).subscribe({
-      error: () => this.error.set('Operazione "muta tutti" non riuscita.'),
+      next: () => {
+        this.muteAllPending.set(false);
+        this.toast.success('Microfono tolto a tutti');
+      },
+      error: () => {
+        this.muteAllPending.set(false);
+        this.toast.error('Operazione "muta tutti" non riuscita.');
+      },
     });
   }
 
@@ -692,12 +751,18 @@ export class LiveRoomComponent implements OnDestroy {
 
   /** Coach: avvia/ferma la registrazione (lo stato REC arriva poi via evento). */
   protected toggleRecording(): void {
+    if (this.recPending()) return;
+    this.recPending.set(true);
     const id = this.id();
     const req$ = this.recording()
       ? this.liveApi.stopRecording(id)
       : this.liveApi.startRecording(id);
     req$.subscribe({
-      error: () => this.error.set('Operazione di registrazione non riuscita.'),
+      next: () => this.recPending.set(false),
+      error: () => {
+        this.recPending.set(false);
+        this.toast.error('Operazione di registrazione non riuscita.');
+      },
     });
   }
 
@@ -740,16 +805,15 @@ export class LiveRoomComponent implements OnDestroy {
   }
 
   /** Coach: termina la live per tutti (chiude la stanza), poi torna alla lista. */
-  protected endLive(): void {
+  protected doEndLive(): void {
+    this.cancelConfirm();
     if (this.endingLive()) return;
-    if (!confirm('Terminare la live per tutti i partecipanti?')) return;
     this.endingLive.set(true);
-    this.error.set(null);
     this.liveApi.endLive(this.id()).subscribe({
       next: () => void this.router.navigate(['/live']),
       error: () => {
         this.endingLive.set(false);
-        this.error.set('Impossibile terminare la live.');
+        this.toast.error('Impossibile terminare la live.');
       },
     });
   }

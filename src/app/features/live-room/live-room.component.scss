@@ -180,8 +180,7 @@
       letter-spacing: 0.03em;
     }
 
-    // Modalità "lezione": schermo condiviso grande, webcam in PiP sull'angolo
-    // (overlay sullo schermo, così non resta la fascia nera attorno).
+    // Modalità "lezione": schermo condiviso grande, webcam nel PiP (vedi sotto).
     &.is-screen-mode ::ng-deep {
       .is-screen {
         flex: 1 1 100%;
@@ -189,18 +188,41 @@
       .is-screen .live-room__video {
         max-height: 78vh;
       }
-      .is-cam {
-        position: absolute;
-        right: 0.6rem;
-        bottom: 0.6rem;
-        width: 22%;
-        max-width: 240px;
-        z-index: 2;
+    }
+
+    // PiP delle webcam (in modalità schermo): impilate in colonna in alto a
+    // destra → niente sovrapposizione anche con più presenter. Vuoto = nascosto.
+    ::ng-deep .live-room__pip {
+      position: absolute;
+      top: 0.6rem;
+      right: 0.6rem;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.5rem;
+      max-width: 32%;
+      max-height: calc(100% - 1.2rem);
+      overflow: hidden;
+
+      &:empty {
+        display: none;
+      }
+
+      .live-room__tile {
+        width: 200px;
+        max-width: 100%;
         border: 2px solid rgba(255, 255, 255, 0.35);
         border-radius: 8px;
       }
-      .is-cam .live-room__video {
-        max-height: 32vh;
+      .live-room__video {
+        width: 100%;
+        height: auto;
+        max-height: 26vh;
+      }
+      .live-room__nameplate {
+        font-size: 0.7rem;
+        padding: 0.1rem 0.4rem;
       }
     }
 
@@ -221,38 +243,98 @@
         max-width: 100vw;
         max-height: 100vh;
       }
-
-      // con schermo condiviso, l'eventuale webcam va in un riquadrino d'angolo
-      &.is-screen-mode ::ng-deep .is-cam {
-        right: 1rem;
-        bottom: 1rem;
-        width: 16vw;
-        max-width: 22vw;
-      }
-      &.is-screen-mode ::ng-deep .is-cam .live-room__video {
+      // i PiP restano a piena larghezza del loro riquadro
+      ::ng-deep .live-room__pip .live-room__video {
         width: 100%;
-        max-height: 22vh;
       }
     }
   }
 
-  &__bar {
+  // Control bar in overlay sul fondo dello stage (pill scura), come nelle
+  // videocall moderne. Pulsanti chiari su barra scura, attivo = oro.
+  &__controlbar {
+    position: absolute;
+    left: 50%;
+    bottom: 0.6rem;
+    transform: translateX(-50%);
+    z-index: 4;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
+    justify-content: center;
+    gap: 0.4rem;
+    max-width: calc(100% - 1.2rem);
+    padding: 0.4rem;
+    border-radius: 999px;
+    background: rgba(7, 11, 24, 0.72);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
 
-  &__self-status {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    font-weight: 600;
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: transparent;
+      border-color: rgba(255, 255, 255, 0.18);
+      color: #f2f3f5;
+    }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .btn.btn--primary {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: #1b1300;
+    }
+    .btn.btn--danger {
+      background: transparent;
+      border-color: rgba(255, 61, 98, 0.5);
+      color: #ff9fb0;
+    }
+    .btn.btn--danger:hover {
+      background: rgba(255, 61, 98, 0.16);
+    }
+    .btn[disabled] {
+      opacity: 0.55;
+      cursor: default;
+    }
 
-    &.is-speaking {
-      color: var(--gold-text);
+    // su desktop con mouse: nascosta di default, appare al passaggio sullo stage
+    @media (hover: hover) and (pointer: fine) {
+      opacity: 0;
+      transform: translateX(-50%) translateY(0.4rem);
+      transition:
+        opacity var(--t-fast),
+        transform var(--t-fast);
+      pointer-events: none;
+
+      // quando manca il video resta fissa (es. coach che deve avviare la camera)
+      &.is-pinned {
+        opacity: 1;
+        transform: translateX(-50%);
+        pointer-events: auto;
+      }
     }
   }
+
+  // rivela la control bar all'hover sullo stage o al focus da tastiera dentro la barra
+  @media (hover: hover) and (pointer: fine) {
+    &__stage:hover &__controlbar,
+    &__controlbar:focus-within {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+  }
+
+  &__bar-sep {
+    width: 1px;
+    align-self: stretch;
+    margin: 0.15rem 0.2rem;
+    background: rgba(255, 255, 255, 0.18);
+  }
+
 
   &__mic-flag {
     display: inline-flex;
@@ -315,21 +397,6 @@
     text-align: center;
     padding: 1rem;
     backdrop-filter: blur(2px);
-  }
-
-  &__controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: center;
-  }
-
-  // Pulsanti con icona SVG + label: allineamento orizzontale coerente.
-  &__controls .btn,
-  &__top-right .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
   }
 
   &__side {
