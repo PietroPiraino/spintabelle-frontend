@@ -226,7 +226,11 @@
       }
     }
 
-    // A tutto schermo: il video riempie lo schermo (letterbox), niente bordi.
+    // A tutto schermo: il tile riempie il viewport e il video SCALA fino a
+    // riempirlo (object-fit:contain → letterbox solo sull'asse che non combacia,
+    // zero bande se le proporzioni combaciano). Senza width/height:100% il
+    // <video> resterebbe alla sua risoluzione (spesso ridotta da LiveKit) →
+    // bande nere su tutti i lati anche con sorgente 4K/2K.
     &:fullscreen {
       border-radius: 0;
       padding: 0;
@@ -236,16 +240,26 @@
       justify-content: center;
 
       ::ng-deep .live-room__tile {
-        flex: 0 1 auto;
+        flex: none;
+        width: 100vw;
+        height: 100vh;
       }
       ::ng-deep .live-room__video {
-        width: auto;
+        width: 100%;
+        height: 100%;
         max-width: 100vw;
         max-height: 100vh;
+        object-fit: contain;
       }
-      // i PiP restano a piena larghezza del loro riquadro
+      // i PiP restano piccoli nel loro riquadro (non a tutto schermo)
+      ::ng-deep .live-room__pip .live-room__tile {
+        width: 200px;
+        height: auto;
+      }
       ::ng-deep .live-room__pip .live-room__video {
         width: 100%;
+        height: auto;
+        max-height: 26vh;
       }
     }
   }
