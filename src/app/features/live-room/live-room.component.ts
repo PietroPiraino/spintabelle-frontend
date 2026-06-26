@@ -20,6 +20,7 @@ import type {
 import { LiveService } from '../../core/services/live.service';
 import { LIVEKIT_LOADER } from '../../shared/sdk/livekit-loader';
 import { apiErrorMessage } from '../../core/utils/http-error';
+import { IconComponent } from '../../shared/ui/icon/icon.component';
 
 type RoomState =
   | 'connecting'
@@ -51,7 +52,7 @@ interface RosterEntry {
  */
 @Component({
   selector: 'app-live-room',
-  imports: [RouterLink],
+  imports: [RouterLink, IconComponent],
   templateUrl: './live-room.component.html',
   styleUrl: './live-room.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -107,6 +108,9 @@ export class LiveRoomComponent implements OnDestroy {
   private recStartMs = 0;
 
   private room: Room | null = null;
+  // Tile video per traccia → rimozione robusta in detach, indipendente dal sid
+  // (un sid assente lascerebbe altrimenti un riquadro orfano sullo stage).
+  private readonly tiles = new Map<Track, HTMLElement>();
   private lk: typeof import('livekit-client') | null = null;
   private disposed = false;
   private krispDone = false;
@@ -156,14 +160,30 @@ export class LiveRoomComponent implements OnDestroy {
       room
         .on(
           LK.RoomEvent.TrackSubscribed,
-          (track: Track, _pub: unknown, p: { identity: string }) =>
-            this.attach(track, p.identity),
+          (
+            track: Track,
+            pub: { isMuted?: boolean },
+            p: { identity: string; name?: string },
+          ) =>
+            this.attach(
+              track,
+              p.identity,
+              p.name || p.identity,
+              false,
+              !!pub?.isMuted,
+            ),
         )
         .on(LK.RoomEvent.TrackUnsubscribed, (track: Track) => this.detach(track))
         .on(LK.RoomEvent.LocalTrackPublished, (pub) => {
           if (!pub.track) return;
           if (pub.track.kind === 'video') {
-            this.attach(pub.track, room.localParticipant.identity);
+            this.attach(
+              pub.track,
+              room.localParticipant.identity,
+              room.localParticipant.name || 'Tu',
+              true,
+              !!pub.isMuted,
+            );
           } else if (pub.source === LK.Track.Source.Microphone) {
             // NON aggancio l'audio locale (eviti di riascoltarti); applico Krisp al mic
             void this.applyKrisp(pub.track);
@@ -287,32 +307,61 @@ export class LiveRoomComponent implements OnDestroy {
     if (this.room) this.participants.set(this.room.remoteParticipants.size + 1);
   }
 
-  private attach(track: Track, identity: string): void {
+  private attach(
+    track: Track,
+    identity: string,
+    name: string,
+    isLocal: boolean,
+    mutedAtAttach = false,
+  ): void {
     const el = track.attach();
-    if (track.kind === 'video') {
-      const isScreen = track.source === this.lk?.Track.Source.ScreenShare;
-      el.classList.add('live-room__video', isScreen ? 'is-screen' : 'is-cam');
-      el.dataset['identity'] = identity;
-      el.dataset['sid'] = track.sid ?? '';
-      if (this.speaking().has(identity)) el.classList.add('is-speaking');
-      this.stageRef()?.nativeElement.appendChild(el);
-      this.hasVideo.set(true);
-      if (isScreen) this.hasScreen.set(true);
-    } else {
+    if (track.kind !== 'video') {
       this.audioRef()?.nativeElement.appendChild(el);
+      return;
     }
+    const isScreen = track.source === this.lk?.Track.Source.ScreenShare;
+    el.classList.add('live-room__video');
+    // Ogni traccia video vive in un tile con targhetta nome (chi è chi sul palco).
+    const tile = document.createElement('div');
+    tile.className = `live-room__tile ${isScreen ? 'is-screen' : 'is-cam'}`;
+    tile.dataset['identity'] = identity;
+    tile.dataset['sid'] = track.sid ?? '';
+    if (this.speaking().has(identity)) tile.classList.add('is-speaking');
+    tile.appendChild(el);
+
+    const plate = document.createElement('div');
+    plate.className = 'live-room__nameplate';
+    const label = document.createElement('span');
+    label.className = 'live-room__nameplate-name';
+    const who = isLocal ? 'Tu' : name;
+    label.textContent = isScreen ? `${who} · schermo` : who;
+    plate.appendChild(label);
+    if (isLocal && this.role() === 'coach') {
+      const role = document.createElement('span');
+      role.className = 'live-room__nameplate-role';
+      role.textContent = 'Coach';
+      plate.appendChild(role);
+    }
+    tile.appendChild(plate);
+
+    // Se la traccia è già mutata al join (es. coach con camera spenta), il tile
+    // nasce nascosto → niente riquadro nero; TrackUnmuted lo rivelerà.
+    if (mutedAtAttach) tile.hidden = true;
+
+    this.tiles.set(track, tile);
+    this.stageRef()?.nativeElement.appendChild(tile);
+    this.recomputeStage();
   }
 
   private detach(track: Track): void {
-    // track.detach() può restituire vuoto se l'SDK ha già staccato il media
-    // all'unsubscribe/unpublish (lasciando però l'elemento NEL DOM, nero):
-    // rimuovo anche per sid così il tile sparisce sempre (schermo, webcam, remoti).
+    // track.detach() stacca il <video>; rimuovo il TILE wrapper (targhetta
+    // compresa) via la mappa per-traccia → mai un riquadro orfano/nero residuo,
+    // anche se il sid è assente in fase di teardown.
     track.detach().forEach((el) => el.remove());
-    const sid = track.sid;
-    if (sid) {
-      this.stageRef()
-        ?.nativeElement.querySelectorAll(`[data-sid="${sid}"]`)
-        .forEach((el) => el.remove());
+    const tile = this.tiles.get(track);
+    if (tile) {
+      tile.remove();
+      this.tiles.delete(track);
     }
     if (track.kind === 'video') this.recomputeStage();
   }
@@ -321,10 +370,13 @@ export class LiveRoomComponent implements OnDestroy {
   private recomputeStage(): void {
     const stage = this.stageRef()?.nativeElement;
     this.hasVideo.set(
-      !!stage && stage.querySelector('video:not([hidden])') !== null,
+      !!stage &&
+        stage.querySelector('.live-room__tile:not([hidden])') !== null,
     );
     this.hasScreen.set(
-      !!stage && stage.querySelector('.is-screen:not([hidden])') !== null,
+      !!stage &&
+        stage.querySelector('.live-room__tile.is-screen:not([hidden])') !==
+          null,
     );
   }
 
@@ -338,7 +390,9 @@ export class LiveRoomComponent implements OnDestroy {
     const sid = pub?.trackSid;
     if (!sid) return;
     this.stageRef()
-      ?.nativeElement.querySelectorAll<HTMLElement>(`video[data-sid="${sid}"]`)
+      ?.nativeElement.querySelectorAll<HTMLElement>(
+        `.live-room__tile[data-sid="${sid}"]`,
+      )
       .forEach((el) => (el.hidden = muted));
     this.recomputeStage();
   }
@@ -348,7 +402,7 @@ export class LiveRoomComponent implements OnDestroy {
     const set = new Set(speakers.map((s) => s.identity));
     this.speaking.set(set);
     const stage = this.stageRef()?.nativeElement;
-    stage?.querySelectorAll('.live-room__video').forEach((el) => {
+    stage?.querySelectorAll('.live-room__tile').forEach((el) => {
       const id = (el as HTMLElement).dataset['identity'];
       (el as HTMLElement).classList.toggle('is-speaking', !!id && set.has(id));
     });
@@ -377,7 +431,7 @@ export class LiveRoomComponent implements OnDestroy {
       }
       // iOS Safari non supporta requestFullscreen su un <div>: ripiego sul
       // fullscreen NATIVO del video (schermo condiviso se c'è, altrimenti il primo).
-      const video = (stage.querySelector('.is-screen') ??
+      const video = (stage.querySelector('.is-screen video') ??
         stage.querySelector('video')) as
         | (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
         | null;
@@ -707,6 +761,7 @@ export class LiveRoomComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.disposed = true;
     if (this.recTimer) clearInterval(this.recTimer);
+    this.tiles.clear();
     void this.room?.disconnect();
     this.room = null;
   }

@@ -6,19 +6,22 @@
       @if (state() === 'connected') {
         <div class="live-room__top-right">
           <span class="live-room__count" aria-live="polite">
-            👥 {{ participants() }} in sala
+            <app-icon name="users" [size]="18" />
+            {{ participants() }} in sala
             @if (role() === 'coach') {
               <span class="badge badge--premium">Coach</span>
             }
           </span>
           @if (role() === 'coach' && recordingEnabled()) {
             <button type="button" class="btn btn--ghost btn--sm" (click)="toggleRecording()">
-              {{ recording() ? '⏹ Ferma registrazione' : '🔴 Registra' }}
+              <app-icon [name]="recording() ? 'square' : 'record'" [size]="16" />
+              {{ recording() ? 'Ferma registrazione' : 'Registra' }}
             </button>
           }
           @if (role() === 'coach') {
             <button type="button" class="btn btn--ghost btn--sm" (click)="muteAll()">
-              🔇 Muta tutti
+              <app-icon name="mic-off" [size]="16" />
+              Muta tutti
             </button>
             <button
               type="button"
@@ -26,6 +29,7 @@
               [disabled]="endingLive()"
               (click)="endLive()"
             >
+              <app-icon name="log-out" [size]="16" />
               {{ endingLive() ? 'Termino…' : 'Termina la live' }}
             </button>
           }
@@ -98,10 +102,12 @@
           }
           @if (!hasVideo()) {
             <div class="live-room__placeholder">
-              <div class="live-room__placeholder-icon" aria-hidden="true">📡</div>
+              <div class="live-room__placeholder-icon" aria-hidden="true">
+                <app-icon name="radio" [size]="40" />
+              </div>
               @if (role() === 'coach') {
                 <p class="live-room__placeholder-title">Sei in sala</p>
-                <p>Attiva 📷 la fotocamera o 🖥️ condividi lo schermo per iniziare la trasmissione.</p>
+                <p>Attiva la fotocamera o condividi lo schermo per iniziare la trasmissione.</p>
               } @else {
                 <p class="live-room__placeholder-title">In attesa del coach</p>
                 <p>La trasmissione non è ancora attiva. Resta in sala: comincerà a breve. Puoi intanto usare la chat.</p>
@@ -116,7 +122,7 @@
               class="live-room__audio-overlay"
               (click)="enableAudio()"
             >
-              🔊 Tocca per attivare l'audio
+              Tocca per attivare l'audio
             </button>
           }
         </div>
@@ -124,20 +130,12 @@
         <div class="live-room__bar">
           @if (hasVideo()) {
             <button type="button" class="btn btn--ghost btn--sm" (click)="toggleFullscreen()">
-              ⛶ Schermo intero
+              <app-icon name="maximize" [size]="16" />
+              Schermo intero
             </button>
           }
-          @if (canPublish()) {
-            <span
-              class="live-room__self-status"
-              [class.is-speaking]="micOn() && selfSpeaking()"
-            >
-              @if (micOn()) {
-                {{ selfSpeaking() ? '🟢 Stai parlando' : '🎙️ Microfono acceso' }}
-              } @else {
-                🔇 Microfono spento
-              }
-            </span>
+          @if (canPublish() && micOn() && selfSpeaking()) {
+            <span class="live-room__self-status is-speaking">Stai parlando</span>
           }
         </div>
 
@@ -151,7 +149,8 @@
               [attr.aria-pressed]="micOn()"
               (click)="toggleMic()"
             >
-              {{ micOn() ? '🎙️ Microfono ON' : '🎙️ Parla (microfono)' }}
+              <app-icon [name]="micOn() ? 'mic' : 'mic-off'" [size]="18" />
+              Microfono
             </button>
             @if (canShareScreen()) {
               <button
@@ -162,7 +161,8 @@
                 [attr.aria-pressed]="camOn()"
                 (click)="toggleCam()"
               >
-                {{ camOn() ? '📷 Fotocamera ON' : '📷 Fotocamera' }}
+                <app-icon [name]="camOn() ? 'video' : 'video-off'" [size]="18" />
+                Fotocamera
               </button>
               <button
                 type="button"
@@ -172,7 +172,8 @@
                 [attr.aria-pressed]="screenOn()"
                 (click)="toggleScreen()"
               >
-                {{ screenOn() ? '🖥️ Schermo ON' : '🖥️ Condividi schermo' }}
+                <app-icon name="screen-share" [size]="18" />
+                Schermo
               </button>
             }
           </div>
@@ -181,7 +182,8 @@
         <!-- Studente a cui il coach ha revocato il microfono -->
         @if (role() !== 'coach' && !canPublishNow()) {
           <p class="live-room__muted-note">
-            🔇 Il coach ti ha tolto il microfono.
+            <app-icon name="mic-off" [size]="16" />
+            Il coach ti ha tolto il microfono.
           </p>
         }
       </div>
@@ -195,7 +197,6 @@
             <div class="live-room__roster-row">
               <span class="live-room__roster-name" [class.is-speaking]="selfSpeaking()">
                 @if (selfSpeaking()) {
-                  <span aria-hidden="true">🔊</span>
                   <span class="sr-only">Stai parlando.</span>
                 }
                 Tu
@@ -213,24 +214,23 @@
                   >●</span>
                   <span class="sr-only">Connessione {{ qualityLabel(p.quality) }}.</span>
                   @if (isSpeaking(p.identity)) {
-                    <span aria-hidden="true">🔊</span>
                     <span class="sr-only">Sta parlando.</span>
                   }
                   {{ p.name }}
                   @if (p.canScreen) {
-                    <span class="badge" title="può condividere lo schermo">
-                      <span aria-hidden="true">🖥️</span>
+                    <span class="badge live-room__flag" title="può condividere lo schermo">
+                      <app-icon name="screen-share" [size]="13" />
                       <span class="sr-only">può condividere lo schermo</span>
                     </span>
                   }
                   @if (!p.canPublish) {
-                    <span class="live-room__mic-flag">
-                      <span aria-hidden="true">🚫</span>
+                    <span class="live-room__mic-flag is-removed" title="microfono tolto dal coach">
+                      <app-icon name="mic-off" [size]="14" />
                       <span class="sr-only">microfono tolto dal coach</span>
                     </span>
                   } @else if (!p.micActive) {
-                    <span class="live-room__mic-flag">
-                      <span aria-hidden="true">🔇</span>
+                    <span class="live-room__mic-flag" title="microfono spento">
+                      <app-icon name="mic-off" [size]="14" />
                       <span class="sr-only">microfono spento</span>
                     </span>
                   }
