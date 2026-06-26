@@ -115,48 +115,51 @@
             @if (canPublish()) {
               <button
                 type="button"
-                class="btn btn--sm"
-                [class.btn--primary]="micOn()"
-                [class.btn--ghost]="!micOn()"
+                class="live-room__cbtn"
+                [class.is-on]="micOn()"
                 [attr.aria-pressed]="micOn()"
+                [attr.aria-label]="micOn() ? 'Disattiva microfono' : 'Attiva microfono'"
+                [title]="micOn() ? 'Microfono acceso' : 'Microfono spento'"
                 (click)="toggleMic()"
               >
-                <app-icon [name]="micOn() ? 'mic' : 'mic-off'" [size]="18" />
-                Microfono
+                <app-icon [name]="micOn() ? 'mic' : 'mic-off'" [size]="20" />
               </button>
               @if (canShareScreen()) {
                 <button
                   type="button"
-                  class="btn btn--sm"
-                  [class.btn--primary]="camOn()"
-                  [class.btn--ghost]="!camOn()"
+                  class="live-room__cbtn"
+                  [class.is-on]="camOn()"
                   [attr.aria-pressed]="camOn()"
+                  [attr.aria-label]="camOn() ? 'Disattiva fotocamera' : 'Attiva fotocamera'"
+                  [title]="camOn() ? 'Fotocamera accesa' : 'Fotocamera spenta'"
                   (click)="toggleCam()"
                 >
-                  <app-icon [name]="camOn() ? 'video' : 'video-off'" [size]="18" />
-                  Fotocamera
+                  <app-icon [name]="camOn() ? 'video' : 'video-off'" [size]="20" />
                 </button>
                 <button
                   type="button"
-                  class="btn btn--sm"
-                  [class.btn--primary]="screenOn()"
-                  [class.btn--ghost]="!screenOn()"
+                  class="live-room__cbtn"
+                  [class.is-on]="screenOn()"
                   [attr.aria-pressed]="screenOn()"
+                  [attr.aria-label]="
+                    screenOn() ? 'Interrompi condivisione schermo' : 'Condividi schermo'
+                  "
+                  [title]="screenOn() ? 'Stai condividendo' : 'Condividi schermo'"
                   (click)="toggleScreen()"
                 >
-                  <app-icon name="screen-share" [size]="18" />
-                  Schermo
+                  <app-icon name="screen-share" [size]="20" />
                 </button>
               }
             }
             @if (hasVideo()) {
               <button
                 type="button"
-                class="btn btn--sm btn--ghost"
+                class="live-room__cbtn"
+                aria-label="Schermo intero"
+                title="Schermo intero"
                 (click)="toggleFullscreen()"
               >
-                <app-icon name="maximize" [size]="18" />
-                Schermo intero
+                <app-icon name="maximize" [size]="20" />
               </button>
             }
             @if (role() === 'coach') {
@@ -164,65 +167,77 @@
               @if (recordingEnabled()) {
                 <button
                   type="button"
-                  class="btn btn--sm btn--ghost"
+                  class="live-room__cbtn"
+                  [class.is-rec]="recording()"
                   [disabled]="recPending()"
+                  [attr.aria-label]="
+                    recording() ? 'Ferma registrazione' : 'Avvia registrazione'
+                  "
+                  [title]="recording() ? 'Ferma registrazione' : 'Registra'"
                   (click)="toggleRecording()"
                 >
-                  <app-icon [name]="recording() ? 'square' : 'record'" [size]="16" />
-                  {{ recPending() ? '…' : recording() ? 'Ferma' : 'Registra' }}
+                  <app-icon [name]="recording() ? 'square' : 'record'" [size]="18" />
                 </button>
               }
               @if (isConfirming('muteAll')) {
-                <button
-                  type="button"
-                  class="btn btn--sm btn--danger"
-                  [disabled]="muteAllPending()"
-                  (click)="doMuteAll()"
-                >
-                  Conferma
-                </button>
-                <button
-                  type="button"
-                  class="btn btn--sm btn--ghost"
-                  (click)="cancelConfirm()"
-                >
-                  Annulla
-                </button>
+                <span class="live-room__confirm">
+                  <span class="live-room__confirm-label">Muta tutti?</span>
+                  <button
+                    type="button"
+                    class="btn btn--sm btn--danger"
+                    [disabled]="muteAllPending()"
+                    (click)="doMuteAll()"
+                  >
+                    Conferma
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--sm btn--ghost"
+                    (click)="cancelConfirm()"
+                  >
+                    Annulla
+                  </button>
+                </span>
               } @else {
                 <button
                   type="button"
-                  class="btn btn--sm btn--ghost"
+                  class="live-room__cbtn"
                   [disabled]="muteAllPending()"
+                  aria-label="Muta tutti"
+                  title="Muta tutti"
                   (click)="askConfirm('muteAll')"
                 >
-                  <app-icon name="mic-off" [size]="16" />
-                  Muta tutti
+                  <app-icon name="mic-off" [size]="18" />
                 </button>
               }
               @if (isConfirming('endLive')) {
-                <button
-                  type="button"
-                  class="btn btn--sm btn--danger"
-                  [disabled]="endingLive()"
-                  (click)="doEndLive()"
-                >
-                  {{ endingLive() ? 'Termino…' : 'Conferma fine' }}
-                </button>
-                <button
-                  type="button"
-                  class="btn btn--sm btn--ghost"
-                  (click)="cancelConfirm()"
-                >
-                  Annulla
-                </button>
+                <span class="live-room__confirm">
+                  <span class="live-room__confirm-label">Terminare?</span>
+                  <button
+                    type="button"
+                    class="btn btn--sm btn--danger"
+                    [disabled]="endingLive()"
+                    (click)="doEndLive()"
+                  >
+                    {{ endingLive() ? 'Termino…' : 'Conferma' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--sm btn--ghost"
+                    (click)="cancelConfirm()"
+                  >
+                    Annulla
+                  </button>
+                </span>
               } @else {
                 <button
                   type="button"
-                  class="btn btn--sm btn--danger"
+                  class="live-room__cbtn live-room__cbtn--danger"
+                  aria-label="Termina la live"
+                  title="Termina la live"
                   (click)="askConfirm('endLive')"
                 >
-                  <app-icon name="log-out" [size]="16" />
-                  Termina
+                  <app-icon name="log-out" [size]="18" />
                 </button>
               }
             }

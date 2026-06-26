@@ -335,6 +335,63 @@
     background: rgba(255, 255, 255, 0.18);
   }
 
+  // Pulsante circolare solo-icona della control bar (compatto, stile videocall).
+  // Il nome accessibile è in aria-label + title (tooltip).
+  &__cbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: #f2f3f5;
+    cursor: pointer;
+    transition:
+      background var(--t-fast),
+      border-color var(--t-fast),
+      color var(--t-fast);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+    &.is-on {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: #1b1300;
+    }
+    &.is-rec {
+      color: var(--danger);
+      border-color: rgba(255, 61, 98, 0.5);
+    }
+    &--danger {
+      color: #ff9fb0;
+      border-color: rgba(255, 61, 98, 0.4);
+    }
+    &--danger:hover {
+      background: rgba(255, 61, 98, 0.16);
+    }
+    &[disabled] {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
+  // Conferma inline compatta (appare solo durante la conferma di muta-tutti/termina)
+  &__confirm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  &__confirm-label {
+    color: #f2f3f5;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
 
   &__mic-flag {
     display: inline-flex;
