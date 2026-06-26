@@ -1,12 +1,10 @@
 <section class="section live-room">
   <div class="container">
+    <h1 class="sr-only">Sala live</h1>
     <div class="live-room__top">
       <a routerLink="/live" class="btn btn--ghost btn--sm">← Torna alle live</a>
       @if (state() === 'connected') {
         <div class="live-room__top-right">
-          @if (recording()) {
-            <span class="live-room__rec" aria-live="polite">🔴 REC {{ recElapsed() }}</span>
-          }
           <span class="live-room__count" aria-live="polite">
             👥 {{ participants() }} in sala
             @if (role() === 'coach') {
@@ -36,13 +34,15 @@
     </div>
 
     @if (reconnecting()) {
-      <div class="form-feedback is-error" role="status">
+      <div class="form-feedback is-info" role="status">
         Riconnessione in corso…
       </div>
     }
     @if (error()) {
       <div class="form-feedback is-error" role="alert">{{ error() }}</div>
     }
+    <!-- annuncio screen-reader per avvio/stop registrazione (il timer visibile è aria-hidden) -->
+    <span class="sr-only" aria-live="polite">{{ recAnnounce() }}</span>
 
     @switch (state()) {
       @case ('connecting') {
@@ -89,8 +89,13 @@
     <!-- Resta nel DOM anche durante 'connecting' così i ViewChild esistono per
          agganciare i track non appena arrivano. -->
     <div class="live-room__grid" [hidden]="state() !== 'connected'">
-      <div class="live-room__stagewrap">
+      <div class="live-room__stagewrap" role="region" aria-label="Video e controlli">
         <div #stage class="live-room__stage" [class.is-screen-mode]="hasScreen()">
+          @if (recording()) {
+            <span class="live-room__rec" aria-hidden="true">
+              <span class="live-room__rec-dot"></span> REC {{ recElapsed() }}
+            </span>
+          }
           @if (!hasVideo()) {
             <div class="live-room__placeholder">
               <div class="live-room__placeholder-icon" aria-hidden="true">📡</div>
@@ -143,6 +148,7 @@
               class="btn btn--sm"
               [class.btn--primary]="micOn()"
               [class.btn--ghost]="!micOn()"
+              [attr.aria-pressed]="micOn()"
               (click)="toggleMic()"
             >
               {{ micOn() ? '🎙️ Microfono ON' : '🎙️ Parla (microfono)' }}
@@ -153,6 +159,7 @@
                 class="btn btn--sm"
                 [class.btn--primary]="camOn()"
                 [class.btn--ghost]="!camOn()"
+                [attr.aria-pressed]="camOn()"
                 (click)="toggleCam()"
               >
                 {{ camOn() ? '📷 Fotocamera ON' : '📷 Fotocamera' }}
@@ -162,6 +169,7 @@
                 class="btn btn--sm"
                 [class.btn--primary]="screenOn()"
                 [class.btn--ghost]="!screenOn()"
+                [attr.aria-pressed]="screenOn()"
                 (click)="toggleScreen()"
               >
                 {{ screenOn() ? '🖥️ Schermo ON' : '🖥️ Condividi schermo' }}
@@ -178,7 +186,7 @@
         }
       </div>
 
-      <div class="live-room__side">
+      <div class="live-room__side" role="region" aria-label="Partecipanti e chat">
         <!-- Lista presenti: visibile a tutti; le azioni solo al coach -->
         <div class="card card--pad live-room__roster">
           <h3>In sala ({{ roster().length + 1 }})</h3>
@@ -188,6 +196,7 @@
               <span class="live-room__roster-name" [class.is-speaking]="selfSpeaking()">
                 @if (selfSpeaking()) {
                   <span aria-hidden="true">🔊</span>
+                  <span class="sr-only">Stai parlando.</span>
                 }
                 Tu
                 @if (role() === 'coach') {
@@ -199,22 +208,31 @@
               <div class="live-room__roster-row">
                 <span class="live-room__roster-name" [class.is-speaking]="isSpeaking(p.identity)">
                   <span
-                    class="live-room__quality"
                     [class]="'live-room__quality is-' + p.quality"
-                    [title]="'Connessione: ' + p.quality"
                     aria-hidden="true"
                   >●</span>
+                  <span class="sr-only">Connessione {{ qualityLabel(p.quality) }}.</span>
                   @if (isSpeaking(p.identity)) {
                     <span aria-hidden="true">🔊</span>
+                    <span class="sr-only">Sta parlando.</span>
                   }
                   {{ p.name }}
                   @if (p.canScreen) {
-                    <span class="badge badge--tag" title="può condividere lo schermo">🖥️</span>
+                    <span class="badge" title="può condividere lo schermo">
+                      <span aria-hidden="true">🖥️</span>
+                      <span class="sr-only">può condividere lo schermo</span>
+                    </span>
                   }
                   @if (!p.canPublish) {
-                    <span class="live-room__mic-flag" title="microfono tolto dal coach">🚫</span>
+                    <span class="live-room__mic-flag">
+                      <span aria-hidden="true">🚫</span>
+                      <span class="sr-only">microfono tolto dal coach</span>
+                    </span>
                   } @else if (!p.micActive) {
-                    <span class="live-room__mic-flag" title="microfono spento">🔇</span>
+                    <span class="live-room__mic-flag">
+                      <span aria-hidden="true">🔇</span>
+                      <span class="sr-only">microfono spento</span>
+                    </span>
                   }
                 </span>
                 @if (role() === 'coach') {
@@ -240,7 +258,7 @@
 
         <div class="live-room__chat card card--pad">
           <h3>Chat</h3>
-          <div class="live-room__messages" aria-live="polite">
+          <div #msgList class="live-room__messages" aria-live="polite">
             @for (m of messages(); track $index) {
               <p class="live-room__msg" [class.is-me]="m.me">
                 <strong>{{ m.from }}:</strong> {{ m.text }}
@@ -255,6 +273,7 @@
               type="text"
               class="input"
               placeholder="Scrivi un messaggio…"
+              aria-label="Scrivi un messaggio in chat"
               maxlength="500"
               (keyup.enter)="sendChat(chatInput)"
             />

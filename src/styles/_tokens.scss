@@ -52,6 +52,11 @@
   --radius-lg: 22px;
   --container: 1180px;
 
+  // Palco video (sala live): near-black coerente in tutti i temi (i blocchi tema
+  // ereditano questi valori se non li ridefiniscono).
+  --stage-bg: #0b0b0f;
+  --stage-border: rgba(255, 255, 255, 0.08);
+
   // Colori azione del viewer tabelle (dal passivo all'aggressivo)
   --act-fold: #b6bfd2;
   --act-check: #00b3a4;

@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  effect,
   ElementRef,
   inject,
   OnDestroy,
@@ -65,6 +66,8 @@ export class LiveRoomComponent implements OnDestroy {
     viewChild<ElementRef<HTMLDivElement>>('stage');
   private readonly audioRef =
     viewChild<ElementRef<HTMLDivElement>>('audioSink');
+  private readonly messagesRef =
+    viewChild<ElementRef<HTMLDivElement>>('msgList');
 
   protected readonly id = signal('');
   protected readonly state = signal<RoomState>('connecting');
@@ -93,6 +96,7 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly recordingEnabled = signal(false); // la sessione è registrabile
   protected readonly recording = signal(false); // egress attivo ora (room.isRecording)
   protected readonly recElapsed = signal(''); // durata REC (mm:ss / h:mm:ss)
+  protected readonly recAnnounce = signal(''); // annuncio sr-only avvio/stop REC
   protected readonly endingLive = signal(false); // "Termina live" in corso
   private consentGiven = false;
   // Testo del consenso fornito dal backend (versionato, GDPR art. 7); fallback se assente.
@@ -110,6 +114,13 @@ export class LiveRoomComponent implements OnDestroy {
   constructor() {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
     this.id.set(id);
+    // Chat: scrolla in fondo all'arrivo/invio di un messaggio. Zoneless → il
+    // render del nuovo messaggio è schedulato: rinvio lo scroll a un rAF.
+    effect(() => {
+      this.messages();
+      const el = this.messagesRef()?.nativeElement;
+      if (el) requestAnimationFrame(() => (el.scrollTop = el.scrollHeight));
+    });
     afterNextRender(() => void this.init(id));
   }
 
@@ -528,6 +539,22 @@ export class LiveRoomComponent implements OnDestroy {
     return 'unknown';
   }
 
+  /** Etichetta italiana della qualità connessione (per lo screen reader). */
+  protected qualityLabel(q: RosterEntry['quality']): string {
+    switch (q) {
+      case 'excellent':
+        return 'ottima';
+      case 'good':
+        return 'buona';
+      case 'poor':
+        return 'scarsa';
+      case 'lost':
+        return 'persa';
+      default:
+        return 'sconosciuta';
+    }
+  }
+
   /** Ricalcola i permessi LOCALI (microfono + schermo concesso) per i controlli. */
   private refreshLocalGrants(): void {
     const lp = this.room?.localParticipant;
@@ -627,7 +654,11 @@ export class LiveRoomComponent implements OnDestroy {
    * osservate dal vivo in stanza l'ancora è assente → si usa Date.now().
    */
   private applyRecording(active: boolean, anchorIso?: string | null): void {
+    const was = this.recording();
     this.recording.set(active);
+    // annuncio sr-only solo sulle transizioni reali (non il conteggio al secondo)
+    if (active && !was) this.recAnnounce.set('Registrazione avviata');
+    else if (!active && was) this.recAnnounce.set('Registrazione terminata');
     if (active) {
       if (!this.recTimer) {
         const anchorMs = anchorIso ? Date.parse(anchorIso) : NaN;

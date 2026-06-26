@@ -1,3 +1,13 @@
+@keyframes live-room-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
 .live-room {
   &__top {
     display: flex;
@@ -15,13 +25,36 @@
     flex-wrap: wrap;
   }
 
+  // Indicatore REC: overlay sull'angolo dello stage → resta visibile anche in
+  // fullscreen (la top bar lì sparisce). Colore da token, dot pulsante.
   &__rec {
+    position: absolute;
+    top: 0.6rem;
+    left: 0.6rem;
+    z-index: 4;
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.4rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    color: #fff;
     font-weight: 700;
-    color: #e23;
+    font-size: 0.85rem;
     letter-spacing: 0.04em;
+  }
+
+  &__rec-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--danger);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 30%, transparent);
+
+    @media (prefers-reduced-motion: no-preference) {
+      animation: live-room-pulse 1.4s ease-in-out infinite;
+    }
   }
 
   &__consent-actions {
@@ -67,8 +100,9 @@
     // niente min-height fisso: con un video lo stage si adatta alla sua altezza
     // (su mobile evitava la grande banda nera sotto). Quando NON c'è video è il
     // placeholder a dare l'altezza (ha il suo min-height).
-    background: #0b0b0f;
-    border-radius: var(--radius, 12px);
+    background: var(--stage-bg);
+    border: 1px solid var(--stage-border);
+    border-radius: var(--radius);
     overflow: hidden;
     padding: 0.25rem;
 
@@ -81,11 +115,11 @@
       max-height: 70vh;
       object-fit: contain;
       background: #000;
-      border-radius: calc(var(--radius, 12px) - 4px);
+      border-radius: calc(var(--radius) - 4px);
 
       // bordo evidente su chi sta parlando
       &.is-speaking {
-        outline: 3px solid var(--brand, #d4a017);
+        outline: 3px solid var(--gold);
         outline-offset: -3px;
       }
     }
@@ -158,7 +192,7 @@
     font-weight: 600;
 
     &.is-speaking {
-      color: var(--brand, #d4a017);
+      color: var(--gold-text);
     }
   }
 
@@ -261,7 +295,7 @@
     gap: 0.3rem;
     padding: 0.4rem 0.5rem;
     border-radius: 8px;
-    background: var(--surface-2, rgba(0, 0, 0, 0.04));
+    background: var(--surface-2);
   }
 
   &__roster-name {
@@ -269,7 +303,7 @@
     word-break: break-word;
 
     &.is-speaking {
-      color: var(--brand, #d4a017);
+      color: var(--gold-text);
     }
   }
 
@@ -303,13 +337,13 @@
     margin: 0;
     padding: 0.35rem 0.5rem;
     border-radius: 8px;
-    background: var(--surface-2, rgba(0, 0, 0, 0.04));
+    background: var(--surface-2);
     font-size: 0.92rem;
     line-height: 1.35;
     word-break: break-word;
 
     &.is-me {
-      background: color-mix(in srgb, var(--brand, #d4a017) 18%, transparent);
+      background: color-mix(in srgb, var(--gold) 18%, transparent);
     }
   }
 
@@ -336,16 +370,16 @@
 
     &.is-excellent,
     &.is-good {
-      color: #2e9e5b;
+      color: var(--felt);
     }
     &.is-poor {
-      color: #d9a400;
+      color: var(--gold-text);
     }
     &.is-lost {
-      color: #c0392b;
+      color: var(--danger);
     }
     &.is-unknown {
-      color: var(--text-muted, #999);
+      color: var(--text-faint);
     }
   }
 }

@@ -133,4 +133,11 @@ input[type="datetime-local"]::-webkit-datetime-edit {
     background: rgba(0, 169, 110, 0.08);
     color: #00744c;
   }
+
+  // Stato neutro/informativo (es. riconnessione in corso): non allarmante come l'errore.
+  &.is-info {
+    border-color: rgba(0, 179, 164, 0.4);
+    background: rgba(0, 179, 164, 0.08);
+    color: #0a7d74;
+  }
 }
