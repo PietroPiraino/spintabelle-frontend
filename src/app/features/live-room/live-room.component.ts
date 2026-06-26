@@ -551,7 +551,7 @@ export class LiveRoomComponent implements OnDestroy {
             contentHint: 'detail',
             resolution: { width: 1920, height: 1080, frameRate: 30 },
           },
-          { screenShareEncoding: { maxBitrate: 4_000_000, maxFramerate: 30 } },
+          { screenShareEncoding: { maxBitrate: 6_000_000, maxFramerate: 30 } },
         );
         this.screenOn.set(on);
       }
