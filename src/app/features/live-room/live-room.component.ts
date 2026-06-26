@@ -540,8 +540,19 @@ export class LiveRoomComponent implements OnDestroy {
         this.micOn.set(on);
       } else {
         const on = !this.screenOn();
-        // contentHint 'detail' = priorità alla nitidezza (testo/tavoli) sulla fluidità
-        await lp.setScreenShareEnabled(on, { audio: true, contentHint: 'detail' });
+        // contentHint 'detail' = priorità alla nitidezza (testo/tavoli) sulla
+        // fluidità. Cattura + pubblica a 1080p30 con bitrate alto così l'egress
+        // registra una sorgente nitida (senza, anche con egress a 1080p,
+        // ricomprimerebbe un 720p). Vedi livekit.service.startRecording.
+        await lp.setScreenShareEnabled(
+          on,
+          {
+            audio: true,
+            contentHint: 'detail',
+            resolution: { width: 1920, height: 1080, frameRate: 30 },
+          },
+          { screenShareEncoding: { maxBitrate: 4_000_000, maxFramerate: 30 } },
+        );
         this.screenOn.set(on);
       }
     } catch {
