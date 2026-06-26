@@ -106,6 +106,26 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly confirming = signal<string | null>(null);
   protected readonly recPending = signal(false); // avvio/stop registrazione in corso
   protected readonly muteAllPending = signal(false); // "muta tutti" in corso
+  // Fase 3 — "alza la mano" + avvisi
+  // coach: identità → richieste in sospeso ('mic'=parola, 'screen'=schermo)
+  protected readonly raisedHands = signal<Map<string, Set<'mic' | 'screen'>>>(
+    new Map(),
+  );
+  protected readonly myHandMic = signal(false); // studente: ha chiesto la parola
+  protected readonly myHandScreen = signal(false); // studente: ha chiesto lo schermo
+  protected readonly chatUnread = signal(0); // messaggi non letti (tab in background)
+  private readonly pageHidden = signal(document.hidden); // pagina in secondo piano
+  protected readonly handAnnounce = signal(''); // annuncio sr-only nuova mano alzata
+  // coach: avviso sonoro delle mani alzate (preferenza persistita, default on)
+  protected readonly soundOn = signal(
+    (() => {
+      try {
+        return localStorage.getItem('bff-live-sound') !== '0';
+      } catch {
+        return true;
+      }
+    })(),
+  );
   private consentGiven = false;
   // Testo del consenso fornito dal backend (versionato, GDPR art. 7); fallback se assente.
   protected readonly consentText = signal(
@@ -113,6 +133,12 @@ export class LiveRoomComponent implements OnDestroy {
   );
   private recTimer: ReturnType<typeof setInterval> | null = null;
   private recStartMs = 0;
+  private audioCtx: AudioContext | null = null;
+  private titleBase = ''; // titolo originale della tab (per il prefisso conteggio)
+  private readonly onVisibility = (): void => {
+    this.pageHidden.set(document.hidden);
+    if (!document.hidden) this.chatUnread.set(0);
+  };
 
   private room: Room | null = null;
   // Tile video per traccia → rimozione robusta in detach, indipendente dal sid
@@ -131,6 +157,19 @@ export class LiveRoomComponent implements OnDestroy {
       this.messages();
       const el = this.messagesRef()?.nativeElement;
       if (el) requestAnimationFrame(() => (el.scrollTop = el.scrollHeight));
+    });
+    // Titolo della tab: SOLO quando la pagina è in secondo piano prefigge il
+    // numero di richieste in attesa (mani alzate per il coach + chat non letta),
+    // così il coach che lavora in un'altra app se ne accorge dalla taskbar.
+    effect(() => {
+      const hands =
+        this.role() === 'coach' && this.pageHidden()
+          ? this.raisedHands().size
+          : 0;
+      const n = hands + this.chatUnread();
+      if (this.titleBase) {
+        document.title = n > 0 ? `(${n}) ${this.titleBase}` : this.titleBase;
+      }
     });
     afterNextRender(() => void this.init(id));
   }
@@ -278,6 +317,9 @@ export class LiveRoomComponent implements OnDestroy {
       // il pubblico nasce con il permesso microfono (tavola rotonda); il coach
       // può revocarlo → questi flag pilotano la visibilità di mic/schermo.
       this.refreshLocalGrants();
+      // titolo tab + reset "non letti" quando la pagina torna in primo piano
+      this.titleBase = document.title;
+      document.addEventListener('visibilitychange', this.onVisibility);
     } catch (err: unknown) {
       if (this.disposed) return;
       const status = (err as { status?: number })?.status;
@@ -477,6 +519,8 @@ export class LiveRoomComponent implements OnDestroy {
       const parsed = JSON.parse(new TextDecoder().decode(payload)) as {
         t?: string;
         m?: string;
+        kind?: string;
+        on?: boolean;
       };
       if (parsed?.t === 'chat' && typeof parsed.m === 'string') {
         const from = participant?.name || participant?.identity || 'Utente';
@@ -484,24 +528,69 @@ export class LiveRoomComponent implements OnDestroy {
           ...l,
           { from, text: parsed.m as string, me: false },
         ]);
+        if (document.hidden) this.chatUnread.update((n) => n + 1);
+        return;
+      }
+      // "alza la mano": lo gestisce SOLO il coach (badge nel roster + suono)
+      if (parsed?.t === 'hand' && this.role() === 'coach') {
+        const id = participant?.identity;
+        if (!id) return;
+        const kind = parsed.kind === 'screen' ? 'screen' : 'mic';
+        const map = new Map(this.raisedHands());
+        const set = new Set(map.get(id) ?? []);
+        if (parsed.on) {
+          const isNew = !set.has(kind);
+          set.add(kind);
+          map.set(id, set);
+          this.raisedHands.set(map);
+          if (isNew) {
+            this.playPing();
+            const who =
+              participant?.name || participant?.identity || 'Un partecipante';
+            this.handAnnounce.set(
+              kind === 'screen'
+                ? `${who} chiede di condividere lo schermo`
+                : `${who} chiede la parola`,
+            );
+          }
+        } else {
+          set.delete(kind);
+          if (set.size) map.set(id, set);
+          else map.delete(id);
+          this.raisedHands.set(map);
+        }
       }
     } catch {
-      // payload non-chat: ignora
+      // payload non valido: ignora
     }
+  }
+
+  /** Invia un messaggio dati affidabile (chat / "alza la mano"). */
+  private sendData(obj: Record<string, unknown>): void {
+    if (!this.room) return;
+    const data = new TextEncoder().encode(JSON.stringify(obj));
+    void this.room.localParticipant.publishData(data, { reliable: true });
   }
 
   protected sendChat(input: HTMLInputElement): void {
     const text = input.value.trim();
     if (!text || !this.room) return;
     this.ensureAudio(); // anche l'invio in chat è un gesto: sblocca l'audio
-
-    const data = new TextEncoder().encode(JSON.stringify({ t: 'chat', m: text }));
-    void this.room.localParticipant.publishData(data, { reliable: true });
+    this.sendData({ t: 'chat', m: text });
     this.messages.update((l) => [
       ...l,
       { from: this.room?.localParticipant.name || 'Tu', text, me: true },
     ]);
     input.value = '';
+  }
+
+  /** Studente: alza/abbassa la mano per la parola (mic) o lo schermo. */
+  protected toggleHand(kind: 'mic' | 'screen'): void {
+    if (!this.room) return;
+    const sig = kind === 'mic' ? this.myHandMic : this.myHandScreen;
+    const on = !sig();
+    sig.set(on);
+    this.sendData({ t: 'hand', kind, on });
   }
 
   protected async toggleCam(): Promise<void> {
@@ -605,6 +694,14 @@ export class LiveRoomComponent implements OnDestroy {
   private onRosterChange(): void {
     this.refreshCount();
     this.rebuildRoster();
+    // pulisci le mani alzate di chi è uscito dalla stanza
+    if (this.raisedHands().size && this.room) {
+      const present = new Set(this.room.remoteParticipants.keys());
+      const map = new Map(
+        [...this.raisedHands()].filter(([id]) => present.has(id)),
+      );
+      if (map.size !== this.raisedHands().size) this.raisedHands.set(map);
+    }
   }
 
   private rebuildRoster(): void {
@@ -654,8 +751,20 @@ export class LiveRoomComponent implements OnDestroy {
   /** Ricalcola i permessi LOCALI (microfono + schermo concesso) per i controlli. */
   private refreshLocalGrants(): void {
     const lp = this.room?.localParticipant;
-    this.canPublishNow.set(!!lp?.permissions?.canPublish);
-    this.canScreenShare.set(lp?.attributes?.['presenter'] === 'true');
+    const canPub = !!lp?.permissions?.canPublish;
+    const canScr = lp?.attributes?.['presenter'] === 'true';
+    this.canPublishNow.set(canPub);
+    this.canScreenShare.set(canScr);
+    // se il coach ha concesso e la mano era alzata, abbassala E avvisa: così
+    // TUTTI i coach (config multi-coach) tolgono il badge, non solo chi concede.
+    if (canPub && this.myHandMic()) {
+      this.myHandMic.set(false);
+      this.sendData({ t: 'hand', kind: 'mic', on: false });
+    }
+    if (canScr && this.myHandScreen()) {
+      this.myHandScreen.set(false);
+      this.sendData({ t: 'hand', kind: 'screen', on: false });
+    }
   }
 
   /** Mostra i controlli di pubblicazione: coach, o pubblico promosso dal coach. */
@@ -668,7 +777,10 @@ export class LiveRoomComponent implements OnDestroy {
     this.liveApi
       .promote(this.id(), { targetUserId: identity, sources: ['mic'] })
       .subscribe({
-        next: () => this.toast.success('Microfono restituito'),
+        next: () => {
+          this.toast.success('Microfono restituito');
+          this.clearHand(identity, 'mic');
+        },
         error: () => this.toast.error('Impossibile ridare il microfono.'),
       });
   }
@@ -708,6 +820,83 @@ export class LiveRoomComponent implements OnDestroy {
     this.confirming.set(null);
   }
 
+  // ----- Fase 3: mani alzate + avviso sonoro (coach) -----
+
+  /** Coach: true se il partecipante ha una richiesta in sospeso. */
+  protected hasHand(id: string): boolean {
+    return this.raisedHands().has(id);
+  }
+  /** Coach: etichetta della richiesta (parola / schermo / entrambi). */
+  protected handLabel(id: string): string {
+    const set = this.raisedHands().get(id);
+    if (!set) return '';
+    const mic = set.has('mic');
+    const screen = set.has('screen');
+    if (mic && screen) return 'vuole parlare e condividere';
+    if (screen) return 'vuole condividere lo schermo';
+    return 'vuole parlare';
+  }
+  /** Coach: rimuove una richiesta (quando concede, o il partecipante la annulla). */
+  private clearHand(id: string, kind: 'mic' | 'screen'): void {
+    const map = new Map(this.raisedHands());
+    const set = new Set(map.get(id) ?? []);
+    if (!set.has(kind)) return;
+    set.delete(kind);
+    if (set.size) map.set(id, set);
+    else map.delete(id);
+    this.raisedHands.set(map);
+  }
+
+  /** Avviso sonoro (coach) all'arrivo di una mano alzata. Web Audio, solo locale. */
+  private playPing(): void {
+    if (!this.soundOn()) return;
+    try {
+      const ctx = (this.audioCtx ??= new AudioContext());
+      const beep = (): void => {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(1175, now + 0.12);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.34);
+      };
+      // Un AudioContext creato fuori da un gesto parte 'suspended' (currentTime
+      // congelato): aspetto il resume PRIMA di schedulare, così anche il primo
+      // ping non viene perso.
+      if (ctx.state === 'suspended') void ctx.resume().then(beep).catch(() => {});
+      else beep();
+    } catch {
+      /* audio non disponibile */
+    }
+  }
+
+  /** Coach: attiva/disattiva l'avviso sonoro delle mani alzate (persistito). */
+  protected toggleSound(): void {
+    const on = !this.soundOn();
+    this.soundOn.set(on);
+    try {
+      localStorage.setItem('bff-live-sound', on ? '1' : '0');
+    } catch {
+      /* storage non disponibile */
+    }
+    // attivandolo (gesto utente) preparo/riprendo l'AudioContext, così il primo
+    // ping successivo non resta muto per la policy autoplay.
+    if (on) {
+      try {
+        const ctx = (this.audioCtx ??= new AudioContext());
+        if (ctx.state === 'suspended') void ctx.resume();
+      } catch {
+        /* audio non disponibile */
+      }
+    }
+  }
+
   /** Coach: espelle un partecipante (dopo conferma inline). */
   protected doKick(identity: string): void {
     this.cancelConfirm();
@@ -720,8 +909,10 @@ export class LiveRoomComponent implements OnDestroy {
   /** Coach: concede/revoca la condivisione schermo (+webcam) a uno studente. */
   protected grantScreen(identity: string, on: boolean): void {
     this.liveApi.grantScreen(this.id(), identity, on).subscribe({
-      next: () =>
-        this.toast.success(on ? 'Schermo concesso' : 'Schermo revocato'),
+      next: () => {
+        this.toast.success(on ? 'Schermo concesso' : 'Schermo revocato');
+        if (on) this.clearHand(identity, 'screen');
+      },
       error: () =>
         this.toast.error(
           on
@@ -836,6 +1027,9 @@ export class LiveRoomComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.disposed = true;
     if (this.recTimer) clearInterval(this.recTimer);
+    document.removeEventListener('visibilitychange', this.onVisibility);
+    if (this.titleBase) document.title = this.titleBase;
+    void this.audioCtx?.close();
     this.tiles.clear();
     void this.room?.disconnect();
     this.room = null;

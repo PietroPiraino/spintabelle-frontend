@@ -12,7 +12,10 @@ export type IconName =
   | 'log-out'
   | 'record'
   | 'square'
-  | 'radio';
+  | 'radio'
+  | 'hand'
+  | 'bell'
+  | 'bell-off';
 
 /**
  * Icona SVG inline, theme-aware (`currentColor`), 24×24 viewBox.
@@ -95,6 +98,22 @@ export type IconName =
         <circle cx="12" cy="12" r="2" />
         <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5" />
         <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19" />
+      }
+      @case ('hand') {
+        <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2" />
+        <path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2" />
+        <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8" />
+        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+      }
+      @case ('bell') {
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+      }
+      @case ('bell-off') {
+        <path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5" />
+        <path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" />
+        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+        <line x1="2" x2="22" y1="2" y2="22" />
       }
     }
   </svg>`,

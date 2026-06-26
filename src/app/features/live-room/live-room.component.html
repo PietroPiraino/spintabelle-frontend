@@ -14,6 +14,24 @@
           </span>
           <!-- Gestione sessione (coach): esterna al video, sempre visibile. -->
           @if (role() === 'coach') {
+            <button
+              type="button"
+              class="btn btn--sm btn--ghost"
+              [attr.aria-pressed]="soundOn()"
+              [attr.aria-label]="
+                soundOn()
+                  ? 'Disattiva avvisi sonori mani alzate'
+                  : 'Attiva avvisi sonori mani alzate'
+              "
+              [title]="
+                soundOn()
+                  ? 'Avvisi sonori attivi (mani alzate)'
+                  : 'Avvisi sonori disattivati'
+              "
+              (click)="toggleSound()"
+            >
+              <app-icon [name]="soundOn() ? 'bell' : 'bell-off'" [size]="16" />
+            </button>
             @if (recordingEnabled()) {
               <button
                 type="button"
@@ -96,8 +114,9 @@
     }
     <!-- gli errori d'azione usano i toast; gli errori fatali compaiono nella
          empty-state dello stato 'error' qui sotto (niente banda duplicata) -->
-    <!-- annuncio screen-reader per avvio/stop registrazione (il timer visibile è aria-hidden) -->
+    <!-- annunci screen-reader: avvio/stop registrazione e mani alzate (oltre al ping sonoro) -->
     <span class="sr-only" aria-live="polite">{{ recAnnounce() }}</span>
+    <span class="sr-only" aria-live="polite">{{ handAnnounce() }}</span>
 
     @switch (state()) {
       @case ('connecting') {
@@ -239,12 +258,44 @@
           }
         </div>
 
-        <!-- Studente a cui il coach ha revocato il microfono -->
-        @if (role() !== 'coach' && !canPublishNow()) {
-          <p class="live-room__muted-note">
-            <app-icon name="mic-off" [size]="16" />
-            Il coach ti ha tolto il microfono.
-          </p>
+        <!-- Studente: stato microfono + "alza la mano" (chiedi parola / schermo) -->
+        @if (role() !== 'coach' && (!canPublishNow() || !canShareScreen())) {
+          <div class="live-room__audience">
+            @if (!canPublishNow()) {
+              <p class="live-room__muted-note">
+                <app-icon name="mic-off" [size]="16" />
+                Il coach ti ha tolto il microfono.
+              </p>
+              <button
+                type="button"
+                class="btn btn--sm"
+                [class.btn--primary]="myHandMic()"
+                [class.btn--ghost]="!myHandMic()"
+                [attr.aria-pressed]="myHandMic()"
+                (click)="toggleHand('mic')"
+              >
+                <app-icon name="hand" [size]="16" />
+                {{ myHandMic() ? 'Mano alzata · annulla' : 'Chiedi la parola' }}
+              </button>
+            }
+            @if (!canShareScreen()) {
+              <button
+                type="button"
+                class="btn btn--sm"
+                [class.btn--primary]="myHandScreen()"
+                [class.btn--ghost]="!myHandScreen()"
+                [attr.aria-pressed]="myHandScreen()"
+                (click)="toggleHand('screen')"
+              >
+                <app-icon name="screen-share" [size]="16" />
+                {{
+                  myHandScreen()
+                    ? 'Richiesta inviata · annulla'
+                    : 'Chiedi di condividere lo schermo'
+                }}
+              </button>
+            }
+          </div>
         }
       </div>
 
@@ -292,6 +343,12 @@
                     <span class="live-room__mic-flag" title="microfono spento">
                       <app-icon name="mic-off" [size]="14" />
                       <span class="sr-only">microfono spento</span>
+                    </span>
+                  }
+                  @if (hasHand(p.identity)) {
+                    <span class="live-room__hand" [title]="handLabel(p.identity)">
+                      <app-icon name="hand" [size]="13" />
+                      {{ handLabel(p.identity) }}
                     </span>
                   }
                 </span>
