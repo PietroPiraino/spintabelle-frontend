@@ -72,6 +72,7 @@
             type="button"
             class="dc__chip"
             [class.dc__chip--on]="selectedPositions().has(p)"
+            [disabled]="!availablePositions().has(p)"
             (click)="togglePosition(p)"
           >
             {{ p }}
@@ -92,6 +93,7 @@
             type="button"
             class="dc__chip"
             [class.dc__chip--on]="selectedSpotTypes().has(s)"
+            [disabled]="!availableSpotTypes().has(s)"
             (click)="toggleSpot(s)"
           >
             {{ spotLabels[s] }}
@@ -140,7 +142,14 @@
         Inizia l'allenamento
       </button>
       @if (!canStart()) {
-        <span class="dc__cta-hint">Scegli almeno un formato.</span>
+        <span class="dc__cta-hint">
+          @if (!selectedFormats().size) {
+            Scegli almeno un formato.
+          } @else {
+            Nessuno spot per questa combinazione: cambia posizione o tipo di
+            spot.
+          }
+        </span>
       }
     </div>
   }

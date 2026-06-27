@@ -7,6 +7,7 @@ import {
   DrillConfigPayload,
   DrillHistory,
   DrillNextQuestion,
+  DrillOptions,
   DrillQuestion,
   DrillSessionsPage,
   DrillSessionView,
@@ -84,6 +85,11 @@ export class DrillService {
 
   getStats(): Observable<DrillStats> {
     return this.http.get<DrillStats>(`${API}/drills/stats`);
+  }
+
+  /** Combinazioni allenabili (per disabilitare le selezioni impossibili nel config). */
+  getOptions(): Observable<DrillOptions> {
+    return this.http.get<DrillOptions>(`${API}/drills/options`);
   }
 
   getHistory(page = 1, limit = 20, format?: string): Observable<DrillHistory> {

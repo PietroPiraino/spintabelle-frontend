@@ -69,9 +69,15 @@
     color var(--t-fast),
     transform var(--t-fast);
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: var(--copper-500);
     transform: translateY(-1px);
+  }
+
+  // combinazione senza spot allenabili: non selezionabile
+  &:disabled {
+    opacity: 0.32;
+    cursor: not-allowed;
   }
 }
 

@@ -480,6 +480,19 @@ export interface DrillConfigPayload {
   questionsPerSession: number;
 }
 
+/** Una combinazione (formato/depth/posizione/tipo-spot) con almeno uno spot
+ *  reale — usata dal configuratore per disabilitare le selezioni impossibili. */
+export interface DrillCombo {
+  format: string;
+  depth: string;
+  position: string;
+  spotType: DrillSpotType;
+}
+
+export interface DrillOptions {
+  combos: DrillCombo[];
+}
+
 export interface DrillSessionView {
   id: string;
   status: 'active' | 'completed' | 'abandoned';

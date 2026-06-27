@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import {
+  DrillCombo,
   DrillConfigPayload,
   DrillDifficulty,
   DrillSpotType,
@@ -49,6 +50,8 @@ export class DrillConfigComponent {
 
   protected readonly meta = signal<PreflopMeta | null>(null);
   protected readonly metaError = signal(false);
+  /** Combinazioni reali (formato/depth/posizione/spot) per il meta-driving. */
+  private readonly combos = signal<DrillCombo[]>([]);
 
   protected readonly selectedFormats = signal<Set<string>>(new Set());
   protected readonly selectedDepths = signal<Set<string>>(new Set());
@@ -110,18 +113,83 @@ export class DrillConfigComponent {
       .sort((a, b) => a.base - b.base);
   });
 
-  protected readonly canStart = computed(() => this.selectedFormats().size > 0);
+  /** depth_label grezze corrispondenti ai chip profondità selezionati. */
+  private readonly selectedRawDepths = computed(() => {
+    const sel = this.selectedDepths();
+    return new Set(
+      this.availableDepths()
+        .filter((d) => sel.has(d.display))
+        .flatMap((d) => d.rawLabels),
+    );
+  });
+
+  /** Combinazioni filtrate per i soli formato+profondità scelti. */
+  private readonly combosForBase = computed(() => {
+    const fmt = this.selectedFormats();
+    const depths = this.selectedRawDepths();
+    return this.combos().filter(
+      (c) =>
+        (fmt.size ? fmt.has(c.format) : true) &&
+        (depths.size ? depths.has(c.depth) : true),
+    );
+  });
+
+  /** Posizioni che hanno spot dato lo spot-type selezionato (vuoto = tutte). */
+  protected readonly availablePositions = computed<Set<string>>(() => {
+    if (!this.combos().length) return new Set(this.positions); // load: non bloccare
+    const spt = this.selectedSpotTypes();
+    return new Set(
+      this.combosForBase()
+        .filter((c) => (spt.size ? spt.has(c.spotType) : true))
+        .map((c) => c.position),
+    );
+  });
+
+  /** Tipi di spot che hanno spot data la posizione selezionata (vuoto = tutti). */
+  protected readonly availableSpotTypes = computed<Set<DrillSpotType>>(() => {
+    if (!this.combos().length) return new Set(this.spotTypes);
+    const pos = this.selectedPositions();
+    return new Set(
+      this.combosForBase()
+        .filter((c) => (pos.size ? pos.has(c.position) : true))
+        .map((c) => c.spotType),
+    );
+  });
+
+  /** Quante combinazioni soddisfano la selezione completa (0 = config vuota). */
+  protected readonly matchedCount = computed(() => {
+    const pos = this.selectedPositions();
+    const spt = this.selectedSpotTypes();
+    return this.combosForBase().filter(
+      (c) =>
+        (pos.size ? pos.has(c.position) : true) &&
+        (spt.size ? spt.has(c.spotType) : true),
+    ).length;
+  });
+
+  protected readonly canStart = computed(() => {
+    if (this.selectedFormats().size === 0) return false;
+    // opzioni non caricate → non blocco (il backend fa da guardia comunque)
+    if (!this.combos().length) return true;
+    return this.matchedCount() > 0;
+  });
 
   constructor() {
-    // la meta popola i selettori: parte appena l'utente è loggato
+    // la meta (+ le combinazioni allenabili) popola i selettori: parte
+    // appena l'utente è loggato
     effect(() => {
       if (!this.auth.user() || this.meta() || this.metaError()) return;
-      untracked(() =>
+      untracked(() => {
         this.preflop.getMeta().subscribe({
           next: (m) => this.meta.set(m),
           error: () => this.metaError.set(true),
-        }),
-      );
+        });
+        this.drill.getOptions().subscribe({
+          next: (o) => this.combos.set(o.combos),
+          // degrada in silenzio: niente disabling, ma il backend fa da guardia
+          error: () => undefined,
+        });
+      });
     });
 
     // default: il primo gioco base (preferendo spin) appena la meta è pronta
@@ -149,6 +217,43 @@ export class DrillConfigComponent {
         }
       });
     });
+
+    // quando cambia il "base" (formato/depth/combinazioni) ripulisci posizioni e
+    // spot che non hanno più spot. Traccia SOLO combosForBase: la prune scrive le
+    // selezioni in untracked, quindi non si auto-ritriggera (niente loop).
+    effect(() => {
+      this.combosForBase();
+      untracked(() => this.pruneSelections());
+    });
+  }
+
+  /**
+   * Rimuove dalle selezioni le posizioni/spot che, data l'altra dimensione e il
+   * formato/depth scelti, non hanno alcuno spot. Prima le posizioni (dato lo
+   * spot), poi gli spot (date le posizioni aggiornate). Un solo passaggio.
+   */
+  private pruneSelections(): void {
+    if (!this.combos().length) return;
+    const base = this.combosForBase();
+    const spt0 = this.selectedSpotTypes();
+    const validPos = new Set(
+      base
+        .filter((c) => (spt0.size ? spt0.has(c.spotType) : true))
+        .map((c) => c.position),
+    );
+    const pos = this.selectedPositions();
+    const np = new Set([...pos].filter((p) => validPos.has(p)));
+    if (np.size !== pos.size) this.selectedPositions.set(np);
+
+    const pos2 = this.selectedPositions();
+    const validSpt = new Set(
+      base
+        .filter((c) => (pos2.size ? pos2.has(c.position) : true))
+        .map((c) => c.spotType),
+    );
+    const spt = this.selectedSpotTypes();
+    const ns = new Set([...spt].filter((s) => validSpt.has(s)));
+    if (ns.size !== spt.size) this.selectedSpotTypes.set(ns);
   }
 
   protected toggleFormat(format: string): void {
@@ -158,10 +263,14 @@ export class DrillConfigComponent {
     this.toggle(this.selectedDepths, label);
   }
   protected togglePosition(pos: string): void {
+    if (!this.availablePositions().has(pos)) return; // chip disabilitato
     this.toggle(this.selectedPositions, pos);
+    this.pruneSelections(); // coerenza con gli spot già scelti
   }
   protected toggleSpot(spot: DrillSpotType): void {
+    if (!this.availableSpotTypes().has(spot)) return; // chip disabilitato
     this.toggle(this.selectedSpotTypes, spot);
+    this.pruneSelections(); // coerenza con le posizioni già scelte
   }
   protected setDifficulty(d: DrillDifficulty): void {
     this.difficulty.set(d);
