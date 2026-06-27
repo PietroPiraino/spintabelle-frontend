@@ -350,6 +350,13 @@
                 }}
               </button>
             }
+            <!-- Studente con permesso schermo su device senza getDisplayMedia (mobile) -->
+            @if (canShareScreen() && !screenShareSupported()) {
+              <p class="live-room__muted-note">
+                <app-icon name="screen-share" [size]="16" />
+                La condivisione schermo richiede un computer.
+              </p>
+            }
           </div>
         }
       </div>
