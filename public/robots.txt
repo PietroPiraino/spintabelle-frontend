@@ -13,4 +13,4 @@ Disallow: /recupera-verifica
 Disallow: /password-dimenticata
 Disallow: /reimposta-password
 
-Sitemap: https://spintabelle.it/sitemap.xml
+Sitemap: https://bestfishforever.it/sitemap.xml

@@ -67,7 +67,7 @@ export class NewsDetailComponent {
         name: 'Best Fish Forever',
         logo: {
           '@type': 'ImageObject',
-          url: 'https://spintabelle.it/logo-256.png',
+          url: 'https://bestfishforever.it/logo-256.png',
         },
       },
     });

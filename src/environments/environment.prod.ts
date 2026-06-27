@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  API_URL: 'https://api.spintabelle.it',
+  API_URL: 'https://api.bestfishforever.it',
 };

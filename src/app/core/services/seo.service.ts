@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 
-const SITE = 'https://spintabelle.it';
+const SITE = 'https://bestfishforever.it';
 const DEFAULT_IMAGE = `${SITE}/og.png`;
 
 export interface SeoData {
