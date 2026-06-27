@@ -279,19 +279,23 @@
                 >
                   <app-icon [name]="camOn() ? 'video' : 'video-off'" [size]="20" />
                 </button>
-                <button
-                  type="button"
-                  class="live-room__cbtn"
-                  [class.is-on]="screenOn()"
-                  [attr.aria-pressed]="screenOn()"
-                  [attr.aria-label]="
-                    screenOn() ? 'Interrompi condivisione schermo' : 'Condividi schermo'
-                  "
-                  [title]="screenOn() ? 'Stai condividendo' : 'Condividi schermo'"
-                  (click)="toggleScreen()"
-                >
-                  <app-icon name="screen-share" [size]="20" />
-                </button>
+                @if (screenShareSupported()) {
+                  <button
+                    type="button"
+                    class="live-room__cbtn"
+                    [class.is-on]="screenOn()"
+                    [attr.aria-pressed]="screenOn()"
+                    [attr.aria-label]="
+                      screenOn()
+                        ? 'Interrompi condivisione schermo'
+                        : 'Condividi schermo'
+                    "
+                    [title]="screenOn() ? 'Stai condividendo' : 'Condividi schermo'"
+                    (click)="toggleScreen()"
+                  >
+                    <app-icon name="screen-share" [size]="20" />
+                  </button>
+                }
               }
             }
             @if (hasVideo()) {
@@ -329,7 +333,7 @@
               <app-icon name="hand" [size]="16" />
               {{ myHandMic() ? 'Mano alzata · annulla' : 'Chiedi la parola' }}
             </button>
-            @if (!canShareScreen()) {
+            @if (!canShareScreen() && screenShareSupported()) {
               <button
                 type="button"
                 class="btn btn--sm"

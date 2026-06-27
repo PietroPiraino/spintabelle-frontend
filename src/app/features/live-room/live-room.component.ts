@@ -243,6 +243,13 @@ export class LiveRoomComponent implements OnDestroy {
         })
         .on(LK.RoomEvent.LocalTrackUnpublished, (pub) => {
           if (pub.track) this.detach(pub.track);
+          // La traccia locale è stata de-pubblicata (es. il coach ha revocato la
+          // parola/lo schermo): riallinea i pulsanti, altrimenti il microfono
+          // resterebbe "acceso" ma muto finché non lo si ri-tocca.
+          if (pub.source === LK.Track.Source.Microphone) this.micOn.set(false);
+          else if (pub.source === LK.Track.Source.Camera) this.camOn.set(false);
+          else if (pub.source === LK.Track.Source.ScreenShare)
+            this.screenOn.set(false);
         })
         .on(LK.RoomEvent.ParticipantConnected, () => this.onRosterChange())
         .on(LK.RoomEvent.ParticipantDisconnected, () => this.onRosterChange())
@@ -799,6 +806,14 @@ export class LiveRoomComponent implements OnDestroy {
     const canScr = lp?.attributes?.['presenter'] === 'true';
     this.canPublishNow.set(canPub);
     this.canScreenShare.set(canScr);
+    // Revoca della parola → le tracce non sono più pubblicate: spegni i pulsanti
+    // (altrimenti il microfono resta "acceso" ma muto). Il coach ha SEMPRE
+    // canPublish, quindi questo tocca solo gli studenti a cui è stata tolta.
+    if (!canPub) {
+      this.micOn.set(false);
+      this.camOn.set(false);
+      this.screenOn.set(false);
+    }
     // se il coach ha concesso e la mano era alzata, abbassala E avvisa: così
     // TUTTI i coach (config multi-coach) tolgono il badge, non solo chi concede.
     if (canPub && this.myHandMic()) {
@@ -979,6 +994,18 @@ export class LiveRoomComponent implements OnDestroy {
   /** Mostra il bottone "Condividi schermo": coach, o studente a cui è stato concesso. */
   protected canShareScreen(): boolean {
     return this.role() === 'coach' || this.canScreenShare();
+  }
+
+  /**
+   * La condivisione schermo (getDisplayMedia) NON esiste sui browser mobile
+   * (iOS Safari/Chrome): lì il pulsante fallirebbe sempre → lo nascondiamo.
+   */
+  protected screenShareSupported(): boolean {
+    return (
+      typeof navigator !== 'undefined' &&
+      !!navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getDisplayMedia === 'function'
+    );
   }
 
   /** L'utente accetta il consenso alla registrazione → riprova l'ingresso. */
