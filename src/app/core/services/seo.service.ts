@@ -29,18 +29,38 @@ export class SeoService {
 
   setSeo(d: SeoData): void {
     const fullTitle = `${d.title} — Best Fish Forever`;
-    const image = d.image || DEFAULT_IMAGE;
     const url = d.path ? `${SITE}${d.path}` : `${SITE}/`;
-
     this.title.setTitle(fullTitle);
-    this.meta.updateTag({ name: 'description', content: d.description });
+    this.applyMeta(fullTitle, d.description, url, d.image);
+  }
+
+  /**
+   * Aggiorna i meta per-pagina (description + OG/Twitter + canonical) dai dati
+   * della rotta, SENZA toccare il <title> (già impostato dal TitleStrategy del
+   * router). Usato dal listener globale di navigazione in app.config: senza di
+   * esso ogni pagina eredita canonical + description statici della home, che
+   * fa auto-canonicalizzare /tabelle, /abbonati, ecc. verso "/".
+   * `fullTitle` è il titolo completo della rotta (già col suffisso brand).
+   */
+  setRouteMeta(fullTitle: string, description: string, path: string): void {
+    this.applyMeta(fullTitle, description, `${SITE}${path}`);
+  }
+
+  private applyMeta(
+    fullTitle: string,
+    description: string,
+    url: string,
+    image?: string,
+  ): void {
+    const img = image || DEFAULT_IMAGE;
+    this.meta.updateTag({ name: 'description', content: description });
     this.meta.updateTag({ property: 'og:title', content: fullTitle });
-    this.meta.updateTag({ property: 'og:description', content: d.description });
-    this.meta.updateTag({ property: 'og:image', content: image });
+    this.meta.updateTag({ property: 'og:description', content: description });
+    this.meta.updateTag({ property: 'og:image', content: img });
     this.meta.updateTag({ property: 'og:url', content: url });
     this.meta.updateTag({ name: 'twitter:title', content: fullTitle });
-    this.meta.updateTag({ name: 'twitter:description', content: d.description });
-    this.meta.updateTag({ name: 'twitter:image', content: image });
+    this.meta.updateTag({ name: 'twitter:description', content: description });
+    this.meta.updateTag({ name: 'twitter:image', content: img });
     this.setCanonical(url);
   }
 

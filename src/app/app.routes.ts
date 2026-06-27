@@ -9,6 +9,10 @@ export const routes: Routes = [
         (m) => m.LandingComponent,
       ),
     title: 'Best Fish Forever — Scuola di Poker Spin & Go',
+    data: {
+      description:
+        'Best Fish Forever è la scuola italiana di poker dedicata a Spin & Go e Twister: lezioni video, tabelle GTO e una community di studio su Discord.',
+    },
   },
   {
     path: 'tabelle',
@@ -17,12 +21,20 @@ export const routes: Routes = [
         (m) => m.TablesComponent,
       ),
     title: 'Tabelle — Best Fish Forever',
+    data: {
+      description:
+        'Tabelle GTO preflop per Spin & Go e Twister: range di apertura, push/fold e raise per ogni stack, posizione e formato (ante, asimmetrico).',
+    },
   },
   {
     path: 'chi-siamo',
     loadComponent: () =>
       import('./features/about/about.component').then((m) => m.AboutComponent),
     title: 'Chi siamo — Best Fish Forever',
+    data: {
+      description:
+        'Scopri Best Fish Forever: coach, metodo e community della scuola italiana di poker dedicata a Spin & Go e Twister.',
+    },
   },
   {
     path: 'allenamento',
@@ -90,6 +102,10 @@ export const routes: Routes = [
         (m) => m.SubscribeComponent,
       ),
     title: 'Abbonati — Best Fish Forever',
+    data: {
+      description:
+        'Abbonati a Best Fish Forever: lezioni video, tabelle GTO, allenamento e live on-site per Spin & Go e Twister. Piani Pesce Rosso e Squalo.',
+    },
   },
   {
     path: 'news',
@@ -98,6 +114,10 @@ export const routes: Routes = [
         (m) => m.NewsListComponent,
       ),
     title: 'News — Best Fish Forever',
+    data: {
+      description:
+        'News e aggiornamenti dalla scuola di poker Best Fish Forever: strategie per Spin & Go e Twister, novità e vita della community.',
+    },
   },
   {
     path: 'docs',
@@ -113,6 +133,10 @@ export const routes: Routes = [
         (m) => m.AffiliationsComponent,
       ),
     title: 'Affiliazioni — Best Fish Forever',
+    data: {
+      description:
+        'Affiliazioni e offerte rakeback consigliate da Best Fish Forever per chi gioca a Spin & Go e Twister.',
+    },
   },
   {
     // Spendere punti richiede una sessione → authGuard (a differenza di /abbonati).
@@ -203,6 +227,10 @@ export const routes: Routes = [
         (m) => m.PrivacyComponent,
       ),
     title: 'Informativa privacy — Best Fish Forever',
+    data: {
+      description:
+        'Informativa sulla privacy di Best Fish Forever: come trattiamo e proteggiamo i dati personali degli utenti.',
+    },
   },
   {
     path: 'cookie-policy',
@@ -211,6 +239,10 @@ export const routes: Routes = [
         (m) => m.CookiePolicyComponent,
       ),
     title: 'Cookie policy — Best Fish Forever',
+    data: {
+      description:
+        'Cookie policy di Best Fish Forever: quali cookie usiamo e come gestire le preferenze.',
+    },
   },
   {
     path: '**',

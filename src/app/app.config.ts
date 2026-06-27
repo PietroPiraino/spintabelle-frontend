@@ -22,8 +22,12 @@ import {
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { AuthService } from './core/services/auth.service';
+import { SeoService } from './core/services/seo.service';
 
 registerLocaleData(localeIt);
+
+const DEFAULT_DESCRIPTION =
+  'Best Fish Forever è la scuola italiana di poker dedicata a Spin & Go e Twister: lezioni video, tabelle GTO e una community di studio su Discord.';
 
 // NB: il ripristino sessione NON blocca il bootstrap (il backend su Render
 // può impiegare decine di secondi a svegliarsi dallo sleep): parte in
@@ -47,6 +51,28 @@ export const appConfig: ApplicationConfig = {
     // il primo render; i guard aspettano ready$ solo sulle rotte protette)
     provideEnvironmentInitializer(() => {
       inject(AuthService).bootstrap().subscribe();
+    }),
+    // SEO per-pagina: a ogni navigazione aggiorna canonical + description +
+    // OG/Twitter dai `data` della rotta (il <title> lo fa già il router). Senza
+    // questo ogni pagina eredita il canonical statico "/" della home (auto-
+    // canonicalizzazione → Google tratta /tabelle, /abbonati… come duplicati).
+    // news/:id ridefinisce poi i meta coi dati reali dell'articolo (vince perché
+    // arriva dopo, alla risposta HTTP).
+    provideEnvironmentInitializer(() => {
+      const router = inject(Router);
+      const seo = inject(SeoService);
+      router.events.subscribe((e) => {
+        if (!(e instanceof NavigationEnd)) return;
+        let snapshot = router.routerState.snapshot.root;
+        while (snapshot.firstChild) snapshot = snapshot.firstChild;
+        const path = router.url.split('?')[0].split('#')[0];
+        seo.setRouteMeta(
+          (snapshot.title as string | undefined) ?? 'Best Fish Forever',
+          (snapshot.data['description'] as string | undefined) ??
+            DEFAULT_DESCRIPTION,
+          path,
+        );
+      });
     }),
     // Scroll del router: in cima SOLO quando cambia la pagina (il path),
     // mai quando cambiano solo i query param; back/forward del browser
