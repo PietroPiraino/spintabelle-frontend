@@ -25,6 +25,7 @@ Dopo modifiche significative: `npx ng build` + Karma.
 - Token d'accesso in memoria, refresh via cookie httpOnly; le navigazioni a URL del backend (download/token) usano XHR per allegare il Bearer.
 - Per la navigazione: voci/gruppi sono meta-driven in `header.component.ts` (nessun cambio CSS/markup per aggiungere una voce).
 - SEO: meta dinamici via `core/services/seo.service.ts` (utili a Google; per anteprime social per-pagina servirebbe SSR).
+- UI riusabile: icone via **`app-icon`** (`shared/ui/icon/`, **non emoji**), notifiche via **`ToastService`** (`shared/ui/toast/`, montato una volta in `app-root`); utility solo-screen-reader = **`.visually-hidden`/`.sr-only`** (`styles/_utilities.scss`).
 
 ## Deploy
 Push su `main` → **Cloudflare Pages** auto-deploy (`spintabelle.it`). **Frontend DOPO il backend**, verificando che le nuove rotte API rispondano (vedi `../backend/AGENTS.md`). Commit/push solo quando l'utente lo chiede.
