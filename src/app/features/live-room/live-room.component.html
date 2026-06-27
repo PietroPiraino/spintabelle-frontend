@@ -160,9 +160,54 @@
       }
     }
 
+    <!-- Tab mobile (sotto 880px): Video / Chat / Persone — su desktop nascosti -->
+    @if (state() === 'connected') {
+      <div class="live-room__tabs" role="group" aria-label="Sezioni sala">
+        <button
+          type="button"
+          class="live-room__tab"
+          [class.is-active]="mobileTab() === 'video'"
+          [attr.aria-pressed]="mobileTab() ==='video'"
+          (click)="setTab('video')"
+        >
+          Video
+        </button>
+        <button
+          type="button"
+          class="live-room__tab"
+          [class.is-active]="mobileTab() === 'chat'"
+          [attr.aria-pressed]="mobileTab() ==='chat'"
+          (click)="setTab('chat')"
+        >
+          Chat
+          @if (mobileChatUnread() > 0) {
+            <span
+              class="live-room__tab-badge"
+              [attr.aria-label]="mobileChatUnread() + ' messaggi non letti'"
+              >{{ mobileChatUnread() }}</span
+            >
+          }
+        </button>
+        <button
+          type="button"
+          class="live-room__tab"
+          [class.is-active]="mobileTab() === 'people'"
+          [attr.aria-pressed]="mobileTab() ==='people'"
+          (click)="setTab('people')"
+        >
+          Persone
+          <span class="live-room__tab-badge">{{ roster().length + 1 }}</span>
+        </button>
+      </div>
+    }
+
     <!-- Resta nel DOM anche durante 'connecting' così i ViewChild esistono per
          agganciare i track non appena arrivano. -->
-    <div class="live-room__grid" [hidden]="state() !== 'connected'">
+    <div
+      class="live-room__grid"
+      [hidden]="state() !== 'connected'"
+      [attr.data-tab]="mobileTab()"
+    >
       <div class="live-room__stagewrap" role="region" aria-label="Video e controlli">
         <div #stage class="live-room__stage" [class.is-screen-mode]="hasScreen()">
           @if (recording()) {

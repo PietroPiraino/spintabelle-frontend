@@ -116,6 +116,9 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly chatUnread = signal(0); // messaggi non letti (tab in background)
   private readonly pageHidden = signal(document.hidden); // pagina in secondo piano
   protected readonly handAnnounce = signal(''); // annuncio sr-only nuova mano alzata
+  // Fase 4 — mobile: tab attiva (sotto 880px) + non letti per il badge "Chat"
+  protected readonly mobileTab = signal<'video' | 'chat' | 'people'>('video');
+  protected readonly mobileChatUnread = signal(0);
   // coach: avviso sonoro delle mani alzate (preferenza persistita, default on)
   protected readonly soundOn = signal(
     (() => {
@@ -529,6 +532,11 @@ export class LiveRoomComponent implements OnDestroy {
           { from, text: parsed.m as string, me: false },
         ]);
         if (document.hidden) this.chatUnread.update((n) => n + 1);
+        // badge non-letti della tab Chat: solo in vista mobile (su desktop la chat
+        // è sempre visibile → niente conteggio fantasma).
+        if (this.isMobileView() && this.mobileTab() !== 'chat') {
+          this.mobileChatUnread.update((n) => n + 1);
+        }
         return;
       }
       // "alza la mano": lo gestisce SOLO il coach (badge nel roster + suono)
@@ -582,6 +590,20 @@ export class LiveRoomComponent implements OnDestroy {
       { from: this.room?.localParticipant.name || 'Tu', text, me: true },
     ]);
     input.value = '';
+  }
+
+  /** Mobile: cambia tab (Video / Chat / Persone); aprendo Chat azzera i non letti. */
+  protected setTab(tab: 'video' | 'chat' | 'people'): void {
+    // il tap su una tab è un gesto utente: sblocca l'audio anche da Chat/Persone
+    // (dove l'overlay "abilita audio" sul video non è visibile).
+    this.ensureAudio();
+    this.mobileTab.set(tab);
+    if (tab === 'chat') this.mobileChatUnread.set(0);
+  }
+
+  /** Vista mobile (sotto 880px): la barra tab è attiva. */
+  private isMobileView(): boolean {
+    return window.matchMedia('(max-width: 880px)').matches;
   }
 
   /** Studente: alza/abbassa la mano per la parola (mic) o lo schermo. */

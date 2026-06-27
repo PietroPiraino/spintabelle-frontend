@@ -84,6 +84,101 @@
     }
   }
 
+  // [hidden] (durante connecting/denied/error/...) deve nascondere la griglia:
+  // l'autore display:grid vincerebbe sulla regola UA [hidden]{display:none}.
+  &__grid[hidden] {
+    display: none;
+  }
+
+  // ----- Fase 4: tab mobile (Video / Chat / Persone) -----
+  &__tabs {
+    display: none; // solo sotto 880px
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+    padding: 0.3rem;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  &__tab {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    border: none;
+    background: none;
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+
+    &.is-active {
+      background: var(--surface-1);
+      color: var(--text);
+      box-shadow: var(--shadow-card);
+    }
+  }
+  &__tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--copper-500);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  // Sotto 880px: barra tab visibile e UNA sola sezione per volta (video a piena
+  // larghezza → tavoli/HUD leggibili; chat/persone a schermo pieno quando servono).
+  @media (max-width: 880px) {
+    &__tabs {
+      display: flex;
+    }
+    &__grid[data-tab='video'] &__side {
+      display: none;
+    }
+    // nascondo solo lo STAGE (video+controlli), non tutto lo stagewrap: così il
+    // blocco "alza la mano" (.live-room__audience) resta raggiungibile su ogni tab.
+    &__grid[data-tab='chat'] &__stage,
+    &__grid[data-tab='people'] &__stage {
+      display: none;
+    }
+    &__grid[data-tab='chat'] &__roster {
+      display: none;
+    }
+    &__grid[data-tab='people'] &__chat {
+      display: none;
+    }
+    // sezioni dedicate: usa più altezza
+    &__roster-list {
+      max-height: none;
+    }
+    &__messages {
+      min-height: 45vh;
+    }
+    // tap-target comodi su touch
+    &__roster-actions .btn,
+    &__compose .btn,
+    &__compose .input,
+    &__audience .btn {
+      min-height: 44px;
+    }
+  }
+
+  // Landscape su mobile: massimizza l'altezza del video nella tab Video
+  @media (max-width: 880px) and (orientation: landscape) {
+    &__grid[data-tab='video'] ::ng-deep .live-room__video {
+      max-height: 82vh;
+    }
+  }
+
   &__stagewrap {
     display: flex;
     flex-direction: column;
