@@ -110,9 +110,12 @@ export class DrillService {
         this.total.set(s.questionsPerSession);
         this.loadNext();
       },
-      error: () => {
+      error: (err) => {
         this.phase.set('idle');
-        this.errorMsg.set('Impossibile avviare la sessione. Riprova.');
+        // il backend rifiuta le config senza spot con un 400 + messaggio chiaro
+        this.errorMsg.set(
+          err?.error?.message ?? 'Impossibile avviare la sessione. Riprova.',
+        );
       },
     });
   }
@@ -134,9 +137,14 @@ export class DrillService {
         this.question.set(r.question);
         this.phase.set('answering');
       },
-      error: () => {
+      error: (err) => {
+        // 503 = config senza spot allenabili (usa il messaggio del backend);
+        // altro = problema di rete/server
         this.errorMsg.set(
-          'Nessuno spot allenabile per questa configurazione, oppure errore di rete.',
+          err?.status === 503
+            ? (err?.error?.message ??
+                'Nessuno spot allenabile per questa configurazione.')
+            : 'Errore di rete nel caricare la domanda. Riprova.',
         );
         this.phase.set('idle');
       },
