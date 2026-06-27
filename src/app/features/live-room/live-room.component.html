@@ -303,26 +303,26 @@
           }
         </div>
 
-        <!-- Studente: stato microfono + "alza la mano" (chiedi parola / schermo) -->
-        @if (role() !== 'coach' && (!canPublishNow() || !canShareScreen())) {
+        <!-- Studente: "alza la mano" (chiedi parola / schermo) — sempre visibile -->
+        @if (role() !== 'coach') {
           <div class="live-room__audience">
             @if (!canPublishNow()) {
               <p class="live-room__muted-note">
                 <app-icon name="mic-off" [size]="16" />
                 Il coach ti ha tolto il microfono.
               </p>
-              <button
-                type="button"
-                class="btn btn--sm"
-                [class.btn--primary]="myHandMic()"
-                [class.btn--ghost]="!myHandMic()"
-                [attr.aria-pressed]="myHandMic()"
-                (click)="toggleHand('mic')"
-              >
-                <app-icon name="hand" [size]="16" />
-                {{ myHandMic() ? 'Mano alzata · annulla' : 'Chiedi la parola' }}
-              </button>
             }
+            <button
+              type="button"
+              class="btn btn--sm"
+              [class.btn--primary]="myHandMic()"
+              [class.btn--ghost]="!myHandMic()"
+              [attr.aria-pressed]="myHandMic()"
+              (click)="toggleHand('mic')"
+            >
+              <app-icon name="hand" [size]="16" />
+              {{ myHandMic() ? 'Mano alzata · annulla' : 'Chiedi la parola' }}
+            </button>
             @if (!canShareScreen()) {
               <button
                 type="button"
@@ -398,25 +398,36 @@
                   }
                 </span>
                 @if (role() === 'coach') {
-                  <span class="live-room__roster-actions">
-                    @if (p.canPublish) {
-                      <button type="button" class="btn btn--ghost btn--sm" (click)="muteParticipant(p.identity)">Muta</button>
-                      <button type="button" class="btn btn--ghost btn--sm" (click)="demote(p.identity)">Togli microfono</button>
-                    } @else {
-                      <button type="button" class="btn btn--primary btn--sm" (click)="promote(p.identity)">Ridai microfono</button>
-                    }
-                    @if (p.canScreen) {
-                      <button type="button" class="btn btn--ghost btn--sm" (click)="grantScreen(p.identity, false)">Revoca schermo</button>
-                    } @else {
-                      <button type="button" class="btn btn--ghost btn--sm" (click)="grantScreen(p.identity, true)">Consenti schermo</button>
-                    }
-                    @if (isConfirming('kick:' + p.identity)) {
-                      <button type="button" class="btn btn--danger btn--sm" (click)="doKick(p.identity)">Conferma</button>
-                      <button type="button" class="btn btn--ghost btn--sm" (click)="cancelConfirm()">Annulla</button>
-                    } @else {
-                      <button type="button" class="btn btn--danger btn--sm" (click)="askConfirm('kick:' + p.identity)">Espelli</button>
-                    }
-                  </span>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm live-room__roster-toggle"
+                    [attr.aria-expanded]="rosterMenu() === p.identity"
+                    [attr.aria-label]="'Azioni per ' + p.name"
+                    (click)="toggleRosterMenu(p.identity)"
+                  >
+                    Azioni ▾
+                  </button>
+                  @if (rosterMenu() === p.identity) {
+                    <div class="live-room__roster-menu">
+                      @if (p.canPublish) {
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="muteParticipant(p.identity)">Muta</button>
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="demote(p.identity)">Togli microfono</button>
+                      } @else {
+                        <button type="button" class="btn btn--primary btn--sm" (click)="promote(p.identity)">Ridai microfono</button>
+                      }
+                      @if (p.canScreen) {
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="grantScreen(p.identity, false)">Revoca schermo</button>
+                      } @else {
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="grantScreen(p.identity, true)">Consenti schermo</button>
+                      }
+                      @if (isConfirming('kick:' + p.identity)) {
+                        <button type="button" class="btn btn--danger btn--sm" (click)="doKick(p.identity)">Conferma</button>
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="cancelConfirm()">Annulla</button>
+                      } @else {
+                        <button type="button" class="btn btn--danger btn--sm" (click)="askConfirm('kick:' + p.identity)">Espelli</button>
+                      }
+                    </div>
+                  }
                 }
               </div>
             }

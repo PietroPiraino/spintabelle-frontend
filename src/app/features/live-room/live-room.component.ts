@@ -57,6 +57,7 @@ interface RosterEntry {
   templateUrl: './live-room.component.html',
   styleUrl: './live-room.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:click)': 'onDocClick($event)' },
 })
 export class LiveRoomComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -119,6 +120,7 @@ export class LiveRoomComponent implements OnDestroy {
   // Fase 4 — mobile: tab attiva (sotto 880px) + non letti per il badge "Chat"
   protected readonly mobileTab = signal<'video' | 'chat' | 'people'>('video');
   protected readonly mobileChatUnread = signal(0);
+  protected readonly rosterMenu = signal<string | null>(null); // riga col menu azioni aperto
   // coach: avviso sonoro delle mani alzate (preferenza persistita, default on)
   protected readonly soundOn = signal(
     (() => {
@@ -599,6 +601,25 @@ export class LiveRoomComponent implements OnDestroy {
     this.ensureAudio();
     this.mobileTab.set(tab);
     if (tab === 'chat') this.mobileChatUnread.set(0);
+    // tornando al Video ri-aggancio le tracce: su Chat/Persone lo stage va in
+    // display:none → l'adaptiveStream mette in pausa e l'elemento resterebbe NERO.
+    // setTimeout(0) → dopo il change-detection (stage di nuovo visibile).
+    if (tab === 'video') setTimeout(() => this.reattachVideos(), 0);
+  }
+
+  /** Ri-aggancia le tracce video ai loro tile: ripristina il render dopo un display:none. */
+  private reattachVideos(): void {
+    this.tiles.forEach((tile, track) => {
+      if (track.kind !== 'video') return;
+      const el = tile.querySelector('video') as HTMLVideoElement | null;
+      if (!el) return;
+      try {
+        track.attach(el);
+        void el.play?.();
+      } catch {
+        /* il browser può rifiutare il play automatico: nessun crash */
+      }
+    });
   }
 
   /** Vista mobile (sotto 880px): la barra tab è attiva. */
@@ -796,6 +817,7 @@ export class LiveRoomComponent implements OnDestroy {
 
   /** Ridà il microfono a uno studente a cui era stato revocato. */
   protected promote(identity: string): void {
+    this.rosterMenu.set(null);
     this.liveApi
       .promote(this.id(), { targetUserId: identity, sources: ['mic'] })
       .subscribe({
@@ -808,6 +830,7 @@ export class LiveRoomComponent implements OnDestroy {
   }
 
   protected demote(identity: string): void {
+    this.rosterMenu.set(null);
     this.liveApi.demote(this.id(), identity).subscribe({
       next: () => this.toast.success('Microfono revocato'),
       error: () => this.toast.error('Impossibile revocare la parola.'),
@@ -815,6 +838,7 @@ export class LiveRoomComponent implements OnDestroy {
   }
 
   protected muteParticipant(identity: string): void {
+    this.rosterMenu.set(null);
     const rp = this.room?.remoteParticipants.get(identity);
     const sid = this.lk
       ? rp?.getTrackPublication(this.lk.Track.Source.Microphone)?.trackSid
@@ -840,6 +864,17 @@ export class LiveRoomComponent implements OnDestroy {
   }
   protected cancelConfirm(): void {
     this.confirming.set(null);
+  }
+
+  /** Coach: apre/chiude il menu azioni di un partecipante (uno per volta). */
+  protected toggleRosterMenu(id: string): void {
+    this.rosterMenu.update((cur) => (cur === id ? null : id));
+  }
+  /** Chiude il menu azioni cliccando fuori da una riga del roster. */
+  protected onDocClick(e: MouseEvent): void {
+    if (this.rosterMenu() === null) return;
+    const t = e.target as HTMLElement | null;
+    if (!t?.closest('.live-room__roster-row')) this.rosterMenu.set(null);
   }
 
   // ----- Fase 3: mani alzate + avviso sonoro (coach) -----
@@ -922,6 +957,7 @@ export class LiveRoomComponent implements OnDestroy {
   /** Coach: espelle un partecipante (dopo conferma inline). */
   protected doKick(identity: string): void {
     this.cancelConfirm();
+    this.rosterMenu.set(null);
     this.liveApi.kick(this.id(), identity).subscribe({
       next: () => this.toast.success('Partecipante espulso'),
       error: () => this.toast.error('Impossibile espellere.'),
@@ -930,6 +966,7 @@ export class LiveRoomComponent implements OnDestroy {
 
   /** Coach: concede/revoca la condivisione schermo (+webcam) a uno studente. */
   protected grantScreen(identity: string, on: boolean): void {
+    this.rosterMenu.set(null);
     this.liveApi.grantScreen(this.id(), identity, on).subscribe({
       next: () => {
         this.toast.success(on ? 'Schermo concesso' : 'Schermo revocato');

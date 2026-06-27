@@ -650,10 +650,17 @@
     }
   }
 
-  &__roster-actions {
+  // Coach: toggle "Azioni" (compatto) + menu a comparsa con i comandi per utente.
+  &__roster-toggle {
+    align-self: flex-start;
+  }
+
+  &__roster-menu {
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--line);
   }
 
   &__chat {
