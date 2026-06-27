@@ -3,7 +3,7 @@
 Istruzioni per agenti AI che lavorano in questo repo. Dettaglio operativo in [`README.md`](./README.md); architettura completa nel `CLAUDE.md` della root del monorepo (`../CLAUDE.md`, se presente).
 
 ## Cosa è
-SPA **Angular 22 standalone, signals, ZONELESS** (no NgModules, no Zone.js) di **spintabelle.it**, scuola di poker italiana. Sezioni: `/tabelle`, `/lezioni`, `/allenamento`, `/live` (+ `/live/:id/stanza`), `/docs`, `/abbonati`, `/negozio`, `/account`, `/chi-siamo`, `/admin`.
+SPA **Angular 22 standalone, signals, ZONELESS** (no NgModules, no Zone.js) di **bestfishforever.it**, scuola di poker italiana. Sezioni: `/tabelle`, `/lezioni`, `/allenamento`, `/live` (+ `/live/:id/stanza`), `/docs`, `/abbonati`, `/negozio`, `/account`, `/chi-siamo`, `/admin`.
 
 ## Regole critiche (leggere PRIMA di toccare il codice)
 - **Node 24** obbligatorio (il globale è 20). Anteporre alla PATH nella stessa invocazione:
@@ -28,4 +28,4 @@ Dopo modifiche significative: `npx ng build` + Karma.
 - UI riusabile: icone via **`app-icon`** (`shared/ui/icon/`, **non emoji**), notifiche via **`ToastService`** (`shared/ui/toast/`, montato una volta in `app-root`); utility solo-screen-reader = **`.visually-hidden`/`.sr-only`** (`styles/_utilities.scss`).
 
 ## Deploy
-Push su `main` → **Cloudflare Pages** auto-deploy (`spintabelle.it`). **Frontend DOPO il backend**, verificando che le nuove rotte API rispondano (vedi `../backend/AGENTS.md`). Commit/push solo quando l'utente lo chiede.
+Push su `main` → **Cloudflare Pages** auto-deploy (`bestfishforever.it`). **Frontend DOPO il backend**, verificando che le nuove rotte API rispondano (vedi `../backend/AGENTS.md`). Commit/push solo quando l'utente lo chiede.

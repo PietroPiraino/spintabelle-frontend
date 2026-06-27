@@ -1,6 +1,6 @@
 # Best Fish Forever — Frontend
 
-Frontend di **spintabelle.it** ("Best Fish Forever"), scuola di poker italiana per Spin & Go / Twister. SPA **Angular 22 standalone, signals, zoneless** (no NgModules, no Zone.js).
+Frontend di **bestfishforever.it** ("Best Fish Forever"), scuola di poker italiana per Spin & Go / Twister. SPA **Angular 22 standalone, signals, zoneless** (no NgModules, no Zone.js).
 
 > 📖 **L'architettura completa (pattern, header, theming, viewer tabelle, sala live, 3D) è in [`../CLAUDE.md`](../CLAUDE.md).** Questo README è il riassunto operativo.
 
@@ -26,7 +26,7 @@ npm run build      # build di produzione in dist/
 npm test           # Karma; headless: npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-`environments/environment.prod.ts` → `https://api.spintabelle.it`.
+`environments/environment.prod.ts` → `https://api.bestfishforever.it`.
 
 ### E2E (script locali, gitignorati)
 
@@ -45,4 +45,4 @@ npm test           # Karma; headless: npx ng test --watch=false --browsers=Chrom
 
 ## Deploy
 
-Push su `main` → **Cloudflare Pages** (`spintabelle.it`) auto-deploy (~2 min, Node da `.node-version` = 24.16.0). Deploy del **frontend dopo** il backend, verificando che le nuove rotte API rispondano (vedi `../backend/README.md`).
+Push su `main` → **Cloudflare Pages** (`bestfishforever.it`) auto-deploy (~2 min, Node da `.node-version` = 24.16.0). Deploy del **frontend dopo** il backend, verificando che le nuove rotte API rispondano (vedi `../backend/README.md`).
