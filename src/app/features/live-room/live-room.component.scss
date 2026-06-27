@@ -170,6 +170,10 @@
     &__audience .btn {
       min-height: 44px;
     }
+    &__act {
+      min-width: 44px;
+      min-height: 44px;
+    }
   }
 
   // Landscape su mobile: massimizza l'altezza del video nella tab Video
@@ -442,6 +446,32 @@
     }
   }
 
+  // Touch (niente hover): la control bar si AUTO-NASCONDE; un tap sul video la
+  // mostra (is-controls-shown, pilotato dal TS con un timer) e poi sparisce → non
+  // resta più piantata sopra il video occupando spazio.
+  @media (hover: none) {
+    &__controlbar {
+      opacity: 0;
+      transform: translateX(-50%) translateY(0.4rem);
+      transition:
+        opacity var(--t-fast),
+        transform var(--t-fast);
+      pointer-events: none;
+
+      // niente video da guardare → resta visibile (es. coach che deve avviare)
+      &.is-pinned {
+        opacity: 1;
+        transform: translateX(-50%);
+        pointer-events: auto;
+      }
+    }
+    &__stage.is-controls-shown &__controlbar {
+      opacity: 1;
+      transform: translateX(-50%);
+      pointer-events: auto;
+    }
+  }
+
   // Pulsanti gestione sessione (coach) nella barra in alto: icona + label allineate.
   &__top-right .btn {
     display: inline-flex;
@@ -650,17 +680,48 @@
     }
   }
 
-  // Coach: toggle "Azioni" (compatto) + menu a comparsa con i comandi per utente.
-  &__roster-toggle {
-    align-self: flex-start;
-  }
-
-  &__roster-menu {
+  // Coach: azioni per-utente come ICONE con tooltip (mic / schermo / espelli).
+  &__roster-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
-    padding-top: 0.4rem;
-    border-top: 1px solid var(--line);
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  &__act {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface-1);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition:
+      background var(--t-fast),
+      color var(--t-fast),
+      border-color var(--t-fast);
+
+    &:hover {
+      color: var(--text);
+      border-color: var(--text-faint);
+    }
+    &.is-on {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: #1b1300;
+    }
+    &--danger {
+      color: var(--danger);
+      border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+
+      &:hover {
+        background: color-mix(in srgb, var(--danger) 14%, transparent);
+        color: var(--danger);
+      }
+    }
   }
 
   &__chat {

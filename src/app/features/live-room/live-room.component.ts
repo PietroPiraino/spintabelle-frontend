@@ -57,7 +57,6 @@ interface RosterEntry {
   templateUrl: './live-room.component.html',
   styleUrl: './live-room.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(document:click)': 'onDocClick($event)' },
 })
 export class LiveRoomComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -120,7 +119,8 @@ export class LiveRoomComponent implements OnDestroy {
   // Fase 4 — mobile: tab attiva (sotto 880px) + non letti per il badge "Chat"
   protected readonly mobileTab = signal<'video' | 'chat' | 'people'>('video');
   protected readonly mobileChatUnread = signal(0);
-  protected readonly rosterMenu = signal<string | null>(null); // riga col menu azioni aperto
+  // touch: control bar visibile (tap sul video → mostra, poi si auto-nasconde)
+  protected readonly controlsShown = signal(false);
   // coach: avviso sonoro delle mani alzate (preferenza persistita, default on)
   protected readonly soundOn = signal(
     (() => {
@@ -138,6 +138,7 @@ export class LiveRoomComponent implements OnDestroy {
   );
   private recTimer: ReturnType<typeof setInterval> | null = null;
   private recStartMs = 0;
+  private controlsTimer: ReturnType<typeof setTimeout> | null = null;
   private audioCtx: AudioContext | null = null;
   private titleBase = ''; // titolo originale della tab (per il prefisso conteggio)
   private readonly onVisibility = (): void => {
@@ -817,7 +818,6 @@ export class LiveRoomComponent implements OnDestroy {
 
   /** Ridà il microfono a uno studente a cui era stato revocato. */
   protected promote(identity: string): void {
-    this.rosterMenu.set(null);
     this.liveApi
       .promote(this.id(), { targetUserId: identity, sources: ['mic'] })
       .subscribe({
@@ -830,28 +830,9 @@ export class LiveRoomComponent implements OnDestroy {
   }
 
   protected demote(identity: string): void {
-    this.rosterMenu.set(null);
     this.liveApi.demote(this.id(), identity).subscribe({
       next: () => this.toast.success('Microfono revocato'),
       error: () => this.toast.error('Impossibile revocare la parola.'),
-    });
-  }
-
-  protected muteParticipant(identity: string): void {
-    this.rosterMenu.set(null);
-    const rp = this.room?.remoteParticipants.get(identity);
-    const sid = this.lk
-      ? rp?.getTrackPublication(this.lk.Track.Source.Microphone)?.trackSid
-      : undefined;
-    if (!sid) {
-      this.toast.error(
-        'Nessuna traccia audio da mutare per questo partecipante.',
-      );
-      return;
-    }
-    this.liveApi.mute(this.id(), { targetUserId: identity, trackSid: sid }).subscribe({
-      next: () => this.toast.success('Partecipante mutato'),
-      error: () => this.toast.error('Mute non riuscito.'),
     });
   }
 
@@ -866,15 +847,15 @@ export class LiveRoomComponent implements OnDestroy {
     this.confirming.set(null);
   }
 
-  /** Coach: apre/chiude il menu azioni di un partecipante (uno per volta). */
-  protected toggleRosterMenu(id: string): void {
-    this.rosterMenu.update((cur) => (cur === id ? null : id));
-  }
-  /** Chiude il menu azioni cliccando fuori da una riga del roster. */
-  protected onDocClick(e: MouseEvent): void {
-    if (this.rosterMenu() === null) return;
-    const t = e.target as HTMLElement | null;
-    if (!t?.closest('.live-room__roster-row')) this.rosterMenu.set(null);
+  /**
+   * Touch: un tap sul video mostra la control bar e la ri-nasconde dopo qualche
+   * secondo (come i player mobile). Su desktop la barra è gestita dall'hover → no-op.
+   */
+  protected onStageTap(): void {
+    if (!window.matchMedia('(hover: none)').matches) return;
+    this.controlsShown.set(true);
+    if (this.controlsTimer) clearTimeout(this.controlsTimer);
+    this.controlsTimer = setTimeout(() => this.controlsShown.set(false), 3500);
   }
 
   // ----- Fase 3: mani alzate + avviso sonoro (coach) -----
@@ -957,7 +938,6 @@ export class LiveRoomComponent implements OnDestroy {
   /** Coach: espelle un partecipante (dopo conferma inline). */
   protected doKick(identity: string): void {
     this.cancelConfirm();
-    this.rosterMenu.set(null);
     this.liveApi.kick(this.id(), identity).subscribe({
       next: () => this.toast.success('Partecipante espulso'),
       error: () => this.toast.error('Impossibile espellere.'),
@@ -966,7 +946,6 @@ export class LiveRoomComponent implements OnDestroy {
 
   /** Coach: concede/revoca la condivisione schermo (+webcam) a uno studente. */
   protected grantScreen(identity: string, on: boolean): void {
-    this.rosterMenu.set(null);
     this.liveApi.grantScreen(this.id(), identity, on).subscribe({
       next: () => {
         this.toast.success(on ? 'Schermo concesso' : 'Schermo revocato');
@@ -1086,6 +1065,7 @@ export class LiveRoomComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.disposed = true;
     if (this.recTimer) clearInterval(this.recTimer);
+    if (this.controlsTimer) clearTimeout(this.controlsTimer);
     document.removeEventListener('visibilitychange', this.onVisibility);
     if (this.titleBase) document.title = this.titleBase;
     void this.audioCtx?.close();
