@@ -5,6 +5,12 @@
   <title>Best Fish Forever — Scuola di Poker Spin & Go</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Preconnessione all'API: scalda DNS+TCP+TLS già durante il parsing dell'HTML,
+       perché il bootstrap di sessione chiama l'API a ogni caricamento di pagina. -->
+  <link rel="preconnect" href="https://api.bestfishforever.it" crossorigin>
+  <link rel="dns-prefetch" href="https://api.bestfishforever.it">
+
   <meta name="description" content="Best Fish Forever è la scuola italiana di poker dedicata a Spin & Go e Twister: lezioni video, tabelle GTO e una community di studio su Discord.">
   <meta name="theme-color" content="#f7f5f0">
 
