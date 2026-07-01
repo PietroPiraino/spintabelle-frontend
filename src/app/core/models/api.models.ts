@@ -220,6 +220,8 @@ export interface DiscountsValidation {
 
 export type DiscountKind = 'PERCENT' | 'FIXED';
 export type DiscountAudience = 'RESTRICTED' | 'PUBLIC';
+/** Ambito d'uso del codice: solo abbonamenti, solo gadget o entrambi. */
+export type DiscountScope = 'SUBSCRIPTION' | 'GADGET' | 'ALL';
 
 /** Esito della validazione di un codice sconto (prezzo scontato da mostrare). */
 export interface DiscountValidation {
@@ -240,6 +242,8 @@ export interface DiscountCode {
   value: number;
   audience: DiscountAudience;
   tiers: SubscriptionTier[];
+  scope: DiscountScope;
+  reusable: boolean;
   active: boolean;
   validFrom?: string;
   validUntil?: string;
@@ -270,6 +274,8 @@ export interface DiscountCodePayload {
   value: number;
   audience: DiscountAudience;
   tiers?: SubscriptionTier[];
+  scope?: DiscountScope;
+  reusable?: boolean;
   active?: boolean;
   validFrom?: string;
   validUntil?: string;
@@ -642,6 +648,8 @@ export type ShopOrderStatus =
   | 'ANNULLATO';
 /** Stati impostabili dall'admin sull'avanzamento di un ordine gadget. */
 export type GadgetFulfillStatus = 'RICEVUTO' | 'SPEDITO' | 'CONSEGNATO';
+/** Metodo di pagamento di un ordine gadget: punti BFF o euro off-site. */
+export type ShopPaymentMethod = 'punti' | 'paypal' | 'skrill';
 
 /** Catalogo a prezzo fisso (buoni + abbonamenti) per la vetrina. */
 export interface ShopCatalog {
@@ -663,7 +671,10 @@ export interface GadgetResource {
   id: string;
   title: string;
   description: string;
-  pricePoints: number;
+  /** null = non acquistabile con i punti */
+  pricePoints: number | null;
+  /** null = non acquistabile in euro */
+  priceEur: number | null;
   /** null = stock illimitato */
   stock: number | null;
   active: boolean;
@@ -677,7 +688,8 @@ export interface GadgetResource {
 export interface GadgetPayload {
   title: string;
   description: string;
-  pricePoints: number;
+  pricePoints?: number;
+  priceEur?: number;
   stock?: number;
   active?: boolean;
 }
@@ -710,6 +722,12 @@ export interface ShopOrder {
   tier?: SubscriptionTier;
   gadgetId?: string;
   shippingAddress?: ShippingAddress;
+  paymentMethod?: ShopPaymentMethod;
+  paymentReference?: string;
+  amountEur?: number;
+  listPriceEur?: number;
+  discountedPriceEur?: number;
+  discountCodes?: string[];
   trackingNote?: string;
   decisionNote?: string;
   refundedPoints?: number;

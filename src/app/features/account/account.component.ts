@@ -157,6 +157,13 @@ export class AccountComponent {
     return v.kind === 'PERCENT' ? `${v.value}%` : `€${v.value}`;
   }
 
+  /** Importo di un ordine: euro per gli ordini off-site, altrimenti punti spesi. */
+  protected orderAmountLabel(o: ShopOrder): string {
+    return o.amountEur != null
+      ? `€${o.amountEur.toFixed(2)}`
+      : `−${o.pointsSpent} pt`;
+  }
+
   protected saveProfile(): void {
     if (this.profileForm.invalid || this.profileSaving()) {
       this.profileForm.markAllAsTouched();

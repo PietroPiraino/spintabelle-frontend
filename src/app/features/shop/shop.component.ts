@@ -1,14 +1,23 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormControl,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Subject, debounceTime } from 'rxjs';
 import {
+  DiscountsValidation,
   GadgetResource,
+  MyVoucher,
+  PaymentInfo,
   Role,
   ShippingAddress,
   ShopCatalog,
@@ -17,6 +26,7 @@ import {
 } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { ShopService } from '../../core/services/shop.service';
+import { SubscriptionsService } from '../../core/services/subscriptions.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
 
 /** Gadget per pagina: griglia → batch coerente con /docs e /lezioni. */
@@ -44,6 +54,7 @@ const TIER_RANK: Record<SubscriptionTier, number> = {
 })
 export class ShopComponent {
   private readonly shop = inject(ShopService);
+  private readonly subscriptions = inject(SubscriptionsService);
   protected readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
@@ -85,9 +96,37 @@ export class ShopComponent {
     phone: ['', [Validators.required, Validators.minLength(4)]],
   });
 
+  // ── Ordine gadget in EURO (sconti + pagamento off-site "confermato subito") ──
+  /** Valuta dell'ordine aperto: punti (istantaneo) o euro (off-site). */
+  protected readonly orderCurrency = signal<'points' | 'euro'>('points');
+  protected readonly paymentInfo = signal<PaymentInfo | null>(null);
+  protected readonly ownedVouchers = signal<MyVoucher[]>([]);
+  protected readonly appliedCodes = signal<string[]>([]);
+  protected readonly euroDiscounts = signal<DiscountsValidation | null>(null);
+  protected readonly discountControl = new FormControl('', {
+    nonNullable: true,
+  });
+  protected readonly discountError = signal<string | null>(null);
+  protected readonly applyingDiscount = signal(false);
+  protected readonly paymentMethodControl = new FormControl<'paypal' | 'skrill'>(
+    'paypal',
+    { nonNullable: true },
+  );
+  protected readonly paymentReferenceControl = new FormControl('', {
+    nonNullable: true,
+  });
+  /** Buoni selezionabili: disponibili e non già applicati. */
+  protected readonly pickableVouchers = computed(() =>
+    this.ownedVouchers().filter(
+      (v) => v.status === 'available' && !this.appliedCodes().includes(v.code),
+    ),
+  );
+
   private page = 1;
   /** Scarta le risposte superate da una ricerca più recente. */
   private requestSeq = 0;
+  /** Scarta le risposte di validazione sconti superate (out-of-order). */
+  private discountSeq = 0;
   private readonly search$ = new Subject<string>();
 
   protected readonly points = this.auth.points;
@@ -254,16 +293,122 @@ export class ShopComponent {
 
   // ── Ordine gadget (form di spedizione inline) ──
 
-  protected openOrder(g: GadgetResource): void {
-    if (g.outOfStock || !this.canAfford(g.pricePoints)) return;
+  protected openOrder(
+    g: GadgetResource,
+    currency: 'points' | 'euro' = 'points',
+  ): void {
+    if (g.outOfStock) return;
+    if (
+      currency === 'points' &&
+      (g.pricePoints == null || !this.canAfford(g.pricePoints))
+    ) {
+      return;
+    }
+    if (currency === 'euro' && (g.priceEur == null || g.priceEur <= 0)) return;
+
     this.purchaseError.set(null);
     this.successMsg.set(null);
     this.shippingForm.reset({ country: 'Italia' });
+    this.orderCurrency.set(currency);
+    // Reset dello stato sconti/pagamento (un solo ordine aperto alla volta).
+    this.appliedCodes.set([]);
+    this.euroDiscounts.set(null);
+    this.discountControl.reset('');
+    this.discountError.set(null);
+    this.paymentMethodControl.setValue('paypal');
+    this.paymentReferenceControl.reset('');
     this.orderingGadgetId.set(g.id);
+
+    if (currency === 'euro') {
+      if (!this.paymentInfo()) {
+        this.subscriptions.paymentInfo().subscribe({
+          next: (info) => this.paymentInfo.set(info),
+          error: () => undefined,
+        });
+      }
+      this.shop.myVouchers().subscribe({
+        next: (vs) => this.ownedVouchers.set(vs),
+        error: () => this.ownedVouchers.set([]),
+      });
+    }
   }
 
   protected closeOrder(): void {
     this.orderingGadgetId.set(null);
+  }
+
+  // ── Sconti sull'ordine gadget in euro (riusa la macchina buoni) ──
+
+  /** Prezzo euro effettivo (dopo eventuali sconti) del gadget in ordine. */
+  protected effectivePrice(g: GadgetResource): number {
+    return this.euroDiscounts()?.discountedPriceEur ?? g.priceEur ?? 0;
+  }
+
+  protected voucherValueLabel(v: MyVoucher): string {
+    return v.kind === 'PERCENT' ? `${v.value}%` : `€${v.value}`;
+  }
+
+  /** Email destinataria del metodo di pagamento selezionato. */
+  protected receiver(): string {
+    const info = this.paymentInfo();
+    if (!info) return '';
+    return this.paymentMethodControl.value === 'skrill'
+      ? info.receivers.skrill
+      : info.receivers.paypal;
+  }
+
+  protected addVoucher(gadgetId: string, code: string): void {
+    this.addCode(gadgetId, code);
+  }
+
+  protected addTyped(gadgetId: string): void {
+    const code = this.discountControl.value.trim();
+    if (!code) return;
+    this.addCode(gadgetId, code);
+    this.discountControl.reset('');
+  }
+
+  private addCode(gadgetId: string, code: string): void {
+    const norm = code.trim().toUpperCase();
+    if (!norm || this.appliedCodes().includes(norm)) return;
+    this.appliedCodes.update((cs) => [...cs, norm]);
+    this.revalidateDiscounts(gadgetId, norm);
+  }
+
+  protected removeCode(gadgetId: string, code: string): void {
+    this.appliedCodes.update((cs) => cs.filter((c) => c !== code));
+    this.revalidateDiscounts(gadgetId);
+  }
+
+  private revalidateDiscounts(gadgetId: string, justAdded?: string): void {
+    // Invalida ogni validazione in volo: una risposta più vecchia che arriva dopo
+    // (add/remove ravvicinati) non deve sovrascrivere il prezzo con codici diversi.
+    const seq = ++this.discountSeq;
+    if (!this.appliedCodes().length) {
+      this.euroDiscounts.set(null);
+      this.discountError.set(null);
+      this.applyingDiscount.set(false);
+      return;
+    }
+    this.applyingDiscount.set(true);
+    this.discountError.set(null);
+    this.shop.validateGadgetDiscounts(gadgetId, this.appliedCodes()).subscribe({
+      next: (v) => {
+        if (seq !== this.discountSeq) return; // risposta superata
+        this.applyingDiscount.set(false);
+        this.euroDiscounts.set(v);
+      },
+      error: (err: unknown) => {
+        if (seq !== this.discountSeq) return; // risposta superata
+        this.applyingDiscount.set(false);
+        this.discountError.set(apiErrorMessage(err, 'Codice non valido.'));
+        // Rollback del codice appena aggiunto: mantiene lo stato valido precedente.
+        if (justAdded) {
+          this.appliedCodes.update((cs) => cs.filter((c) => c !== justAdded));
+          if (!this.appliedCodes().length) this.euroDiscounts.set(null);
+        }
+      },
+    });
   }
 
   protected submitOrder(g: GadgetResource): void {
@@ -273,10 +418,23 @@ export class ShopComponent {
     }
     this.startPurchase(`gadget:${g.id}`);
     const address = this.shippingForm.getRawValue() as ShippingAddress;
-    this.shop.orderGadget(g.id, address).subscribe({
+    const euro = this.orderCurrency() === 'euro';
+    const opts = euro
+      ? {
+          paymentMethod: this.paymentMethodControl.value,
+          paymentReference:
+            this.paymentReferenceControl.value.trim() || undefined,
+          discountCodes: this.appliedCodes(),
+        }
+      : undefined;
+    this.shop.orderGadget(g.id, address, opts).subscribe({
       next: () => {
         this.orderingGadgetId.set(null);
-        this.onPurchased('Ordine ricevuto! Ti avviseremo alla spedizione.');
+        this.onPurchased(
+          euro
+            ? 'Ordine ricevuto! Ti confermiamo dopo la verifica del pagamento.'
+            : 'Ordine ricevuto! Ti avviseremo alla spedizione.',
+        );
         // Ricarica la vetrina: stock/esaurito riflettono l'acquisto.
         this.reload();
       },

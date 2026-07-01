@@ -92,7 +92,10 @@ export class AdminShopComponent {
       '',
       [Validators.required, Validators.minLength(3), Validators.maxLength(2000)],
     ],
-    pricePoints: [0, [Validators.required, Validators.min(1)]],
+    /** Vuoto = non acquistabile con i punti (serve almeno un prezzo: punti o euro). */
+    pricePoints: [null as number | null, [Validators.min(1)]],
+    /** Vuoto = non acquistabile in euro. */
+    priceEur: [null as number | null, [Validators.min(0)]],
     /** Vuoto = stock illimitato. */
     stock: [null as number | null, [Validators.min(0)]],
     active: [true],
@@ -171,6 +174,26 @@ export class AdminShopComponent {
     return stock == null ? '∞' : String(stock);
   }
 
+  /** Prezzi del gadget (punti e/o euro) come stringa compatta per la lista. */
+  protected priceLabel(g: GadgetResource): string {
+    const parts: string[] = [];
+    if (g.pricePoints != null) parts.push(`${g.pricePoints} pt`);
+    if (g.priceEur != null) parts.push(`€${g.priceEur}`);
+    return parts.join(' · ') || '—';
+  }
+
+  /** Importo di un ordine: euro (con metodo) per gli ordini off-site, altrimenti punti. */
+  protected orderAmountLabel(o: ShopOrder): string {
+    if (o.amountEur != null) {
+      const m =
+        o.paymentMethod && o.paymentMethod !== 'punti'
+          ? ` (${o.paymentMethod})`
+          : '';
+      return `€${o.amountEur.toFixed(2)}${m}`;
+    }
+    return `−${o.pointsSpent} pt`;
+  }
+
   protected onImageChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
@@ -193,6 +216,7 @@ export class AdminShopComponent {
       title: g.title,
       description: g.description,
       pricePoints: g.pricePoints,
+      priceEur: g.priceEur,
       stock: g.stock,
       active: g.active,
     });
@@ -202,7 +226,12 @@ export class AdminShopComponent {
   protected cancelEdit(): void {
     this.editingId.set(null);
     this.selectedImage.set(null);
-    this.form.reset({ pricePoints: 0, stock: null, active: true });
+    this.form.reset({
+      pricePoints: null,
+      priceEur: null,
+      stock: null,
+      active: true,
+    });
     this.prodError.set(null);
   }
 
@@ -216,17 +245,26 @@ export class AdminShopComponent {
       }
       return;
     }
+    const raw = this.form.getRawValue();
+    // Serve almeno un prezzo (in punti o in euro): un gadget senza prezzo non è ordinabile.
+    const hasPoints = raw.pricePoints != null && raw.pricePoints >= 1;
+    const hasEur = raw.priceEur != null && raw.priceEur > 0;
+    if (!hasPoints && !hasEur) {
+      this.prodError.set('Imposta almeno un prezzo: in punti o in euro.');
+      return;
+    }
     this.saving.set(true);
     this.prodError.set(null);
     this.prodFeedback.set(null);
 
-    const raw = this.form.getRawValue();
     const payload: GadgetPayload = {
       title: raw.title,
       description: raw.description,
-      pricePoints: raw.pricePoints,
       active: raw.active,
     };
+    if (hasPoints) payload.pricePoints = raw.pricePoints!;
+    // priceEur: 0 in modifica rimuove il prezzo in euro; se assente non lo tocchiamo.
+    if (raw.priceEur != null) payload.priceEur = raw.priceEur;
     // Stock vuoto = illimitato: ometti il campo.
     if (raw.stock != null) payload.stock = raw.stock;
 
@@ -400,9 +438,14 @@ export class AdminShopComponent {
       next: (updated) => {
         this.actingId.set(null);
         this.cancelId.set(null);
-        const refund = updated.refundedPoints ?? updated.pointsSpent;
+        const who = updated.userNickname || updated.userEmail;
+        // Ordine in euro: nessun punto da rimborsare (rimborso off-site manuale).
         this.ordFeedback.set(
-          `Ordine annullato: rimborsati ${refund} pt a ${updated.userNickname || updated.userEmail}.`,
+          updated.amountEur != null
+            ? `Ordine annullato: eventuali buoni rilasciati. Il rimborso in euro va gestito off-site.`
+            : `Ordine annullato: rimborsati ${
+                updated.refundedPoints ?? updated.pointsSpent
+              } pt a ${who}.`,
         );
         this.loadOrders();
       },

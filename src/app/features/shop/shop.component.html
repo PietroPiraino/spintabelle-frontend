@@ -42,7 +42,7 @@
                 <div class="shop-card__body">
                   <h3>{{ v.label }}</h3>
                   <p class="shop-card__desc">
-                    Sconto di €{{ fmt(v.eurValue) }} sul tuo abbonamento.
+                    Sconto di €{{ fmt(v.eurValue) }} su abbonamenti o gadget in euro.
                   </p>
                 </div>
                 <div class="shop-card__foot">
@@ -227,22 +227,46 @@
 
               <div class="gadget-card__foot">
                 <span class="shop-card__price">
-                  <span class="chip-dot" aria-hidden="true"></span
-                  >{{ fmt(g.pricePoints) }} pt
+                  @if (g.pricePoints != null) {
+                    <span class="chip-dot" aria-hidden="true"></span
+                    >{{ fmt(g.pricePoints) }} pt
+                  }
+                  @if (g.priceEur != null) {
+                    @if (g.pricePoints != null) {
+                      <span class="text-muted"> · </span>
+                    }
+                    €{{ g.priceEur }}
+                  }
                 </span>
                 @if (g.outOfStock) {
                   <span class="shop-card__insufficient">Esaurito</span>
-                } @else if (!canAfford(g.pricePoints)) {
-                  <span class="shop-card__insufficient">Punti insufficienti</span>
                 } @else {
-                  <button
-                    type="button"
-                    class="btn btn--primary btn--sm"
-                    (click)="openOrder(g)"
-                    [disabled]="actingId() !== null"
-                  >
-                    Ordina
-                  </button>
+                  <div class="row" style="gap: 0.4rem; flex-wrap: wrap">
+                    @if (g.pricePoints != null) {
+                      @if (canAfford(g.pricePoints)) {
+                        <button
+                          type="button"
+                          class="btn btn--primary btn--sm"
+                          (click)="openOrder(g, 'points')"
+                          [disabled]="actingId() !== null"
+                        >
+                          {{ g.priceEur != null ? 'Punti' : 'Ordina' }}
+                        </button>
+                      } @else {
+                        <span class="shop-card__insufficient">Punti insufficienti</span>
+                      }
+                    }
+                    @if (g.priceEur != null) {
+                      <button
+                        type="button"
+                        class="btn btn--primary btn--sm"
+                        (click)="openOrder(g, 'euro')"
+                        [disabled]="actingId() !== null"
+                      >
+                        {{ g.pricePoints != null ? 'Euro (€' + g.priceEur + ')' : 'Ordina (€' + g.priceEur + ')' }}
+                      </button>
+                    }
+                  </div>
                 }
               </div>
 
@@ -355,13 +379,123 @@
                     <span class="field-error">Compila tutti i campi obbligatori.</span>
                   }
 
-                  <div class="row">
+                  @if (orderCurrency() === 'euro') {
+                    <!-- Buoni sconto (facoltativi) -->
+                    <div class="gadget-card__euro" style="margin-top: 0.8rem">
+                      <p class="text-muted">Buoni sconto (facoltativo)</p>
+
+                      @if (appliedCodes().length) {
+                        <div class="row" style="gap: 0.4rem; flex-wrap: wrap">
+                          @for (code of appliedCodes(); track code) {
+                            <span class="badge badge--free">
+                              {{ code }}
+                              <button
+                                type="button"
+                                (click)="removeCode(g.id, code)"
+                                [disabled]="applyingDiscount()"
+                                [attr.aria-label]="'Rimuovi ' + code"
+                                style="margin-left: 0.3rem; background: none; border: none; cursor: pointer; color: inherit"
+                              >×</button>
+                            </span>
+                          }
+                        </div>
+                      }
+
+                      @if (pickableVouchers().length) {
+                        <div class="row" style="gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem">
+                          @for (v of pickableVouchers(); track v.code) {
+                            <button
+                              type="button"
+                              class="btn btn--ghost btn--sm"
+                              (click)="addVoucher(g.id, v.code)"
+                              [disabled]="applyingDiscount()"
+                            >
+                              {{ v.code }} ({{ voucherValueLabel(v) }})
+                            </button>
+                          }
+                        </div>
+                      }
+
+                      <div class="row" style="gap: 0.4rem; margin-top: 0.4rem">
+                        <input
+                          type="text"
+                          class="input"
+                          [formControl]="discountControl"
+                          placeholder="Codice sconto"
+                          maxlength="40"
+                          style="flex: 1; text-transform: uppercase"
+                        />
+                        <button
+                          type="button"
+                          class="btn btn--ghost btn--sm"
+                          (click)="addTyped(g.id)"
+                          [disabled]="applyingDiscount()"
+                        >Applica</button>
+                      </div>
+                      @if (discountError()) {
+                        <span class="field-error">{{ discountError() }}</span>
+                      }
+                    </div>
+
+                    <!-- Riepilogo prezzo -->
+                    <p class="gadget-card__euro-price" style="margin-top: 0.6rem">
+                      @if (euroDiscounts()) {
+                        <span class="text-muted" style="text-decoration: line-through">€{{ g.priceEur }}</span>
+                        &nbsp;
+                      }
+                      <strong>€{{ effectivePrice(g).toFixed(2) }}</strong>
+                    </p>
+
+                    <!-- Pagamento off-site (nascosto se omaggio) -->
+                    @if (effectivePrice(g) > 0) {
+                      <div class="gadget-card__payment" style="margin-top: 0.4rem">
+                        <p class="text-muted">Metodo di pagamento (off-site)</p>
+                        <div class="row" style="gap: 1rem">
+                          <label class="row" style="gap: 0.3rem; margin: 0">
+                            <input type="radio" [formControl]="paymentMethodControl" value="paypal" /> PayPal
+                          </label>
+                          <label class="row" style="gap: 0.3rem; margin: 0">
+                            <input type="radio" [formControl]="paymentMethodControl" value="skrill" /> Skrill
+                          </label>
+                        </div>
+                        @if (receiver()) {
+                          <p class="text-muted">
+                            Invia <strong>€{{ effectivePrice(g).toFixed(2) }}</strong> a
+                            <strong>{{ receiver() }}</strong>
+                            ({{ paymentMethodControl.value === 'skrill' ? 'Skrill' : 'PayPal' }}),
+                            poi conferma l'ordine.
+                          </p>
+                        }
+                        <div class="field">
+                          <label for="payref-{{ g.id }}">Riferimento pagamento (facoltativo)</label>
+                          <input
+                            id="payref-{{ g.id }}"
+                            type="text"
+                            class="input"
+                            [formControl]="paymentReferenceControl"
+                            maxlength="140"
+                            placeholder="ID transazione o email mittente"
+                          />
+                        </div>
+                      </div>
+                    } @else {
+                      <p class="text-muted" style="margin-top: 0.4rem">
+                        Gadget in omaggio: nessun pagamento richiesto.
+                      </p>
+                    }
+                  }
+
+                  <div class="row" style="margin-top: 0.8rem">
                     <button
                       type="submit"
                       class="btn btn--primary btn--sm"
                       [disabled]="actingId() !== null"
                     >
-                      {{ actingId() === 'gadget:' + g.id ? 'Invio…' : 'Conferma ordine (' + fmt(g.pricePoints) + ' pt)' }}
+                      {{ actingId() === 'gadget:' + g.id
+                          ? 'Invio…'
+                          : (orderCurrency() === 'euro'
+                              ? 'Conferma ordine (€' + effectivePrice(g).toFixed(2) + ')'
+                              : 'Conferma ordine (' + fmt(g.pricePoints ?? 0) + ' pt)') }}
                     </button>
                     <button
                       type="button"

@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  DiscountsValidation,
   GadgetFulfillStatus,
   GadgetPayload,
   GadgetResource,
@@ -13,6 +14,7 @@ import {
   ShopOrder,
   ShopOrderStatus,
   ShopOrderType,
+  ShopPaymentMethod,
   ShopVoucherType,
   SubscriptionTier,
 } from '../models/api.models';
@@ -81,10 +83,33 @@ export class ShopService {
   orderGadget(
     id: string,
     shippingAddress: ShippingAddress,
+    opts?: {
+      paymentMethod?: ShopPaymentMethod;
+      paymentReference?: string;
+      discountCodes?: string[];
+    },
   ): Observable<ShopOrder> {
     return this.http.post<ShopOrder>(`${API}/shop/gadgets/${id}/order`, {
       shippingAddress,
+      ...(opts?.paymentMethod ? { paymentMethod: opts.paymentMethod } : {}),
+      ...(opts?.paymentReference
+        ? { paymentReference: opts.paymentReference }
+        : {}),
+      ...(opts?.discountCodes?.length
+        ? { discountCodes: opts.discountCodes }
+        : {}),
     });
+  }
+
+  /** Anteprima sconti su un gadget in euro (prima del pagamento off-site). */
+  validateGadgetDiscounts(
+    id: string,
+    codes: string[],
+  ): Observable<DiscountsValidation> {
+    return this.http.post<DiscountsValidation>(
+      `${API}/shop/gadgets/${id}/validate-discounts`,
+      { codes },
+    );
   }
 
   // ── Admin: prodotti ──
@@ -161,6 +186,9 @@ export class ShopService {
       fd.set('description', payload.description);
     if (payload.pricePoints !== undefined)
       fd.set('pricePoints', String(payload.pricePoints));
+    // priceEur solo se definito: Number('') === 0 renderebbe gratis il gadget.
+    if (payload.priceEur !== undefined)
+      fd.set('priceEur', String(payload.priceEur));
     if (payload.stock !== undefined) fd.set('stock', String(payload.stock));
     if (payload.active !== undefined) fd.set('active', String(payload.active));
     if (image) fd.set('image', image, image.name);

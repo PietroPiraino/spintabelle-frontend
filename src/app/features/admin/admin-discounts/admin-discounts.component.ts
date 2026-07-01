@@ -14,6 +14,7 @@ import {
   DiscountCodeDetail,
   DiscountCodePayload,
   DiscountKind,
+  DiscountScope,
   Paginated,
 } from '../../../core/models/api.models';
 import { AdminDiscountsService } from '../../../core/services/admin-discounts.service';
@@ -62,6 +63,13 @@ export class AdminDiscountsComponent {
   protected readonly tierSqualoControl = new FormControl(false, {
     nonNullable: true,
   });
+  protected readonly scopeControl = new FormControl<DiscountScope>(
+    'SUBSCRIPTION',
+    { nonNullable: true },
+  );
+  protected readonly reusableControl = new FormControl(false, {
+    nonNullable: true,
+  });
   protected readonly activeControl = new FormControl(true, {
     nonNullable: true,
   });
@@ -82,6 +90,17 @@ export class AdminDiscountsComponent {
 
   protected readonly kinds: DiscountKind[] = ['PERCENT', 'FIXED'];
   protected readonly audiences: DiscountAudience[] = ['RESTRICTED', 'PUBLIC'];
+  protected readonly scopes: DiscountScope[] = [
+    'SUBSCRIPTION',
+    'GADGET',
+    'ALL',
+  ];
+
+  protected scopeLabel(s: DiscountScope): string {
+    if (s === 'GADGET') return 'Solo gadget';
+    if (s === 'ALL') return 'Abbonamenti e gadget';
+    return 'Solo abbonamenti';
+  }
 
   constructor() {
     this.searchControl.valueChanges
@@ -90,6 +109,13 @@ export class AdminDiscountsComponent {
         this.query.set(q.trim());
         this.currentPage.set(1);
         this.load();
+      });
+    // Un codice riutilizzabile non ammette un tetto: disabilita il campo di conseguenza.
+    this.reusableControl.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((reusable) => {
+        if (reusable) this.maxRedControl.disable();
+        else this.maxRedControl.enable();
       });
     this.load();
   }
@@ -166,6 +192,8 @@ export class AdminDiscountsComponent {
     this.audienceControl.setValue('RESTRICTED');
     this.tierPesceControl.setValue(false);
     this.tierSqualoControl.setValue(false);
+    this.scopeControl.setValue('SUBSCRIPTION');
+    this.reusableControl.setValue(false);
     this.activeControl.setValue(true);
     this.validFromControl.setValue('');
     this.validUntilControl.setValue('');
@@ -184,6 +212,8 @@ export class AdminDiscountsComponent {
     this.audienceControl.setValue(c.audience);
     this.tierPesceControl.setValue(c.tiers?.includes('PESCE_ROSSO') ?? false);
     this.tierSqualoControl.setValue(c.tiers?.includes('SQUALO') ?? false);
+    this.scopeControl.setValue(c.scope ?? 'SUBSCRIPTION');
+    this.reusableControl.setValue(c.reusable ?? false);
     this.activeControl.setValue(c.active);
     this.validFromControl.setValue(this.isoToDateInput(c.validFrom));
     this.validUntilControl.setValue(this.isoToDateInput(c.validUntil));
@@ -203,17 +233,21 @@ export class AdminDiscountsComponent {
     if (this.tierSqualoControl.value) tiers.push('SQUALO');
     const vf = this.validFromControl.value;
     const vu = this.validUntilControl.value;
+    const reusable = this.reusableControl.value;
     const payload: DiscountCodePayload = {
       kind: this.kindControl.value,
       value: Number(this.valueControl.value),
       audience: this.audienceControl.value,
       tiers,
+      scope: this.scopeControl.value,
+      reusable,
       active: this.activeControl.value,
       note: this.noteControl.value.trim() || undefined,
     };
     if (vf) payload.validFrom = new Date(`${vf}T00:00:00`).toISOString();
     if (vu) payload.validUntil = new Date(`${vu}T23:59:59`).toISOString();
-    if (this.maxRedControl.value != null)
+    // Un codice riutilizzabile non può avere un tetto (il backend lo rifiuterebbe).
+    if (!reusable && this.maxRedControl.value != null)
       payload.maxRedemptions = Number(this.maxRedControl.value);
     return payload;
   }

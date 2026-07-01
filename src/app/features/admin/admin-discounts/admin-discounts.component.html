@@ -99,6 +99,28 @@
         </p>
       }
 
+      <div class="row admin-panel__row" style="margin-top: 0.6rem">
+        <div class="field" style="margin: 0">
+          <label for="dscope">Ambito d'uso</label>
+          <select id="dscope" class="input" [formControl]="scopeControl">
+            @for (s of scopes; track s) {
+              <option [value]="s">{{ scopeLabel(s) }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <label class="row admin-panel__check" style="margin-top: 0.6rem">
+        <input type="checkbox" [formControl]="reusableControl" />
+        Riutilizzabile a ogni acquisto (sconto "a vita")
+      </label>
+      @if (reusableControl.value) {
+        <p class="admin-item__meta">
+          Un codice riutilizzabile può essere usato dallo stesso utente a ogni
+          rinnovo/acquisto e non ha tetto di utilizzi.
+        </p>
+      }
+
       <div class="field" style="margin: 0.6rem 0 0">
         <label for="dnote">Nota interna (facoltativa)</label>
         <input id="dnote" type="text" class="input" [formControl]="noteControl" maxlength="300" />
@@ -139,6 +161,12 @@
                 <strong>{{ c.code }}</strong>
                 <span class="badge badge--premium">{{ valueLabel(c) }}</span>
                 <span class="badge badge--tag">{{ audienceLabel(c.audience) }}</span>
+                @if (c.scope && c.scope !== 'SUBSCRIPTION') {
+                  <span class="badge badge--tag">{{ scopeLabel(c.scope) }}</span>
+                }
+                @if (c.reusable) {
+                  <span class="badge badge--premium">A vita</span>
+                }
                 @if (c.active) {
                   <span class="badge badge--free">Attivo</span>
                 } @else {
