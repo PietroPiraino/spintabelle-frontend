@@ -1,0 +1,343 @@
+<section class="vz">
+  <header class="vz__hero">
+    <h1 class="vz__title">Simulatore di Varianza</h1>
+    <p class="vz__lead">
+      Quanto conta la fortuna nel breve periodo? Simula migliaia di percorsi possibili
+      per il tuo volume di gioco negli Spin&nbsp;&amp;&nbsp;Go / Twister lottery e scopri
+      swing, downswing e quanti buy-in servono per dormire tranquillo.
+    </p>
+  </header>
+
+  <div class="vz__grid">
+    <!-- ============ PANNELLO IMPOSTAZIONI ============ -->
+    <form class="vz__panel" novalidate (submit)="$event.preventDefault(); run()">
+      <!-- 1. Formato + buy-in -->
+      <fieldset class="vz__field">
+        <legend>Formato</legend>
+        <div class="vz__seg" role="radiogroup" aria-label="Formato di gioco">
+          @for (f of formats; track f.id) {
+            <button type="button" role="radio" class="vz__seg-btn"
+              [class.is-active]="formatId() === f.id" [attr.aria-checked]="formatId() === f.id"
+              (click)="setFormat(f.id)">{{ f.label }}</button>
+          }
+        </div>
+        <label class="vz__select-wrap">
+          <span>Buy-in</span>
+          <select class="vz__select" (change)="setBuyin($any($event.target).value)">
+            @for (t of format().buyins; track t.eur) {
+              <option [value]="t.eur" [selected]="t.eur === buyinEur()">{{ t.label }}</option>
+            }
+          </select>
+        </label>
+        @if (format().note) {
+          <p class="vz__hint vz__hint--warn">{{ format().note }}</p>
+        }
+      </fieldset>
+
+      <!-- 2. Edge (globale) -->
+      <fieldset class="vz__field">
+        <legend>Il tuo edge</legend>
+        @if (finishMode() === 'chips') {
+          <label class="vz__row">
+            <span>Chip EV medie per partita</span>
+            <input type="range" min="-100" max="300" step="5" [value]="evChips()"
+              (input)="onNum(evChips, $any($event.target).value, -1000, 5000)" />
+            <input class="vz__num" type="number" step="1" [value]="evChips()"
+              (input)="onNum(evChips, $any($event.target).value, -1000, 5000)"
+              aria-label="Chip EV per partita" />
+          </label>
+          @if (mode() === 'money') {
+            <p class="vz__hint">
+              → probabilità di arrivare 1°: <strong>{{ fmtPct(winRatePct(), 1) }}</strong>
+              (0 chip = 33,3% · un reg vincente fa ~+40)
+            </p>
+            <button type="button" class="vz__link" (click)="finishMode.set('manual')">
+              Inserisci le % a mano
+            </button>
+          } @else {
+            <p class="vz__hint">In modalità EV Chip è la media di chip vinte per partita.</p>
+          }
+        } @else {
+          <div class="vz__finish">
+            @for (lbl of ['1°', '2°', '3°']; track $index) {
+              <label>
+                <span>{{ lbl }} %</span>
+                <input type="number" min="0" max="100" step="any" [value]="manualFinish()[$index]"
+                  (input)="setManualFinish($index, $any($event.target).value)" />
+              </label>
+            }
+          </div>
+          <button type="button" class="vz__link" (click)="finishMode.set('chips')">
+            Torna agli EV chip
+          </button>
+        }
+      </fieldset>
+
+      <!-- 3. Modalità di analisi -->
+      <fieldset class="vz__field">
+        <legend>Modalità di analisi</legend>
+        <div class="vz__seg" role="radiogroup" aria-label="Modalità di simulazione">
+          <button type="button" role="radio" class="vz__seg-btn" [class.is-active]="mode() === 'money'"
+            [attr.aria-checked]="mode() === 'money'" (click)="setMode('money')">Soldi reali</button>
+          <button type="button" role="radio" class="vz__seg-btn" [class.is-active]="mode() === 'chip'"
+            [attr.aria-checked]="mode() === 'chip'" (click)="setMode('chip')">EV Chip</button>
+        </div>
+      </fieldset>
+
+      <!-- 4. Extra per modalità -->
+      @if (mode() === 'money') {
+        <fieldset class="vz__field vz__field--row">
+          <label class="vz__inline">
+            <span>Rakeback %</span>
+            <input type="number" min="0" max="100" step="1" [value]="rakebackPct()"
+              (input)="onNum(rakebackPct, $any($event.target).value, 0, 100)" />
+          </label>
+        </fieldset>
+      } @else {
+        <fieldset class="vz__field vz__field--row">
+          <label class="vz__inline">
+            <span>Deviazione standard (chip)</span>
+            <input type="number" min="1" step="1" [value]="chipsStdDev()"
+              (input)="onNum(chipsStdDev, $any($event.target).value, 1, 100000)" />
+          </label>
+        </fieldset>
+        <p class="vz__hint">
+          Mostra la varianza in chip EV (l'abilità "pura"), senza il rumore del montepremi lottery.
+        </p>
+      }
+
+      <!-- 5. Volume -->
+      <fieldset class="vz__field">
+        <legend>Volume</legend>
+        <label class="vz__row">
+          <span>Numero di simulazioni</span>
+          <input type="range" min="200" [max]="maxSims" step="100" [value]="numSims()"
+            (input)="onNum(numSims, $any($event.target).value, 1, maxSims)" />
+          <input class="vz__num" type="number" min="1" [max]="maxSims" step="1" [value]="numSims()"
+            (input)="onNum(numSims, $any($event.target).value, 1, maxSims)"
+            aria-label="Numero di simulazioni" />
+        </label>
+        <label class="vz__row">
+          <span>Partite per simulazione</span>
+          <input type="range" min="0" max="1000" step="1" [value]="gamesSliderPos(numGames())"
+            (input)="onGamesSlider($any($event.target).value)" />
+          <input class="vz__num" type="number" min="1" [max]="maxGames" step="1" [value]="numGames()"
+            (input)="onNum(numGames, $any($event.target).value, 1, maxGames)"
+            aria-label="Partite per simulazione" />
+        </label>
+      </fieldset>
+
+      <button type="submit" class="vz__run" [disabled]="running()">
+        @if (running()) { Simulazione… {{ (progress() * 100).toFixed(0) }}% } @else { Simula }
+      </button>
+      @if (running()) {
+        <div class="vz__progress" [style.--p.%]="progress() * 100"></div>
+      }
+    </form>
+
+    <!-- ============ GRAFICO + STATISTICHE ============ -->
+    <div class="vz__main">
+      <!-- Anteprima live -->
+      <div class="vz__preview">
+        @if (mode() === 'money') {
+          <div class="vz__stat">
+            <span class="vz__stat-k">Expected Profit</span>
+            <span class="vz__stat-v" [class.is-pos]="eurPre() >= 0"
+              [class.is-neg]="eurPre() < 0">{{ fmtEurSigned(eurPre()) }}</span>
+            <span class="vz__stat-sub">{{ fmtSignedPct(roiPrePct()) }} ROI · {{ fmtBuyins(numGames()) }} partite</span>
+          </div>
+          <div class="vz__stat">
+            <span class="vz__stat-k">Expected Profit + Rakeback</span>
+            <span class="vz__stat-v" [class.is-pos]="eurPost() >= 0"
+              [class.is-neg]="eurPost() < 0">{{ fmtEurSigned(eurPost()) }}</span>
+            <span class="vz__stat-sub">{{ fmtSignedPct(roiPostPct()) }} ROI</span>
+          </div>
+          <div class="vz__stat">
+            <span class="vz__stat-k">Rake effettiva</span>
+            <span class="vz__stat-v">{{ fmtPct(effectiveRakePct(), 1) }}</span>
+          </div>
+        } @else {
+          <div class="vz__stat">
+            <span class="vz__stat-k">EV per partita</span>
+            <span class="vz__stat-v">{{ evPerGamePreview() }} chip</span>
+          </div>
+        }
+      </div>
+
+      @if (error()) {
+        <div class="vz__error" role="alert">{{ error() }}</div>
+      }
+
+      @if (result()) {
+        <app-varianza-graph [result]="result()" [showSamples]="showSamples()" [unit]="graphUnit()"
+          [perGameLabels]="mode() === 'chip' && graphUnit() === 'total'" [chipsPerBuyin]="avgStack()" />
+      } @else {
+        <div class="vz__empty">
+          @if (running()) {
+            <div class="vz__empty-spinner" aria-hidden="true"></div>
+            <p class="vz__empty-title">Simulazione in corso… {{ (progress() * 100).toFixed(0) }}%</p>
+          } @else {
+            <div class="vz__empty-model">
+              <app-subscribe-model [spec]="octopusSpec" />
+            </div>
+            <p class="vz__empty-title">Pronto a scoprire la tua varianza?</p>
+            <p class="vz__empty-sub">Imposta formato, edge e volume qui a fianco, poi premi <strong>Simula</strong>.</p>
+          }
+        </div>
+      }
+
+      <div class="vz__graph-tools">
+        <label class="vz__check">
+          <input type="checkbox" [checked]="showSamples()" (change)="toggleSamples()" />
+          Mostra percorsi campione
+        </label>
+        @if (graphUnitOptions().length) {
+          <div class="vz__unitsel" role="radiogroup" aria-label="Unità del grafico">
+            @for (o of graphUnitOptions(); track o.v) {
+              <button type="button" role="radio" class="vz__unitbtn"
+                [class.is-active]="graphUnit() === o.v" [attr.aria-checked]="graphUnit() === o.v"
+                (click)="setGraphUnit(o.v)">{{ o.l }}</button>
+            }
+          </div>
+        }
+        @if (result()) {
+          <span class="vz__meta">{{ fmtBuyins(result()!.numSims) }} simulazioni ·
+            {{ fmtBuyins(result()!.numGames) }} partite</span>
+        }
+      </div>
+
+      @if (result(); as r) {
+        <div class="vz__results">
+          <h2 class="vz__results-title">Cosa aspettarti su {{ fmtBuyins(r.numGames) }} partite</h2>
+
+          <div class="vz__cards">
+            <div class="vz__card">
+              <span class="vz__card-k">Risultato mediano</span>
+              <span class="vz__card-v">{{ fmtBuyins(buyinsAt(r.roi, 0.5)) }} {{ unit() }}</span>
+              @if (mode() === 'money' && buyinEur()) {
+                <span class="vz__card-sub">{{ fmtEur(buyinsAt(r.roi, 0.5)) }}</span>
+              }
+            </div>
+            <div class="vz__card">
+              <span class="vz__card-k">Nel 90% dei casi</span>
+              <span class="vz__card-v">da {{ fmtBuyins(buyinsAt(r.roi, 0.05)) }}
+                a {{ fmtBuyins(buyinsAt(r.roi, 0.95)) }} {{ unit() }}</span>
+              <span class="vz__card-sub">tra il 5° e il 95° percentile</span>
+            </div>
+            <div class="vz__card">
+              <span class="vz__card-k">Downswing tipico</span>
+              <span class="vz__card-v">{{ fmtBuyins(buyinsAt(r.drawdown, 0.5)) }} {{ unit() }}</span>
+              <span class="vz__card-sub">1 su 20: fino a {{ fmtBuyins(buyinsAt(r.drawdown, 0.95)) }}</span>
+            </div>
+            <div class="vz__card">
+              <span class="vz__card-k">Punto più basso</span>
+              <span class="vz__card-v">{{ fmtBuyins(buyinsAt(r.lowPoint, 0.05)) }} {{ unit() }}</span>
+              <span class="vz__card-sub">nel 5% dei casi peggiori</span>
+            </div>
+            <div class="vz__card">
+              <span class="vz__card-k">Break-even più lungo</span>
+              <span class="vz__card-v">{{ fmtBuyins(buyinsAt(r.breakeven, 0.5)) }} partite</span>
+              <span class="vz__card-sub">1 su 20: fino a {{ fmtBuyins(buyinsAt(r.breakeven, 0.95)) }}</span>
+            </div>
+            <div class="vz__card">
+              <span class="vz__card-k">Deviazione std finale</span>
+              <span class="vz__card-v">±{{ fmtBuyins(r.finalStdDev) }} {{ unit() }}</span>
+            </div>
+          </div>
+
+          @if (mode() === 'money') {
+            <p class="vz__note">
+              <strong>EV atteso</strong> = media a lungo termine (dove tende il bankroll su volume
+              enorme). <strong>Mediana</strong> = risultato tipico (metà sopra, metà sotto). Nei lottery
+              la media è più alta perché i rari jackpot la tirano su → la mediana descrive "cosa vivrai
+              di solito", l'EV "quanto vali davvero". Nessuna delle due è sbagliata.
+            </p>
+          } @else {
+            <p class="vz__note">
+              In EV Chip la distribuzione è simmetrica: <strong>media e mediana coincidono</strong>
+              (piccole differenze = rumore Monte Carlo, si riducono aumentando le simulazioni).
+            </p>
+          }
+
+          <div class="vz__dist">
+            <h3 class="vz__dist-title">Distribuzione dei risultati su {{ fmtBuyins(r.numGames) }} partite</h3>
+            <div class="vz__dist-scroll">
+              <table class="vz__disttable">
+                <thead>
+                  <tr>
+                    <th>Percentile</th>
+                    <th>Risultato</th>
+                    @if (mode() === 'chip') {
+                      <th>Per partita</th>
+                    } @else if (buyinEur()) {
+                      <th>In €</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of distPercentiles; track p) {
+                    <tr [class.is-median]="p === 0.5">
+                      <td>{{ (p * 100).toFixed(0) }}%@if (p === 0.5) {<span> · mediana</span>}</td>
+                      <td>{{ fmtBuyins(buyinsAt(r.roi, p)) }} {{ unit() }}</td>
+                      @if (mode() === 'chip') {
+                        <td>{{ fmtBuyins(buyinsAt(r.roi, p) / r.numGames) }}/partita</td>
+                      } @else if (buyinEur()) {
+                        <td>{{ fmtEur(buyinsAt(r.roi, p)) }}</td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+          @if (mode() === 'chip') {
+            <p class="vz__hint">Valori in <strong>chip EV puri</strong> (senza rake né montepremi): è l'abilità grezza. Stack medio: ~{{ fmtBuyins(avgStack()) }} chip = 1 buy-in.</p>
+          }
+          <p class="vz__disclaimer">
+            Numeri indicativi da simulazione Monte Carlo: la varianza reale può essere anche
+            più estrema. Non è una promessa di risultato.
+          </p>
+        </div>
+      }
+
+      @if (bustData(); as bust) {
+        <section class="vz__bust">
+          <h2 class="vz__results-title">Rischio di rovina</h2>
+          <div class="vz__bust-head">
+            <label class="vz__bust-pick">
+              <span>Ho</span>
+              <select class="vz__select" (change)="setBankroll($any($event.target).value)"
+                aria-label="Bankroll in buy-in">
+                @for (bk of bankrollOptions; track bk) {
+                  <option [value]="bk" [selected]="bk === selectedBankroll()">{{ bk }}</option>
+                }
+              </select>
+              <span>buy-in di bankroll</span>
+            </label>
+            <p class="vz__bust-headline">
+              →
+              <strong class="vz__bust-num" [class.is-safe]="bustPctRounded() < 5"
+                [class.is-warn]="bustPctRounded() >= 5 && bustPctRounded() < 15"
+                [class.is-danger]="bustPctRounded() >= 15">{{ fmtPct(bustPct(), 1) }}</strong>
+              di rischio di rovina su {{ fmtBuyins(result()!.numGames) }} partite
+            </p>
+          </div>
+          <app-varianza-bust-chart [bust]="bust" [numGames]="result()!.numGames"
+            [selected]="selectedBankroll()" />
+          <p class="vz__hint">
+            Ogni curva è un bankroll: la quota di giocatori che, col tuo edge, ha perso l'intero
+            bankroll (bust) entro quella partita. Più buy-in tieni, più la curva resta bassa. Qui il
+            gioco non si ferma mai (nessun cash-out): è lo scenario peggiore per il bankroll.
+          </p>
+        </section>
+      }
+    </div>
+  </div>
+
+  <p class="vz__credits">
+    Mascotte 3D: “Octopus Plush” di Surkee — licenza
+    <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>,
+    via <a href="https://www.fab.com/listings/0170a229-2d64-4f27-ae0b-6cf775fb088a" target="_blank" rel="noopener">Fab</a>
+    (ridimensionata e illuminata per il sito).
+  </p>
+</section>

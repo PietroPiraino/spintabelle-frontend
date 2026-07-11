@@ -1,0 +1,632 @@
+:host {
+  display: block;
+}
+
+.vz {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2.5rem) clamp(0.9rem, 3vw, 1.5rem) 4rem;
+}
+
+.vz__hero {
+  margin-bottom: 1.75rem;
+}
+.vz__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  margin: 0 0 0.5rem;
+  color: var(--text);
+}
+.vz__lead {
+  max-width: 60ch;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.vz__grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) 1fr;
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .vz__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- pannello impostazioni ---------- */
+.vz__panel {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.1rem;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+@media (max-width: 900px) {
+  .vz__panel {
+    position: static;
+  }
+}
+
+.vz__seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  padding: 0.28rem;
+  background: var(--bg-1);
+  border-radius: var(--radius);
+}
+.vz__seg-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.5rem;
+  border-radius: calc(var(--radius) - 3px);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.vz__seg-btn.is-active {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+}
+
+.vz__field {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.vz__field legend {
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.vz__field--row {
+  flex-direction: row;
+  gap: 0.75rem;
+}
+
+.vz__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.vz__pill {
+  border: 1px solid var(--line);
+  background: var(--bg-1);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.vz__pill:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.vz__pill.is-active {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.vz__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+}
+.vz__row > span {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.vz__row input[type='range'] {
+  grid-column: 1;
+  width: 100%;
+  accent-color: var(--gold);
+}
+.vz__out {
+  grid-column: 2;
+  min-width: 3.5ch;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text);
+}
+input[type='number'].vz__num {
+  grid-column: 2;
+  width: 7ch;
+  min-width: 7ch;
+  padding: 0.32rem 0.4rem;
+  text-align: right;
+  font-family: var(--font-mono);
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type='number'].vz__num::-webkit-outer-spin-button,
+input[type='number'].vz__num::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.vz__inline {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.vz__finish {
+  display: flex;
+  gap: 0.5rem;
+}
+.vz__finish label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+input[type='number'] {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+}
+input[type='number']:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+.vz__select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.vz__select {
+  width: 100%;
+  padding: 0.5rem 0.55rem;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.vz__select:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+.vz__hint--warn {
+  color: var(--copper-500, var(--gold-text));
+  font-style: italic;
+}
+
+.vz__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.vz__hint strong {
+  color: var(--text);
+}
+.vz__link {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--gold-text, var(--copper-500));
+  font: inherit;
+  font-size: 0.82rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.vz__run {
+  margin-top: 0.25rem;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  background: var(--gold);
+  color: #1a1205;
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: filter var(--t-fast), transform var(--t-fast);
+}
+.vz__run:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.vz__run:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+.vz__progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bg-1);
+  overflow: hidden;
+  position: relative;
+}
+.vz__progress::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--p, 0%);
+  background: var(--gold);
+  transition: width 0.2s var(--ease-out);
+}
+
+/* ---------- area principale ---------- */
+.vz__main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.vz__preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.vz__stat {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.vz__stat-k {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-faint);
+}
+.vz__stat-v {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.vz__stat-v.is-pos {
+  color: var(--act-call);
+}
+.vz__stat-v.is-neg {
+  color: var(--danger, var(--act-allin));
+}
+.vz__stat-sub {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.vz__error {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--danger, #d61f5e) 14%, transparent);
+  border: 1px solid var(--danger, #d61f5e);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.vz__graph-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.vz__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+.vz__check input {
+  accent-color: var(--gold);
+}
+.vz__unitsel {
+  display: inline-flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  background: var(--bg-1);
+  border-radius: var(--radius-sm);
+}
+.vz__unitbtn {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: calc(var(--radius-sm) - 1px);
+  cursor: pointer;
+  transition:
+    background var(--t-fast),
+    color var(--t-fast);
+}
+.vz__unitbtn.is-active {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+}
+.vz__meta {
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+}
+
+.vz__results-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  margin: 0.5rem 0 0.9rem;
+  color: var(--text);
+}
+.vz__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.7rem;
+}
+.vz__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.vz__card-k {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-faint);
+}
+.vz__card-v {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.vz__card-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.vz__disclaimer {
+  margin: 1rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.vz__note {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0.9rem;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.vz__note strong {
+  color: var(--text);
+}
+
+.vz__dist {
+  margin-top: 1.25rem;
+}
+.vz__dist-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  margin: 0 0 0.6rem;
+  color: var(--text);
+}
+.vz__dist-scroll {
+  overflow-x: auto;
+}
+.vz__disttable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+.vz__disttable th {
+  text-align: right;
+  padding: 0.4rem 0.8rem;
+  color: var(--text-faint);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line-strong);
+  white-space: nowrap;
+}
+.vz__disttable th:first-child {
+  text-align: left;
+}
+.vz__disttable td {
+  text-align: right;
+  padding: 0.35rem 0.8rem;
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.vz__disttable td:first-child {
+  text-align: left;
+  color: var(--text-muted);
+}
+.vz__disttable tr.is-median td {
+  color: var(--gold-text, var(--copper-500));
+  font-weight: 700;
+}
+.vz__placeholder {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+/* ---------- sezione rischio di rovina (bust chart) ---------- */
+.vz__bust {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.vz__bust-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+}
+.vz__bust-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.vz__bust-pick .vz__select {
+  width: auto;
+  min-width: 4.5rem;
+  padding: 0.4rem 0.5rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.vz__bust-headline {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+.vz__bust-num {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.vz__bust-num.is-safe {
+  color: var(--act-call);
+}
+.vz__bust-num.is-warn {
+  color: var(--gold-text, var(--copper-500));
+}
+.vz__bust-num.is-danger {
+  color: var(--danger, var(--act-allin));
+}
+
+/* ---------- empty-state al centro del grafico ---------- */
+.vz__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: clamp(340px, 52vh, 620px);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  text-align: center;
+  padding: 2rem;
+}
+.vz__empty-art {
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  line-height: 1;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.14));
+  animation: vz-bob 3.6s ease-in-out infinite;
+}
+@keyframes vz-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(2deg);
+  }
+}
+.vz__empty-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--text);
+  margin: 0.6rem 0 0;
+}
+.vz__empty-sub {
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 34ch;
+  line-height: 1.5;
+}
+.vz__empty-spinner {
+  width: 2.6rem;
+  height: 2.6rem;
+  border: 3px solid var(--line);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: vz-spin 0.8s linear infinite;
+}
+@keyframes vz-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vz__empty-art,
+  .vz__empty-spinner {
+    animation: none;
+  }
+}
+.vz__empty-model {
+  width: 260px;
+  max-width: 80%;
+}
+
+.vz__credits {
+  max-width: var(--container);
+  margin: 1.5rem auto 0;
+  padding: 0 clamp(0.9rem, 3vw, 1.5rem);
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  text-align: center;
+}
+.vz__credits a {
+  color: var(--text-muted);
+  text-decoration: underline;
+}

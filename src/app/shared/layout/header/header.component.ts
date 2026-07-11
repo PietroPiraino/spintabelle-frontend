@@ -55,6 +55,7 @@ export class HeaderComponent {
       label: 'Studia',
       children: [
         { path: '/allenamento', label: 'Allenamento' },
+        { path: '/simulatore-varianza', label: 'Simulatore varianza', isNew: true },
         { path: '/lezioni', label: 'Lezioni' },
         { path: '/live', label: 'Live' },
       ],

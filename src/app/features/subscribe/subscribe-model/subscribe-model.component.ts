@@ -26,6 +26,8 @@ export interface SubscribeModelSpec {
   readonly baseRotation?: readonly [number, number, number];
   /** Vira di tono un materiale del modello (es. il corpo del pesce → arancio). */
   readonly tint?: { readonly match: string; readonly color: number };
+  /** Fattore di scala aggiuntivo (default 1): <1 lascia margine nel riquadro. */
+  readonly scale?: number;
 }
 
 const TARGET_SIZE = 2.3; // lato più lungo del modello in unità scena
@@ -130,6 +132,7 @@ export class SubscribeModelComponent implements OnDestroy {
       }
       if (spec.tint) tintMaterial(root, spec.tint.match, spec.tint.color);
       wrapper = fitModel(THREE, root, TARGET_SIZE);
+      if (spec.scale) wrapper.scale.multiplyScalar(spec.scale);
     } catch {
       // .glb assente o illeggibile: ripulisci e lascia il fallback CSS
       res.disposeAll();

@@ -27,6 +27,19 @@ export const routes: Routes = [
     },
   },
   {
+    // Pubblica di proposito: strumento gratuito ad alto valore (SEO/condivisione/conversione).
+    path: 'simulatore-varianza',
+    loadComponent: () =>
+      import('./features/varianza/varianza.component').then(
+        (m) => m.VarianzaComponent,
+      ),
+    title: 'Simulatore di Varianza — Best Fish Forever',
+    data: {
+      description:
+        'Simulatore di varianza per Spin & Go e Twister lottery: migliaia di percorsi Monte Carlo per capire swing, downswing e bankroll necessario. Gratis, senza registrazione.',
+    },
+  },
+  {
     path: 'chi-siamo',
     loadComponent: () =>
       import('./features/about/about.component').then((m) => m.AboutComponent),

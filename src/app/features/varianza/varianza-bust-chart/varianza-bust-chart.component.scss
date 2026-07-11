@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: clamp(240px, 34vh, 400px);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.varianza-bust__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
