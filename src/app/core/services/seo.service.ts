@@ -42,8 +42,13 @@ export class SeoService {
    * fa auto-canonicalizzare /tabelle, /abbonati, ecc. verso "/".
    * `fullTitle` è il titolo completo della rotta (già col suffisso brand).
    */
-  setRouteMeta(fullTitle: string, description: string, path: string): void {
-    this.applyMeta(fullTitle, description, `${SITE}${path}`);
+  setRouteMeta(
+    fullTitle: string,
+    description: string,
+    path: string,
+    image?: string,
+  ): void {
+    this.applyMeta(fullTitle, description, `${SITE}${path}`, image);
   }
 
   private applyMeta(
@@ -86,5 +91,15 @@ export class SeoService {
       this.doc.head.appendChild(el);
     }
     el.textContent = JSON.stringify(data);
+  }
+
+  /**
+   * Rimuove uno <script type="application/ld+json"> per id. Da chiamare quando
+   * una pagina che ha aggiunto dati strutturati specifici viene distrutta:
+   * senza questo lo schema (es. un FAQPage) resterebbe nel <head> anche sulle
+   * altre pagine, sporcando i loro dati strutturati.
+   */
+  removeJsonLd(id: string): void {
+    this.doc.getElementById(id)?.remove();
   }
 }

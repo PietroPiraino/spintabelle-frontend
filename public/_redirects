@@ -1,0 +1,7 @@
+# Fallback SPA per le rotte NON prerenderizzate (gated/auth/token/404 e news
+# non ancora generate al build). I file .html prerenderizzati (es. /tabelle,
+# /simulatore-varianza) sono asset statici e hanno precedenza: il wildcard
+# scatta solo quando nessun file corrisponde alla richiesta.
+# index.csr.html = shell client puro (nessun contenuto SSR → niente mismatch
+# di idratazione sulle rotte servite dal fallback).
+/*    /index.csr.html    200

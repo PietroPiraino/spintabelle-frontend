@@ -76,7 +76,8 @@ export class SubscribeModelComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.disposed = true;
-    cancelAnimationFrame(this.rafId);
+    // guardia SSR/prerender: su server rafId=0 e il global non esiste.
+    if (this.rafId) cancelAnimationFrame(this.rafId);
     this.cleanupFns.forEach((fn) => fn());
     this.cleanupFns = [];
   }

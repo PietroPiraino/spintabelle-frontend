@@ -52,7 +52,9 @@ export class Hero3dComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.disposed = true;
-    cancelAnimationFrame(this.rafId);
+    // guardia SSR/prerender: rafId è 0 se afterNextRender non è mai girato
+    // (server) e cancelAnimationFrame come global non esiste su Node.
+    if (this.rafId) cancelAnimationFrame(this.rafId);
     this.cleanupFns.forEach((fn) => fn());
     this.cleanupFns = [];
   }

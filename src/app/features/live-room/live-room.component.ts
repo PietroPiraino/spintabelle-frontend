@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type {
@@ -64,6 +65,7 @@ export class LiveRoomComponent implements OnDestroy {
   private readonly liveApi = inject(LiveService);
   private readonly loadLiveKit = inject(LIVEKIT_LOADER);
   private readonly toast = inject(ToastService);
+  private readonly doc = inject(DOCUMENT); // SSR-safe: niente global `document`
 
   private readonly stageRef =
     viewChild<ElementRef<HTMLDivElement>>('stage');
@@ -114,7 +116,7 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly myHandMic = signal(false); // studente: ha chiesto la parola
   protected readonly myHandScreen = signal(false); // studente: ha chiesto lo schermo
   protected readonly chatUnread = signal(0); // messaggi non letti (tab in background)
-  private readonly pageHidden = signal(document.hidden); // pagina in secondo piano
+  private readonly pageHidden = signal(this.doc.hidden); // pagina in secondo piano
   protected readonly handAnnounce = signal(''); // annuncio sr-only nuova mano alzata
   // Fase 4 — mobile: tab attiva (sotto 880px) + non letti per il badge "Chat"
   protected readonly mobileTab = signal<'video' | 'chat' | 'people'>('video');
@@ -142,8 +144,8 @@ export class LiveRoomComponent implements OnDestroy {
   private audioCtx: AudioContext | null = null;
   private titleBase = ''; // titolo originale della tab (per il prefisso conteggio)
   private readonly onVisibility = (): void => {
-    this.pageHidden.set(document.hidden);
-    if (!document.hidden) this.chatUnread.set(0);
+    this.pageHidden.set(this.doc.hidden);
+    if (!this.doc.hidden) this.chatUnread.set(0);
   };
 
   private room: Room | null = null;

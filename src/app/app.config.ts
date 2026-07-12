@@ -1,13 +1,22 @@
-import { ViewportScroller, registerLocaleData } from '@angular/common';
+import {
+  ViewportScroller,
+  isPlatformBrowser,
+  registerLocaleData,
+} from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import localeIt from '@angular/common/locales/it';
 import {
   ApplicationConfig,
   LOCALE_ID,
+  PLATFORM_ID,
   inject,
   provideEnvironmentInitializer,
   provideZonelessChangeDetection,
 } from '@angular/core';
+import {
+  provideClientHydration,
+  withEventReplay,
+} from '@angular/platform-browser';
 import {
   NavigationEnd,
   NavigationStart,
@@ -36,6 +45,10 @@ const DEFAULT_DESCRIPTION =
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
+    // Idratazione dell'HTML prerenderizzato (SSG): il client riusa il DOM
+    // statico invece di ricrearlo. withEventReplay riproduce i click avvenuti
+    // prima che l'app fosse interattiva. Supportato con zoneless in Angular 22.
+    provideClientHydration(withEventReplay()),
     provideRouter(
       routes,
       withComponentInputBinding(),
@@ -48,9 +61,13 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: LOCALE_ID, useValue: 'it' },
     // Avvia il ripristino sessione in background (senza await: non blocca
-    // il primo render; i guard aspettano ready$ solo sulle rotte protette)
+    // il primo render; i guard aspettano ready$ solo sulle rotte protette).
+    // SOLO browser: in prerender non c'è cookie di refresh e la chiamata HTTP
+    // resterebbe un pending task che rallenta la stabilizzazione del build.
     provideEnvironmentInitializer(() => {
-      inject(AuthService).bootstrap().subscribe();
+      if (isPlatformBrowser(inject(PLATFORM_ID))) {
+        inject(AuthService).bootstrap().subscribe();
+      }
     }),
     // SEO per-pagina: a ogni navigazione aggiorna canonical + description +
     // OG/Twitter dai `data` della rotta (il <title> lo fa già il router). Senza
@@ -71,6 +88,7 @@ export const appConfig: ApplicationConfig = {
           (snapshot.data['description'] as string | undefined) ??
             DEFAULT_DESCRIPTION,
           path,
+          snapshot.data['ogImage'] as string | undefined,
         );
       });
     }),
@@ -80,6 +98,9 @@ export const appConfig: ApplicationConfig = {
     // Angular (store per navigationId) senza il suo scroll-to-top automatico,
     // che scatterebbe anche navigando l'albero delle tabelle.
     provideEnvironmentInitializer(() => {
+      // Solo browser: lo scroll non ha senso in prerender e il callback legge
+      // window.scrollY (global assente su Node → crash del prerender).
+      if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
       const viewport = inject(ViewportScroller);
       viewport.setHistoryScrollRestoration('manual');
       const store: Record<number, [number, number]> = {};

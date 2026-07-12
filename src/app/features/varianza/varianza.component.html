@@ -1,6 +1,6 @@
 <section class="vz">
   <header class="vz__hero">
-    <h1 class="vz__title">Simulatore di Varianza</h1>
+    <h1 class="vz__title">Simulatore di Varianza per Spin&nbsp;&amp;&nbsp;Go e Twister</h1>
     <p class="vz__lead">
       Quanto conta la fortuna nel breve periodo? Simula migliaia di percorsi possibili
       per il tuo volume di gioco negli Spin&nbsp;&amp;&nbsp;Go / Twister lottery e scopri
@@ -333,6 +333,48 @@
       }
     </div>
   </div>
+
+  <!-- ============ CONTENUTO EVERGREEN (SEO) ============ -->
+  <!-- Testo sempre visibile: dà alla pagina contenuto indicizzabile su intent
+       reali anche senza lanciare la simulazione (le card/tabella risultati sono
+       dietro @if(result())). Il FAQ qui sotto è la stessa sorgente del FAQPage. -->
+  <section class="vz__seo" aria-labelledby="vz-seo-title">
+    <h2 id="vz-seo-title" class="vz__seo-title">
+      Capire la varianza negli Spin&nbsp;&amp;&nbsp;Go e nei Twister
+    </h2>
+    <p class="vz__seo-lead">
+      La varianza è il motivo per cui, nel poker, il risultato di breve periodo dice
+      poco sul tuo livello reale. Negli Spin&nbsp;&amp;&nbsp;Go e nei Twister — tornei
+      3-max hyper-turbo a montepremi casuale — l’oscillazione è ancora più marcata che
+      nel poker classico. Questo strumento gratuito simula migliaia di percorsi di
+      bankroll possibili per il tuo volume di gioco, così puoi vedere swing, downswing
+      e quanti buy-in servono per giocare sereno.
+    </p>
+    <p class="vz__seo-lead">
+      Imposta il formato, il tuo edge e il numero di partite, poi premi <strong>Simula</strong>:
+      otterrai la distribuzione completa dei risultati, il downswing tipico, il punto più
+      basso e il rischio di rovina per diversi bankroll.
+    </p>
+
+    <div class="vz__cta">
+      <p>
+        Vuoi ridurre l’impatto della varianza? Parti dalle decisioni: consulta le
+        <a routerLink="/tabelle">tabelle GTO preflop</a>, allenati sugli
+        <a routerLink="/allenamento">spot di allenamento</a> e scopri il
+        <a routerLink="/abbonati">percorso di coaching</a> di Best Fish Forever.
+      </p>
+    </div>
+
+    <h2 class="vz__seo-title">Domande frequenti sulla varianza</h2>
+    <div class="vz__faq">
+      @for (item of faq; track item.q) {
+        <div class="vz__faq-item">
+          <h3 class="vz__faq-q">{{ item.q }}</h3>
+          <p class="vz__faq-a">{{ item.a }}</p>
+        </div>
+      }
+    </div>
+  </section>
 
   <p class="vz__credits">
     Mascotte 3D: “Octopus Plush” di Surkee — licenza

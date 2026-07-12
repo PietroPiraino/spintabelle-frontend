@@ -37,6 +37,9 @@ export const routes: Routes = [
     data: {
       description:
         'Simulatore di varianza per Spin & Go e Twister lottery: migliaia di percorsi Monte Carlo per capire swing, downswing e bankroll necessario. Gratis, senza registrazione.',
+      // Card OG dedicata (public/og-varianza.png). Aiuta Google subito; per gli
+      // scraper social puri diventa efficace solo con l'SSG (leggono l'HTML iniziale).
+      ogImage: 'https://bestfishforever.it/og-varianza.png',
     },
   },
   {

@@ -1,12 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   inject,
   signal,
   type WritableSignal,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { SeoService } from '../../core/services/seo.service';
 import {
   VarianzaGraphComponent,
   type GraphUnit,
@@ -42,7 +44,12 @@ const MAX_GAMES = 1_000_000;
   selector: 'app-varianza',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [VarianzaGraphComponent, VarianzaBustChartComponent, SubscribeModelComponent],
+  imports: [
+    VarianzaGraphComponent,
+    VarianzaBustChartComponent,
+    SubscribeModelComponent,
+    RouterLink,
+  ],
   providers: [VarianzaRunner],
   templateUrl: './varianza.component.html',
   styleUrl: './varianza.component.scss',
@@ -51,6 +58,45 @@ export class VarianzaComponent {
   private readonly runner = inject(VarianzaRunner);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly seo = inject(SeoService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /**
+   * Contenuto evergreen (visibile + sorgente unica del FAQPage JSON-LD): dà alla
+   * pagina testo indicizzabile su intent reali (varianza, bankroll, downswing,
+   * rischio di rovina) — senza, un crawler che non lancia la simulazione vede
+   * solo H1 + lead, perché il resto è dietro @if(result()).
+   */
+  protected readonly faq: readonly { q: string; a: string }[] = [
+    {
+      q: 'Cos’è la varianza nel poker?',
+      a: 'La varianza misura quanto i risultati di breve periodo si discostano dal tuo valore atteso (EV). Negli Spin & Go e nei Twister, tornei hyper-turbo a montepremi casuale, è molto alta: puoi essere un giocatore vincente e vivere comunque lunghe fasi di perdita dovute solo alla fortuna. Il simulatore lo rende visibile generando migliaia di percorsi possibili con lo stesso edge.',
+    },
+    {
+      q: 'Quanti buy-in servono di bankroll per gli Spin & Go?',
+      a: 'Per formati hyper-turbo come Spin & Go e Twister una regola prudente è tenere almeno 100 buy-in, spesso di più ai limiti dove il montepremi può moltiplicarsi molto. Con meno buy-in il rischio di rovina cresce in fretta: imposta il tuo edge e il volume, poi guarda la sezione "Rischio di rovina" per vedere quanti buy-in ti servono davvero.',
+    },
+    {
+      q: 'Cos’è un downswing e quanto può durare?',
+      a: 'Un downswing è una fase prolungata in cui il bankroll resta sotto il punto di partenza nonostante un edge positivo. Nei lottery-SNG può durare migliaia di partite e includere lunghi tratti di break-even. Le statistiche "Downswing tipico" e "Break-even più lungo" stimano quanto in profondità e quanto a lungo può realisticamente andare.',
+    },
+    {
+      q: 'Cos’è il rischio di rovina (risk of ruin)?',
+      a: 'Il rischio di rovina è la probabilità di perdere l’intero bankroll prima di realizzare il tuo vantaggio a lungo termine. Dipende da edge, varianza del formato e numero di buy-in che tieni. Il grafico "Rischio di rovina" calcola questa probabilità per diversi bankroll, così vedi quanto conta avere qualche buy-in in più.',
+    },
+    {
+      q: 'Come funziona una simulazione Monte Carlo della varianza?',
+      a: 'Una simulazione Monte Carlo ripete migliaia di volte un campione casuale di partite usando il tuo edge e la struttura di premi reale del formato, poi raccoglie tutti gli esiti in una distribuzione. Ogni percorso è diverso perché la fortuna cambia, ma insieme mostrano l’intervallo di risultati plausibili. Il calcolo gira interamente nel tuo browser ed è riproducibile grazie al seed nell’URL.',
+    },
+    {
+      q: 'Perché nei lottery la media (EV) è più alta della mediana?',
+      a: 'Nei formati a montepremi casuale i rari moltiplicatori molto alti tirano su la media, mentre la maggior parte delle partite si gioca sul moltiplicatore base. Per questo l’EV descrive "quanto vali davvero" sul lunghissimo periodo, mentre la mediana descrive "cosa vivrai di solito". Il simulatore mostra entrambe per non confondere il risultato tipico con quello atteso.',
+    },
+    {
+      q: 'Posso avere un ROI positivo ed essere comunque in perdita?',
+      a: 'Sì. Su campioni di poche migliaia di partite la varianza può nascondere del tutto un edge positivo: è normale essere sotto zero pur giocando bene. Per ridurre l’impatto della varianza conta migliorare le decisioni e giocare volume, allenando i range preflop e gli spot ricorrenti.',
+    },
+  ];
 
   protected readonly formats = VARIANCE_FORMATS;
   protected readonly maxSims = MAX_SIMS;
@@ -186,6 +232,54 @@ export class VarianzaComponent {
 
   constructor() {
     this.hydrateFromUrl();
+    this.applyStructuredData();
+  }
+
+  /**
+   * Dati strutturati specifici della pagina: WebApplication (tool gratuito) +
+   * FAQPage (dallo stesso `faq` mostrato a schermo). Rimossi su ngOnDestroy
+   * così non restano nel <head> quando si naviga verso un’altra pagina.
+   * NB: il title/description/OG/canonical li imposta già il listener globale
+   * in app.config dai `data` della rotta — qui aggiungiamo solo il JSON-LD.
+   */
+  private applyStructuredData(): void {
+    const url = 'https://bestfishforever.it/simulatore-varianza';
+    this.seo.setJsonLd('ld-varianza-app', {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'Simulatore di Varianza per Spin & Go e Twister',
+      url,
+      applicationCategory: 'EducationalApplication',
+      operatingSystem: 'Web',
+      browserRequirements: 'Requires JavaScript',
+      inLanguage: 'it',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+      description:
+        'Simulatore Monte Carlo gratuito della varianza nel poker per Spin & Go e Twister: migliaia di percorsi di bankroll per capire swing, downswing, rischio di rovina e quanti buy-in servono.',
+      publisher: {
+        '@type': 'Organization',
+        name: 'Best Fish Forever',
+        url: 'https://bestfishforever.it/',
+        logo: {
+          '@type': 'ImageObject',
+          url: 'https://bestfishforever.it/logo-256.png',
+        },
+      },
+    });
+    this.seo.setJsonLd('ld-varianza-faq', {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: this.faq.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    });
+    this.destroyRef.onDestroy(() => {
+      this.seo.removeJsonLd('ld-varianza-app');
+      this.seo.removeJsonLd('ld-varianza-faq');
+    });
   }
 
   // --- azioni UI ---

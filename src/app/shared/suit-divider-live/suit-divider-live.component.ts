@@ -70,7 +70,8 @@ export class SuitDividerLiveComponent implements OnDestroy {
   }
 
   private teardown(): void {
-    cancelAnimationFrame(this.rafId);
+    // guardia SSR/prerender: su server rafId=0 e il global non esiste.
+    if (this.rafId) cancelAnimationFrame(this.rafId);
     this.host.nativeElement.classList.remove('is-on');
     const fns = this.cleanupFns;
     this.cleanupFns = [];

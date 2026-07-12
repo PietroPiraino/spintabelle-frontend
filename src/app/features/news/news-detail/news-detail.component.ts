@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   effect,
   inject,
   input,
@@ -43,6 +44,9 @@ export class NewsDetailComponent {
         error: () => this.notFound.set(true),
       });
     });
+    // Rimuovi i dati strutturati specifici dell'articolo lasciando la pagina:
+    // altrimenti il NewsArticle resterebbe nel <head> anche sulle altre pagine.
+    inject(DestroyRef).onDestroy(() => this.seo.removeJsonLd('ld-news-article'));
   }
 
   /** Titolo + description + immagine dinamici, e dati strutturati NewsArticle. */

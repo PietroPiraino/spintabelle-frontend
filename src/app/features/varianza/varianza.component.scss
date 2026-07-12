@@ -618,6 +618,75 @@ input[type='number']:focus-visible {
   max-width: 80%;
 }
 
+/* ---------- contenuto evergreen (SEO) ---------- */
+.vz__seo {
+  margin-top: 2.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--line);
+}
+.vz__seo-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 3vw, 1.7rem);
+  color: var(--text);
+  margin: 1.75rem 0 0.75rem;
+}
+.vz__seo-title:first-child {
+  margin-top: 0;
+}
+.vz__seo-lead {
+  max-width: 70ch;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0 0 0.9rem;
+}
+.vz__seo-lead strong {
+  color: var(--text);
+}
+.vz__cta {
+  max-width: 70ch;
+  margin: 1.25rem 0 0.5rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius);
+}
+.vz__cta p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.vz__cta a {
+  color: var(--gold-text, var(--copper-500));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+.vz__faq {
+  display: grid;
+  gap: 0.9rem;
+  max-width: 75ch;
+}
+.vz__faq-item {
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+.vz__faq-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.vz__faq-q {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  color: var(--text);
+  margin: 0 0 0.35rem;
+}
+.vz__faq-a {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
 .vz__credits {
   max-width: var(--container);
   margin: 1.5rem auto 0;
