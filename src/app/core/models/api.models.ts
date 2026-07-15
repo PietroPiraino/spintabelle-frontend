@@ -746,3 +746,220 @@ export interface MyVoucher {
   validUntil?: string;
   createdAt?: string;
 }
+
+// ----- Statistiche admin (GET /admin/stats) -----
+// Ricalcate su backend/src/admin/admin-stats.types.ts: se là cambia una shape,
+// va cambiata anche qui (non c'è un tipo condiviso fra i due repo).
+//
+// ⚠️ DUE convenzioni diverse per le percentuali, ed è voluto lato backend:
+// `tassoRinnovo` e `conversione.tasso` sono FRAZIONI 0..1, `deltaPct` è già un
+// NUMERO IN PUNTI PERCENTUALI (12.5 = +12,5%). Formattarli con lo stesso helper
+// sbaglia di un fattore 100.
+
+/** Serie mensile dell'incasso: `mese` = 'YYYY-MM' (mese italiano). */
+export interface StatsMeseIncasso {
+  mese: string;
+  incassoEur: number;
+  ordini: number;
+  /** Righe senza snapshot di prezzo, ricostruite dal listino della data. */
+  stimati: number;
+  perMetodo: Array<{ metodo: string; incassoEur: number; ordini: number }>;
+}
+
+/** Attivazioni del mese che NON hanno portato cassa (€0). */
+export interface StatsMeseSenzaCassa {
+  mese: string;
+  punti: number;
+  manuale: number;
+}
+
+export interface StatsMeseCoorte {
+  mese: string;
+  scaduti: number;
+  rinnovati: number;
+  /** null sotto la coorte minima: la UI mostra "2 su 3", MAI "0%". */
+  tassoRinnovo: number | null;
+}
+
+/** Clienti distinti di un mese, per come sono entrati. */
+export interface StatsClientiPerTipo {
+  nuovi: number;
+  rinnovi: number;
+  ritorni: number;
+}
+
+/** `paganti` e `nonPaganti` sono due righe separate e non vanno MAI sommate. */
+export interface StatsMeseAcquisizione {
+  mese: string;
+  paganti: StatsClientiPerTipo;
+  nonPaganti: StatsClientiPerTipo;
+}
+
+export interface AdminStatsView {
+  /** Istante del calcolo: la risposta può arrivare dalla cache. */
+  generatoIl: string;
+  aggiornatoOgniMinuti: number;
+  finestraMesi: number;
+
+  abbonati: {
+    /** Ruolo tier E scadenza nel futuro: gli abbonamenti in regola. */
+    conAbbonamentoValido: number;
+    /** Ruolo tier comunque sia messa la scadenza: chi passa il paywall ORA. */
+    hannoAccessoOra: number;
+    perTier: Array<{
+      tier: Role;
+      conAbbonamentoValido: number;
+      hannoAccessoOra: number;
+      /** Accesso a vita (scadenza assente): invisibile al cron notturno. */
+      senzaScadenza: number;
+      /** Scaduti con una data vera, che il cron declasserà. */
+      daDeclassare: number;
+    }>;
+  };
+
+  /** Incasso dei soli ABBONAMENTI: i gadget in euro non sono qui (vedi limiti). */
+  incassoAbbonamenti: {
+    ultimi30Eur: number;
+    ordini30: number;
+    precedenti30Eur: number;
+    /** ⚠️ punti percentuali (12.5 = +12,5%); null se la base è zero. */
+    deltaPct: number | null;
+    /** Volume punti/omaggi: accanto agli euro, MAI sommato. */
+    attivazioniSenzaCassa30: number;
+    serieMensile: StatsMeseIncasso[];
+    senzaCassaMensile: StatsMeseSenzaCassa[];
+  };
+
+  rinnovi: {
+    /** Sempre il mese di calendario appena chiuso, anche se vuoto. */
+    ultimoMeseChiuso: StatsMeseCoorte;
+    serieMensile: StatsMeseCoorte[];
+  };
+
+  scadenze: {
+    entro7: { utenti: number; valoreListinoEur: number };
+    /** Cumulativo: include i 7 giorni. */
+    entro30: { utenti: number; valoreListinoEur: number };
+    perTier: Array<{
+      tier: Role;
+      entro7: number;
+      entro30: number;
+      valoreListinoEur: number;
+    }>;
+  };
+
+  acquisizione: {
+    serieMensile: StatsMeseAcquisizione[];
+  };
+
+  conversione: {
+    registrazioniComplete: number;
+    paganti: number;
+    /** ⚠️ frazione 0..1; null senza denominatore. */
+    tasso: number | null;
+  };
+
+  /** Quanto fidarsi del resto della pagina: ogni contatore è un'anomalia vera. */
+  qualitaDati: {
+    senzaScadenzaTotale: number;
+    senzaScadenzaPerRuolo: Array<{ ruolo: Role; utenti: number }>;
+    daDeclassare: number;
+    stimati: number;
+    approvedSenzaDecidedAt: number;
+  };
+
+  /** Da rendere IN PAGINA, non in un tooltip. */
+  limiti: string[];
+}
+
+// ----- Statistiche video (GET /admin/stats/video) -----
+// Ricalcate su backend/src/admin/admin-video-stats.types.ts.
+// ⚠️ il query param si chiama `giorni` (non `days`), mentre /admin/stats usa
+// `months`: due nomi diversi, non un refuso.
+
+/** Una riga della tabella: una lezione coi numeri del suo video Bunny. */
+export interface RigaVideoLezione {
+  lezioneId: string;
+  titolo: string;
+  /** Titolo lato Bunny: può divergere da quello della lezione. */
+  titoloVideo?: string;
+  guid: string;
+  visibility: string;
+  stakes?: LessonStakes;
+  videoDate?: string;
+  /** Riproduzioni LIFETIME dell'embed. */
+  visualizzazioni: number;
+  tempoVisioneSecondi: number;
+  tempoMedioSecondi: number;
+  durataSecondi: number | null;
+  /** ⚠️ frazione 0..1; null senza durata (una % senza denominatore è inventata). */
+  percentualeVisione: number | null;
+}
+
+/** Una lezione ESCLUSA dalla tabella, col motivo già in italiano. */
+export interface LezioneSaltata {
+  lezioneId: string;
+  titolo: string;
+  dettaglio?: string;
+}
+
+/** Il totale è esatto, gli `esempi` sono troncati. */
+export interface GruppoSaltate {
+  totale: number;
+  esempi: LezioneSaltata[];
+}
+
+export interface AdminVideoStatsView {
+  generatoIl: string;
+  aggiornatoOgniMinuti: number;
+
+  /**
+   * false = sezione degradata (Bunny giù o non configurato): la forma resta
+   * completa ma `libreria`/`andamento` sono null e le liste vuote. La UI mostra
+   * `motivo`, MAI degli zeri: uno zero si legge "nessuno guarda i video", che è
+   * l'opposto di "non lo sappiamo".
+   */
+  disponibile: boolean;
+  motivo?: string;
+
+  /** Finestra del solo `andamento`: la tabella e la libreria sono lifetime. */
+  periodo: { giorni: number; dal: string; al: string };
+
+  /** Lifetime su TUTTI i video, inclusi i `videoNonAssociati`: NON è la somma
+   * della tabella e non va presentato come confrontabile. */
+  libreria: {
+    video: number;
+    visualizzazioni: number;
+    tempoVisioneSecondi: number;
+    tempoVisioneOre: number;
+  } | null;
+
+  andamento: {
+    visualizzazioniPeriodo: number;
+    serie: Array<{ giorno: string; visualizzazioni: number }>;
+  } | null;
+
+  /** Già ordinata per visualizzazioni decrescenti dal backend. */
+  lezioni: RigaVideoLezione[];
+
+  /** Lezioni assenti dalla tabella: da mostrare sempre se totale > 0. */
+  saltate: {
+    totale: number;
+    senzaEmbedValido: GruppoSaltate;
+    libreriaDiversa: GruppoSaltate;
+    senzaStatistiche: GruppoSaltate;
+  };
+
+  /** Video su Bunny senza lezione: spiegano il divario libreria/tabella. */
+  videoNonAssociati: {
+    totale: number;
+    esempi: Array<{ guid: string; titolo?: string; visualizzazioni: number }>;
+  };
+
+  qualitaDati: {
+    guidDuplicati: number;
+    paginaTroncata: boolean;
+  };
+
+  limiti: string[];
+}

@@ -1,0 +1,23 @@
+# Fine-riga: LF ovunque, nel repo E sul disco — anche su Windows.
+#
+# Senza questo file ogni macchina applica la propria regola (`core.autocrlf`),
+# e su Windows quella regola pretende CRLF sul disco mentre qui i file sono LF:
+# git segna come "modificati" file identici a HEAD (`git diff` vuoto, `git add`
+# non mette in stage niente). Modifiche fantasma che fanno sembrare rischioso
+# ogni deploy.
+#
+# `text=auto` = git decide da solo cosa e' testo (i binari restano intatti).
+* text=auto eol=lf
+
+# Binari: mai toccare i fine-riga.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.svg -text
+*.woff binary
+*.woff2 binary
+*.mp4 binary
+*.glb binary

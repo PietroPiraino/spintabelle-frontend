@@ -77,8 +77,22 @@
         </li>
         <li>
           <strong>Dati tecnici di connessione</strong>: indirizzo IP e informazioni
-          sul browser, trattati dai nostri fornitori di hosting per erogare il
-          servizio e garantirne la sicurezza.
+          sul browser, trattati dai nostri fornitori per erogare il servizio,
+          garantirne la sicurezza e ricavarne le statistiche di navigazione descritte al
+          punto seguente. Per i video delle lezioni, invece, le statistiche non
+          derivano dalla connessione: è il player stesso, dal tuo browser, a comunicare
+          a bunny.net quale video stai guardando e per quanto tempo (il dettaglio è
+          nella <a routerLink="/cookie-policy">Cookie policy</a>).
+        </li>
+        <li>
+          <strong>Dati di utilizzo (statistiche)</strong>: le pagine che apri, il sito
+          da cui arrivi, i tempi di caricamento, le dimensioni dello schermo e il tipo di
+          browser e di dispositivo, oltre alle visualizzazioni e al tempo di visione dei
+          video delle lezioni. Servono solo a
+          produrre <strong>numeri aggregati</strong> sull'andamento del sito: non
+          creiamo profili, non ti riconosciamo tra una visita e l'altra e non colleghiamo
+          le statistiche dei video al tuo account. Il dettaglio è nella
+          <a routerLink="/cookie-policy">Cookie policy</a>.
         </li>
       </ul>
 
@@ -132,10 +146,32 @@
           <em>legittimo interesse</em> (art. 6.1.f GDPR).
         </li>
         <li>
+          <strong>Statistiche di utilizzo del sito e delle lezioni</strong> (contare le
+          visite con uno strumento senza cookie e misurare visualizzazioni e tempo di
+          visione, lezione per lezione) — base
+          giuridica: <em>legittimo interesse</em> (art. 6.1.f GDPR) a capire come viene
+          usato il sito e quali lezioni sono utili. Ne ricaviamo solo
+          <strong>numeri aggregati</strong>: non creiamo profili, non ti riconosciamo tra
+          una visita e l'altra e non colleghiamo le statistiche dei video al tuo account.
+          Puoi opporti a questo trattamento (vedi il punto 7); in
+          <a routerLink="/cookie-policy">Cookie policy</a> trovi anche come bloccare la
+          misurazione delle visite direttamente dal tuo browser.
+        </li>
+        <li>
           <strong>Registro delle azioni amministrative</strong> (tracciamento delle
           operazioni effettuate dagli amministratori sugli account, a fini di
           sicurezza e responsabilizzazione) — base giuridica:
           <em>legittimo interesse</em> (art. 6.1.f GDPR).
+        </li>
+        <li>
+          <strong>Analisi interne sull'andamento della scuola</strong> (un pannello
+          riservato agli amministratori che mostra numeri aggregati ricavati dai dati che
+          già abbiamo: quanti iscritti e abbonati, quante lezioni pubblicate, quanto
+          viene usato l'allenamento) — base giuridica: <em>legittimo interesse</em>
+          (art. 6.1.f GDPR) a gestire e migliorare il servizio. Per questa finalità non
+          raccogliamo nulla di nuovo, guardiamo <strong>totali e medie</strong> e non
+          prendiamo decisioni automatizzate sul tuo conto. Puoi opporti anche a questa
+          analisi (vedi il punto 7): su richiesta escludiamo i tuoi dati dai conteggi.
         </li>
       </ul>
       <p>
@@ -192,6 +228,16 @@
           di cancellazione dell'account, le voci che ti riguardano vengono
           anonimizzate.
         </li>
+        <li>
+          <strong>Statistiche di utilizzo</strong>: i dati tecnici da cui derivano non
+          vengono conservati da noi. Restano i <strong>numeri aggregati</strong> nei
+          pannelli dei fornitori — <strong>6 mesi</strong> per le statistiche di visita
+          (Cloudflare), i tempi del servizio per quelle di visione dei video (bunny.net)
+          — e li guardiamo solo come totali, senza tentare di risalire alle singole
+          persone. I numeri del pannello interno sono invece calcolati al momento dai
+          dati già presenti nel tuo account e seguono quindi la conservazione di quei
+          dati.
+        </li>
       </ul>
       <p>
         In ogni caso puoi richiedere la cancellazione dei tuoi dati in qualsiasi
@@ -207,11 +253,11 @@
       <ul>
         <li><strong>MongoDB Atlas</strong> — database del sito (dati di account e di allenamento), con archiviazione nell'Unione Europea.</li>
         <li><strong>Render</strong> — hosting dell'infrastruttura applicativa (API).</li>
-        <li><strong>Cloudflare</strong> — distribuzione e protezione del sito (hosting del frontend e CDN).</li>
+        <li><strong>Cloudflare</strong> — distribuzione e protezione del sito (hosting del frontend e CDN) e misurazione senza cookie delle visite (Cloudflare Web Analytics).</li>
         <li><strong>Cloudflare R2</strong> — archiviazione temporanea (max 3 giorni) dei file di registrazione delle lezioni live, in regione <strong>europea</strong>.</li>
         <li><strong>LiveKit</strong> (LiveKit, Inc., Stati Uniti) — infrastruttura delle lezioni live on-site (trasmissione in tempo reale di audio/video e registrazione).</li>
         <li><strong>Resend</strong> — invio delle email di verifica e di servizio.</li>
-        <li><strong>bunny.net</strong> (BunnyWay d.o.o., Slovenia) — hosting e streaming dei video delle lezioni e delle registrazioni delle live, all'interno dell'Unione Europea.</li>
+        <li><strong>bunny.net</strong> (BunnyWay d.o.o., Slovenia) — hosting e streaming dei video delle lezioni e delle registrazioni delle live, e statistiche aggregate di visione delle lezioni, all'interno dell'Unione Europea.</li>
       </ul>
       <p>
         Per la consegna degli ordini di gadget, l'indirizzo di spedizione che ci
@@ -280,8 +326,14 @@
 
       <h2>9. Cookie</h2>
       <p>
-        Il sito utilizza esclusivamente cookie e strumenti tecnici necessari al suo
-        funzionamento. Per i dettagli consulta la
+        Quello che viene salvato sul tuo dispositivo è solo tecnico: il cookie di
+        sessione, un paio di preferenze (il tema grafico e l'avviso sonoro delle lezioni
+        dal vivo) e le preferenze tecniche del player dei video, che si carica solo
+        quando premi play su una lezione.
+        Misuriamo le visite con uno strumento <strong>senza cookie</strong>, che non
+        salva nulla sul tuo dispositivo e non legge i cookie né gli altri dati lì
+        salvati, e produce solo numeri aggregati: per questo non è presente un banner di
+        consenso. Per i dettagli consulta la
         <a routerLink="/cookie-policy">Cookie policy</a>.
       </p>
 

@@ -6,10 +6,17 @@
       <p class="legal__updated">Ultimo aggiornamento: {{ aggiornata }}</p>
 
       <p>
-        Questa pagina spiega quali cookie e strumenti di archiviazione locale utilizza
-        il sito <strong>bestfishforever.it</strong>. Usiamo <strong>solo strumenti tecnici
-        necessari</strong> al funzionamento del sito: per questo non è presente alcun
-        banner di consenso, in linea con le Linee guida del Garante del 10 giugno 2021.
+        Questa pagina spiega quali cookie, strumenti di archiviazione locale e script di
+        statistica utilizza il sito <strong>bestfishforever.it</strong>. Quello che viene
+        salvato sul tuo dispositivo — dal sito e dal player dei video — è <strong>solo
+        tecnico</strong>: serve a tenerti connesso, a ricordare un paio di tue preferenze
+        e a far funzionare il player delle lezioni. Nella tabella qui sotto trovi tutto
+        quello che abbiamo rilevato all'ultima verifica. Misuriamo inoltre
+        le visite con uno strumento <strong>senza cookie</strong>, che non salva nulla sul
+        tuo dispositivo e non legge i cookie né gli altri dati lì salvati, e produce solo
+        numeri aggregati. Poiché si tratta solo di strumenti tecnici e di una misurazione
+        senza cookie, non è presente alcun banner di consenso, in linea con le Linee guida
+        del Garante del 10 giugno 2021.
       </p>
 
       <h2>Cosa sono i cookie</h2>
@@ -45,24 +52,105 @@
             <td>Ricorda il tema grafico scelto (chiaro, tramonto, scuro).</td>
             <td>Finché non lo rimuovi dal browser</td>
           </tr>
+          <tr>
+            <td><code>bff-live-sound</code></td>
+            <td>Archiviazione locale (localStorage) tecnica/funzionale</td>
+            <td>Nelle lezioni dal vivo, ricorda se hai attivato l'avviso sonoro quando uno studente chiede la parola.</td>
+            <td>Finché non lo rimuovi dal browser</td>
+          </tr>
+          <tr>
+            <td><code>cache-sprite-plyr</code></td>
+            <td>Archiviazione locale (localStorage) tecnica — player dei video</td>
+            <td>Memorizza le icone dei comandi del player, per non riscaricarle a ogni video.</td>
+            <td>Finché non lo rimuovi dal browser</td>
+          </tr>
+          <tr>
+            <td><code>plyr--lib-&lt;ID libreria&gt;</code></td>
+            <td>Archiviazione locale (localStorage) tecnica/funzionale — player dei video</td>
+            <td>Ricorda le tue preferenze di riproduzione (volume, audio muto, qualità).</td>
+            <td>Finché non lo rimuovi dal browser</td>
+          </tr>
+          <tr>
+            <td><code>plyr-video-position-&lt;video&gt;</code></td>
+            <td>Archiviazione locale (localStorage) tecnica/funzionale — player dei video</td>
+            <td>Ricorda il punto in cui hai interrotto un video, per farti riprendere da lì la volta dopo. Il dato resta nel tuo browser: secondo quanto dichiara bunny.net non viene trasmesso ai suoi server.</td>
+            <td>Finché non lo rimuovi dal browser (bunny.net dichiara una pulizia automatica dopo 7 giorni)</td>
+          </tr>
+          <tr>
+            <td><strong>Cloudflare Web Analytics</strong></td>
+            <td>Script di statistica senza cookie (<strong>non è un cookie</strong>)</td>
+            <td>Conta in forma aggregata le pagine viste e da dove arrivano i visitatori. Non installa identificatori; secondo quanto dichiara Cloudflare, non ti riconosce tra una visita e l'altra e non ti segue su altri siti.</td>
+            <td>Nessuna: non viene salvato nulla sul tuo dispositivo</td>
+          </tr>
         </tbody>
       </table>
 
-      <h2>Nessun cookie di profilazione o analitici di terze parti</h2>
+      <h2>Statistiche di visita, senza cookie e senza profilazione</h2>
       <p>
-        Il sito <strong>non utilizza</strong> Google Analytics, pixel pubblicitari,
-        strumenti di tracciamento o cookie di profilazione. I caratteri tipografici
-        sono ospitati direttamente sul nostro dominio, quindi non vengono effettuate
-        chiamate a servizi esterni per il loro caricamento.
+        Per sapere quante persone visitano il sito e quali pagine leggono usiamo
+        <strong>Cloudflare Web Analytics</strong>, uno strumento <strong>senza
+        cookie</strong>: non salva nulla sul tuo dispositivo e non installa identificatori
+        — lo abbiamo verificato — e, secondo quanto dichiara Cloudflare, non ti riconosce
+        tra una visita e l'altra e non ti segue su altri siti. Quando
+        apri una pagina il tuo browser invia a Cloudflare l'indirizzo della pagina, il
+        sito da cui arrivi, i tempi di caricamento, le dimensioni dello schermo, il tipo
+        di browser e di dispositivo e i dati tecnici della connessione (come l'indirizzo
+        IP, dal quale viene ricavato il Paese che vediamo nel pannello). Cloudflare li
+        tratta per nostro conto al solo scopo di produrre <strong>numeri
+        aggregati</strong>: non li usa per identificarti né per costruire un profilo e,
+        secondo quanto dichiara, scarta il tuo indirizzo IP nel data center a te più
+        vicino, senza conservarlo.
+      </p>
+      <p>
+        Il sito <strong>non utilizza</strong> Google Analytics, pixel pubblicitari o
+        cookie di profilazione, e non facciamo pubblicità basata sui tuoi
+        comportamenti. I caratteri tipografici sono ospitati direttamente sul nostro
+        dominio, quindi non vengono effettuate chiamate a servizi esterni per il loro
+        caricamento.
+      </p>
+      <p>
+        Trattiamo questi dati sulla base del nostro <strong>legittimo interesse</strong>
+        (art. 6.1.f GDPR) a capire come viene usato il sito. Se preferisci non
+        contribuire, puoi bloccare lo script dalle impostazioni del browser o con una
+        qualsiasi estensione per il blocco dei contenuti: l'indirizzo da bloccare è
+        <code>static.cloudflareinsights.com</code> e il sito continua a funzionare
+        normalmente. Puoi anche scriverci per opporti: trovi come fare
+        nell'<a routerLink="/privacy">Informativa sulla privacy</a>.
       </p>
 
       <h2>Video delle lezioni</h2>
       <p>
-        I video delle lezioni sono ospitati su <strong>bunny.net</strong>, un fornitore
-        europeo che eroga il player in modalità senza cookie. Per riprodurre un video, il
-        tuo browser si collega ai server di bunny.net, che ricevono i dati tecnici di
-        connessione (come l'indirizzo IP) necessari alla trasmissione, senza installare
-        cookie di profilazione.
+        I video delle lezioni sono ospitati su <strong>bunny.net</strong> (BunnyWay
+        d.o.o., Slovenia), un fornitore europeo. Il player si carica <strong>solo quando
+        premi play</strong> su una lezione: prima di quel momento nessuno script di
+        bunny.net viene eseguito nel tuo browser e non viene salvato nulla
+        nell'archiviazione del tuo browser. Dalla lista delle lezioni il tuo browser
+        scarica dai server di bunny.net soltanto le immagini di copertina.
+      </p>
+      <p>
+        Quando avvii un video il tuo browser si collega ai server di bunny.net, che
+        ricevono i dati tecnici di connessione (come l'indirizzo IP) necessari alla
+        trasmissione. Alla data di questo aggiornamento il player <strong>non installa
+        cookie</strong>: lo abbiamo verificato e bunny.net lo dichiara nella propria
+        documentazione. Salva però nell'<strong>archiviazione locale</strong> del tuo
+        browser alcune informazioni tecniche che gli servono per funzionare: le icone dei
+        comandi e le tue preferenze di riproduzione (volume, audio muto, qualità).
+        Restano lì finché non cancelli i dati del sito, <strong>non contengono
+        identificatori</strong> e non servono a riconoscerti né a seguirti su altri siti:
+        per questo sono strumenti tecnici e non richiedono il tuo consenso. Le trovi
+        nella tabella qui sopra.
+      </p>
+      <p>
+        Mentre guardi, è il player stesso, dal tuo browser, a comunicare a bunny.net
+        quale video stai riproducendo e per quanto tempo. Da questi dati bunny.net ricava
+        per nostro conto le <strong>statistiche di visione</strong> di ogni lezione:
+        quante visualizzazioni ha e quanto a lungo viene guardata. Quei messaggi
+        <strong>non contengono cookie né identificatori</strong>, e il collegamento che
+        il tuo browser apre verso bunny.net è firmato per singolo video e non porta con
+        sé chi sei: a noi arrivano soltanto <strong>numeri aggregati per lezione</strong>,
+        che <strong>non colleghiamo</strong> al tuo account. Li usiamo sulla base del
+        nostro <strong>legittimo interesse</strong> (art. 6.1.f GDPR) a capire quali
+        lezioni sono davvero utili.
       </p>
 
       <h2>Come gestire i cookie</h2>

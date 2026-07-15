@@ -38,6 +38,19 @@
           },
           "configurations": {
             "production": {
+              // Rende ASSOLUTI (/chunk-*.js) gli URL dei bundle in index.html.
+              // NON è ridondante con <base href="/">: Cloudflare Pages raccoglie i
+              // <link rel=modulepreload> e li ri-pubblica come header HTTP `Link:`
+              // (Early Hints), che si risolve sull'URL DELLA RICHIESTA e non può
+              // vedere <base> (roba del DOM). Sulle pagine prerenderizzate, servite
+              // con lo slash finale (/simulatore-varianza/), gli href relativi
+              // diventavano /simulatore-varianza/chunk-*.js → 71 KB di index.html
+              // dal fallback SPA per OGNI chunk (verificato in prod: quell'URL
+              // risponde 200 + 71.455 B di HTML della home), cioè 16 richieste
+              // sprecate e ogni chunk scaricato due volte. Sul filo sono ~264 KB
+              // compressi (1.116 KB non compressi: l'HTML gzippa moltissimo).
+              // Verificare con e2e-cls-bytes-local.mjs.
+              "deployUrl": "/",
               "budgets": [
                 {
                   "type": "initial",

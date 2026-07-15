@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Nomi delle icone disponibili (set minimo per la sala live). */
+/** Nomi delle icone disponibili (sala live + pannello admin). */
 export type IconName =
   | 'mic'
   | 'mic-off'
@@ -15,7 +15,11 @@ export type IconName =
   | 'radio'
   | 'hand'
   | 'bell'
-  | 'bell-off';
+  | 'bell-off'
+  | 'refresh'
+  | 'info'
+  | 'alert-triangle'
+  | 'check';
 
 /**
  * Icona SVG inline, theme-aware (`currentColor`), 24×24 viewBox.
@@ -114,6 +118,25 @@ export type IconName =
         <path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" />
         <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         <line x1="2" x2="22" y1="2" y2="22" />
+      }
+      @case ('refresh') {
+        <path d="M3 12a9 9 0 0 1 15.5-6.2L21 8" />
+        <path d="M21 3v5h-5" />
+        <path d="M21 12a9 9 0 0 1-15.5 6.2L3 16" />
+        <path d="M3 21v-5h5" />
+      }
+      @case ('info') {
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 16v-4" />
+        <path d="M12 8h.01" />
+      }
+      @case ('alert-triangle') {
+        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+        <path d="M12 9v4" />
+        <path d="M12 17h.01" />
+      }
+      @case ('check') {
+        <path d="M20 6 9 17l-5-5" />
       }
     }
   </svg>`,

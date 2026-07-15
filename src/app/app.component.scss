@@ -11,6 +11,30 @@
   display: flex;
   flex-direction: column;
 
+  // Spazio riservato al contenuto della rotta PRIMA che arrivi (CLS).
+  // Senza questo, con <main> ancora vuoto il flex di :host tiene <app-footer>
+  // DENTRO il viewport (footer alto 400px desktop / 740px mobile → nasce a
+  // ~y=400): quando il contenuto vero atterra (24 card lezioni, pannelli
+  // admin…) il footer viene spinto sotto la piega e Chrome conta lo
+  // spostamento → misurati 0,40-0,80 di CLS, tutti attribuiti ad app-footer.
+  // Riservando qui l'altezza del viewport il footer nasce SOTTO la piega
+  // (top = altezza header + 100dvh) e può solo scendere: invisibile → 0 CLS.
+  // 100dvh e non calc(100dvh - altezza header): così non può MAI riservare
+  // troppo poco (un header più alto del previsto rimetterebbe il footer in
+  // viewport). Costo: un po' di scroll in più sulle pagine corte — misurato
+  // +220px sul 404, dove resta uno spazio vuoto dove prima c'era il footer.
+  // È il prezzo voluto dello spazio riservato, non un bug.
+  min-height: 100dvh;
+
+  // <router-outlet> è solo un segnaposto: il componente della rotta viene
+  // inserito come suo FRATELLO, non dentro. Senza toglierlo dal flusso, il
+  // `flex: 1` qui sotto prende anche lui e si mangia metà dello spazio
+  // riservato: il contenuto nasce a metà pagina e RISALE quando arriva (fa
+  // shift). Misurato su /lezioni mobile: app-lessons y=402 → y=65 = 0,42.
+  > router-outlet {
+    display: none;
+  }
+
   > * {
     flex: 1;
   }
