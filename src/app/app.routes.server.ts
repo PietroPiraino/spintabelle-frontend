@@ -11,7 +11,23 @@ const API = environment.API_URL;
  *   NavigationEnd + i componenti, che girano anche in prerender). Chiude il gap
  *   delle anteprime social (scraper che leggono solo l'HTML iniziale).
  * - CLIENT (default via `**`): rotte gated/auth/token-based/404 → nessun HTML
- *   statico, servite dallo shell SPA (index.csr.html) via il fallback _redirects.
+ *   statico. DOVREBBERO essere servite dallo shell SPA vuota (index.csr.html,
+ *   12,7 KB).
+ *
+ * ⚠️ MA OGGI NON È COSÌ, ed è un debito aperto (verificato in prod 15/07/2026).
+ * `_redirects` non esiste (rimosso il 12/07 dopo un loop 308 che buttò giù il
+ * sito ~2 min) e il fallback automatico di Cloudflare Pages serve `index.html`,
+ * cioè la HOME: `/login`, `/registrazione` e `/lezioni` rispondono con un corpo
+ * byte-identico a `/` (71.455 B, con dentro <app-landing>). L'utente guarda la
+ * landing per 10-22s finché Angular non monta la rotta vera. Costa CLS (era
+ * 0,72 sul footer, ora mitigato dallo spazio riservato in app.component.scss),
+ * INP (i long task di /login: 544ms → 264ms con la shell giusta) e ~59 KB.
+ *
+ * Come si ripara — NON improvvisare, il target ovvio rompe il sito:
+ * `/index.csr.html` → 308 → `/index.csr` (CF taglia il `.html`: è il
+ * meccanismo del loop). Il bersaglio giusto è `/index.csr` SENZA estensione
+ * (→ 200, shell da 12.674 B), con regole ESPLICITE per rotta e mai `/*`.
+ * Da provare su una preview deployment. Dettagli in PLAN-ssg-prerender.md.
  */
 export const serverRoutes: ServerRoute[] = [
   { path: '', renderMode: RenderMode.Prerender },
