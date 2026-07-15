@@ -1,0 +1,49 @@
+# Fallback SPA per le rotte NON prerenderizzate (RenderMode.Client).
+#
+# PERCHE' ESISTE: senza queste regole il fallback automatico di Cloudflare
+# Pages serve `index.html` — cioe' la HOME (71 KB, con <app-landing>) — su
+# /login, /lezioni, /admin... L'utente guarda la landing per 10-22 secondi
+# finche' Angular non monta la rotta vera. Costa CLS, INP e ~59 KB a pagina.
+#
+# ⚠️ LEGGERE PRIMA DI TOCCARE — qui il sito e' gia' andato giu' ~2 minuti.
+#
+# 1. IL TARGET E' `/index.csr`, **SENZA** `.html`.
+#    Cloudflare rimuove l'estensione dai target: `/index.csr.html` risponde
+#    308 verso `/index.csr`. Se il target avesse il `.html`, il 308 finirebbe
+#    su un URL che rimatcha la regola -> LOOP. E' esattamente l'incidente del
+#    12/07/2026 (`/*  /index.csr.html  200`). Verificato in prod: `/index.csr`
+#    risponde 200 con la shell da ~12,7 KB.
+#
+# 2. MAI UNA CATCH-ALL `/*`.
+#    Le regole di _redirects sono valutate PRIMA degli asset statici: una
+#    `/*` catturerebbe anche il target e ogni file. Qui ogni rotta e' elencata
+#    a mano: e' verboso ed e' il punto.
+#
+# 3. LE PRERENDERIZZATE NON VANNO ELENCATE (`/`, /tabelle, /simulatore-varianza,
+#    /chi-siamo, /abbonati, /news, /news/:id, /affiliazioni, /privacy,
+#    /cookie-policy): hanno il proprio HTML statico e nessuna regola le tocca.
+#    Elencarle qui le romperebbe, servendo la shell vuota al posto dell'HTML
+#    con i meta -> addio anteprime social e SEO.
+#
+# 4. AGGIUNGENDO UNA ROTTA CLIENT ad app.routes.ts, aggiungila anche qui:
+#    e' l'unico punto che non si aggiorna da solo. Se te ne dimentichi non si
+#    rompe niente — quella rotta torna a ricevere la home e ricompare il
+#    difetto, in silenzio.
+#
+# Fonte: app.routes.server.ts (chi e' Prerender e chi e' Client).
+
+/account                /index.csr  200
+/admin                  /index.csr  200
+/allenamento            /index.csr  200
+/allenamento/*          /index.csr  200
+/docs                   /index.csr  200
+/lezioni                /index.csr  200
+/live                   /index.csr  200
+/live/*                 /index.csr  200
+/login                  /index.csr  200
+/negozio                /index.csr  200
+/password-dimenticata   /index.csr  200
+/recupera-verifica      /index.csr  200
+/registrazione          /index.csr  200
+/reimposta-password     /index.csr  200
+/verifica-email         /index.csr  200
