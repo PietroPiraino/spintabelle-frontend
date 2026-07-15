@@ -11,23 +11,20 @@ const API = environment.API_URL;
  *   NavigationEnd + i componenti, che girano anche in prerender). Chiude il gap
  *   delle anteprime social (scraper che leggono solo l'HTML iniziale).
  * - CLIENT (default via `**`): rotte gated/auth/token-based/404 → nessun HTML
- *   statico. DOVREBBERO essere servite dallo shell SPA vuota (index.csr.html,
- *   12,7 KB).
+ *   statico, servite dalla shell SPA vuota (index.csr.html, ~12,7 KB) tramite
+ *   le regole in `public/_redirects`.
  *
- * ⚠️ MA OGGI NON È COSÌ, ed è un debito aperto (verificato in prod 15/07/2026).
- * `_redirects` non esiste (rimosso il 12/07 dopo un loop 308 che buttò giù il
- * sito ~2 min) e il fallback automatico di Cloudflare Pages serve `index.html`,
- * cioè la HOME: `/login`, `/registrazione` e `/lezioni` rispondono con un corpo
- * byte-identico a `/` (71.455 B, con dentro <app-landing>). L'utente guarda la
- * landing per 10-22s finché Angular non monta la rotta vera. Costa CLS (era
- * 0,72 sul footer, ora mitigato dallo spazio riservato in app.component.scss),
- * INP (i long task di /login: 544ms → 264ms con la shell giusta) e ~59 KB.
+ * ⚠️ `public/_redirects` VA TENUTO ALLINEATO A MANO con questo file: è l'unico
+ * punto che non si aggiorna da solo. Aggiungendo qui una rotta Client, aggiungi
+ * lì la regola — se te ne dimentichi NON si rompe niente: quella rotta torna a
+ * ricevere l'HTML della HOME (71 KB) e l'utente guarda la landing per ~10s
+ * prima che Angular monti la pagina vera. Un difetto silenzioso, ed è
+ * esattamente com'è vissuto dal 12/07 al 16/07/2026.
  *
- * Come si ripara — NON improvvisare, il target ovvio rompe il sito:
- * `/index.csr.html` → 308 → `/index.csr` (CF taglia il `.html`: è il
- * meccanismo del loop). Il bersaglio giusto è `/index.csr` SENZA estensione
- * (→ 200, shell da 12.674 B), con regole ESPLICITE per rotta e mai `/*`.
- * Da provare su una preview deployment. Dettagli in PLAN-ssg-prerender.md.
+ * ⚠️ E le PRERENDER non vanno mai messe in `_redirects`: riceverebbero la shell
+ * vuota al posto del loro HTML coi meta → addio anteprime social e SEO.
+ * Il perché delle regole (target `/index.csr` senza `.html`, niente catch-all)
+ * è in `public/_redirects` e in PLAN-ssg-prerender.md.
  */
 export const serverRoutes: ServerRoute[] = [
   { path: '', renderMode: RenderMode.Prerender },
