@@ -4,9 +4,10 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build && node scripts/gen-sitemap.mjs",
+    "build": "ng build && node scripts/gen-sitemap.mjs && node scripts/check-routes.mjs",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:scripts": "node --test \"scripts/lib/*.test.mjs\""
   },
   "private": true,
   "dependencies": {
