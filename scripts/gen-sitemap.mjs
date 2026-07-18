@@ -97,11 +97,22 @@ function perOrdineEditoriale(a, b) {
   return a.loc.localeCompare(b.loc);
 }
 
+// L'SSG serve le pagine con lo SLASH FINALE: Cloudflare fa `/abbonati` → 308 →
+// `/abbonati/` (la 200 e' la forma con slash). La sitemap deve elencare la forma
+// servita a 200 — non quella che redirige — e coincidere col canonical (vedi
+// SeoService.absUrl), altrimenti Search Console bucketizza gli URL come
+// "reindirizzamento"/"canonical alternato". La root resta `/`. Nota: lo slash si
+// aggiunge SOLO qui in output; le chiavi restano senza slash sopra, per i lookup
+// in META/ESCLUSE.
+function conSlash(loc) {
+  return loc === '/' || loc.endsWith('/') ? loc : `${loc}/`;
+}
+
 function toXml(urls) {
   const body = urls
     .map((u) => {
       const lastmod = u.lastmod ? `\n    <lastmod>${u.lastmod}</lastmod>` : '';
-      return `  <url>\n    <loc>${SITE}${u.loc}</loc>${lastmod}\n    <changefreq>${u.changefreq}</changefreq>\n    <priority>${u.priority}</priority>\n  </url>`;
+      return `  <url>\n    <loc>${SITE}${conSlash(u.loc)}</loc>${lastmod}\n    <changefreq>${u.changefreq}</changefreq>\n    <priority>${u.priority}</priority>\n  </url>`;
     })
     .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;

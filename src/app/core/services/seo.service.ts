@@ -29,9 +29,25 @@ export class SeoService {
 
   setSeo(d: SeoData): void {
     const fullTitle = `${d.title} — Best Fish Forever`;
-    const url = d.path ? `${SITE}${d.path}` : `${SITE}/`;
     this.title.setTitle(fullTitle);
-    this.applyMeta(fullTitle, d.description, url, d.image);
+    this.applyMeta(fullTitle, d.description, this.absUrl(d.path), d.image);
+  }
+
+  /**
+   * URL assoluto e canonico per una rotta, normalizzato allo **slash finale**.
+   * Perché: l'SSG (`outputMode: 'static'`) emette un `<rotta>/index.html` per
+   * pagina → Cloudflare serve la pagina reale (200) su `/abbonati/` e fa 308
+   * dalla forma senza slash. Canonical + og:url (e la sitemap, vedi
+   * `gen-sitemap.mjs`) devono puntare alla forma SERVITA A 200, non a quella che
+   * redirige: altrimenti Search Console classifica gli URL come "pagina con
+   * reindirizzamento" / "canonical alternato" e il canonical rimanda a un 308
+   * (sconsigliato dalle linee guida Google). La root resta `/`.
+   */
+  private absUrl(path: string | undefined): string {
+    let p = (path ?? '/').split('?')[0].split('#')[0];
+    if (!p.startsWith('/')) p = `/${p}`;
+    if (!p.endsWith('/')) p += '/';
+    return `${SITE}${p}`;
   }
 
   /**
@@ -48,7 +64,7 @@ export class SeoService {
     path: string,
     image?: string,
   ): void {
-    this.applyMeta(fullTitle, description, `${SITE}${path}`, image);
+    this.applyMeta(fullTitle, description, this.absUrl(path), image);
   }
 
   private applyMeta(

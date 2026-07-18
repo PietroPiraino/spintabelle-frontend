@@ -243,7 +243,9 @@ export class VarianzaComponent {
    * in app.config dai `data` della rotta — qui aggiungiamo solo il JSON-LD.
    */
   private applyStructuredData(): void {
-    const url = 'https://bestfishforever.it/simulatore-varianza';
+    // Slash finale = coerente col canonical (l'SSG serve la 200 su /…/, vedi
+    // SeoService.absUrl): niente URL "alternati" nei dati strutturati.
+    const url = 'https://bestfishforever.it/simulatore-varianza/';
     this.seo.setJsonLd('ld-varianza-app', {
       '@context': 'https://schema.org',
       '@type': 'WebApplication',
