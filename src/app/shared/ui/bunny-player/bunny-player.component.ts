@@ -1,11 +1,26 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   inject,
   input,
+  output,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+
+/** Avanzamento della riproduzione riportato dal player. */
+export interface BunnyProgress {
+  /** secondi guardati (posizione corrente nel video) */
+  seconds: number;
+  /** durata totale del video in secondi */
+  duration: number;
+}
+
+/** Origine dell'iframe: i messaggi da altre origini si scartano. */
+const BUNNY_ORIGIN = 'https://iframe.mediadelivery.net';
 
 /**
  * Player bunny.net (Bunny Stream) responsive 16:9, URL sanitizzato.
@@ -27,6 +42,14 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
  *   Il clic NON è un consenso ex art. 7 GDPR: non scriverlo da nessuna parte.
  * - Le statistiche di visione sono telemetria CLIENT-side dell'iframe
  *   (POST `/.metrics/track-session` ogni ~5s), senza cookie né identificatori.
+ *
+ * Avanzamento (`progress`): l'embed implementa il protocollo **Player.js** —
+ * verificato il 29/07/2026 con un browser vero, handshake `ready` che dichiara
+ * `["ready","play","pause","ended","timeupdate","progress","seeked","error"]` e
+ * 56 `timeupdate` ricevuti con `{seconds, duration}`. Ci si iscrive DOPO il
+ * `ready` (prima i messaggi vengono ignorati) e si filtra per origine.
+ * ⚠️ Ascoltare non scrive nulla nel terminale: l'analisi dell'art. 122 non
+ * cambia. Restano vere entrambe le righe qui sopra.
  */
 @Component({
   selector: 'app-bunny-player',
@@ -34,6 +57,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
   template: `
     <div class="bunny-frame">
       <iframe
+        #frame
         [src]="safeUrl()"
         [title]="videoTitle()"
         allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
@@ -66,8 +90,56 @@ export class BunnyPlayerComponent {
 
   readonly url = input.required<string>();
   readonly videoTitle = input('Lezione video');
+  /** Avanzamento della riproduzione (grezzo: la frequenza la gestisce il chiamante). */
+  readonly progress = output<BunnyProgress>();
+
+  private readonly frame =
+    viewChild.required<ElementRef<HTMLIFrameElement>>('frame');
 
   protected readonly safeUrl = computed<SafeResourceUrl>(() =>
     this.sanitizer.bypassSecurityTrustResourceUrl(this.url()),
   );
+
+  constructor() {
+    const onMessage = (e: MessageEvent) => this.onPlayerMessage(e);
+    window.addEventListener('message', onMessage);
+    inject(DestroyRef).onDestroy(() =>
+      window.removeEventListener('message', onMessage),
+    );
+  }
+
+  /** Messaggi Player.js dall'iframe: handshake e avanzamento. */
+  private onPlayerMessage(e: MessageEvent): void {
+    if (e.origin !== BUNNY_ORIGIN || typeof e.data !== 'string') return;
+    let msg: { context?: string; event?: string; value?: unknown };
+    try {
+      msg = JSON.parse(e.data) as typeof msg;
+    } catch {
+      return;
+    }
+    if (msg.context !== 'player.js') return;
+
+    // Il player accetta le iscrizioni solo DOPO aver annunciato "ready".
+    if (msg.event === 'ready') {
+      this.frame().nativeElement.contentWindow?.postMessage(
+        JSON.stringify({
+          context: 'player.js',
+          version: '0.0.11',
+          method: 'addEventListener',
+          value: 'timeupdate',
+          listener: 'bff-progress',
+        }),
+        BUNNY_ORIGIN,
+      );
+      return;
+    }
+
+    if (msg.event === 'timeupdate') {
+      const v = msg.value as { seconds?: number; duration?: number } | undefined;
+      const seconds = Number(v?.seconds);
+      const duration = Number(v?.duration);
+      if (Number.isFinite(seconds) && Number.isFinite(duration) && duration > 0)
+        this.progress.emit({ seconds, duration });
+    }
+  }
 }

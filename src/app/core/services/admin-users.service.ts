@@ -5,10 +5,12 @@ import { environment } from '../../../environments/environment';
 import {
   AdminActionLogEntry,
   AdminUser,
+  LessonViewSummary,
   Paginated,
   Role,
   SubscriptionRequest,
   SubscriptionTier,
+  UserLiveAttendance,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -85,6 +87,20 @@ export class AdminUsersService {
   auditLog(id: string): Observable<AdminActionLogEntry[]> {
     return this.http.get<AdminActionLogEntry[]>(
       `${API}/admin/users/${id}/audit`,
+    );
+  }
+
+  /** Live on-site a cui l'utente ha partecipato (chi, quando, per quanto). */
+  liveAttendance(id: string): Observable<UserLiveAttendance[]> {
+    return this.http.get<UserLiveAttendance[]>(
+      `${API}/admin/users/${id}/live-attendance`,
+    );
+  }
+
+  /** Video-lezioni che l'utente ha aperto (non quanto le ha guardate). */
+  lessonViews(id: string): Observable<LessonViewSummary[]> {
+    return this.http.get<LessonViewSummary[]>(
+      `${API}/admin/users/${id}/lesson-views`,
     );
   }
 

@@ -11,6 +11,7 @@ import { AdminDocumentsComponent } from './admin-documents/admin-documents.compo
 import { AdminLessonsComponent } from './admin-lessons/admin-lessons.component';
 import { AdminLiveComponent } from './admin-live/admin-live.component';
 import { AdminNewsComponent } from './admin-news/admin-news.component';
+import { AdminParticipationComponent } from './admin-participation/admin-participation.component';
 import { AdminShopComponent } from './admin-shop/admin-shop.component';
 import { AdminStatsComponent } from './admin-stats/admin-stats.component';
 import { AdminSubscriptionRequestsComponent } from './admin-subscription-requests/admin-subscription-requests.component';
@@ -25,6 +26,7 @@ type AdminTab =
   | 'iscritti'
   | 'richieste'
   | 'sconti'
+  | 'partecipazione'
   | 'statistiche'
   | 'log';
 
@@ -39,6 +41,7 @@ type AdminTab =
     AdminUsersComponent,
     AdminSubscriptionRequestsComponent,
     AdminDiscountsComponent,
+    AdminParticipationComponent,
     AdminStatsComponent,
     AdminAuditComponent,
   ],
@@ -119,6 +122,14 @@ type AdminTab =
             type="button"
             role="tab"
             class="admin-tabs__tab"
+            [class.is-active]="tab() === 'partecipazione'"
+            [attr.aria-selected]="tab() === 'partecipazione'"
+            (click)="setTab('partecipazione')"
+          >◉ Partecipazione</button>
+          <button
+            type="button"
+            role="tab"
+            class="admin-tabs__tab"
             [class.is-active]="tab() === 'statistiche'"
             [attr.aria-selected]="tab() === 'statistiche'"
             (click)="setTab('statistiche')"
@@ -149,6 +160,8 @@ type AdminTab =
           <app-admin-subscription-requests />
         } @else if (tab() === 'sconti') {
           <app-admin-discounts />
+        } @else if (tab() === 'partecipazione') {
+          <app-admin-participation />
         } @else if (tab() === 'statistiche') {
           <app-admin-stats />
         } @else {
@@ -200,6 +213,7 @@ export class AdminComponent {
     'iscritti',
     'richieste',
     'sconti',
+    'partecipazione',
     'statistiche',
     'log',
   ];

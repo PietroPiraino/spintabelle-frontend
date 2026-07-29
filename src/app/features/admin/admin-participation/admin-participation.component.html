@@ -1,0 +1,227 @@
+<div class="admin-users">
+  <div class="admin-list">
+    <div class="admin-users__head">
+      <h2 style="margin: 0; font-size: 1.2rem">Presenze alle lezioni live</h2>
+      @if (onsite().length > 0) {
+        <span class="admin-users__count">
+          {{ onsite().length }} {{ onsite().length === 1 ? 'sessione' : 'sessioni' }} on-site
+        </span>
+      }
+    </div>
+
+    <p class="admin-item__meta">
+      Chi è entrato nella sala, quando e per quanto. Il registro esiste solo per le
+      lezioni on-site: le sessioni su Zoom o Discord si svolgono fuori dal sito e
+      non lasciano alcuna traccia qui.
+    </p>
+
+    @if (listError()) {
+      <div class="form-feedback is-error" role="alert">{{ listError() }}</div>
+    }
+
+    @if (!sessions() && listLoading()) {
+      <div class="spinner" role="status" aria-label="Caricamento"></div>
+    } @else if (sessions() && onsite().length === 0) {
+      <div class="empty-state">
+        <p>
+          Nessuna lezione live on-site.
+          @if (hasExternal()) {
+            Le sessioni esterne (Zoom/Discord) non compaiono qui.
+          }
+        </p>
+      </div>
+    } @else if (sessions()) {
+      @for (s of onsite(); track s.id) {
+        <div class="card admin-item">
+          <div class="admin-item__info">
+            <div class="row" style="gap: 0.6rem">
+              <strong>{{ s.title }}</strong>
+              @if (s.stakes === 'HIGH') {
+                <span class="badge badge--premium">High stakes</span>
+              } @else {
+                <span class="badge badge--free">Low stakes</span>
+              }
+            </div>
+            <span class="admin-item__meta">
+              {{ s.startsAt | date: 'dd MMM yyyy · HH:mm' }}
+              @if (s.durationMin) {
+                · {{ s.durationMin }} min previsti
+              }
+            </span>
+          </div>
+          <div class="row" style="gap: 0.5rem">
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              [attr.aria-expanded]="openId() === s.id"
+              (click)="toggle(s)"
+            >
+              {{ openId() === s.id ? 'Chiudi' : 'Presenze' }}
+            </button>
+          </div>
+        </div>
+
+        @if (openId() === s.id) {
+          <div class="card card--pad admin-panel">
+            <h3>Presenze — {{ s.title }}</h3>
+
+            @if (reportLoading()) {
+              <div class="spinner" role="status" aria-label="Caricamento presenze"></div>
+            } @else if (reportError()) {
+              <div class="form-feedback is-error" role="alert">{{ reportError() }}</div>
+            } @else if (report(); as r) {
+              @if (r.partecipanti.length === 0) {
+                <p class="admin-item__meta">
+                  Nessun ingresso registrato per questa sessione.
+                </p>
+              } @else {
+                <p class="admin-item__meta">
+                  <strong>{{ r.totali.partecipanti }}</strong> partecipanti
+                  @if (r.totali.mediaMinuti !== null) {
+                    · permanenza media <strong>{{ r.totali.mediaMinuti }} min</strong>
+                  }
+                  @if (r.sessione.fine) {
+                    · terminata alle {{ r.sessione.fine | date: 'HH:mm' }}
+                  }
+                </p>
+                @if (r.totali.troncato) {
+                  <p class="admin-item__meta">
+                    ⚠️ Elenco troppo lungo: sono mostrati i primi ingressi registrati.
+                  </p>
+                }
+
+                <ul class="admin-history">
+                  @for (p of r.partecipanti; track p.userId) {
+                    <li>
+                      <strong>{{ p.nickname }}</strong>
+                      @if (p.ruolo === 'coach') {
+                        <span class="badge badge--tag">coach</span>
+                      }
+                      @if (p.ancoraInSala) {
+                        <span class="badge badge--premium">in sala ora</span>
+                      }
+                      <br />
+                      <span class="admin-item__meta">
+                        entrato alle {{ p.primoIngresso | date: 'HH:mm' }}
+                        @if (p.ultimaUscita) {
+                          · uscito alle {{ p.ultimaUscita | date: 'HH:mm' }}
+                        }
+                        · <strong>{{ p.minuti }} min</strong>
+                        @if (p.ingressi > 1) {
+                          · {{ p.ingressi }} ingressi
+                        }
+                        @if (p.durataStimata) {
+                          · durata stimata
+                        }
+                      </span>
+                    </li>
+                  }
+                </ul>
+
+                <p class="admin-item__meta">
+                  "Durata stimata" significa che l'avviso di uscita non è mai
+                  arrivato (browser chiuso di colpo, rete caduta): il tempo è
+                  dedotto, non misurato. Chi cancella il proprio account sparisce
+                  anche da questo registro.
+                </p>
+              }
+            }
+          </div>
+        }
+      }
+    }
+  </div>
+
+  <!-- ── Viste delle video-lezioni ─────────────────────────────────────── -->
+  <div class="admin-list" style="margin-top: 2.4rem">
+    <div class="admin-users__head">
+      <h2 style="margin: 0; font-size: 1.2rem">Chi ha visto le lezioni</h2>
+      @if (viewsRows(); as rows) {
+        <span class="admin-users__count">
+          {{ rows.length }} {{ rows.length === 1 ? 'lezione aperta' : 'lezioni aperte' }}
+        </span>
+      }
+    </div>
+
+    <p class="admin-item__meta">
+      Qui si contano le <strong>aperture fatte dal sito</strong>, persona per
+      persona: questi numeri e quelli del riquadro Video delle statistiche non
+      coincidono e non devono coincidere. La percentuale vista è il punto più
+      avanzato raggiunto e viene aggiornata al massimo una volta al minuto:
+      l'ultimo tratto guardato prima di chiudere la pagina può mancare, quindi è
+      una <strong>stima per difetto</strong>. Chi cancella il proprio account
+      sparisce anche da qui, quindi i totali possono calare.
+    </p>
+
+    @if (viewsError()) {
+      <div class="form-feedback is-error" role="alert">{{ viewsError() }}</div>
+    }
+
+    @if (!viewsRows() && viewsLoading()) {
+      <div class="spinner" role="status" aria-label="Caricamento viste"></div>
+    } @else if (viewsRows(); as rows) {
+      @if (rows.length === 0) {
+        <div class="empty-state">
+          <p>Nessuna apertura registrata finora.</p>
+        </div>
+      } @else {
+        @for (r of rows; track r.lessonId) {
+          <div class="card admin-item">
+            <div class="admin-item__info">
+              <strong>{{ r.titolo }}</strong>
+              <span class="admin-item__meta">
+                <strong>{{ r.spettatori }}</strong>
+                {{ r.spettatori === 1 ? 'persona' : 'persone' }}
+                · {{ r.aperture }} {{ r.aperture === 1 ? 'apertura' : 'aperture' }}
+                @if (r.ultimaApertura) {
+                  · ultima il {{ r.ultimaApertura | date: 'dd MMM yyyy' }}
+                }
+              </span>
+            </div>
+            <div class="row" style="gap: 0.5rem">
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                [attr.aria-expanded]="openLessonId() === r.lessonId"
+                (click)="toggleLesson(r)"
+              >
+                {{ openLessonId() === r.lessonId ? 'Chiudi' : 'Chi' }}
+              </button>
+            </div>
+          </div>
+
+          @if (openLessonId() === r.lessonId) {
+            <div class="card card--pad admin-panel">
+              <h3>Spettatori — {{ r.titolo }}</h3>
+              @if (viewersLoading()) {
+                <div class="spinner" role="status" aria-label="Caricamento spettatori"></div>
+              } @else if (viewers(); as people) {
+                @if (people.length === 0) {
+                  <p class="admin-item__meta">Nessuno l'ha ancora aperta.</p>
+                } @else {
+                  <ul class="admin-history">
+                    @for (p of people; track p.userId) {
+                      <li>
+                        <strong>{{ p.nome }}</strong>
+                        @if (p.percentualeMax != null) {
+                          <span class="badge badge--tag">{{ p.percentualeMax }}% visto</span>
+                        }
+                        <span class="admin-item__meta">
+                          · {{ p.aperture }}
+                          {{ p.aperture === 1 ? 'apertura' : 'aperture' }}
+                          @if (p.ultimaAperturaAt) {
+                            · ultima il {{ p.ultimaAperturaAt | date: 'dd MMM yyyy' }}
+                          }
+                        </span>
+                      </li>
+                    }
+                  </ul>
+                }
+              }
+            </div>
+          }
+        }
+      }
+    }
+  </div>
+</div>

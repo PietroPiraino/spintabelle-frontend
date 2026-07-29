@@ -180,7 +180,8 @@
                     type="button"
                     class="btn btn--primary btn--sm"
                     [disabled]="publishing()"
-                    (click)="publishRecording(s)"
+                    [attr.aria-expanded]="publishPanelId() === s.id"
+                    (click)="openPublish(s)"
                   >
                     Pubblica come lezione
                   </button>
@@ -212,6 +213,87 @@
             </button>
           </div>
         </div>
+
+        <!--
+          Pannello di pubblicazione: FUORI dalla card (e non dentro
+          .admin-item__meta, che è uno <span>: un form lì dentro è markup
+          invalido ed eredita il font monospace del meta).
+        -->
+        @if (publishPanelId() === s.id) {
+          <div class="card card--pad admin-panel">
+            <h3>Pubblica come lezione — {{ s.title }}</h3>
+            <form [formGroup]="publishForm" (ngSubmit)="confirmPublish(s)">
+              <div class="field">
+                <label [attr.for]="'pt-' + s.id">Titolo della lezione</label>
+                <input
+                  [id]="'pt-' + s.id"
+                  type="text"
+                  class="input"
+                  formControlName="title"
+                  maxlength="200"
+                />
+                @if (publishForm.controls.title.touched && publishForm.controls.title.invalid) {
+                  <span class="field-error">Il titolo deve avere almeno 3 caratteri.</span>
+                }
+              </div>
+
+              <div class="field">
+                <label [attr.for]="'pd-' + s.id">Descrizione</label>
+                <textarea
+                  [id]="'pd-' + s.id"
+                  class="input"
+                  rows="3"
+                  formControlName="description"
+                  maxlength="2000"
+                  placeholder="Se la lasci vuota viene usata la descrizione della live."
+                ></textarea>
+              </div>
+
+              <app-tag-picker
+                [(known)]="knownTags"
+                [(selected)]="selectedTags"
+                [inputId]="'ptag-' + s.id"
+              />
+
+              <div class="row admin-panel__row">
+                <div class="field" style="margin: 0; min-width: 12rem">
+                  <label [attr.for]="'ps-' + s.id">Accesso</label>
+                  <select [id]="'ps-' + s.id" class="input" formControlName="stakes">
+                    <option value="LOW">Low stakes — Pesce Rosso</option>
+                    <option value="HIGH">High stakes — Squalo</option>
+                  </select>
+                </div>
+                <div class="field" style="margin: 0; min-width: 12rem">
+                  <label [attr.for]="'pv-' + s.id">Data del video</label>
+                  <input
+                    [id]="'pv-' + s.id"
+                    type="date"
+                    class="input"
+                    formControlName="videoDate"
+                  />
+                </div>
+              </div>
+
+              <label class="row admin-panel__check">
+                <input type="checkbox" formControlName="freePreview" />
+                Anteprima gratuita (visibile a tutti gli iscritti)
+              </label>
+              <label class="row admin-panel__check">
+                <input type="checkbox" formControlName="notify" />
+                Avvisa gli iscritti (Discord + email agli abbonati del tier)
+              </label>
+
+              <div class="row admin-panel__actions">
+                <button type="submit" class="btn btn--primary btn--sm" [disabled]="publishing()">
+                  {{ publishing() ? 'Pubblicazione…' : 'Pubblica' }}
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="closePublish()">
+                  Annulla
+                </button>
+              </div>
+            </form>
+          </div>
+        }
       }
     }
   </div>

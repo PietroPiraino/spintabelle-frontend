@@ -81,35 +81,11 @@
         }
       </div>
 
-      <div class="field">
-        <label for="newTag">Tag</label>
-        @if (knownTags().length > 0) {
-          <div class="row admin-form__tags" role="group" aria-label="Seleziona i tag">
-            @for (tag of knownTags(); track tag) {
-              <button
-                type="button"
-                class="badge badge--tag"
-                [class.is-active]="selectedTags().includes(tag)"
-                (click)="toggleTag(tag)"
-              >{{ tag }}</button>
-            }
-          </div>
-        }
-        <div class="row" style="gap: 0.5rem">
-          <input
-            id="newTag"
-            type="text"
-            class="input"
-            formControlName="newTag"
-            placeholder="Nuovo tag…"
-            style="flex: 1"
-            (keydown.enter)="addNewTag($event)"
-          />
-          <button type="button" class="btn btn--ghost btn--sm" (click)="addNewTag()">
-            Aggiungi
-          </button>
-        </div>
-      </div>
+      <app-tag-picker
+        [(known)]="knownTags"
+        [(selected)]="selectedTags"
+        inputId="newTag"
+      />
 
       <div class="row">
         <button type="submit" class="btn btn--primary" [disabled]="saving()">

@@ -13,12 +13,14 @@ import {
   LiveSession,
   LiveSessionPayload,
 } from '../../../core/models/api.models';
+import { LessonsService } from '../../../core/services/lessons.service';
 import { LiveService } from '../../../core/services/live.service';
+import { TagPickerComponent } from '../../../shared/ui/tag-picker/tag-picker.component';
 import { apiErrorMessage } from '../../../core/utils/http-error';
 
 @Component({
   selector: 'app-admin-live',
-  imports: [ReactiveFormsModule, DatePipe, RouterLink],
+  imports: [ReactiveFormsModule, DatePipe, RouterLink, TagPickerComponent],
   templateUrl: './admin-live.component.html',
   styleUrl: '../admin-shared.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +28,7 @@ import { apiErrorMessage } from '../../../core/utils/http-error';
 export class AdminLiveComponent {
   private readonly fb = inject(FormBuilder);
   private readonly liveApi = inject(LiveService);
+  private readonly lessonsApi = inject(LessonsService);
 
   protected readonly sessions = signal<LiveSession[] | null>(null);
   protected readonly listLoading = signal(false);
@@ -215,29 +218,96 @@ export class AdminLiveComponent {
     });
   }
 
-  /** Pubblica una registrazione pronta come lezione VOD (avvisa gli abbonati). */
-  protected publishRecording(session: LiveSession): void {
+  // ── Pubblicazione della registrazione come lezione ──────────────────────--
+  //
+  // Pannello inline (idioma .admin-panel di admin-users): il titolo e la
+  // descrizione della live diventano quelli della lezione quasi mai tali e
+  // quali, e i tag prima non erano proponibili affatto. Precompilare qui
+  // sostituisce il giro "modifica live → salva → pubblica → tab Lezioni →
+  // modifica per i tag".
+
+  /** Sessione con il pannello di pubblicazione aperto (una alla volta). */
+  protected readonly publishPanelId = signal<string | null>(null);
+  protected readonly knownTags = signal<string[]>([]);
+  protected readonly selectedTags = signal<string[]>([]);
+
+  protected readonly publishForm = this.fb.nonNullable.group({
+    title: [
+      '',
+      [Validators.required, Validators.minLength(3), Validators.maxLength(200)],
+    ],
+    description: ['', [Validators.maxLength(2000)]],
+    stakes: ['LOW' as LessonStakes, Validators.required],
+    freePreview: [false],
+    videoDate: ['', Validators.required],
+    // avvisa = @everyone su Discord + email agli abbonati del tier
+    notify: [true],
+  });
+
+  protected openPublish(session: LiveSession): void {
+    this.feedback.set(null);
+    this.error.set(null);
+    this.publishForm.reset({
+      title: session.title,
+      description: session.description ?? '',
+      stakes: session.stakes,
+      freePreview: false,
+      // data della live: nella grande maggioranza dei casi è già quella giusta
+      videoDate: session.startsAt.slice(0, 10),
+      notify: true,
+    });
+    // 'live' è il marcatore di sistema: il backend lo aggiunge comunque, qui è
+    // pre-selezionato perché si veda che ci sarà.
+    this.selectedTags.set(['live']);
+    this.publishPanelId.set(session.id);
+    if (this.knownTags().length === 0)
+      this.lessonsApi.getTags().subscribe({
+        next: (tags) => this.knownTags.set(tags),
+      });
+  }
+
+  protected closePublish(): void {
+    this.publishPanelId.set(null);
+  }
+
+  /** Pubblica la registrazione con le correzioni del pannello. */
+  protected confirmPublish(session: LiveSession): void {
     if (this.publishing()) return;
-    if (
-      !confirm(
-        `Pubblicare la registrazione di "${session.title}" come lezione? ` +
-          'Gli abbonati del tier riceveranno un avviso via email.',
-      )
-    )
+    if (this.publishForm.invalid) {
+      this.publishForm.markAllAsTouched();
       return;
+    }
     this.publishing.set(true);
     this.feedback.set(null);
     this.error.set(null);
-    this.liveApi.publishRecording(session.id).subscribe({
-      next: () => {
-        this.publishing.set(false);
-        this.feedback.set('Registrazione pubblicata come lezione.');
-        this.load();
-      },
-      error: (err: unknown) => {
-        this.publishing.set(false);
-        this.error.set(apiErrorMessage(err, 'Pubblicazione non riuscita.'));
-      },
-    });
+
+    const v = this.publishForm.getRawValue();
+    this.liveApi
+      .publishRecording(session.id, {
+        title: v.title.trim(),
+        description: v.description.trim() || undefined,
+        stakes: v.stakes,
+        freePreview: v.freePreview,
+        videoDate: v.videoDate,
+        // il marcatore 'live' lo aggiunge il backend: non serve rimandarlo
+        tags: this.selectedTags().filter((t) => t !== 'live'),
+        notify: v.notify,
+      })
+      .subscribe({
+        next: () => {
+          this.publishing.set(false);
+          this.closePublish();
+          this.feedback.set(
+            v.notify
+              ? `Pubblicata come lezione: "${v.title.trim()}". Avviso inviato.`
+              : `Pubblicata come lezione: "${v.title.trim()}" (senza avvisi).`,
+          );
+          this.load();
+        },
+        error: (err: unknown) => {
+          this.publishing.set(false);
+          this.error.set(apiErrorMessage(err, 'Pubblicazione non riuscita.'));
+        },
+      });
   }
 }

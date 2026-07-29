@@ -13,7 +13,10 @@ import { Lesson, LessonStakes } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { LessonsService } from '../../core/services/lessons.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
-import { BunnyPlayerComponent } from '../../shared/ui/bunny-player/bunny-player.component';
+import {
+  BunnyPlayerComponent,
+  type BunnyProgress,
+} from '../../shared/ui/bunny-player/bunny-player.component';
 
 /** Sezione stakes: tutte, solo Low o solo High. */
 type StakesFilter = 'all' | LessonStakes;
@@ -55,6 +58,13 @@ export class LessonsComponent {
   protected readonly stakesFilter = signal<StakesFilter>('all');
   /** id della lezione con il player aperto (click-to-play) */
   protected readonly playingId = signal<string | null>(null);
+  /** Lezioni che l'utente ha già aperto: alimenta il badge "già visto". */
+  protected readonly viste = signal<ReadonlySet<string>>(new Set());
+  /** Ultimo avanzamento inviato per lezione (throttling): non è stato di UI. */
+  private readonly progressSent = new Map<
+    string,
+    { seconds: number; at: number }
+  >();
 
   private page = 1;
   /** Scarta le risposte superate da un cambio filtro più recente. */
@@ -78,6 +88,12 @@ export class LessonsComponent {
         this.reload();
       });
     this.load();
+    // Una sola richiesta per sessione: quali lezioni ho già aperto. Best-effort,
+    // il badge è un di più — se fallisce la lista funziona identica.
+    this.lessonsApi.myViews().subscribe({
+      next: (rows) => this.viste.set(new Set(rows.map((r) => r.lessonId))),
+      error: () => undefined,
+    });
   }
 
   /**
@@ -173,8 +189,52 @@ export class LessonsComponent {
     this.reload();
   }
 
+  /**
+   * Monta il player (click-to-load) e registra l'apertura.
+   *
+   * ⚠️ Il montaggio DEVE restare qui, dietro il clic: il player scrive in
+   * localStorage già al caricamento dell'iframe, e l'esimente dell'art. 122
+   * Codice Privacy poggia su questa condotta. Montarlo al caricamento della
+   * pagina la farebbe cadere. (Il clic **non è consenso** ex art. 7: è la
+   * richiesta esplicita del servizio.)
+   *
+   * Il tracking è fire-and-forget: un evento accessorio non deve mai far
+   * fallire né ritardare la visione, e l'errore non si mostra all'utente.
+   */
   protected play(id: string): void {
     this.playingId.set(id);
+    this.viste.update((set) => new Set(set).add(id));
+    this.lessonsApi.trackView(id).subscribe({ error: () => undefined });
+  }
+
+  /** true se l'utente ha già aperto questa lezione (badge "già visto"). */
+  protected isViewed(id: string): boolean {
+    return this.viste().has(id);
+  }
+
+  /**
+   * Avanzamento riportato dal player. Arriva ~4 volte al secondo: si invia al
+   * massimo una volta al minuto e solo se il punto più avanzato è cresciuto di
+   * almeno 15 secondi — altrimenti sarebbero migliaia di richieste per lezione.
+   *
+   * Si manda sempre il MASSIMO raggiunto, non la posizione corrente: chi torna
+   * indietro a rivedere un passaggio non deve "perdere" i minuti già guardati.
+   * L'ultimo pezzo (fino a un minuto) può andare perso alla chiusura della
+   * pagina: `sendBeacon` non può portare il token, che vive solo in memoria.
+   */
+  protected onProgress(lessonId: string, p: BunnyProgress): void {
+    const now = Date.now();
+    const prev = this.progressSent.get(lessonId);
+    const maxSeconds = Math.max(prev?.seconds ?? 0, p.seconds);
+    if (prev && now - prev.at < 60_000 && maxSeconds - prev.seconds < 15) {
+      // ancora troppo presto: aggiorna solo il massimo locale
+      this.progressSent.set(lessonId, { ...prev, seconds: maxSeconds });
+      return;
+    }
+    this.progressSent.set(lessonId, { seconds: maxSeconds, at: now });
+    this.lessonsApi
+      .trackProgress(lessonId, maxSeconds, p.duration)
+      .subscribe({ error: () => undefined });
   }
 
   /** Nasconde la copertina se non carica (video senza thumbnail) → resta il gradiente. */

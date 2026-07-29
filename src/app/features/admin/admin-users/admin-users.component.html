@@ -127,6 +127,9 @@
               <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'history')">
                 Storico
               </button>
+              <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'partecipazione')">
+                Partecipazione
+              </button>
               @if (!user.verified) {
                 <button type="button" class="btn btn--ghost btn--sm" (click)="resend(user)">
                   Reinvia verifica
@@ -294,6 +297,61 @@
                     {{ savingPanel() ? 'Assegno…' : 'Assegna' }}
                   </button>
                   <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Annulla</button>
+                </div>
+              }
+            </div>
+          }
+
+          @if (isPanel(user, 'partecipazione')) {
+            <div class="card card--pad admin-panel">
+              <h3>Partecipazione — {{ user.email }}</h3>
+              @if (participationLoading()) {
+                <div class="spinner" role="status" aria-label="Caricamento partecipazione"></div>
+              } @else {
+                <h4 class="admin-panel__h4">Lezioni live seguite</h4>
+                @if ((liveAttendance() ?? []).length === 0) {
+                  <p class="admin-item__meta">
+                    Nessuna partecipazione registrata. Le lezioni su Zoom o Discord
+                    si svolgono fuori dal sito e non lasciano traccia qui.
+                  </p>
+                } @else {
+                  <ul class="admin-history">
+                    @for (a of liveAttendance()!; track a.sessionId) {
+                      <li>
+                        {{ a.primoIngresso | date: 'dd MMM yyyy' }} ·
+                        <strong>{{ a.titolo }}</strong>
+                        · {{ a.minuti }} min
+                        @if (a.ingressi > 1) { · {{ a.ingressi }} ingressi }
+                      </li>
+                    }
+                  </ul>
+                }
+                <h4 class="admin-panel__h4">Video-lezioni aperte</h4>
+                @if ((lessonViews() ?? []).length === 0) {
+                  <p class="admin-item__meta">Nessuna lezione aperta.</p>
+                } @else {
+                  <ul class="admin-history">
+                    @for (v of lessonViews()!; track v.lessonId) {
+                      <li>
+                        @if (v.ultimaAperturaAt) {
+                          {{ v.ultimaAperturaAt | date: 'dd MMM yyyy' }} ·
+                        }
+                        <strong>{{ v.titolo }}</strong>
+                        · {{ v.aperture }} {{ v.aperture === 1 ? 'apertura' : 'aperture' }}
+                        @if (v.percentualeMax != null) {
+                          · <strong>{{ v.percentualeMax }}%</strong> visto
+                        }
+                      </li>
+                    }
+                  </ul>
+                  <p class="admin-item__meta">
+                    "Aperture" = quante volte ha aperto il video sul sito. La
+                    percentuale è il punto più avanzato raggiunto ed è una stima
+                    per difetto (si aggiorna al massimo una volta al minuto).
+                  </p>
+                }
+                <div class="row admin-panel__actions">
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Chiudi</button>
                 </div>
               }
             </div>

@@ -13,10 +13,12 @@ import {
   AdminActionLogEntry,
   AdminUser,
   DiscountCode,
+  LessonViewSummary,
   Paginated,
   Role,
   SubscriptionRequest,
   SubscriptionTier,
+  UserLiveAttendance,
 } from '../../../core/models/api.models';
 import { AdminDiscountsService } from '../../../core/services/admin-discounts.service';
 import { AdminUsersService } from '../../../core/services/admin-users.service';
@@ -37,6 +39,7 @@ type PanelKind =
   | 'grant'
   | 'profile'
   | 'history'
+  | 'partecipazione'
   | 'discount';
 
 @Component({
@@ -98,6 +101,11 @@ export class AdminUsersComponent {
   protected readonly historyReqs = signal<SubscriptionRequest[] | null>(null);
   protected readonly historyAudit = signal<AdminActionLogEntry[] | null>(null);
   protected readonly historyLoading = signal(false);
+
+  // ── Partecipazione: a quali live è stato ──
+  protected readonly liveAttendance = signal<UserLiveAttendance[] | null>(null);
+  protected readonly lessonViews = signal<LessonViewSummary[] | null>(null);
+  protected readonly participationLoading = signal(false);
 
   // ── Assegna codice sconto ──
   protected readonly discountCodes = signal<DiscountCode[] | null>(null);
@@ -221,6 +229,9 @@ export class AdminUsersComponent {
         break;
       case 'history':
         this.loadHistory(user);
+        break;
+      case 'partecipazione':
+        this.loadParticipation(user);
         break;
       case 'discount':
         this.selectedCodeId.reset('');
@@ -438,6 +449,30 @@ export class AdminUsersComponent {
       error: (err: unknown) => {
         this.savingPanel.set(false);
         this.error.set(apiErrorMessage(err, 'Modifica dati non riuscita.'));
+      },
+    });
+  }
+
+  // ── Partecipazione (live seguite) ───────────────────────────────────────--
+
+  private loadParticipation(user: AdminUser): void {
+    this.liveAttendance.set(null);
+    this.lessonViews.set(null);
+    this.participationLoading.set(true);
+    this.usersApi.liveAttendance(user.id).subscribe({
+      // niente banner: un pannello accessorio che fallisce non deve rubare la
+      // scena alla gestione dell'iscritto
+      next: (rows) => this.liveAttendance.set(rows),
+      error: () => this.liveAttendance.set([]),
+    });
+    this.usersApi.lessonViews(user.id).subscribe({
+      next: (rows) => {
+        this.lessonViews.set(rows);
+        this.participationLoading.set(false);
+      },
+      error: () => {
+        this.lessonViews.set([]);
+        this.participationLoading.set(false);
       },
     });
   }

@@ -3,9 +3,11 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  LiveAttendanceReport,
   LiveRoomToken,
   LiveSession,
   LiveSessionPayload,
+  PublishRecordingPayload,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -97,9 +99,28 @@ export class LiveService {
     return this.http.post(`${API}/live/${id}/recording/retry`, {});
   }
 
-  /** Coach/admin: pubblica una registrazione pronta (READY) come lezione VOD. */
-  publishRecording(id: string): Observable<unknown> {
-    return this.http.post(`${API}/live/${id}/recording/publish`, {});
+  /**
+   * Coach/admin: pubblica una registrazione pronta (READY) come lezione VOD.
+   * Il payload sono le correzioni del pannello (titolo, tag, tier, avvisi…):
+   * omesso, la lezione resta derivata dalla sessione come prima.
+   */
+  publishRecording(
+    id: string,
+    payload: PublishRecordingPayload = {},
+  ): Observable<{ ok: true; lessonId: string }> {
+    return this.http.post<{ ok: true; lessonId: string }>(
+      `${API}/live/${id}/recording/publish`,
+      payload,
+    );
+  }
+
+  /**
+   * Admin: registro presenze di una sessione on-site. Le sessioni EXTERNAL non
+   * lasciano segnale lato sito e rispondono 400 (non un elenco vuoto, che si
+   * leggerebbe come "non è venuto nessuno").
+   */
+  getAttendance(id: string): Observable<LiveAttendanceReport> {
+    return this.http.get<LiveAttendanceReport>(`${API}/live/${id}/attendance`);
   }
 
   create(payload: LiveSessionPayload): Observable<LiveSession> {

@@ -357,6 +357,91 @@ export interface LiveSessionPayload {
   recordingEnabled?: boolean;
 }
 
+/** Una lezione già aperta dall'utente (badge "già visto"). */
+export interface LessonViewSummary {
+  lessonId: string;
+  aperture: number;
+  primaAperturaAt?: string;
+  ultimaAperturaAt?: string;
+  /** presente solo nelle viste admin per-utente */
+  titolo?: string;
+  /** assente se il player non ha riportato l'avanzamento */
+  percentualeMax?: number;
+  secondiVisti?: number;
+}
+
+/** Chi ha aperto una certa lezione (vista admin). */
+export interface LessonViewer {
+  userId: string;
+  nome: string;
+  aperture: number;
+  primaAperturaAt?: string;
+  ultimaAperturaAt?: string;
+  /** assente se il player non ha riportato l'avanzamento */
+  percentualeMax?: number;
+}
+
+/** Riepilogo per lezione: spettatori distinti e aperture (vista admin). */
+export interface LessonViewsRow {
+  lessonId: string;
+  titolo: string;
+  spettatori: number;
+  aperture: number;
+  ultimaApertura?: string;
+}
+
+/** Una persona nel registro presenze di una live (vista admin). */
+export interface LiveAttendanceEntry {
+  userId: string;
+  nickname: string;
+  ruolo: 'coach' | 'audience';
+  primoIngresso: string;
+  ultimaUscita: string | null;
+  minuti: number;
+  ingressi: number;
+  /** connessione ancora aperta: la live è in corso */
+  ancoraInSala: boolean;
+  /** durata dedotta e non misurata (evento di uscita mai arrivato) */
+  durataStimata: boolean;
+}
+
+/** Registro presenze di una sessione live on-site. */
+export interface LiveAttendanceReport {
+  sessione: { id: string; titolo: string; inizio: string; fine: string | null };
+  partecipanti: LiveAttendanceEntry[];
+  totali: {
+    partecipanti: number;
+    mediaMinuti: number | null;
+    troncato: boolean;
+  };
+}
+
+/** Una live a cui un iscritto ha partecipato (pannello Iscritti). */
+export interface UserLiveAttendance {
+  sessionId: string;
+  titolo: string;
+  primoIngresso: string;
+  minuti: number;
+  ingressi: number;
+}
+
+/**
+ * Correzioni applicate alla lezione al momento di pubblicare la registrazione.
+ * Tutto opzionale: ciò che si omette resta derivato dalla sessione live.
+ */
+export interface PublishRecordingPayload {
+  title?: string;
+  description?: string;
+  /** tag aggiuntivi: il marcatore 'live' lo mette il backend */
+  tags?: string[];
+  /** solo un ADMIN può cambiare il tier (decide il paywall) */
+  stakes?: LessonStakes;
+  freePreview?: boolean;
+  videoDate?: string;
+  /** false = niente avviso Discord e niente email agli abbonati */
+  notify?: boolean;
+}
+
 /** Token per entrare in una stanza on-site (LIVEKIT). */
 export interface LiveRoomToken {
   token: string;

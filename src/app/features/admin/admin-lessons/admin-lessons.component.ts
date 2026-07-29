@@ -7,6 +7,7 @@ import {
   Paginated,
 } from '../../../core/models/api.models';
 import { LessonsService } from '../../../core/services/lessons.service';
+import { TagPickerComponent } from '../../../shared/ui/tag-picker/tag-picker.component';
 import { apiErrorMessage } from '../../../core/utils/http-error';
 
 /** Lezioni per pagina nel pannello (pager classico, come gli iscritti). */
@@ -14,7 +15,7 @@ const PAGE_SIZE = 25;
 
 @Component({
   selector: 'app-admin-lessons',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, TagPickerComponent],
   templateUrl: './admin-lessons.component.html',
   styleUrl: '../admin-shared.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -52,7 +53,6 @@ export class AdminLessonsComponent {
     // anteprima gratuita: la lezione resta visibile a tutti i registrati
     freePreview: [false],
     videoDate: ['', Validators.required],
-    newTag: [''],
   });
 
   /** Converte una data ISO nel formato YYYY-MM-DD richiesto da input[type=date]. */
@@ -98,34 +98,6 @@ export class AdminLessonsComponent {
     if (n < 1 || n > total || n === this.currentPage()) return;
     this.currentPage.set(n);
     this.load();
-  }
-
-  protected toggleTag(tag: string): void {
-    this.selectedTags.update((tags) =>
-      tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag],
-    );
-  }
-
-  /**
-   * Aggiunge i tag scritti nel campo libero (select-or-create). La virgola
-   * separa più tag e non può far parte di un tag (è il separatore del
-   * filtro lista: il backend la rifiuta con 400).
-   */
-  protected addNewTag(event?: Event): void {
-    event?.preventDefault();
-    const parts = this.form.controls.newTag.value
-      .split(',')
-      .map((t) => t.trim().toLowerCase())
-      .filter(Boolean);
-    for (const raw of parts) {
-      if (!this.knownTags().includes(raw)) {
-        this.knownTags.update((tags) => [...tags, raw].sort());
-      }
-      if (!this.selectedTags().includes(raw)) {
-        this.selectedTags.update((tags) => [...tags, raw]);
-      }
-    }
-    this.form.controls.newTag.setValue('');
   }
 
   protected edit(lesson: Lesson): void {

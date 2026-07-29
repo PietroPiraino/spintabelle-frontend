@@ -110,7 +110,11 @@
                   </a>
                 </div>
               } @else if (playingId() === lesson.id && lesson.bunnyEmbedUrl) {
-                <app-bunny-player [url]="lesson.bunnyEmbedUrl" [videoTitle]="lesson.title" />
+                <app-bunny-player
+                  [url]="lesson.bunnyEmbedUrl"
+                  [videoTitle]="lesson.title"
+                  (progress)="onProgress(lesson.id, $event)"
+                />
               } @else {
                 <button
                   type="button"
@@ -145,6 +149,9 @@
                   }
                   @if (lesson.visibility === 'USER') {
                     <span class="badge badge--tag">Gratis</span>
+                  }
+                  @if (!lesson.locked && isViewed(lesson.id)) {
+                    <span class="badge badge--tag" title="L'hai già aperta">✓ Vista</span>
                   }
                 </div>
               </div>
