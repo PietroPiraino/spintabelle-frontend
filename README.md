@@ -8,7 +8,7 @@ Frontend di **bestfishforever.it** ("Best Fish Forever"), scuola di poker italia
 
 Angular 22 (zoneless, `provideZonelessChangeDetection`) · Three.js (hero/diorami/mascotte/banco particellare) · `livekit-client` (sala live, lazy) · 3 temi via `data-theme` (token CSS in `styles/_tokens.scss`).
 
-Sezioni: `/tabelle` (viewer preflop GTO, stato in query param) · `/lezioni` (video gated paginati) · `/allenamento` (drill) · `/simulatore-varianza` (**pubblico**, simulatore Monte Carlo di varianza per Spin & Go / Twister) · `/live` + `/live/:id/stanza` (**lezioni dal vivo on-site**) · `/docs` (file scaricabili) · `/abbonati` (pubblica) · `/negozio` (punti) · `/account` · `/chi-siamo` · `/admin` (pannello a tab).
+Sezioni: `/tabelle` (viewer preflop GTO, stato in query param) · `/lezioni` (video gated paginati) · `/allenamento` (drill) · `/simulatore-varianza` (**pubblico**, simulatore Monte Carlo di varianza per Spin & Go / Twister) · `/live` + `/live/:id/stanza` (**lezioni dal vivo on-site**) · `/docs` (file scaricabili) · `/abbonati` (pubblica) · `/negozio` (punti) · `/account` · `/chi-siamo` · `/admin` (pannello a tab: lezioni · live · news · documenti · negozio · iscritti · richieste · sconti · **partecipazione** · statistiche · log).
 
 ## Prerequisiti
 
@@ -54,8 +54,10 @@ Famiglia `e2e-cls-*.mjs`: misure di CLS/INP/byte sul filo (`e2e-cls-bytes-local.
 
 ## Privacy — vincoli di codice
 
-⚠️ **Il player Bunny deve restare click-to-load**: `<app-bunny-player>` (`shared/ui/bunny-player/`, **unico** punto di mount di un iframe) si monta solo al clic su play. Montarlo al caricamento della pagina farebbe **cadere l'esenzione dell'art. 122** (il player scrive 2 chiavi in localStorage già al load dell'iframe, prima di qualunque play): è un vincolo legale, non una preferenza. Il clic **non è consenso** — mai scrivere "acconsenti cliccando". **Cloudflare Web Analytics è attivo dal 27/06/2026** via auto-inject di zona: **non è nel sorgente**, e `curl | grep cloudflareinsights` dà **0** perché CF inietta solo con uno User-Agent da browser (falso negativo già preso due volte — verificare con Playwright o un UA da browser). Motivazioni e prove in `../gdpr/`.
+⚠️ **Il player Bunny deve restare click-to-load**: `<app-bunny-player>` (`shared/ui/bunny-player/`, **unico** punto di mount di un iframe) si monta solo al clic su play. Montarlo al caricamento della pagina farebbe **cadere l'esenzione dell'art. 122** (il player scrive 2 chiavi in localStorage già al load dell'iframe, prima di qualunque play): è un vincolo legale, non una preferenza. Il clic **non è consenso** — mai scrivere "acconsenti cliccando". Lo **stesso clic** registra anche l'apertura della lezione (`POST /lessons/:id/view`) e, mentre il video scorre, l'avanzamento arrivato dal player via **Player.js**: nessuna delle due cose scrive nel terminale, quindi l'analisi dell'art. 122 non cambia — ciò che non deve mai spostarsi è il **punto di mount**. Guardie in `lessons.component.spec.ts` e `bunny-player.component.spec.ts`. **Cloudflare Web Analytics è attivo dal 27/06/2026** via auto-inject di zona: **non è nel sorgente**, e `curl | grep cloudflareinsights` dà **0** perché CF inietta solo con uno User-Agent da browser (falso negativo già preso due volte — verificare con Playwright o un UA da browser). Motivazioni e prove in `../gdpr/`.
 
 ## Deploy
 
 Push su `main` → **Cloudflare Pages** (`bestfishforever.it`) auto-deploy (~2 min, Node da `.node-version` = 24.16.0). Deploy del **frontend dopo** il backend, verificando che le nuove rotte API rispondano (vedi `../backend/README.md`).
+
+⚠️ **Eccezione — testi legali**: se il cambiamento inizia a raccogliere un dato personale nuovo, l'informativa aggiornata va pubblicata **prima** che la raccolta parta (art. 13.3 GDPR). In quel caso si spezza in tre push: **frontend dei soli testi legali** → backend → frontend del resto. E si **bumpa la data** in `privacy.component.ts` / `cookie-policy.component.ts`: un testo cambiato senza data nuova è un difetto legale silenzioso.

@@ -9,5 +9,6 @@ import { RouterLink } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CookiePolicyComponent {
-  protected readonly aggiornata = '15 luglio 2026';
+  // ⚠️ Da bumpare a ogni modifica del testo (vedi PrivacyComponent).
+  protected readonly aggiornata = '29 luglio 2026';
 }

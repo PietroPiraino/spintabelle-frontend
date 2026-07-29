@@ -9,5 +9,7 @@ import { RouterLink } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PrivacyComponent {
-  protected readonly aggiornata = '15 luglio 2026';
+  // ⚠️ Da bumpare a OGNI modifica del testo: un'informativa cambiata senza
+  // data nuova è un difetto legale silenzioso (l'utente non può accorgersene).
+  protected readonly aggiornata = '29 luglio 2026';
 }

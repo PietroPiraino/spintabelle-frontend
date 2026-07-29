@@ -10,7 +10,9 @@ SPA **Angular 22 standalone, signals, ZONELESS** (no NgModules, no Zone.js) di *
   `export PATH="/c/Users/Pietro Piraino/AppData/Roaming/nvm/v24.16.0:$PATH"`
 - **Zoneless**: il rendering è asincrono. Le guard aspettano `auth.ready$` (`ReplaySubject`), NON `toObservable(signal)`. Nei test/Playwright fare polling, non leggere il DOM subito dopo un click.
 - **Niente colori brand hardcoded**: usare i token CSS in `styles/_tokens.scss` (3 temi via `data-theme`).
-- Gli script `e2e-*.mjs` / `shot-*.mjs` / `deck-*.mjs` sono **gitignored** (tooling locale): non committarli.
+- Gli script `e2e-*.mjs` / `shot-*.mjs` / `deck-*.mjs` / `_*.mjs` sono **tooling locale**: non committarli.
+- ⚠️ **Il player Bunny si monta SOLO al clic** (`<app-bunny-player>`, unico iframe del frontend): è il presupposto dell'esenzione art. 122, non una scelta di UX. Vale anche per il tracking: si aggancia allo stesso clic, non lo anticipa. Guardie in `lessons.component.spec.ts`.
+- ⚠️ **Testi legali**: se una modifica cambia quali dati raccogliamo, l'informativa va aggiornata **e deployata prima** del backend che raccoglie, con la **data bumpata** in `privacy.component.ts`/`cookie-policy.component.ts`.
 
 ## Comandi
 ```bash
@@ -28,4 +30,4 @@ Dopo modifiche significative: `npx ng build` + Karma.
 - UI riusabile: icone via **`app-icon`** (`shared/ui/icon/`, **non emoji**), notifiche via **`ToastService`** (`shared/ui/toast/`, montato una volta in `app-root`); utility solo-screen-reader = **`.visually-hidden`/`.sr-only`** (`styles/_utilities.scss`).
 
 ## Deploy
-Push su `main` → **Cloudflare Pages** auto-deploy (`bestfishforever.it`). **Frontend DOPO il backend**, verificando che le nuove rotte API rispondano (vedi `../backend/AGENTS.md`). Commit/push solo quando l'utente lo chiede.
+Push su `main` → **Cloudflare Pages** auto-deploy (`bestfishforever.it`). **Frontend DOPO il backend**, verificando che le nuove rotte API rispondano (vedi `../backend/AGENTS.md`). ⚠️ **Eccezione**: i **testi legali** vanno pubblicati **prima** del backend che inizia a raccogliere (art. 13.3) → tre push: testi → backend → resto del frontend. Commit/push solo quando l'utente lo chiede.
