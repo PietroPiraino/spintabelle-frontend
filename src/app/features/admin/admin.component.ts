@@ -5,6 +5,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AdminAffiliationsComponent } from './admin-affiliations/admin-affiliations.component';
 import { AdminAuditComponent } from './admin-audit/admin-audit.component';
 import { AdminDiscountsComponent } from './admin-discounts/admin-discounts.component';
 import { AdminDocumentsComponent } from './admin-documents/admin-documents.component';
@@ -26,6 +27,7 @@ type AdminTab =
   | 'iscritti'
   | 'richieste'
   | 'sconti'
+  | 'affiliazioni'
   | 'partecipazione'
   | 'statistiche'
   | 'log';
@@ -41,6 +43,7 @@ type AdminTab =
     AdminUsersComponent,
     AdminSubscriptionRequestsComponent,
     AdminDiscountsComponent,
+    AdminAffiliationsComponent,
     AdminParticipationComponent,
     AdminStatsComponent,
     AdminAuditComponent,
@@ -122,6 +125,14 @@ type AdminTab =
             type="button"
             role="tab"
             class="admin-tabs__tab"
+            [class.is-active]="tab() === 'affiliazioni'"
+            [attr.aria-selected]="tab() === 'affiliazioni'"
+            (click)="setTab('affiliazioni')"
+          >⛓ Affiliazioni</button>
+          <button
+            type="button"
+            role="tab"
+            class="admin-tabs__tab"
             [class.is-active]="tab() === 'partecipazione'"
             [attr.aria-selected]="tab() === 'partecipazione'"
             (click)="setTab('partecipazione')"
@@ -160,6 +171,8 @@ type AdminTab =
           <app-admin-subscription-requests />
         } @else if (tab() === 'sconti') {
           <app-admin-discounts />
+        } @else if (tab() === 'affiliazioni') {
+          <app-admin-affiliations />
         } @else if (tab() === 'partecipazione') {
           <app-admin-participation />
         } @else if (tab() === 'statistiche') {
@@ -213,6 +226,7 @@ export class AdminComponent {
     'iscritti',
     'richieste',
     'sconti',
+    'affiliazioni',
     'partecipazione',
     'statistiche',
     'log',

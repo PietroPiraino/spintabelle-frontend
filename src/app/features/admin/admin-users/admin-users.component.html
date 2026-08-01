@@ -130,6 +130,9 @@
               <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'partecipazione')">
                 Partecipazione
               </button>
+              <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'affiliazioni')">
+                Affiliazioni
+              </button>
               @if (!user.verified) {
                 <button type="button" class="btn btn--ghost btn--sm" (click)="resend(user)">
                   Reinvia verifica
@@ -348,6 +351,57 @@
                     "Aperture" = quante volte ha aperto il video sul sito. La
                     percentuale è il punto più avanzato raggiunto ed è una stima
                     per difetto (si aggiorna al massimo una volta al minuto).
+                  </p>
+                }
+                <div class="row admin-panel__actions">
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Chiudi</button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- ⚠️ FRATELLO della card, mai dentro .admin-item__meta: quello è uno
+               <span>, e un blocco così dentro un inline è markup invalido -->
+          @if (isPanel(user, 'affiliazioni')) {
+            <div class="card card--pad admin-panel">
+              <h3>Affiliazioni — {{ user.email }}</h3>
+              @if (affiliationsLoading()) {
+                <div class="spinner" role="status" aria-label="Caricamento affiliazioni"></div>
+              } @else {
+                @if ((userAffiliations() ?? []).length === 0) {
+                  <p class="admin-item__meta">Nessuna richiesta di affiliazione.</p>
+                } @else {
+                  <ul class="admin-history">
+                    @for (a of userAffiliations()!; track a.id) {
+                      <li>
+                        <span class="badge badge--tag">{{ a.statusLabel }}</span>
+                        <strong>{{ a.roomName }}</strong>
+                        · <code>{{ a.refCode }}</code>
+                        @if (a.roomUsername) {
+                          · username dichiarato: <strong>{{ a.roomUsername }}</strong>
+                        }
+                        @if (a.decidedAt) {
+                          · deciso il {{ a.decidedAt | date: 'dd MMM yyyy' }}
+                        } @else if (a.datiInviatiAt) {
+                          · dati inviati il {{ a.datiInviatiAt | date: 'dd MMM yyyy' }}
+                        } @else if (a.richiestoAt) {
+                          · richiesta del {{ a.richiestoAt | date: 'dd MMM yyyy' }}
+                        }
+                        @if (a.riaperture) {
+                          · {{ a.riaperture }}
+                          {{ a.riaperture === 1 ? 'riapertura' : 'riaperture' }}
+                        }
+                        @if (a.decisionNote) { — {{ a.decisionNote }} }
+                        @if (a.adminNote) {
+                          <span class="admin-item__meta"> · nota interna: {{ a.adminNote }}</span>
+                        }
+                      </li>
+                    }
+                  </ul>
+                  <p class="admin-item__meta">
+                    Il codice è il numero di pratica dell'utente, non un codice
+                    da dare alla sala. Le decisioni (approva, rifiuta, revoca) si
+                    prendono nella tab Affiliazioni.
                   </p>
                 }
                 <div class="row admin-panel__actions">

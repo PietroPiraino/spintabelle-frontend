@@ -12,6 +12,11 @@ import {
 import { AdminUsersService } from '../../../core/services/admin-users.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
 
+/**
+ * ⚠️ Mappa GEMELLA di `actionLabel()` in `admin-users.component.ts` (storico del
+ * singolo iscritto): le stesse azioni si stampano nei due posti. Aggiornarne una
+ * sola lascia lo slug grezzo visibile nell'altra.
+ */
 const ACTION_LABELS: Record<string, string> = {
   'set-expiry': 'Scadenza modificata',
   'grant-subscription': 'Abbonamento concesso',
@@ -27,8 +32,26 @@ const ACTION_LABELS: Record<string, string> = {
   'delete-gadget': 'Gadget eliminato',
   'fulfill-order': 'Ordine evaso',
   'cancel-order': 'Ordine annullato',
+  'approve-affiliation': 'Affiliazione approvata',
+  'reject-affiliation': 'Affiliazione rifiutata',
+  'revoke-affiliation': 'Affiliazione revocata',
+  'note-affiliation': 'Nota interna affiliazione',
+  'resend-affiliation': 'Email affiliazione reinviata',
+  'create-poker-room': 'Sala creata',
+  'update-poker-room': 'Sala modificata',
+  'delete-poker-room': 'Sala eliminata',
 };
 
+/**
+ * Etichette dei campi confrontati in `before`/`after`.
+ *
+ * ⚠️ Lo snapshot di un'affiliazione ha OTTO chiavi, non quattro: oltre a stato,
+ * collegamento, sala e username ci sono `affiliateUrlSnapshot` e
+ * `linkInviatoAt`, che sono le sole due cose che un *rinvio* cambia (senza di
+ * loro la voce `resend-affiliation` registrerebbe due volte la stessa riga), più
+ * le due note. Viaggiano nel before/after di OGNI voce di affiliazione, quindi
+ * una chiave senza etichetta mostra lo slug grezzo nel pannello.
+ */
 const KEY_LABELS: Record<string, string> = {
   role: 'Ruolo',
   subscriptionExpiresAt: 'Scadenza',
@@ -40,6 +63,21 @@ const KEY_LABELS: Record<string, string> = {
   value: 'Valore',
   audience: 'Platea',
   active: 'Attivo',
+  // affiliazioni (riga di tracciamento)
+  status: 'Stato',
+  claimAttivo: 'Collegamento attivo',
+  roomName: 'Sala',
+  roomUsername: 'Username dichiarato',
+  affiliateUrlSnapshot: 'Link affiliato inviato',
+  linkInviatoAt: 'Link inviato il',
+  decisionNote: "Nota per l'utente",
+  adminNote: 'Nota interna',
+  // affiliazioni (catalogo sale)
+  name: 'Nome',
+  slug: 'Slug',
+  affiliateUrlTemplate: 'Modello del link affiliato',
+  disattivata: 'Disattivata',
+  tracciamenti: 'Tracciamenti',
 };
 
 @Component({

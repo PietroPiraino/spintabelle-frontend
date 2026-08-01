@@ -1,0 +1,236 @@
+// Chrome extra di /affiliazioni. Il grosso arriva dai globali (.section,
+// .container, .card, .field, .btn, .badge, .form-feedback): qui stanno solo le
+// figure che non esistono altrove o che vivono in file component-scoped e da
+// qui non sono raggiungibili.
+// ⚠️ Colori SOLO da _tokens.scss (tre temi): nessun valore hardcoded.
+
+// ── Parte pubblica (finisce nell'HTML prerenderizzato) ────────────────────────
+
+.aff__how {
+  margin-bottom: 2rem;
+}
+
+// I tre passi sono una sequenza vera (l'ordine è informazione: senza il primo
+// accesso al client il passo 3 non può riuscire), quindi il numero non è
+// decorazione. È `aria-hidden` nel markup perché la lista lo comunica già.
+.aff__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+
+.aff__step-n {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--copper-400);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--gold-text);
+}
+
+.aff__terms,
+.aff__disclaimer {
+  margin-top: 2rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.aff__disclaimer {
+  font-weight: 600;
+}
+
+// Riquadro per l'anonimo: spiega perché non vede le sale e dove andare.
+// ⚠️ Nessun marchio di operatore qui dentro — questa parte è indicizzabile.
+.aff__gate {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+
+.aff__gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.aff__gate-hint {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-faint);
+}
+
+// ── Vetrina ───────────────────────────────────────────────────────────────────
+
+.aff__rooms {
+  margin-top: 1.5rem;
+}
+
+// La card muta sul posto dopo un'azione: senza una regione annunciata, chi usa
+// uno screen reader non saprebbe che è successo qualcosa.
+.aff__live {
+  margin: 1rem 0 0;
+
+  &:empty {
+    margin: 0;
+  }
+}
+
+// Copia di `.shop-thumb` (admin-shop.component.scss, component-scoped e da qui
+// irraggiungibile). Stesse misure di proposito: il linguaggio visivo resta uno.
+.aff-thumb {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.aff-thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--text-faint);
+}
+
+// ── Codice in evidenza (promozionale della sala, o numero di pratica) ─────────
+
+.aff-code {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.85rem 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--copper-400);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+
+.aff-code__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.aff-code__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+// ⚠️ `user-select: all` e nessun `text-transform`: è una stringa che l'utente
+// digita altrove: se la copia fallisce deve poterla selezionare a mano, e deve
+// leggerla esattamente com'è.
+.aff-code__value {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  color: var(--cream-100);
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.aff-copy {
+  padding: 0.3rem 0.5rem;
+  line-height: 0;
+}
+
+// ⚠️ NON `display: none` e NON `visibility: hidden`: il ripiego della copia
+// chiama `select()` su questo campo, e un elemento non renderizzato non si può
+// selezionare. Fuori dallo schermo, non rimosso.
+.aff__copy-fallback {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+// ── Card: note, tempi, azioni ────────────────────────────────────────────────
+
+.aff-card__note {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: pre-wrap; // le istruzioni della sala sono testo semplice
+}
+
+// Il ritardo di attribuzione: se non è scritto qui, l'attesa sembra un guasto.
+.aff-card__eta {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+.aff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+// ── Form inline (richiesta e invio dati) ─────────────────────────────────────
+
+.aff-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+
+.aff-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+// Il promemoria sul primo accesso al client: sta SOPRA il campo username
+// perché è la ragione più frequente per cui un invio verrebbe rifiutato.
+.aff-form__reminder {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-left: 2px solid var(--copper-400);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.aff-help {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+@media (max-width: 720px) {
+  .aff-actions,
+  .aff-form__actions,
+  .aff__gate-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -12,6 +12,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs';
 import {
   AdminActionLogEntry,
   AdminUser,
+  AffiliationAdmin,
   DiscountCode,
   LessonViewSummary,
   Paginated,
@@ -22,6 +23,7 @@ import {
 } from '../../../core/models/api.models';
 import { AdminDiscountsService } from '../../../core/services/admin-discounts.service';
 import { AdminUsersService } from '../../../core/services/admin-users.service';
+import { AffiliationsService } from '../../../core/services/affiliations.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PointsService } from '../../../core/services/points.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
@@ -40,6 +42,7 @@ type PanelKind =
   | 'profile'
   | 'history'
   | 'partecipazione'
+  | 'affiliazioni'
   | 'discount';
 
 @Component({
@@ -53,6 +56,7 @@ export class AdminUsersComponent {
   private readonly usersApi = inject(AdminUsersService);
   private readonly pointsApi = inject(PointsService);
   private readonly discountsApi = inject(AdminDiscountsService);
+  private readonly affiliationsApi = inject(AffiliationsService);
   private readonly auth = inject(AuthService);
 
   protected readonly page = signal<Paginated<AdminUser> | null>(null);
@@ -106,6 +110,10 @@ export class AdminUsersComponent {
   protected readonly liveAttendance = signal<UserLiveAttendance[] | null>(null);
   protected readonly lessonViews = signal<LessonViewSummary[] | null>(null);
   protected readonly participationLoading = signal(false);
+
+  // ── Affiliazioni: su quali sale è (o ha chiesto di essere) tracciato ──
+  protected readonly userAffiliations = signal<AffiliationAdmin[] | null>(null);
+  protected readonly affiliationsLoading = signal(false);
 
   // ── Assegna codice sconto ──
   protected readonly discountCodes = signal<DiscountCode[] | null>(null);
@@ -232,6 +240,9 @@ export class AdminUsersComponent {
         break;
       case 'partecipazione':
         this.loadParticipation(user);
+        break;
+      case 'affiliazioni':
+        this.loadAffiliations(user);
         break;
       case 'discount':
         this.selectedCodeId.reset('');
@@ -477,6 +488,28 @@ export class AdminUsersComponent {
     });
   }
 
+  // ── Affiliazioni (poker room) ───────────────────────────────────────────--
+
+  /**
+   * Caricamento pigro all'apertura del pannello. L'errore è assorbito a `[]`:
+   * un pannello accessorio che fallisce non deve rubare il banner d'errore
+   * della pagina (stessa scelta di "Partecipazione" e "Storico").
+   */
+  private loadAffiliations(user: AdminUser): void {
+    this.userAffiliations.set(null);
+    this.affiliationsLoading.set(true);
+    this.affiliationsApi.forUser(user.id).subscribe({
+      next: (rows) => {
+        this.userAffiliations.set(rows);
+        this.affiliationsLoading.set(false);
+      },
+      error: () => {
+        this.userAffiliations.set([]);
+        this.affiliationsLoading.set(false);
+      },
+    });
+  }
+
   // ── Storico ─────────────────────────────────────────────────────────────--
 
   private loadHistory(user: AdminUser): void {
@@ -499,6 +532,11 @@ export class AdminUsersComponent {
     });
   }
 
+  /**
+   * ⚠️ Mappa GEMELLA di `ACTION_LABELS` in `admin-audit.component.ts`: le stesse
+   * azioni sono stampate qui (storico del singolo iscritto) e là (log globale).
+   * Aggiornarne una sola lascia lo slug grezzo visibile nell'altra.
+   */
   protected actionLabel(action: string): string {
     const map: Record<string, string> = {
       'set-expiry': 'Scadenza modificata',
@@ -507,6 +545,14 @@ export class AdminUsersComponent {
       'edit-profile': 'Dati modificati',
       'grant-discount-eligibility': 'Codice sconto assegnato',
       'revoke-discount-eligibility': 'Codice sconto revocato',
+      'approve-affiliation': 'Affiliazione approvata',
+      'reject-affiliation': 'Affiliazione rifiutata',
+      'revoke-affiliation': 'Affiliazione revocata',
+      'note-affiliation': 'Nota interna affiliazione',
+      'resend-affiliation': 'Email affiliazione reinviata',
+      'create-poker-room': 'Sala creata',
+      'update-poker-room': 'Sala modificata',
+      'delete-poker-room': 'Sala eliminata',
     };
     return map[action] ?? action;
   }

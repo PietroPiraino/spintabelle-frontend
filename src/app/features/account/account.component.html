@@ -113,6 +113,72 @@
       }
     </div>
 
+    <!-- Le mie affiliazioni (tracciamento poker room) -->
+    <div class="card card--pad account__card">
+      <h2>Le mie affiliazioni</h2>
+      @if (affiliationsError()) {
+        <!-- ⚠️ mai una lista vuota al posto di un errore: direbbe "non sei
+             tracciato da nessuna parte" mentre l'API è irraggiungibile -->
+        <div class="form-feedback is-error" role="alert">{{ affiliationsError() }}</div>
+      } @else if (myAffiliations() === null) {
+        <div class="spinner" role="status" aria-label="Caricamento affiliazioni"></div>
+      } @else if (affiliationsTracked().length === 0 && affiliationsInProgress().length === 0) {
+        <p class="text-muted">Non risulti tracciato su nessuna sala.</p>
+      } @else {
+        @if (affiliationsTracked().length) {
+          <h3 class="account__group">Dove sei tracciato</h3>
+          <ul style="list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.6rem">
+            @for (a of affiliationsTracked(); track a.id) {
+              <li class="spread" style="gap: 1rem">
+                <span class="text-muted">
+                  <strong>{{ a.roomName }}</strong>
+                  @if (a.decidedAt) {
+                    · dal {{ a.decidedAt | date: 'dd MMM yyyy' }}
+                  }
+                </span>
+                <span class="account__chip" [class]="affiliationChip(a)">
+                  {{ a.statusLabel }}
+                </span>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (affiliationsInProgress().length) {
+          <h3 class="account__group">In corso</h3>
+          <ul style="list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.6rem">
+            @for (a of affiliationsInProgress(); track a.id) {
+              <li class="spread" style="gap: 1rem">
+                <span class="text-muted">
+                  <strong>{{ a.roomName }}</strong>
+                  @if (a.richiestoAt) {
+                    · richiesta del {{ a.richiestoAt | date: 'dd MMM yyyy' }}
+                  }
+                </span>
+                <span class="row" style="gap: 0.5rem">
+                  <span class="account__chip" [class]="affiliationChip(a)">
+                    {{ a.statusLabel }}
+                  </span>
+                  @if (a.status === 'RICHIESTO' && a.roomSlug) {
+                    <!-- ⚠️ un solo parametro, ed è lo slug: è la stessa chiave
+                         del deep-link spedito per email -->
+                    <a
+                      class="btn btn--ghost btn--sm"
+                      routerLink="/affiliazioni"
+                      [queryParams]="{ completa: a.roomSlug }"
+                    >Completa i dati →</a>
+                  }
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      }
+      <p class="account__more">
+        <a routerLink="/affiliazioni">Vai alle affiliazioni →</a>
+      </p>
+    </div>
+
     <!-- Dati di profilo (rettifica) -->
     <div class="card card--pad account__card">
       <h2>Dati di profilo</h2>

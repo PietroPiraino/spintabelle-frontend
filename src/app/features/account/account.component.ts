@@ -14,7 +14,13 @@ import {
 } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { MyPoints, MyVoucher, ShopOrder } from '../../core/models/api.models';
+import {
+  MyAffiliation,
+  MyPoints,
+  MyVoucher,
+  ShopOrder,
+} from '../../core/models/api.models';
+import { AffiliationsService } from '../../core/services/affiliations.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PointsService } from '../../core/services/points.service';
 import { ShopService } from '../../core/services/shop.service';
@@ -38,6 +44,7 @@ export class AccountComponent {
   private readonly auth = inject(AuthService);
   private readonly pointsApi = inject(PointsService);
   private readonly shop = inject(ShopService);
+  private readonly affiliationsApi = inject(AffiliationsService);
   private readonly router = inject(Router);
 
   protected readonly user = this.auth.user;
@@ -52,6 +59,26 @@ export class AccountComponent {
   // ── Negozio: buoni e ordini dell'utente (best-effort) ──
   protected readonly myVouchers = signal<MyVoucher[]>([]);
   protected readonly myOrders = signal<ShopOrder[]>([]);
+
+  // ── Affiliazioni (tracciamento poker room) ──
+  // ⚠️ Qui NON si assorbe l'errore in una lista vuota come nelle card qui sopra:
+  // sui buoni "lista vuota" significa "non ne hai", su queste righe significa
+  // "non sei tracciato da nessuna parte" — che con l'API giù è una bugia, e
+  // proprio sul dato per cui l'utente è passato di qui. Segnale d'errore
+  // dedicato e riga d'errore vera. `null` = ancora in caricamento.
+  protected readonly myAffiliations = signal<MyAffiliation[] | null>(null);
+  protected readonly affiliationsError = signal<string | null>(null);
+
+  /** Sale in cui il tracciamento è confermato. */
+  protected readonly affiliationsTracked = computed(() =>
+    (this.myAffiliations() ?? []).filter((a) => a.status === 'APPROVATO'),
+  );
+  /** Pratiche ancora in volo: link ricevuto o dati in verifica. */
+  protected readonly affiliationsInProgress = computed(() =>
+    (this.myAffiliations() ?? []).filter(
+      (a) => a.status === 'RICHIESTO' || a.status === 'IN_VERIFICA',
+    ),
+  );
 
   // ── Abbonamento (dal ruolo/scadenza già in auth.user) ──
   protected readonly isAdmin = this.auth.isAdmin;
@@ -132,6 +159,26 @@ export class AccountComponent {
       next: (o) => this.myOrders.set(o),
       error: () => undefined,
     });
+    // affiliazioni: errore MOSTRATO, non assorbito (vedi il commento sui segnali)
+    this.affiliationsApi.mine().subscribe({
+      next: (rows) => this.myAffiliations.set(rows),
+      error: (err: unknown) => {
+        this.myAffiliations.set([]);
+        this.affiliationsError.set(
+          apiErrorMessage(err, 'Caricamento delle affiliazioni non riuscito.'),
+        );
+      },
+    });
+  }
+
+  /**
+   * Modificatore del chip di stato (il testo è `statusLabel`, calcolato dal
+   * server: nessuna mappa stato→etichetta nel client).
+   */
+  protected affiliationChip(a: MyAffiliation): string {
+    if (a.status === 'APPROVATO') return 'account__chip--available';
+    if (a.status === 'IN_VERIFICA') return 'account__chip--reserved';
+    return '';
   }
 
   /** Etichetta IT dello stato di un buono. */

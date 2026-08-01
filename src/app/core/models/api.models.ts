@@ -1048,3 +1048,284 @@ export interface AdminVideoStatsView {
 
   limiti: string[];
 }
+
+// ----- Affiliazioni (tracciamento poker room) -----
+// Ricalcate sulle VISTE del backend (branch `affiliazioni`):
+// `affiliations/poker-rooms.service.ts` (PokerRoomView / PokerRoomAdminView) e
+// `affiliations/affiliations.service.ts` (MyAffiliationView / AffiliationAdminView).
+// Non c'è un tipo condiviso fra i due repo: se là cambia una shape, va cambiata
+// anche qui. ⚠️ Le `Date` del backend arrivano serializzate come stringhe ISO
+// (come ovunque in questo file), quindi qui sono `string`.
+
+/**
+ * Sei stati, ognuno con una via di ritorno: la coppia {utente, sala} non viene
+ * mai liberata, quindi uno stato senza uscita chiuderebbe fuori quell'utente da
+ * quella sala per sempre. ⚠️ `ANNULLATO` (chiusura self-service dell'utente) è
+ * uno stato vero, non l'assenza di riga: dimenticarlo lascia una card senza
+ * etichetta e senza azioni.
+ */
+export type AffiliationStatus =
+  | 'RICHIESTO'
+  | 'IN_VERIFICA'
+  | 'APPROVATO'
+  | 'RIFIUTATO'
+  | 'REVOCATO'
+  | 'ANNULLATO';
+
+/**
+ * Gli stessi sei, nell'ordine del ciclo di vita: alimenta le pillole di filtro
+ * del pannello admin. ⚠️ Nessuna mappa stato→etichetta qui: l'italiano lo
+ * calcola il server (`statusLabel`), una sola fonte di verità per pagina utente,
+ * pannello ed email.
+ */
+export const AFFILIATION_STATUSES: readonly AffiliationStatus[] = [
+  'RICHIESTO',
+  'IN_VERIFICA',
+  'APPROVATO',
+  'RIFIUTATO',
+  'REVOCATO',
+  'ANNULLATO',
+];
+
+/** Forma ammessa per l'identificativo dichiarato, configurata per sala. */
+export type IdentifierFormat = 'LIBERO' | 'ALFANUMERICO' | 'NUMERICO';
+
+/**
+ * Poker room come la vede l'UTENTE (`GET /affiliations/rooms`).
+ *
+ * ⚠️ Non porta MAI `affiliateUrlTemplate` (il link esce solo come snapshot sulla
+ * riga personale), `logoStoragePath` né `istruzioni` (possono citare bonus di
+ * deposito: restano dietro la richiesta e viaggiano su `MyAffiliation`).
+ */
+export interface PokerRoom {
+  id: string;
+  name: string;
+  /** chiave del deep-link `/affiliazioni?completa=<slug>` */
+  slug: string;
+  /** etichetta di raggruppamento (circuito), non una regola */
+  network?: string;
+  descrizione?: string;
+  condizioni?: string;
+  /**
+   * Codice da digitare sul sito della sala quando non esiste un link tracciato
+   * (AdmiralBet). ⚠️ Pubblico di proposito: è un'istruzione, non un segreto — la
+   * card deve poterlo mostrare anche prima della richiesta.
+   */
+  codicePromozionale?: string;
+  /** assente = logo non caricato: la card mostra il segnaposto */
+  logoUrl?: string;
+  identifierLabel: string;
+  identifierHelp?: string;
+  /** già clampati dal server: i validator del form si costruiscono da qui */
+  identifierMinLen: number;
+  identifierMaxLen: number;
+  richiedeSecondoId: boolean;
+  secondIdentifierLabel?: string;
+  /** false = la sala non traccia chi ha già un account (tutte e otto, oggi) */
+  consenteAccountEsistenti: boolean;
+  ordine: number;
+}
+
+/** Poker room come la vede l'ADMIN: aggiunge i campi interni e di stato. */
+export interface PokerRoomAdmin extends PokerRoom {
+  istruzioni?: string;
+  /** ⚠️ campo INTERNO: non mostrarlo fuori dal pannello admin */
+  affiliateUrlTemplate: string;
+  identifierFormat: IdentifierFormat;
+  identifierCaseSensitive: boolean;
+  active: boolean;
+  /**
+   * true = il template di QUESTA sala usa il segnaposto `{ref}`. ⚠️ Oggi è false
+   * ovunque: verso la sala non parte alcun codice nostro.
+   */
+  supportaCodice: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Metadati per creare una sala (il logo viaggia in multipart, ed è facoltativo).
+ *
+ * ⚠️ `slug` si fissa alla creazione e non è più modificabile: è la chiave dei
+ * deep-link `?completa=<slug>` già finiti nelle email spedite (vedi
+ * `PokerRoomUpdatePayload`).
+ */
+export interface PokerRoomPayload {
+  name: string;
+  slug: string;
+  network?: string;
+  descrizione?: string;
+  condizioni?: string;
+  istruzioni?: string;
+  affiliateUrlTemplate: string;
+  codicePromozionale?: string;
+  identifierLabel?: string;
+  identifierHelp?: string;
+  identifierFormat?: IdentifierFormat;
+  identifierMinLen?: number;
+  identifierMaxLen?: number;
+  identifierCaseSensitive?: boolean;
+  richiedeSecondoId?: boolean;
+  secondIdentifierLabel?: string;
+  consenteAccountEsistenti?: boolean;
+  ordine?: number;
+  /** ⚠️ assente = false: una sala si pubblica di proposito, non salvandola */
+  active?: boolean;
+}
+
+/** Modifica sala: tutto facoltativo, `slug` escluso (il backend lo rifiuta). */
+export type PokerRoomUpdatePayload = Partial<Omit<PokerRoomPayload, 'slug'>>;
+
+/**
+ * Risposta del PATCH sala: la vista admin più l'avviso sui link già spediti.
+ */
+export interface PokerRoomUpdated extends PokerRoomAdmin {
+  /**
+   * Presente SOLO quando il PATCH ha cambiato `affiliateUrlTemplate`: quante
+   * righe sono ancora in attesa del link (`RICHIESTO`) e quindi ne portano uno
+   * vecchio. Il motivo normale per cambiare un template è che il programma ha
+   * ruotato il tracker: da quel momento quelle N persone si registrerebbero su
+   * un indirizzo morto. Va STAMPATO nel pannello, con la scorciatoia "Reinvia".
+   */
+  righeAperteConLinkPrecedente?: number;
+}
+
+/**
+ * Esito della cancellazione di una sala.
+ *
+ * ⚠️ Con tracciamenti esistenti è un **200** con `disattivata:true`, non un 4xx:
+ * la chiamata MUTA comunque (`active:false`), quindi va trattata come successo e
+ * l'elenco va ricaricato, o il pannello continua a mostrare attiva una sala che
+ * non lo è più.
+ */
+export interface PokerRoomRemoved {
+  ok: true;
+  disattivata: boolean;
+  tracciamenti: number;
+  /** messaggio italiano già pronto per il pannello */
+  messaggio: string;
+}
+
+/**
+ * La riga come la vede l'UTENTE (`GET /affiliations/me`).
+ *
+ * ⚠️ Non porta MAI `adminNote`: è il blocco note dell'owner. Il campo che
+ * l'utente legge è `decisionNote`.
+ */
+export interface MyAffiliation {
+  id: string;
+  roomId: string;
+  roomName: string;
+  /** assente se la sala non esiste più */
+  roomSlug?: string;
+  /**
+   * La sala accetta ancora nuove richieste. false = disattivata: la card stampa
+   * il motivo ("Questa sala non accetta nuove richieste") invece di un errore
+   * generico — una sala disattivata sparisce dalla vetrina ma le righe già
+   * aperte restano.
+   */
+  roomAttiva: boolean;
+  /**
+   * Codice di riferimento personale `AFF-XXXXXXXX`. ⚠️ È il **numero di pratica**
+   * dell'utente (da citare scrivendoci), NON un codice da dare alla sala: verso
+   * la sala non parte nulla di nostro.
+   */
+  refCode: string;
+  /**
+   * Link affiliato, letto dallo **snapshot** congelato sulla riga: è lo stesso
+   * che l'utente ha in casella. ⚠️ Non ricomporlo mai dal template della sala.
+   */
+  affiliateUrl?: string;
+  /**
+   * Codice promozionale della sala, riletto dalla SALA a ogni lettura (non è uno
+   * snapshot): una correzione dell'owner deve valere subito anche per chi il
+   * link ce l'ha già. Dove c'è, è la sola stringa che attribuisce la
+   * registrazione — va mostrata PRIMA del `refCode`.
+   */
+  codicePromozionale?: string;
+  istruzioni?: string;
+  status: AffiliationStatus;
+  /** etichetta italiana calcolata dal server: non ricalcolarla nel client */
+  statusLabel: string;
+  identifierLabel?: string;
+  /** conservato ESATTAMENTE come digitato dall'utente */
+  roomUsername?: string;
+  roomUserId?: string;
+  accountEsistente: boolean;
+  dichiaraProprieta: boolean;
+  accettaTermini: boolean;
+  /** motivo della decisione, scritto dall'admin e leggibile dall'utente */
+  decisionNote?: string;
+  richiestoAt?: string;
+  linkInviatoAt?: string;
+  datiInviatiAt?: string;
+  decidedAt?: string;
+  revocatoAt?: string;
+  riaperture: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Risposta di `POST .../request`: la riga più se l'email è davvero partita.
+ *
+ * ⚠️ `emailSent:false` è un caso reale, non teorico (l'invio è best-effort): la
+ * card deve mostrare comunque il link in pagina e dirlo, invece di lasciare
+ * l'utente ad aspettare un'email che non arriverà.
+ */
+export interface MyAffiliationRequest extends MyAffiliation {
+  emailSent: boolean;
+}
+
+/** Esito di un rinvio email (rotta utente e rotta admin: stessa forma). */
+export interface AffiliationResendResult {
+  emailSent: boolean;
+  /** fra quanti minuti sarà possibile un altro invio (cooldown per-riga) */
+  prossimoInvioTraMinuti?: number;
+}
+
+/** La riga come la vede l'ADMIN: aggiunge i campi interni. */
+export interface AffiliationAdmin extends MyAffiliation {
+  userId: string;
+  userEmail: string;
+  userNickname?: string;
+  /**
+   * Nota INTERNA dell'owner ("trovato nel back-office come FishKiller91"). ⚠️ Non
+   * esce da nessuna vista utente e da nessuna email: non stamparla altrove.
+   */
+  adminNote?: string;
+  decidedBy?: string;
+  ownerNotifiedAt?: string;
+}
+
+/** Badge sul tab admin (`GET /admin/affiliations/pending-count`). */
+export interface AffiliationsPendingCount {
+  inVerifica: number;
+}
+
+/**
+ * Corpo di `POST /affiliations/rooms/:roomId/request`: tre spunte e nient'altro.
+ *
+ * ⚠️ NIENTE `roomUsername`/`roomUserId` qui: l'username esiste solo dopo aver
+ * creato il conto e arriva con `PUT .../identifier`. Un corpo che li porta prende
+ * un **400** (`forbidNonWhitelisted`), non uno scarto silenzioso.
+ * ⚠️ `dichiaraProprieta` e `accettaTermini` devono essere `true`: lato form sono
+ * `Validators.requiredTrue`, che rispecchia l'`@Equals(true)` dei DTO.
+ */
+export interface AffiliationRequestPayload {
+  accountEsistente: boolean;
+  dichiaraProprieta: boolean;
+  accettaTermini: boolean;
+}
+
+/**
+ * Corpo di `PUT /affiliations/rooms/:roomId/identifier`.
+ *
+ * ⚠️ `accettaTermini` NON si ripete: un `PUT identifier` atterra sempre su una
+ * riga che l'accettazione ce l'ha già (riaperture dopo un rifiuto comprese).
+ */
+export interface AffiliationIdentifierPayload {
+  roomUsername: string;
+  roomUserId?: string;
+  dichiaraProprieta: boolean;
+}
