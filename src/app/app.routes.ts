@@ -148,10 +148,15 @@ export const routes: Routes = [
       import('./features/affiliations/affiliations.component').then(
         (m) => m.AffiliationsComponent,
       ),
+    // ⚠️ Testo deliberatamente NEUTRO: questa pagina è prerenderizzata, quindi
+    // title e description finiscono nell'HTML indicizzabile e nella SERP. Qui
+    // niente marchi di operatore, niente nomi di formato e niente linguaggio
+    // promozionale sulle condizioni: le offerte vere stanno dietro login.
+    // Non "migliorare" per SEO — vedi PLAN-affiliazioni.md §9.3 e §11.
     title: 'Affiliazioni — Best Fish Forever',
     data: {
       description:
-        'Affiliazioni e offerte rakeback consigliate da Best Fish Forever per chi gioca a Spin & Go e Twister.',
+        'Il programma di affiliazione di Best Fish Forever: come funziona e come si richiede dal tuo account. Condizioni riservate agli iscritti. 18+, gioca responsabilmente.',
     },
   },
   {
