@@ -1,0 +1,148 @@
+// Chrome extra della tab Affiliazioni: miniatura del logo, chip di stato e
+// stringhe da copiare. Il resto riusa admin-shared.scss e i globali.
+// ⚠️ Colori solo da _tokens.scss (tre temi): niente valori hardcoded.
+
+// Copia di `.shop-thumb` (admin-shop.component.scss): quel file è
+// component-scoped e da qui non è raggiungibile. Stesse misure di proposito —
+// il linguaggio visivo del pannello resta uno solo.
+.aff-thumb {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.aff-thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--text-faint);
+}
+
+.aff-item {
+  align-items: flex-start;
+}
+
+.aff-line {
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+// Numero di pratica: è la stringa che l'owner cerca, quindi è la più leggibile
+// della riga (mono, un filo più grande del meta).
+.aff-code {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+  color: var(--cream-100);
+  // Selezionabile a mano anche se la copia fallisce: mai un vicolo cieco.
+  user-select: all;
+}
+
+// Username dichiarato (e codice promozionale): si conserva ESATTAMENTE come
+// digitato — nessuna trasformazione di maiuscole, spazi preservati.
+.aff-user {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  user-select: all;
+}
+
+.aff-copy {
+  padding: 0.25rem 0.45rem;
+  line-height: 0;
+}
+
+// Il template del link può essere lunghissimo: non deve sfondare la card.
+.aff-url {
+  overflow-wrap: anywhere;
+}
+
+.aff-internal {
+  color: var(--text-muted);
+}
+
+.aff-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+// Pannello inline di una decisione (conferma/motivo/nota): niente dialog, come
+// ovunque nel progetto.
+.aff-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+  width: min(420px, 100%);
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--copper-400);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+
+.aff-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+
+  code {
+    font-family: var(--font-mono);
+    background: var(--line);
+    padding: 0.05em 0.35em;
+    border-radius: var(--radius-sm);
+  }
+}
+
+// Chip di stato: stesso chrome del badge, colore per stato. L'etichetta la
+// scrive il server (`statusLabel`) — qui c'è solo il colore.
+.aff-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.aff-chip--richiesto,
+.aff-chip--annullato {
+  color: var(--text-faint);
+}
+
+.aff-chip--in_verifica {
+  color: var(--ember);
+}
+
+.aff-chip--approvato {
+  color: var(--gold-text);
+}
+
+.aff-chip--rifiutato,
+.aff-chip--revocato {
+  color: var(--danger);
+}
+
+@media (max-width: 720px) {
+  .aff-actions {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .aff-panel {
+    width: 100%;
+  }
+}

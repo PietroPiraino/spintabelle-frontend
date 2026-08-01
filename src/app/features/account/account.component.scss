@@ -75,6 +75,25 @@
   margin-bottom: 1rem;
 }
 
+// Sottotitolo dei gruppi dentro una card (affiliazioni: tracciato / in corso)
+.account__group {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 1.2rem 0 0;
+
+  &:first-of-type {
+    margin-top: 0.4rem;
+  }
+}
+
+// Riga di rimando in fondo a una card
+.account__more {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
 // Chip di stato per buoni/ordini del Negozio (stessa cifra di .account__badge)
 .account__chip {
   font-family: var(--font-mono);

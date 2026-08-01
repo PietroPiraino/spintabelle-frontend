@@ -1,0 +1,724 @@
+<div
+  class="row"
+  role="group"
+  aria-label="Sotto-sezioni delle affiliazioni"
+  style="gap: 0.5rem; margin-bottom: 1.6rem"
+>
+  <button
+    type="button"
+    class="badge badge--tag"
+    [class.is-active]="view() === 'richieste'"
+    (click)="setView('richieste')"
+  >Richieste@if (pending()) { ({{ pending() }}) }</button>
+  <button
+    type="button"
+    class="badge badge--tag"
+    [class.is-active]="view() === 'sale'"
+    (click)="setView('sale')"
+  >Poker room</button>
+</div>
+
+@if (view() === 'richieste') {
+  <!-- ─────────────────────────── RICHIESTE ─────────────────────────── -->
+  <div class="admin-list">
+    <div class="spread">
+      <h2>Richieste di affiliazione</h2>
+      @if (reqPage(); as p) {
+        <span class="admin-item__meta">
+          {{ p.total }} {{ p.total === 1 ? 'richiesta' : 'richieste' }}
+        </span>
+      }
+    </div>
+
+    <input
+      type="search"
+      class="input"
+      placeholder="Cerca per numero di pratica, username, email o nickname…"
+      aria-label="Cerca richieste di affiliazione"
+      [formControl]="searchControl"
+      style="margin: 0.6rem 0"
+    />
+
+    <div
+      class="row"
+      role="group"
+      aria-label="Filtra per stato"
+      style="gap: 0.5rem; margin: 0.4rem 0 0.6rem; flex-wrap: wrap"
+    >
+      @for (s of statuses; track s) {
+        <button
+          type="button"
+          class="badge badge--tag"
+          [class.is-active]="statusFilter() === s"
+          (click)="setStatusFilter(s)"
+        >{{ statusFilterLabel(s) }}</button>
+      }
+    </div>
+
+    @if (roomFilter(); as rf) {
+      <div class="row" style="gap: 0.5rem; align-items: center; margin-bottom: 0.6rem">
+        <span class="admin-item__meta">Solo la sala: {{ rf.name }}</span>
+        <button type="button" class="btn btn--ghost btn--sm" (click)="clearRoomFilter()">
+          Rimuovi filtro
+        </button>
+      </div>
+    }
+
+    <p class="aff-hint">{{ ritardoAttribuzione }}</p>
+
+    @if (reqFeedback()) {
+      <div class="form-feedback is-success" role="status">{{ reqFeedback() }}</div>
+    }
+    @if (reqError()) {
+      <div class="form-feedback is-error" role="alert">{{ reqError() }}</div>
+    }
+
+    @if (!reqPage() && reqLoading()) {
+      <div class="spinner" role="status" aria-label="Caricamento"></div>
+    } @else if (reqPage() && reqPage()!.items.length === 0) {
+      <div class="empty-state">
+        <p>Nessuna richiesta con questo filtro.</p>
+      </div>
+    } @else if (reqPage()) {
+      @for (a of reqPage()!.items; track a.id) {
+        <div class="card admin-item aff-item">
+          <div class="admin-item__info">
+            <!-- Numero di pratica per primo: è la chiave con cui l'owner ritrova
+                 la riga a partire da un messaggio di supporto. -->
+            <div class="row aff-line">
+              <code class="aff-code">{{ a.refCode }}</code>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm aff-copy"
+                [attr.aria-label]="'Copia il numero di pratica ' + a.refCode"
+                (click)="copy(a.refCode, 'Numero di pratica')"
+              ><app-icon name="copy" [size]="15" /></button>
+              <span [class]="chipClass(a.status)">{{ a.statusLabel }}</span>
+              @if (a.riaperture > 0) {
+                <span class="badge">{{ a.riaperture }} riaperture</span>
+              }
+            </div>
+
+            <!-- L'username dichiarato: è QUESTO che si confronta nel back-office
+                 della sala (verso la sala non parte alcun codice nostro). -->
+            <div class="row aff-line">
+              <span class="admin-item__meta">
+                {{ a.identifierLabel || 'Username dichiarato' }}:
+              </span>
+              @if (a.roomUsername) {
+                <code class="aff-user">{{ a.roomUsername }}</code>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm aff-copy"
+                  [attr.aria-label]="'Copia l\'username dichiarato ' + a.roomUsername"
+                  (click)="copy(a.roomUsername!, 'Username dichiarato')"
+                ><app-icon name="copy" [size]="15" /></button>
+              } @else {
+                <span class="admin-item__meta">non ancora inviato</span>
+              }
+              @if (a.roomUserId) {
+                <code class="aff-user">{{ a.roomUserId }}</code>
+              }
+            </div>
+
+            <span class="admin-item__meta">
+              {{ who(a) }} · {{ a.userEmail }}
+            </span>
+            <span class="admin-item__meta">
+              {{ a.roomName }}@if (!a.roomAttiva) { · sala non attiva}
+              @if (a.accountEsistente) { · dichiarava un account già esistente}
+            </span>
+            <span class="admin-item__meta">
+              @if (a.richiestoAt) { Richiesta {{ a.richiestoAt | date: 'dd MMM yyyy HH:mm' }} }
+              @if (a.linkInviatoAt) { · link {{ a.linkInviatoAt | date: 'dd MMM HH:mm' }} }
+              @if (a.datiInviatiAt) { · dati {{ a.datiInviatiAt | date: 'dd MMM HH:mm' }} }
+              @if (a.decidedAt) { · decisa {{ a.decidedAt | date: 'dd MMM HH:mm' }} }
+              @if (a.revocatoAt) { · revocata {{ a.revocatoAt | date: 'dd MMM HH:mm' }} }
+            </span>
+            @if (a.decisionNote) {
+              <span class="admin-item__meta">Motivo (letto dall'utente): {{ a.decisionNote }}</span>
+            }
+            @if (a.adminNote) {
+              <span class="admin-item__meta aff-internal">
+                Nota interna: {{ a.adminNote }}
+              </span>
+            }
+          </div>
+
+          <div class="aff-actions">
+            <div class="row" style="gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end">
+              @if (a.status === 'IN_VERIFICA') {
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  [disabled]="actingId() === a.id"
+                  (click)="toggleAction(a, 'approva')"
+                >Approva</button>
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  [disabled]="actingId() === a.id"
+                  (click)="toggleAction(a, 'rifiuta')"
+                >Rifiuta</button>
+              }
+              @if (a.status === 'APPROVATO') {
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  [disabled]="actingId() === a.id"
+                  (click)="toggleAction(a, 'revoca')"
+                >Revoca</button>
+              }
+              @if (a.status !== 'ANNULLATO') {
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="actingId() === a.id"
+                  (click)="resend(a)"
+                >Reinvia email</button>
+              }
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                [disabled]="actingId() === a.id"
+                (click)="toggleAction(a, 'nota')"
+              >Nota interna</button>
+            </div>
+
+            @if (isAction(a, 'approva')) {
+              <div class="aff-panel">
+                <span class="admin-item__meta">Approvare questa affiliazione?</span>
+                <input
+                  #approveNote
+                  type="text"
+                  class="input"
+                  maxlength="500"
+                  placeholder="Nota per l'utente (facoltativa)"
+                  aria-label="Nota per l'utente, facoltativa"
+                />
+                <div class="row" style="gap: 0.5rem; flex-wrap: wrap">
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--sm"
+                    [disabled]="actingId() === a.id"
+                    (click)="approve(a, approveNote.value)"
+                  >Conferma approvazione</button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="toggleAction(a, 'approva')"
+                  >Annulla</button>
+                </div>
+                <p class="aff-hint">{{ ritardoAttribuzione }}</p>
+              </div>
+            }
+
+            @if (isAction(a, 'rifiuta')) {
+              <div class="aff-panel">
+                <input
+                  #rejectNote
+                  type="text"
+                  class="input"
+                  maxlength="500"
+                  placeholder="Motivo del rifiuto (obbligatorio)"
+                  aria-label="Motivo del rifiuto, obbligatorio"
+                />
+                <div class="row" style="gap: 0.5rem; flex-wrap: wrap">
+                  <button
+                    type="button"
+                    class="btn btn--danger btn--sm"
+                    [disabled]="actingId() === a.id"
+                    (click)="reject(a, rejectNote.value)"
+                  >Conferma rifiuto</button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="toggleAction(a, 'rifiuta')"
+                  >Annulla</button>
+                </div>
+                <p class="aff-hint">
+                  Il motivo arriva all'utente nell'email d'esito: scrivilo in modo
+                  che possa correggere. {{ ritardoAttribuzione }}
+                </p>
+              </div>
+            }
+
+            @if (isAction(a, 'revoca')) {
+              <div class="aff-panel">
+                <input
+                  #revokeNote
+                  type="text"
+                  class="input"
+                  maxlength="500"
+                  placeholder="Motivo della revoca (obbligatorio)"
+                  aria-label="Motivo della revoca, obbligatorio"
+                />
+                <div class="row" style="gap: 0.5rem; flex-wrap: wrap">
+                  <button
+                    type="button"
+                    class="btn btn--danger btn--sm"
+                    [disabled]="actingId() === a.id"
+                    (click)="revoke(a, revokeNote.value)"
+                  >Conferma revoca</button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="toggleAction(a, 'revoca')"
+                  >Annulla</button>
+                </div>
+              </div>
+            }
+
+            @if (isAction(a, 'nota')) {
+              <div class="aff-panel">
+                <input
+                  #adminNote
+                  type="text"
+                  class="input"
+                  maxlength="500"
+                  placeholder="Es. trovato nel back-office come FishKiller91"
+                  aria-label="Nota interna"
+                  [value]="a.adminNote || ''"
+                />
+                <div class="row" style="gap: 0.5rem; flex-wrap: wrap">
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--sm"
+                    [disabled]="actingId() === a.id"
+                    (click)="saveNote(a, adminNote.value)"
+                  >Salva nota</button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="toggleAction(a, 'nota')"
+                  >Annulla</button>
+                </div>
+                <p class="aff-hint">
+                  Resta nel pannello: non compare in nessuna pagina dell'utente né
+                  in nessuna email.
+                </p>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      @if (reqPage()!.totalPages > 1) {
+        <div class="row admin-users__pager">
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            [disabled]="reqPage()!.page <= 1 || reqLoading()"
+            (click)="goToReqPage(reqPage()!.page - 1)"
+          >← Precedenti</button>
+          <span class="admin-item__meta">
+            Pagina {{ reqPage()!.page }} di {{ reqPage()!.totalPages }}
+          </span>
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            [disabled]="reqPage()!.page >= reqPage()!.totalPages || reqLoading()"
+            (click)="goToReqPage(reqPage()!.page + 1)"
+          >Successive →</button>
+        </div>
+      }
+    }
+  </div>
+} @else {
+  <!-- ───────────────────────────── SALE ───────────────────────────── -->
+  <div class="admin-grid">
+    <!-- FORM -->
+    <div class="card card--pad admin-form">
+      <h2>{{ editingId() ? 'Modifica poker room' : 'Nuova poker room' }}</h2>
+
+      @if (roomFeedback()) {
+        <div class="form-feedback is-success" role="status">{{ roomFeedback() }}</div>
+      }
+      @if (roomError()) {
+        <div class="form-feedback is-error" role="alert">
+          {{ roomError() }}
+          @if (logoRejected()) {
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              style="margin-top: 0.5rem"
+              (click)="saveWithoutLogo()"
+            >Salva senza logo</button>
+          }
+        </div>
+      }
+      @if (linkWarning(); as w) {
+        <div class="form-feedback is-info" role="status">
+          Hai cambiato il link affiliato: {{ w.righe }}
+          {{ w.righe === 1 ? 'richiesta ha ancora' : 'richieste hanno ancora' }}
+          il link precedente. Chi si registra da lì non viene attribuito.
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            style="margin-top: 0.5rem"
+            (click)="showOpenRows(w.room.id, w.room.name)"
+          >Reinvia il link aggiornato</button>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submitRoom()">
+        <div class="field">
+          <label for="aff-name">Nome</label>
+          <input
+            id="aff-name"
+            type="text"
+            class="input"
+            formControlName="name"
+            placeholder="Es. Lottomatica"
+            [class.is-invalid]="form.controls.name.touched && form.controls.name.invalid"
+          />
+        </div>
+
+        <div class="field">
+          <label for="aff-slug">Slug</label>
+          <input
+            id="aff-slug"
+            type="text"
+            class="input"
+            formControlName="slug"
+            placeholder="es. lottomatica"
+            [readOnly]="editingId() !== null"
+            [class.is-invalid]="form.controls.slug.touched && form.controls.slug.invalid"
+          />
+          <p class="admin-news__hint">
+            @if (editingId()) {
+              Non è più modificabile: è la chiave dei link "completa la richiesta"
+              già finiti nelle email spedite.
+            } @else {
+              Solo minuscole, numeri e trattini. Si fissa ora e non cambia più.
+            }
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="aff-network">Circuito</label>
+          <input
+            id="aff-network"
+            type="text"
+            class="input"
+            formControlName="network"
+            placeholder="Es. iPoker"
+          />
+          <p class="admin-news__hint">Solo un'etichetta di raggruppamento, non una regola.</p>
+        </div>
+
+        <div class="field">
+          <label for="aff-url">Link affiliato</label>
+          <input
+            id="aff-url"
+            type="text"
+            class="input"
+            formControlName="affiliateUrlTemplate"
+            placeholder="https://…"
+            [class.is-invalid]="
+              form.controls.affiliateUrlTemplate.touched &&
+              form.controls.affiliateUrlTemplate.invalid
+            "
+          />
+          <p class="admin-news__hint">
+            Va copiato esattamente com'è (simboli compresi). Cambiarlo su una sala
+            già in uso lascia il link vecchio a chi lo ha già ricevuto: il pannello
+            te lo dice e da lì puoi rimandarlo.
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="aff-promo">Codice promozionale</label>
+          <input
+            id="aff-promo"
+            type="text"
+            class="input"
+            formControlName="codicePromozionale"
+            maxlength="40"
+            placeholder="Vuoto = la sala non ne usa"
+          />
+          <p class="admin-news__hint">
+            Dove esiste, è l'unica stringa che attribuisce la registrazione:
+            l'utente lo digita sul sito della sala.
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="aff-desc">Descrizione</label>
+          <textarea
+            id="aff-desc"
+            class="input"
+            rows="3"
+            formControlName="descrizione"
+          ></textarea>
+        </div>
+
+        <div class="field">
+          <label for="aff-cond">Condizioni</label>
+          <textarea
+            id="aff-cond"
+            class="input"
+            rows="3"
+            formControlName="condizioni"
+            placeholder="Es. Rakeback 45%, accreditato ogni giorno."
+          ></textarea>
+        </div>
+
+        <div class="field">
+          <label for="aff-istr">Istruzioni</label>
+          <textarea
+            id="aff-istr"
+            class="input"
+            rows="3"
+            formControlName="istruzioni"
+          ></textarea>
+          <p class="admin-news__hint">
+            Testo semplice (niente HTML): finisce nell'email del link e nella card
+            dell'utente.
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="aff-idlabel">Etichetta dell'identificativo</label>
+          <input
+            id="aff-idlabel"
+            type="text"
+            class="input"
+            formControlName="identifierLabel"
+            placeholder="Vuoto = «Username di login»"
+            [class.is-invalid]="
+              form.controls.identifierLabel.touched && form.controls.identifierLabel.invalid
+            "
+          />
+        </div>
+
+        <div class="field">
+          <label for="aff-idhelp">Aiuto sotto il campo</label>
+          <input
+            id="aff-idhelp"
+            type="text"
+            class="input"
+            formControlName="identifierHelp"
+            placeholder="Es. lo trovi nel client, in alto a destra"
+          />
+        </div>
+
+        <div class="row admin-panel__row">
+          <div class="field" style="margin: 0">
+            <label for="aff-idformat">Formato</label>
+            <select id="aff-idformat" class="input" formControlName="identifierFormat">
+              @for (f of identifierFormats; track f) {
+                <option [value]="f">{{ f }}</option>
+              }
+            </select>
+          </div>
+          <div class="field" style="margin: 0">
+            <label for="aff-idmin">Lunghezza min.</label>
+            <input
+              id="aff-idmin"
+              type="number"
+              min="1"
+              max="60"
+              class="input"
+              formControlName="identifierMinLen"
+            />
+          </div>
+          <div class="field" style="margin: 0">
+            <label for="aff-idmax">Lunghezza max.</label>
+            <input
+              id="aff-idmax"
+              type="number"
+              min="1"
+              max="60"
+              class="input"
+              formControlName="identifierMaxLen"
+            />
+          </div>
+        </div>
+
+        <label class="row admin-panel__check" style="gap: 0.4rem">
+          <input type="checkbox" formControlName="identifierCaseSensitive" />
+          <span>L'username distingue maiuscole e minuscole</span>
+        </label>
+        <p class="admin-news__hint">
+          Spuntala se la sala tratta <code>FishKiller</code> e
+          <code>fishkiller</code> come due account diversi: senza, il secondo di
+          due utenti con lo stesso nome "a meno di maiuscole" resta bloccato.
+        </p>
+
+        <label class="row admin-panel__check" style="gap: 0.4rem">
+          <input type="checkbox" formControlName="richiedeSecondoId" />
+          <span>Serve un secondo identificativo</span>
+        </label>
+
+        @if (form.controls.richiedeSecondoId.value) {
+          <div class="field">
+            <label for="aff-id2">Etichetta del secondo identificativo</label>
+            <input
+              id="aff-id2"
+              type="text"
+              class="input"
+              formControlName="secondIdentifierLabel"
+              placeholder="Es. ID conto"
+            />
+          </div>
+        }
+
+        <label class="row admin-panel__check" style="gap: 0.4rem">
+          <input type="checkbox" formControlName="consenteAccountEsistenti" />
+          <span>Traccia anche chi ha già un account</span>
+        </label>
+        <p class="admin-news__hint">
+          Lasciala spenta se il ri-tracciamento si fa a mano col responsabile
+          affiliazione: la richiesta di chi dichiara un account esistente viene
+          fermata e instradata su Discord.
+        </p>
+
+        <div class="field">
+          <label for="aff-ordine">Ordine in vetrina</label>
+          <input
+            id="aff-ordine"
+            type="number"
+            min="0"
+            max="9999"
+            class="input"
+            formControlName="ordine"
+          />
+          <p class="admin-news__hint">Più basso = più in alto.</p>
+        </div>
+
+        <label class="row admin-panel__check" style="gap: 0.4rem">
+          <input type="checkbox" formControlName="active" />
+          <span>Attiva (visibile agli iscritti)</span>
+        </label>
+        <p class="admin-news__hint">
+          Una sala nuova nasce spenta: si pubblica spuntando questa casella, mai
+          salvandola.
+        </p>
+
+        <div class="field">
+          <label for="aff-logo">
+            Logo{{ editingId() ? ' (vuoto = mantieni quello attuale)' : ' (facoltativo)' }}
+          </label>
+          <input
+            id="aff-logo"
+            type="file"
+            accept="image/*"
+            class="input"
+            (change)="onLogoChange($event)"
+          />
+          @if (selectedLogo()) {
+            <span class="admin-item__meta">{{ selectedLogo()!.name }}</span>
+          }
+          <p class="admin-news__hint">
+            Max {{ maxLogoMb }} MB (png, jpg, jpeg, webp, gif). Senza logo la card
+            mostra un segnaposto.
+          </p>
+        </div>
+
+        <div class="row">
+          <button type="submit" class="btn btn--primary" [disabled]="saving()">
+            {{ saving() ? 'Salvataggio…' : editingId() ? 'Salva modifiche' : 'Crea sala' }}
+          </button>
+          @if (editingId()) {
+            <button type="button" class="btn btn--ghost" (click)="cancelEdit()">Annulla</button>
+          }
+        </div>
+      </form>
+    </div>
+
+    <!-- LISTA -->
+    <div class="admin-list">
+      <div class="spread">
+        <h2>Poker room</h2>
+        @if (roomPage(); as p) {
+          <span class="admin-item__meta">
+            {{ p.total }} {{ p.total === 1 ? 'sala' : 'sale' }}
+          </span>
+        }
+      </div>
+      @if (roomListError()) {
+        <div class="form-feedback is-error" role="alert">{{ roomListError() }}</div>
+      }
+      @if (!roomPage() && roomLoading()) {
+        <div class="spinner" role="status" aria-label="Caricamento"></div>
+      } @else if (roomPage() && roomPage()!.items.length === 0) {
+        <div class="empty-state">
+          <p>Nessuna sala ancora: creane una dal form.</p>
+        </div>
+      } @else if (roomPage()) {
+        @for (r of roomPage()!.items; track r.id) {
+          <div class="card admin-item" [class.is-editing]="editingId() === r.id">
+            <div class="row" style="gap: 0.9rem; align-items: center; min-width: 0">
+              @if (r.logoUrl) {
+                <img class="aff-thumb" [src]="r.logoUrl" [alt]="r.name" />
+              } @else {
+                <span class="aff-thumb aff-thumb--empty" aria-hidden="true">♠</span>
+              }
+              <div class="admin-item__info">
+                <div class="row" style="gap: 0.6rem; flex-wrap: wrap; align-items: center">
+                  <strong>{{ r.name }}</strong>
+                  @if (r.active) {
+                    <span class="badge badge--free">Attiva</span>
+                  } @else {
+                    <span class="badge badge--premium">Non pubblicata</span>
+                  }
+                  @if (r.supportaCodice) {
+                    <span class="badge badge--live">Il link usa &#123;ref&#125;</span>
+                  }
+                </div>
+                <span class="admin-item__meta">
+                  {{ r.slug }}@if (r.network) { · {{ r.network }} } · ordine {{ r.ordine }}
+                </span>
+                @if (r.codicePromozionale) {
+                  <span class="admin-item__meta">
+                    Codice promozionale: <code class="aff-user">{{ r.codicePromozionale }}</code>
+                  </span>
+                }
+                <span class="admin-item__meta aff-url">{{ r.affiliateUrlTemplate }}</span>
+              </div>
+            </div>
+            <div class="row" style="gap: 0.5rem">
+              @if (confirmDeleteId() === r.id) {
+                <span class="admin-item__meta">Eliminare?</span>
+                <button type="button" class="btn btn--danger btn--sm" (click)="confirmDelete(r)">
+                  Conferma
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="cancelDelete()">
+                  Annulla
+                </button>
+              } @else {
+                <button type="button" class="btn btn--ghost btn--sm" (click)="editRoom(r)">
+                  Modifica
+                </button>
+                <button type="button" class="btn btn--danger btn--sm" (click)="askDelete(r)">
+                  Elimina
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        @if (roomPage()!.totalPages > 1) {
+          <div class="row admin-users__pager">
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              [disabled]="roomPage()!.page <= 1 || roomLoading()"
+              (click)="goToRoomPage(roomPage()!.page - 1)"
+            >← Precedenti</button>
+            <span class="admin-item__meta">
+              Pagina {{ roomPage()!.page }} di {{ roomPage()!.totalPages }}
+            </span>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              [disabled]="roomPage()!.page >= roomPage()!.totalPages || roomLoading()"
+              (click)="goToRoomPage(roomPage()!.page + 1)"
+            >Successive →</button>
+          </div>
+        }
+      }
+    </div>
+  </div>
+}
