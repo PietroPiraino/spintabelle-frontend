@@ -133,12 +133,19 @@
             e ciò che serve davvero (cosa ottengo, a che punto sono) sta in una
             riga. Il dettaglio e i form si aprono SOTTO la riga, a tutta
             larghezza dell'elenco — mai dentro una colonna stretta.
+
+            ⚠️ E si aprono SU RICHIESTA, una riga per volta. Mostrare sempre il
+            dettaglio di ogni pratica portava la pagina a 4770px (la griglia di
+            card che sostituisce ne misurava 3524) e ripeteva cinque volte, nella
+            stessa schermata, la stessa frase sul primo accesso al client. Da
+            chiusa la riga tiene solo ciò che serve a decidere; il gettone
+            "tocca a te", che è il punto del ridisegno, resta fra quelle cose.
           -->
           <ul class="aff-list">
             @for (c of cards(); track c.id; let i = $index) {
               <li
                 class="aff-row rise"
-                [class.is-open]="openFormRoomId() === c.id"
+                [class.is-open]="isDetailOpen(c)"
                 id="card-{{ c.id }}"
                 [style.animation-delay.ms]="(i % 12) * 60"
               >
@@ -169,110 +176,164 @@
                     }
                   </div>
 
-                  <!-- Cosa ottiene: è metà del motivo per cui è qui. -->
+                  <!--
+                    Cosa ottiene: è metà del motivo per cui è qui. Qui sta la
+                    sola `condizioni` — la descrizione lunga scende nel
+                    dettaglio, dove non fa alzare ogni riga dell'elenco.
+                  -->
                   <div class="aff-row__offer">
                     @if (c.room?.condizioni) {
                       <p class="aff-row__cond">{{ c.room!.condizioni }}</p>
                     }
-                    @if (c.room?.descrizione) {
-                      <p class="aff-row__desc">{{ c.room!.descrizione }}</p>
-                    }
-                  </div>
 
-                  <!-- A che punto è: l'altra metà, più l'azione principale. -->
-                  <div class="aff-row__state">
+                    <!--
+                      Il gettone dell'azione: nel poker conta di chi è l'azione.
+                      Lo portano SOLO le righe che aspettano una mossa
+                      dell'utente — è l'unica spesa di audacia della pagina, e
+                      se lo portassero tutte non direbbe più niente.
+                      ⚠️ Sta nella riga CHIUSA, non nel dettaglio: è la risposta
+                      alla domanda per cui si torna in pagina, e dietro un clic
+                      non risponderebbe più a nessuno.
+                    -->
                     @if (c.aff; as a) {
-                      <span
-                        class="aff-chip"
-                        [class.aff-chip--ok]="chipOk(a.status)"
-                        [class.aff-chip--wait]="chipWait(a.status)"
-                        [class.aff-chip--ko]="chipKo(a.status)"
-                        [class.aff-chip--todo]="chipTodo(a.status)"
-                        [class.aff-chip--off]="chipOff(a.status)"
-                        >{{ a.statusLabel }}</span
-                      >
-                      @if (a.status === 'IN_VERIFICA') {
-                        <span class="aff-row__eta">di solito entro 48 ore</span>
-                      }
-                      @if (a.richiestoAt) {
-                        <span class="aff-row__eta">
-                          richiesta del {{ a.richiestoAt | date: 'dd/MM/yyyy' }}
-                        </span>
-                      }
-
-                      <!--
-                        Azione PRINCIPALE in riga; le secondarie stanno nel
-                        dettaglio. Le condizioni si escludono a vicenda, così
-                        nessun bottone compare due volte: `canSubmitIdentifier`
-                        è falso solo su APPROVATO e ANNULLATO.
-                      -->
-                      @if (canSubmitIdentifier(a)) {
-                        @if (!isFormOpen(c, 'dati')) {
-                          <button
-                            type="button"
-                            class="btn btn--primary btn--sm aff-row__cta"
-                            (click)="openIdentifierForm(c)"
-                            [disabled]="actingRoomId() !== null"
-                          >
-                            {{
-                              a.roomUsername
-                                ? 'Correggi i miei dati'
-                                : 'Ho fatto: invia i miei dati'
-                            }}
-                          </button>
-                        }
-                      } @else if (canRequestAgain(a)) {
-                        @if (!isFormOpen(c, 'richiesta')) {
-                          <button
-                            type="button"
-                            class="btn btn--ghost btn--sm aff-row__cta"
-                            (click)="openRequestForm(c)"
-                            [disabled]="
-                              actingRoomId() !== null ||
-                              requestBlockedReason(c) !== null
-                            "
-                          >
-                            Richiedi di nuovo
-                          </button>
-                        }
-                      }
-                    } @else {
-                      <span class="aff-chip aff-chip--none">Non richiesto</span>
-                      @if (!isFormOpen(c, 'richiesta')) {
-                        <button
-                          type="button"
-                          class="btn btn--primary btn--sm aff-row__cta"
-                          (click)="openRequestForm(c)"
-                          [disabled]="
-                            actingRoomId() !== null ||
-                            requestBlockedReason(c) !== null
-                          "
-                        >
-                          Richiedi il collegamento
-                        </button>
-                      }
-                    }
-                  </div>
-                </div>
-
-                @if (
-                  c.aff || requestBlockedReason(c) || isFormOpen(c, 'richiesta')
-                ) {
-                  <div class="aff-row__detail">
-                    @if (c.aff; as a) {
-                      <!--
-                        Il gettone dell'azione: nel poker conta di chi è
-                        l'azione. Lo portano SOLO le righe che aspettano una
-                        mossa dell'utente — è l'unica spesa di audacia della
-                        pagina, e se lo portassero tutte non direbbe più niente.
-                      -->
                       @if (needsAction(c)) {
                         <p class="aff-turn">
                           <span class="aff-coin" aria-hidden="true"></span>
                           <span>{{ actionHint(a) }}</span>
                         </p>
                       }
+                    }
+                  </div>
 
+                  <!-- A che punto è: l'altra metà, più l'azione principale. -->
+                  <div class="aff-row__state">
+                    <div class="aff-row__badges">
+                      @if (c.aff; as a) {
+                        <span
+                          class="aff-chip"
+                          [class.aff-chip--ok]="chipOk(a.status)"
+                          [class.aff-chip--wait]="chipWait(a.status)"
+                          [class.aff-chip--ko]="chipKo(a.status)"
+                          [class.aff-chip--todo]="chipTodo(a.status)"
+                          [class.aff-chip--off]="chipOff(a.status)"
+                          >{{ a.statusLabel }}</span
+                        >
+                        @if (a.status === 'IN_VERIFICA') {
+                          <span class="aff-row__eta"
+                            >di solito entro 48 ore</span
+                          >
+                        }
+                        @if (a.richiestoAt) {
+                          <span class="aff-row__eta">
+                            richiesta del
+                            {{ a.richiestoAt | date: 'dd/MM/yyyy' }}
+                          </span>
+                        }
+                      } @else {
+                        <span class="aff-chip aff-chip--none"
+                          >Non richiesto</span
+                        >
+                      }
+                    </div>
+
+                    <div class="aff-row__acts">
+                      <!--
+                        UNA sola azione in riga, la prossima mossa; le secondarie
+                        (rinvia, annulla, richiedi di nuovo) stanno nel
+                        dettaglio. Le condizioni si escludono a vicenda, così
+                        nessun bottone compare due volte: `canSubmitIdentifier`
+                        è falso solo su APPROVATO e ANNULLATO.
+                      -->
+                      @if (c.aff; as a) {
+                        @if (canSubmitIdentifier(a)) {
+                          @if (!isFormOpen(c, 'dati')) {
+                            <button
+                              type="button"
+                              class="btn btn--primary btn--sm"
+                              id="cta-{{ c.id }}"
+                              (click)="openIdentifierForm(c)"
+                              [disabled]="actingRoomId() !== null"
+                            >
+                              {{
+                                a.roomUsername
+                                  ? 'Correggi i miei dati'
+                                  : 'Ho fatto: invia i miei dati'
+                              }}
+                            </button>
+                          }
+                        } @else if (canRequestAgain(a)) {
+                          @if (!isFormOpen(c, 'richiesta')) {
+                            <button
+                              type="button"
+                              class="btn btn--ghost btn--sm"
+                              id="cta-{{ c.id }}"
+                              (click)="openRequestForm(c)"
+                              [disabled]="
+                                actingRoomId() !== null ||
+                                requestBlockedReason(c) !== null
+                              "
+                            >
+                              Richiedi di nuovo
+                            </button>
+                          }
+                        }
+                      } @else {
+                        @if (!isFormOpen(c, 'richiesta')) {
+                          <button
+                            type="button"
+                            class="btn btn--primary btn--sm"
+                            id="cta-{{ c.id }}"
+                            (click)="openRequestForm(c)"
+                            [disabled]="
+                              actingRoomId() !== null ||
+                              requestBlockedReason(c) !== null
+                            "
+                          >
+                            Richiedi il collegamento
+                          </button>
+                        }
+                      }
+
+                      <!--
+                        ⚠️ L'apertura è QUESTO bottone, non la riga intera:
+                        dentro la riga ci sono già altri comandi, e un clic su
+                        un bottone non deve anche aprire il pannello.
+                        `aria-controls` punta al pannello, che esiste nel DOM
+                        solo da aperto — è la forma corretta di un disclosure a
+                        contenuto rimosso.
+                      -->
+                      @if (hasDetail(c) || isDetailOpen(c)) {
+                        <button
+                          type="button"
+                          class="btn btn--ghost btn--sm aff-row__toggle"
+                          id="dettaglio-toggle-{{ c.id }}"
+                          [attr.aria-expanded]="isDetailOpen(c)"
+                          [attr.aria-controls]="'dettaglio-' + c.id"
+                          (click)="toggleDetail(c)"
+                        >
+                          {{ isDetailOpen(c) ? 'Chiudi' : 'Dettagli'
+                          }}<span class="visually-hidden">
+                            {{ isDetailOpen(c) ? 'i dettagli di' : 'di' }}
+                            {{ c.name }}</span
+                          >
+                          <span class="aff-row__caret" aria-hidden="true"></span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                @if (isDetailOpen(c)) {
+                  <div class="aff-row__detail" id="dettaglio-{{ c.id }}">
+                    <!--
+                      La descrizione lunga vive QUI, non in riga: è contesto, e
+                      moltiplicata per otto righe era metà del muro.
+                    -->
+                    @if (c.room?.descrizione) {
+                      <p class="aff-row__desc">{{ c.room!.descrizione }}</p>
+                    }
+
+                    @if (c.aff; as a) {
                       @if (a.decisionNote) {
                         <p class="form-feedback is-info">{{ a.decisionNote }}</p>
                       }
@@ -618,7 +679,7 @@
                           <button
                             type="button"
                             class="btn btn--ghost btn--sm"
-                            (click)="closeForm()"
+                            (click)="closeForm(c)"
                             [disabled]="actingRoomId() !== null"
                           >
                             Annulla
@@ -731,7 +792,7 @@
                           <button
                             type="button"
                             class="btn btn--ghost btn--sm"
-                            (click)="closeForm()"
+                            (click)="closeForm(c)"
                             [disabled]="actingRoomId() !== null"
                           >
                             Annulla

@@ -165,6 +165,18 @@ export class AffiliationsComponent {
   protected readonly actingRoomId = signal<string | null>(null);
   /** id della sala con la conferma inline di annullamento aperta. */
   protected readonly confirmingRoomId = signal<string | null>(null);
+  /**
+   * id della riga col **dettaglio** aperto: **una sola alla volta**, come i
+   * form (stessa disciplina di `openFormRoomId`, che questo signal affianca).
+   *
+   * ⚠️ È la cura della densità, misurata: mostrando sempre tutto il dettaglio,
+   * con otto sale la pagina era alta **4770px** contro i 3524 della griglia di
+   * card che sostituiva — e la frase sul primo accesso al client compariva
+   * **cinque volte nella stessa schermata**. Da chiusa la riga tiene solo ciò
+   * che serve a decidere: chi è la sala, cosa offre, a che punto sei, la
+   * prossima mossa e — dove c'è — il gettone "tocca a te".
+   */
+  protected readonly openDetailRoomId = signal<string | null>(null);
   /** id della sala col form aperto (uno solo alla volta, come /negozio). */
   protected readonly openFormRoomId = signal<string | null>(null);
   protected readonly openFormKind = signal<OpenFormKind>('richiesta');
@@ -188,6 +200,8 @@ export class AffiliationsComponent {
   private loadedForUserId: string | null = null;
   /** Il deep-link si applica una volta sola per visita. */
   private deepLinkDone = false;
+  /** L'apertura automatica si valuta una volta sola per visita. */
+  private autoOpenDone = false;
 
   // ── Form ──────────────────────────────────────────────────────────────────
 
@@ -252,6 +266,28 @@ export class AffiliationsComponent {
       this.deepLinkDone = true;
       const card = this.cards().find((c) => c.slug === slug);
       if (card) this.openDeepLink(card);
+    });
+
+    /**
+     * ⚠️ **Decisione dichiarata, non implicita**: se al caricamento c'è **una
+     * sola** riga con una pratica, quella riga **nasce aperta**.
+     *
+     * Con una pratica sola non c'è nulla da scegliere: chi torna in pagina
+     * torna per quella, e chiedergli un clic per vedere il codice che è venuto
+     * a prendere è un passaggio a vuoto. Da **due in su** non se ne apre
+     * nessuna: sceglierne una sarebbe arbitrario, e aprirne due rimetterebbe
+     * in piedi il muro che questo ridisegno smonta.
+     *
+     * Vale una volta per visita (`autoOpenDone`), così una chiusura dell'utente
+     * non viene riaperta al primo ricalcolo; e cede il passo al deep-link, che
+     * sa già dove portare (e apre anche il form giusto).
+     */
+    effect(() => {
+      if (this.autoOpenDone || this.rooms() === null) return;
+      this.autoOpenDone = true;
+      if (this.deepLinkSlug()) return;
+      const conPratica = this.cards().filter((c) => c.aff);
+      if (conPratica.length === 1) this.openDetailRoomId.set(conPratica[0].id);
     });
   }
 
@@ -541,7 +577,57 @@ export class AffiliationsComponent {
       : 'Tocca a te: se vuoi, puoi richiedere di nuovo il collegamento.';
   }
 
-  // ── Apertura dei form ─────────────────────────────────────────────────────
+  // ── Apertura del dettaglio e dei form ─────────────────────────────────────
+
+  protected isDetailOpen(card: RoomCard): boolean {
+    return this.openDetailRoomId() === card.id;
+  }
+
+  /**
+   * C'è qualcosa da svelare su questa riga? Solo allora compare il bottone di
+   * apertura: una riga senza pratica e senza note non nasconde nulla, e un
+   * comando che apre il vuoto insegna a non fidarsi degli altri.
+   *
+   * ⚠️ Il motivo di blocco di una riga **senza** pratica è sempre e solo il
+   * tetto delle richieste aperte, che è già stampato in chiaro sopra l'elenco:
+   * qui dentro non sparisce niente che non sia detto altrove.
+   */
+  protected hasDetail(card: RoomCard): boolean {
+    return (
+      card.aff !== null ||
+      !!card.room?.descrizione ||
+      this.requestBlockedReason(card) !== null
+    );
+  }
+
+  /**
+   * Apre/chiude il dettaglio. Una sola riga aperta per volta: aprire questa
+   * chiude quella di prima, form e conferma di annullamento compresi — un form
+   * lasciato "in corso" fuori dagli occhi tornerebbe a galla mezzo compilato.
+   */
+  protected toggleDetail(card: RoomCard): void {
+    if (this.isDetailOpen(card)) {
+      this.closeDetail(card);
+      return;
+    }
+    this.openFormRoomId.set(null);
+    this.confirmingRoomId.set(null);
+    this.formError.set(null);
+    this.openDetailRoomId.set(card.id);
+  }
+
+  /**
+   * ⚠️ Il pannello esce dal DOM: senza rimettere il fuoco sul bottone che l'ha
+   * aperto, chi usa la tastiera si ritrova sul `<body>` e riparte dall'inizio
+   * della pagina.
+   */
+  protected closeDetail(card: RoomCard): void {
+    this.openDetailRoomId.set(null);
+    this.openFormRoomId.set(null);
+    this.confirmingRoomId.set(null);
+    this.formError.set(null);
+    this.focusElement(`dettaglio-toggle-${card.id}`);
+  }
 
   protected isFormOpen(card: RoomCard, kind: OpenFormKind): boolean {
     return this.openFormRoomId() === card.id && this.openFormKind() === kind;
@@ -558,6 +644,9 @@ export class AffiliationsComponent {
       accettaTermini: false,
     });
     this.openFormKind.set('richiesta');
+    // Il form vive DENTRO il dettaglio: aprirlo lo apre, altrimenti servirebbe
+    // un doppio clic per arrivare dove il bottone dice già di andare.
+    this.openDetailRoomId.set(card.id);
     this.openFormRoomId.set(card.id);
     this.focusInto(`richiesta-${card.id}`, scroll);
   }
@@ -586,13 +675,24 @@ export class AffiliationsComponent {
     username.updateValueAndValidity();
     second.updateValueAndValidity();
     this.openFormKind.set('dati');
+    this.openDetailRoomId.set(card.id);
     this.openFormRoomId.set(card.id);
     this.focusInto(`dati-${card.id}`, scroll);
   }
 
-  protected closeForm(): void {
+  /**
+   * Chiude **solo il form**, mai il dettaglio: dopo un invio riuscito è lì che
+   * compaiono il link e i codici che l'utente è venuto a prendere (e che la
+   * riga annunciata dice di trovare "qui sotto").
+   *
+   * `card` arriva dal bottone "Annulla" del form e serve a riportare il fuoco
+   * sul comando che quel form l'aveva aperto; dai gestori di successo si chiama
+   * senza, perché lì la riga si riscrive da sola e il fuoco lo guida l'annuncio.
+   */
+  protected closeForm(card?: RoomCard): void {
     this.openFormRoomId.set(null);
     this.formError.set(null);
+    if (card) this.focusElement(`cta-${card.id}`);
   }
 
   /** Il deep-link porta dove c'è qualcosa da fare, non solo sulla card. */
@@ -610,7 +710,10 @@ export class AffiliationsComponent {
       return;
     }
     // Niente da completare (tracciamento attivo, sala chiusa, tetto raggiunto):
-    // si porta comunque la card sotto gli occhi, senza aprire nulla.
+    // si apre il dettaglio e si porta la riga sotto gli occhi. Aprirlo è il
+    // minimo che un deep-link debba fare: chi ci arriva dall'email vuole vedere
+    // il suo codice, non una riga chiusa uguale alle altre sette.
+    if (this.hasDetail(card)) this.openDetailRoomId.set(card.id);
     this.focusInto(`card-${card.id}`, true);
   }
 
@@ -821,6 +924,16 @@ export class AffiliationsComponent {
       );
       first?.focus();
     }, 0);
+  }
+
+  /**
+   * Rimette il fuoco su un comando preciso (il bottone che ha aperto ciò che si
+   * sta chiudendo). ⚠️ Stesso `setTimeout(0)` di `focusInto`: in zoneless il DOM
+   * si aggiorna dopo il giro di change detection, e il bersaglio del fuoco può
+   * essere proprio un elemento che quel giro deve ancora ridisegnare.
+   */
+  private focusElement(elementId: string): void {
+    setTimeout(() => document.getElementById(elementId)?.focus(), 0);
   }
 
   /**
