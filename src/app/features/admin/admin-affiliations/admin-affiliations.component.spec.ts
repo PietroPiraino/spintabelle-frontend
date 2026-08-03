@@ -35,8 +35,9 @@ const rowOf = (id: string): AffiliationAdmin => ({
   userNickname: 'Tizio',
 });
 
-const roomOf = (id: string): PokerRoomAdmin => ({
+const roomOf = (id: string, ordine = 100): PokerRoomAdmin => ({
   id,
+  ordine,
   name: 'Sala Uno',
   slug: 'sala-uno',
   identifierLabel: 'Username di login',
@@ -44,7 +45,6 @@ const roomOf = (id: string): PokerRoomAdmin => ({
   identifierMaxLen: 40,
   richiedeSecondoId: false,
   consenteAccountEsistenti: false,
-  ordine: 100,
   affiliateUrlTemplate: 'https://esempio.it/redirect?pid=1',
   identifierFormat: 'LIBERO',
   identifierCaseSensitive: false,
@@ -68,6 +68,7 @@ interface Testable {
   submitRoom(): void;
   approve(a: AffiliationAdmin, note: string): void;
   onLogoChange(event: Event): void;
+  moveRoom(r: PokerRoomAdmin, delta: -1 | 1): void;
 }
 
 describe('AdminAffiliationsComponent', () => {
@@ -197,6 +198,78 @@ describe('AdminAffiliationsComponent', () => {
     http.verify();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'supera il limite',
+    );
+  });
+
+  /**
+   * ⚠️ Il caso reale: tutte le sale nascono con `ordine = 100`, e uno scambio
+   * di valori identici non produce alcun movimento. La freccia deve stendere
+   * una scala di valori DISTINTI sull'elenco riordinato.
+   */
+  it('frecce: con tutte le sale a 100 lo spostamento rinumera (10, 20, 30…)', async () => {
+    await flushBoot();
+    comp.setView('sale');
+    const rooms = [roomOf('r1'), roomOf('r2'), roomOf('r3')];
+    http.expectOne(isRooms).flush(pageOf(rooms, 3));
+    await fixture.whenStable();
+
+    // La terza sale di un posto: l'ordine visibile diventa r1, r3, r2.
+    comp.moveRoom(rooms[2], -1);
+
+    // ⚠️ In sequenza (`concat`), non in parallelo: una cascata che fallisce a
+    // metà non deve continuare a scrivere.
+    for (const [id, ordine] of [
+      ['r1', '10'],
+      ['r3', '20'],
+      ['r2', '30'],
+    ]) {
+      const patch = http.expectOne(
+        (r) =>
+          r.url === `${API}/admin/affiliations/rooms/${id}` &&
+          r.method === 'PATCH',
+      );
+      const body = patch.request.body as FormData;
+      expect(body.get('ordine')).toBe(ordine);
+      // Solo `ordine`: `toFormData` salta gli `undefined`, quindi una PATCH
+      // parziale non tocca il template del link né lo stato di pubblicazione.
+      expect(body.get('name')).toBeNull();
+      expect(body.get('affiliateUrlTemplate')).toBeNull();
+      expect(body.get('active')).toBeNull();
+      patch.flush(roomOf(id, Number(ordine)));
+    }
+    await fixture.whenStable();
+
+    // Ricarica: l'ordine mostrato è quello che risponde il server.
+    http.expectOne(isRooms).flush(pageOf(rooms, 3));
+    await fixture.whenStable();
+  });
+
+  it("frecce: se una PATCH fallisce la cascata si ferma e l'elenco si ricarica", async () => {
+    await flushBoot();
+    comp.setView('sale');
+    const rooms = [roomOf('r1'), roomOf('r2'), roomOf('r3')];
+    http.expectOne(isRooms).flush(pageOf(rooms, 3));
+    await fixture.whenStable();
+
+    comp.moveRoom(rooms[2], -1);
+
+    http
+      .expectOne((r) => r.url === `${API}/admin/affiliations/rooms/r1`)
+      .flush(
+        { message: 'Ordine non salvato.' },
+        { status: 500, statusText: 'Server Error' },
+      );
+    await fixture.whenStable();
+
+    // Nessuna seconda PATCH: `concat` non fa partire le successive. L'unica
+    // richiesta rimasta è la ricarica dell'elenco.
+    const reload = http.expectOne(isRooms);
+    reload.flush(pageOf(rooms, 3));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Ordine non salvato.',
     );
   });
 });

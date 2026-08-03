@@ -27,6 +27,47 @@
   align-items: flex-start;
 }
 
+// Frecce di riordino della vetrina, in colonna a sinistra della riga: è il
+// posto dove si cerca una maniglia d'ordinamento, e non entra in conflitto con
+// la conferma di eliminazione che occupa il lato destro.
+.aff-move {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.aff-move__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  // ⚠️ 44px pieni per lato: è il bersaglio minimo del progetto, e una freccia
+  // alta la metà sarebbe il tipico controllo che su telefono si manca.
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--btn-ghost-bg);
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast),
+    color var(--t-fast);
+
+  &:hover:not(:disabled) {
+    border-color: var(--copper-500);
+    color: var(--copper-600);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
 .aff-line {
   gap: 0.5rem;
   align-items: center;

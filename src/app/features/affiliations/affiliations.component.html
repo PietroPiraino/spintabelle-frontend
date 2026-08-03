@@ -24,14 +24,14 @@
       <ol class="aff__steps">
         <li>
           <span class="aff__step-n" aria-hidden="true">1</span>
-          <span>
+          <span class="aff__step-t">
             Dal tuo account scegli una sala e chiedi il collegamento. Ti
             mandiamo per email il link (o il codice) da usare per registrarti.
           </span>
         </li>
         <li>
           <span class="aff__step-n" aria-hidden="true">2</span>
-          <span>
+          <span class="aff__step-t">
             Crei il conto seguendo quel link e fai un primo accesso al client di
             poker. Prima di quel passaggio il tuo username non risulta da nessuna
             parte.
@@ -39,7 +39,7 @@
         </li>
         <li>
           <span class="aff__step-n" aria-hidden="true">3</span>
-          <span>
+          <span class="aff__step-t">
             Torni qui e ci mandi il tuo username. Controlliamo a mano che il
             collegamento risulti e ti scriviamo l'esito, di solito entro 48 ore.
           </span>
@@ -60,6 +60,30 @@
     </div>
 
     @if (auth.isAuthenticated()) {
+      <!--
+        ── Perché passare dalla scuola ──
+        ⚠️ Sta QUI, dentro il ramo autenticato, e qui deve restare: il ramo
+        anonimo finisce nell'HTML prerenderizzato e indicizzabile, e un premio
+        in cambio di gioco su una pagina pubblica è un incentivo — il perimetro
+        approvato dal consulente è un *programma di affiliazione*. Fuori resta
+        solo l'invito a iscriversi.
+        ⚠️ Nessuna cifra, nessun tasso, nessuna cadenza: i punti li assegna
+        l'owner a mano, in proporzione al gioco e a sua discrezione, e i termini
+        qui sotto dicono che il programma non garantisce alcun vantaggio. Una
+        promessa quantificata li farebbe suonare come una presa in giro.
+        Sta sopra l'elenco perché è la ragione per cui uno passa dalla scuola:
+        si legge prima di scegliere la sala, non dopo.
+      -->
+      <section class="aff__points" aria-labelledby="aff-punti">
+        <h2 id="aff-punti">Giocando da affiliato guadagni punti BFF</h2>
+        <p>
+          Più giochi, più punti ti riconosciamo: li assegniamo noi guardando il
+          pannello della sala. Li spendi nel
+          <a routerLink="/negozio">Negozio</a> — buoni sconto, abbonamento alle
+          lezioni, gadget. Sono gli stessi punti del gettone che vedi in alto.
+        </p>
+      </section>
+
       <!-- ── Vetrina delle sale (solo per chi è dentro) ── -->
       <section class="aff__rooms" aria-labelledby="aff-sale">
         <h2 id="aff-sale">Le sale disponibili</h2>
@@ -79,6 +103,23 @@
             <p>Al momento non ci sono sale disponibili. Riprova più avanti.</p>
           </div>
         } @else {
+          <!--
+            Striscia di sintesi: la pagina si visita due volte — una per chiedere
+            il link, una giorni dopo per mandare l'username — ed è la seconda a
+            dover trovare subito la risposta. Derivata da `mine()`: zero chiamate
+            in più, e solo le voci con conteggio > 0.
+          -->
+          @if (riepilogo().length) {
+            <p class="aff__summary">
+              <span class="visually-hidden">Le tue richieste:</span>
+              @for (v of riepilogo(); track v.key) {
+                <span class="aff__sum" [attr.data-voce]="v.key">
+                  <strong>{{ v.count }}</strong> {{ v.label }}
+                </span>
+              }
+            </p>
+          }
+
           @if (atPendingCap()) {
             <p class="form-feedback is-info">
               Hai {{ openRequests() }} richieste aperte: annullane una per
@@ -87,533 +128,683 @@
             </p>
           }
 
-          <div class="grid grid--2">
+          <!--
+            Elenco, non griglia di card: con otto sale la vetrina alta è un muro,
+            e ciò che serve davvero (cosa ottengo, a che punto sono) sta in una
+            riga. Il dettaglio e i form si aprono SOTTO la riga, a tutta
+            larghezza dell'elenco — mai dentro una colonna stretta.
+
+            ⚠️ E si aprono SU RICHIESTA, una riga per volta. Mostrare sempre il
+            dettaglio di ogni pratica portava la pagina a 4770px (la griglia di
+            card che sostituisce ne misurava 3524) e ripeteva cinque volte, nella
+            stessa schermata, la stessa frase sul primo accesso al client. Da
+            chiusa la riga tiene solo ciò che serve a decidere; il gettone
+            "tocca a te", che è il punto del ridisegno, resta fra quelle cose.
+          -->
+          <ul class="aff-list">
             @for (c of cards(); track c.id; let i = $index) {
-              <article
-                class="card card--pad card--hover aff-card rise"
+              <li
+                class="aff-row rise"
+                [class.is-open]="isDetailOpen(c)"
                 id="card-{{ c.id }}"
                 [style.animation-delay.ms]="(i % 12) * 60"
               >
-                <div class="aff-card__head">
-                  @if (c.room?.logoUrl) {
-                    <img
-                      class="aff-thumb"
-                      [src]="c.room!.logoUrl"
-                      alt=""
-                      width="56"
-                      height="56"
-                      loading="lazy"
-                    />
-                  } @else {
-                    <span class="aff-thumb aff-thumb--empty" aria-hidden="true"
-                      >♠</span
-                    >
-                  }
-                  <div class="aff-card__headtext">
+                <div class="aff-row__main">
+                  <!--
+                    ⚠️ Piastrella BIANCA in tutti e tre i temi: sono marchi di
+                    terzi, disegnati per il bianco. Un marchio altrui non si
+                    ricolora mai: gli si dà il substrato (`--logo-plate`).
+                  -->
+                  <span class="aff-tile">
+                    @if (c.room?.logoUrl) {
+                      <img
+                        [src]="c.room!.logoUrl"
+                        alt=""
+                        width="56"
+                        height="56"
+                        loading="lazy"
+                      />
+                    } @else {
+                      <span class="aff-tile__empty" aria-hidden="true">♠</span>
+                    }
+                  </span>
+
+                  <div class="aff-row__id">
                     <h3>{{ c.name }}</h3>
                     @if (c.network) {
-                      <span class="badge badge--tag">{{ c.network }}</span>
+                      <span class="aff-row__net">{{ c.network }}</span>
                     }
+                  </div>
+
+                  <!--
+                    Cosa ottiene: è metà del motivo per cui è qui. Qui sta la
+                    sola `condizioni` — la descrizione lunga scende nel
+                    dettaglio, dove non fa alzare ogni riga dell'elenco.
+                  -->
+                  <div class="aff-row__offer">
+                    @if (c.room?.condizioni) {
+                      <p class="aff-row__cond">{{ c.room!.condizioni }}</p>
+                    }
+
+                    <!--
+                      Il gettone dell'azione: nel poker conta di chi è l'azione.
+                      Lo portano SOLO le righe che aspettano una mossa
+                      dell'utente — è l'unica spesa di audacia della pagina, e
+                      se lo portassero tutte non direbbe più niente.
+                      ⚠️ Sta nella riga CHIUSA, non nel dettaglio: è la risposta
+                      alla domanda per cui si torna in pagina, e dietro un clic
+                      non risponderebbe più a nessuno.
+                    -->
+                    @if (c.aff; as a) {
+                      @if (needsAction(c)) {
+                        <p class="aff-turn">
+                          <span class="aff-coin" aria-hidden="true"></span>
+                          <span>{{ actionHint(a) }}</span>
+                        </p>
+                      }
+                    }
+                  </div>
+
+                  <!-- A che punto è: l'altra metà, più l'azione principale. -->
+                  <div class="aff-row__state">
+                    <div class="aff-row__badges">
+                      @if (c.aff; as a) {
+                        <span
+                          class="aff-chip"
+                          [class.aff-chip--ok]="chipOk(a.status)"
+                          [class.aff-chip--wait]="chipWait(a.status)"
+                          [class.aff-chip--ko]="chipKo(a.status)"
+                          [class.aff-chip--todo]="chipTodo(a.status)"
+                          [class.aff-chip--off]="chipOff(a.status)"
+                          >{{ a.statusLabel }}</span
+                        >
+                        @if (a.status === 'IN_VERIFICA') {
+                          <span class="aff-row__eta"
+                            >di solito entro 48 ore</span
+                          >
+                        }
+                        @if (a.richiestoAt) {
+                          <span class="aff-row__eta">
+                            richiesta del
+                            {{ a.richiestoAt | date: 'dd/MM/yyyy' }}
+                          </span>
+                        }
+                      } @else {
+                        <span class="aff-chip aff-chip--none"
+                          >Non richiesto</span
+                        >
+                      }
+                    </div>
+
+                    <div class="aff-row__acts">
+                      <!--
+                        UNA sola azione in riga, la prossima mossa; le secondarie
+                        (rinvia, annulla, richiedi di nuovo) stanno nel
+                        dettaglio. Le condizioni si escludono a vicenda, così
+                        nessun bottone compare due volte: `canSubmitIdentifier`
+                        è falso solo su APPROVATO e ANNULLATO.
+                      -->
+                      @if (c.aff; as a) {
+                        @if (canSubmitIdentifier(a)) {
+                          @if (!isFormOpen(c, 'dati')) {
+                            <button
+                              type="button"
+                              class="btn btn--primary btn--sm"
+                              id="cta-{{ c.id }}"
+                              (click)="openIdentifierForm(c)"
+                              [disabled]="actingRoomId() !== null"
+                            >
+                              {{
+                                a.roomUsername
+                                  ? 'Correggi i miei dati'
+                                  : 'Ho fatto: invia i miei dati'
+                              }}
+                            </button>
+                          }
+                        } @else if (canRequestAgain(a)) {
+                          @if (!isFormOpen(c, 'richiesta')) {
+                            <button
+                              type="button"
+                              class="btn btn--ghost btn--sm"
+                              id="cta-{{ c.id }}"
+                              (click)="openRequestForm(c)"
+                              [disabled]="
+                                actingRoomId() !== null ||
+                                requestBlockedReason(c) !== null
+                              "
+                            >
+                              Richiedi di nuovo
+                            </button>
+                          }
+                        }
+                      } @else {
+                        @if (!isFormOpen(c, 'richiesta')) {
+                          <button
+                            type="button"
+                            class="btn btn--primary btn--sm"
+                            id="cta-{{ c.id }}"
+                            (click)="openRequestForm(c)"
+                            [disabled]="
+                              actingRoomId() !== null ||
+                              requestBlockedReason(c) !== null
+                            "
+                          >
+                            Richiedi il collegamento
+                          </button>
+                        }
+                      }
+
+                      <!--
+                        ⚠️ L'apertura è QUESTO bottone, non la riga intera:
+                        dentro la riga ci sono già altri comandi, e un clic su
+                        un bottone non deve anche aprire il pannello.
+                        `aria-controls` punta al pannello, che esiste nel DOM
+                        solo da aperto — è la forma corretta di un disclosure a
+                        contenuto rimosso.
+                      -->
+                      @if (hasDetail(c) || isDetailOpen(c)) {
+                        <button
+                          type="button"
+                          class="btn btn--ghost btn--sm aff-row__toggle"
+                          id="dettaglio-toggle-{{ c.id }}"
+                          [attr.aria-expanded]="isDetailOpen(c)"
+                          [attr.aria-controls]="'dettaglio-' + c.id"
+                          (click)="toggleDetail(c)"
+                        >
+                          {{ isDetailOpen(c) ? 'Chiudi' : 'Dettagli'
+                          }}<span class="visually-hidden">
+                            {{ isDetailOpen(c) ? 'i dettagli di' : 'di' }}
+                            {{ c.name }}</span
+                          >
+                          <span class="aff-row__caret" aria-hidden="true"></span>
+                        </button>
+                      }
+                    </div>
                   </div>
                 </div>
 
-                @if (c.room?.descrizione) {
-                  <p class="aff-card__desc">{{ c.room!.descrizione }}</p>
-                }
-                @if (c.room?.condizioni) {
-                  <p class="aff-card__cond">{{ c.room!.condizioni }}</p>
-                }
-
-                @if (c.aff; as a) {
-                  <!-- ── Stato personale ── -->
-                  <div class="aff-card__state">
-                    <span
-                      class="aff-chip"
-                      [class.aff-chip--ok]="chipOk(a.status)"
-                      [class.aff-chip--wait]="chipWait(a.status)"
-                      [class.aff-chip--ko]="chipKo(a.status)"
-                      >{{ a.statusLabel }}</span
-                    >
-                    @if (a.status === 'IN_VERIFICA') {
-                      <span class="aff-card__eta">di solito entro 48 ore</span>
+                @if (isDetailOpen(c)) {
+                  <div class="aff-row__detail" id="dettaglio-{{ c.id }}">
+                    <!--
+                      La descrizione lunga vive QUI, non in riga: è contesto, e
+                      moltiplicata per otto righe era metà del muro.
+                    -->
+                    @if (c.room?.descrizione) {
+                      <p class="aff-row__desc">{{ c.room!.descrizione }}</p>
                     }
-                    @if (a.richiestoAt) {
-                      <span class="aff-card__eta">
-                        richiesta del {{ a.richiestoAt | date: 'dd/MM/yyyy' }}
-                      </span>
-                    }
-                  </div>
 
-                  @if (a.decisionNote) {
-                    <p class="form-feedback is-info">{{ a.decisionNote }}</p>
-                  }
-                  @if (!a.roomAttiva) {
-                    <p class="aff-card__note">
-                      Questa sala non accetta nuove richieste. Quella che hai già
-                      aperto resta valida e puoi comunque completarla.
-                    </p>
-                  }
-                  @if (emailFailedRoomId() === c.id) {
-                    <p class="form-feedback is-error">
-                      Non siamo riusciti a inviarti l'email: trovi qui sotto
-                      tutto quello che ti serve.
-                    </p>
-                  }
+                    @if (c.aff; as a) {
+                      @if (a.decisionNote) {
+                        <p class="form-feedback is-info">{{ a.decisionNote }}</p>
+                      }
+                      @if (!a.roomAttiva) {
+                        <p class="aff-row__note">
+                          Questa sala non accetta nuove richieste. Quella che hai
+                          già aperto resta valida e puoi comunque completarla.
+                        </p>
+                      }
+                      @if (emailFailedRoomId() === c.id) {
+                        <p class="form-feedback is-error">
+                          Non siamo riusciti a inviarti l'email: trovi qui sotto
+                          tutto quello che ti serve.
+                        </p>
+                      }
 
-                  <!--
-                    ⚠️ Il codice promozionale viene PRIMA del numero di pratica:
-                    dove c'è, è la sola stringa che attribuisce la registrazione
-                    alla scuola, ed è quella che l'utente deve digitare davvero.
-                  -->
-                  @if (a.codicePromozionale) {
-                    <div class="aff-code">
-                      <span class="aff-code__label"
-                        >Codice promozionale da inserire sul sito della
-                        sala</span
-                      >
-                      <div class="aff-code__row">
-                        <code class="aff-code__value">{{
-                          a.codicePromozionale
-                        }}</code>
-                        <button
-                          type="button"
-                          class="btn btn--ghost btn--sm aff-copy"
-                          [attr.aria-label]="
-                            'Copia il codice promozionale di ' + c.name
-                          "
-                          (click)="
-                            copy(
-                              a.codicePromozionale!,
-                              'Codice promozionale copiato.'
-                            )
-                          "
-                        >
-                          <app-icon name="copy" [size]="16" />
-                        </button>
+                      <div class="aff-row__codes">
+                        <!--
+                          ⚠️ Il codice promozionale viene PRIMA del numero di
+                          pratica: dove c'è, è la sola stringa che attribuisce la
+                          registrazione alla scuola, ed è quella che l'utente
+                          deve digitare davvero.
+                        -->
+                        @if (a.codicePromozionale) {
+                          <div class="aff-code">
+                            <span class="aff-code__label"
+                              >Codice promozionale da inserire sul sito della
+                              sala</span
+                            >
+                            <div class="aff-code__row">
+                              <code class="aff-code__value">{{
+                                a.codicePromozionale
+                              }}</code>
+                              <button
+                                type="button"
+                                class="btn btn--ghost btn--sm aff-copy"
+                                [attr.aria-label]="
+                                  'Copia il codice promozionale di ' + c.name
+                                "
+                                (click)="
+                                  copy(
+                                    a.codicePromozionale!,
+                                    'Codice promozionale copiato.'
+                                  )
+                                "
+                              >
+                                <app-icon name="copy" [size]="16" />
+                              </button>
+                            </div>
+                          </div>
+                        }
+
+                        <!--
+                          ⚠️ Il codice di riferimento è il NUMERO DI PRATICA
+                          interno: non si dà alla sala, non viaggia verso nessun
+                          operatore e non va mai presentato come un codice da
+                          inserire altrove.
+                        -->
+                        <div class="aff-code">
+                          <span class="aff-code__label"
+                            >Il tuo numero di pratica: citalo se ci scrivi</span
+                          >
+                          <div class="aff-code__row">
+                            <code class="aff-code__value">{{ a.refCode }}</code>
+                            <button
+                              type="button"
+                              class="btn btn--ghost btn--sm aff-copy"
+                              aria-label="Copia il codice di riferimento"
+                              (click)="
+                                copy(a.refCode, 'Numero di pratica copiato.')
+                              "
+                            >
+                              <app-icon name="copy" [size]="16" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  }
 
-                  <!--
-                    ⚠️ Il codice di riferimento è il NUMERO DI PRATICA interno:
-                    non si dà alla sala, non viaggia verso nessun operatore e
-                    non va mai presentato come un codice da inserire altrove.
-                  -->
-                  <div class="aff-code">
-                    <span class="aff-code__label"
-                      >Il tuo numero di pratica: citalo se ci scrivi</span
-                    >
-                    <div class="aff-code__row">
-                      <code class="aff-code__value">{{ a.refCode }}</code>
-                      <button
-                        type="button"
-                        class="btn btn--ghost btn--sm aff-copy"
-                        aria-label="Copia il codice di riferimento"
-                        (click)="
-                          copy(a.refCode, 'Numero di pratica copiato.')
-                        "
-                      >
-                        <app-icon name="copy" [size]="16" />
-                      </button>
-                    </div>
-                  </div>
-
-                  @if (a.affiliateUrl) {
-                    <a
-                      class="btn btn--primary btn--sm aff-card__link"
-                      [href]="a.affiliateUrl"
-                      target="_blank"
-                      rel="noopener nofollow sponsored"
-                    >
-                      Apri la pagina di registrazione
-                      <span class="visually-hidden"
-                        >(si apre in una nuova scheda)</span
-                      >
-                    </a>
-                  }
-
-                  @if (a.istruzioni) {
-                    <p class="aff-card__istr">{{ a.istruzioni }}</p>
-                  }
-
-                  <!--
-                    ⚠️ Promemoria fisso sul primo accesso al client: duplicato
-                    consapevolmente dal backend (vedi il commento sulla costante
-                    nel .ts). Va tenuto allineato a mano.
-                  -->
-                  <p class="aff-card__reminder">{{ firstLoginReminder }}</p>
-
-                  @if (a.status === 'RICHIESTO') {
-                    <p class="aff-card__note">{{ retentionNotice }}</p>
-                  }
-
-                  @if (a.roomUsername) {
-                    <p class="aff-card__declared">
-                      Username dichiarato:
-                      <span class="aff-card__declared-val">{{
-                        a.roomUsername
-                      }}</span>
-                    </p>
-                  }
-
-                  <!-- ── Azioni ── -->
-                  <div class="aff-actions">
-                    @if (canSubmitIdentifier(a) && !isFormOpen(c, 'dati')) {
-                      <button
-                        type="button"
-                        class="btn btn--primary btn--sm"
-                        (click)="openIdentifierForm(c)"
-                        [disabled]="actingRoomId() !== null"
-                      >
-                        {{
-                          a.roomUsername
-                            ? 'Correggi i miei dati'
-                            : 'Ho fatto: invia i miei dati'
-                        }}
-                      </button>
-                    }
-                    @if (canRequestAgain(a) && !isFormOpen(c, 'richiesta')) {
-                      <button
-                        type="button"
-                        class="btn btn--ghost btn--sm"
-                        (click)="openRequestForm(c)"
-                        [disabled]="
-                          actingRoomId() !== null ||
-                          requestBlockedReason(c) !== null
-                        "
-                      >
-                        Richiedi di nuovo
-                      </button>
-                    }
-                    @if (canResend(a)) {
-                      <button
-                        type="button"
-                        class="btn btn--ghost btn--sm"
-                        (click)="resend(c)"
-                        [disabled]="actingRoomId() !== null"
-                      >
-                        {{
-                          actingRoomId() === c.id ? 'Attendi…' : "Rinvia l'email"
-                        }}
-                      </button>
-                    }
-                    @if (a.status !== 'ANNULLATO') {
-                      <button
-                        type="button"
-                        class="btn btn--ghost btn--sm aff-actions__danger"
-                        (click)="askCancel(c)"
-                        [disabled]="actingRoomId() !== null"
-                      >
-                        {{
-                          isTracked(a)
-                            ? 'Annulla il tracciamento'
-                            : 'Annulla la richiesta'
-                        }}
-                      </button>
-                    }
-                  </div>
-
-                  @if (canRequestAgain(a) && requestBlockedReason(c); as why) {
-                    <p class="aff-card__note">{{ why }}</p>
-                  }
-
-                  <!-- Conferma inline: nel progetto non esistono dialog. -->
-                  @if (confirmingRoomId() === c.id) {
-                    <div class="aff-confirm">
-                      <p class="aff-confirm__text">
-                        Il tracciamento presso la sala non si annulla da qui:
-                        smettiamo di conservare i tuoi dati di collegamento.
-                      </p>
-                      <div class="row">
-                        <button
-                          type="button"
-                          class="btn btn--danger-solid btn--sm"
-                          (click)="cancel(c)"
-                          [disabled]="actingRoomId() !== null"
-                        >
-                          {{
-                            actingRoomId() === c.id ? 'Attendi…' : 'Confermo'
-                          }}
-                        </button>
-                        <button
-                          type="button"
-                          class="btn btn--ghost btn--sm"
-                          (click)="dismissCancel()"
-                          [disabled]="actingRoomId() !== null"
-                        >
-                          Lascia com'è
-                        </button>
-                      </div>
-                    </div>
-                  }
-                } @else {
-                  <!-- ── Nessuna riga: si richiede il link ── -->
-                  <div class="aff-actions">
-                    @if (!isFormOpen(c, 'richiesta')) {
-                      <button
-                        type="button"
-                        class="btn btn--primary btn--sm"
-                        (click)="openRequestForm(c)"
-                        [disabled]="
-                          actingRoomId() !== null ||
-                          requestBlockedReason(c) !== null
-                        "
-                      >
-                        Richiedi il collegamento
-                      </button>
-                    }
-                  </div>
-                  @if (requestBlockedReason(c); as why) {
-                    <p class="aff-card__note">{{ why }}</p>
-                  }
-                }
-
-                <!-- ── Form 1: richiesta del link (tre spunte) ── -->
-                @if (isFormOpen(c, 'richiesta')) {
-                  <form
-                    class="aff-form"
-                    id="richiesta-{{ c.id }}"
-                    [formGroup]="requestForm"
-                    (ngSubmit)="submitRequest(c)"
-                  >
-                    <fieldset class="aff-fieldset">
-                      <legend class="aff-fieldset__legend">
-                        Hai già un account su questa poker room?
-                      </legend>
-                      <label class="check">
-                        <input
-                          type="radio"
-                          formControlName="accountEsistente"
-                          [value]="false"
-                        />
-                        <span>No, lo creo adesso</span>
-                      </label>
-                      <label class="check">
-                        <input
-                          type="radio"
-                          formControlName="accountEsistente"
-                          [value]="true"
-                        />
-                        <span>Sì, ce l'ho già</span>
-                      </label>
-                    </fieldset>
-
-                    @if (blockedExistingAccount(c)) {
-                      <!--
-                        ⚠️ Non è un vicolo cieco: il ricollegamento di un conto
-                        esistente si fa a mano, e l'unica uscita è l'invito
-                        Discord del footer — mai un link a un profilo, che per
-                        chi non condivide un server non si può nemmeno scrivere.
-                      -->
-                      <p class="form-feedback is-info">
-                        Questa sala non collega un account già esistente in
-                        automatico. Quasi ovunque si può fare a mano: scrivicelo
-                        sul nostro
+                      @if (a.affiliateUrl) {
                         <a
-                          [href]="discordUrl"
+                          class="btn btn--primary btn--sm aff-row__link"
+                          [href]="a.affiliateUrl"
                           target="_blank"
-                          rel="noopener noreferrer"
+                          rel="noopener nofollow sponsored"
                         >
-                          canale Discord
+                          Apri la pagina di registrazione
                           <span class="visually-hidden"
                             >(si apre in una nuova scheda)</span
-                          > </a
-                        >, ci pensiamo noi.
-                      </p>
-                    }
+                          >
+                        </a>
+                      }
 
-                    <p class="aff-form__reminder">{{ firstLoginReminder }}</p>
+                      @if (a.istruzioni) {
+                        <p class="aff-row__istr">{{ a.istruzioni }}</p>
+                      }
 
-                    <div class="field field--check">
-                      <label class="check">
-                        <input
-                          type="checkbox"
-                          formControlName="dichiaraProprieta"
-                        />
-                        <span
-                          >Dichiaro che l'account su {{ c.name }} è mio.</span
-                        >
-                      </label>
-                    </div>
+                      <!--
+                        ⚠️ Promemoria fisso sul primo accesso al client:
+                        duplicato consapevolmente dal backend (vedi il commento
+                        sulla costante nel .ts). Va tenuto allineato a mano.
+                      -->
+                      <p class="aff-note-rule">{{ firstLoginReminder }}</p>
 
-                    <div class="field field--check">
-                      <label class="check">
-                        <input type="checkbox" formControlName="accettaTermini" />
-                        <span>
-                          Ho letto e accetto i
+                      @if (a.status === 'RICHIESTO') {
+                        <p class="aff-row__note">{{ retentionNotice }}</p>
+                      }
+
+                      @if (a.roomUsername) {
+                        <p class="aff-row__declared">
+                          Username dichiarato:
+                          <span class="aff-row__declared-val">{{
+                            a.roomUsername
+                          }}</span>
+                        </p>
+                      }
+
+                      <!--
+                        ── Azioni secondarie ──
+                        La principale è già in riga. Su ANNULLATO l'unica azione
+                        è "Richiedi di nuovo", che sta lì: qui non resterebbe
+                        nulla, e una barra vuota è un bordo senza motivo.
+                      -->
+                      @if (a.status !== 'ANNULLATO') {
+                        <div class="aff-actions">
+                          @if (
+                            canRequestAgain(a) &&
+                            canSubmitIdentifier(a) &&
+                            !isFormOpen(c, 'richiesta')
+                          ) {
+                            <button
+                              type="button"
+                              class="btn btn--ghost btn--sm"
+                              (click)="openRequestForm(c)"
+                              [disabled]="
+                                actingRoomId() !== null ||
+                                requestBlockedReason(c) !== null
+                              "
+                            >
+                              Richiedi di nuovo
+                            </button>
+                          }
+                          @if (canResend(a)) {
+                            <button
+                              type="button"
+                              class="btn btn--ghost btn--sm"
+                              (click)="resend(c)"
+                              [disabled]="actingRoomId() !== null"
+                            >
+                              {{
+                                actingRoomId() === c.id
+                                  ? 'Attendi…'
+                                  : "Rinvia l'email"
+                              }}
+                            </button>
+                          }
                           <button
                             type="button"
-                            class="btn--link"
-                            (click)="scrollToTerms()"
+                            class="btn btn--ghost btn--sm aff-actions__danger"
+                            (click)="askCancel(c)"
+                            [disabled]="actingRoomId() !== null"
                           >
-                            termini del programma</button
-                          >.
-                        </span>
-                      </label>
-                    </div>
-
-                    <!--
-                      ⚠️ Verso la sala non parte nulla di nostro: qui si dice
-                      cosa succede davvero al dato, non che "comunicheremo un
-                      codice" (falso).
-                    -->
-                    <p class="aff-form__note">
-                      L'username che ci manderai dopo serve a verificare il
-                      collegamento nel back-office della sala; lo conserviamo
-                      come descritto nella
-                      <a routerLink="/privacy">privacy policy</a>.
-                    </p>
-
-                    @if (formError()) {
-                      <p class="form-feedback is-error" role="alert">
-                        {{ formError() }}
-                      </p>
-                    }
-                    @if (requestForm.invalid && requestForm.touched) {
-                      <span class="field-error"
-                        >Scegli una risposta e spunta entrambe le
-                        dichiarazioni.</span
-                      >
-                    }
-
-                    <div class="row aff-form__actions">
-                      <button
-                        type="submit"
-                        class="btn btn--primary btn--sm"
-                        [disabled]="
-                          actingRoomId() !== null || blockedExistingAccount(c)
-                        "
-                      >
-                        {{
-                          actingRoomId() === c.id
-                            ? 'Attendi…'
-                            : 'Invia la richiesta'
-                        }}
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn--ghost btn--sm"
-                        (click)="closeForm()"
-                        [disabled]="actingRoomId() !== null"
-                      >
-                        Annulla
-                      </button>
-                    </div>
-                  </form>
-                }
-
-                <!-- ── Form 2: invio dell'identificativo ── -->
-                @if (isFormOpen(c, 'dati')) {
-                  <form
-                    class="aff-form"
-                    id="dati-{{ c.id }}"
-                    [formGroup]="identifierForm"
-                    (ngSubmit)="submitIdentifier(c)"
-                  >
-                    <div class="field">
-                      <label for="username-{{ c.id }}">{{
-                        identifierLabel(c)
-                      }}</label>
-                      <input
-                        id="username-{{ c.id }}"
-                        type="text"
-                        class="input"
-                        formControlName="roomUsername"
-                        autocomplete="off"
-                        spellcheck="false"
-                        [maxlength]="identifierMax(c)"
-                        [attr.aria-invalid]="identifierInvalid()"
-                        [attr.aria-describedby]="identifierDescribedBy(c)"
-                      />
-                      @if (c.room?.identifierHelp) {
-                        <span class="aff-help" id="aiuto-{{ c.id }}">{{
-                          c.room!.identifierHelp
-                        }}</span>
+                            {{
+                              isTracked(a)
+                                ? 'Annulla il tracciamento'
+                                : 'Annulla la richiesta'
+                            }}
+                          </button>
+                        </div>
                       }
-                      @if (identifierInvalid()) {
-                        <span
-                          class="field-error"
-                          id="errore-username-{{ c.id }}"
-                          >{{ identifierErrorText(c) }}</span
-                        >
-                      }
-                    </div>
 
-                    @if (c.room?.richiedeSecondoId) {
-                      <div class="field">
-                        <label for="secondo-{{ c.id }}">{{
-                          c.room!.secondIdentifierLabel ??
-                            'Secondo identificativo'
-                        }}</label>
-                        <input
-                          id="secondo-{{ c.id }}"
-                          type="text"
-                          class="input"
-                          formControlName="roomUserId"
-                          autocomplete="off"
-                          spellcheck="false"
-                          maxlength="60"
-                          [attr.aria-invalid]="secondIdentifierInvalid()"
-                          [attr.aria-describedby]="
-                            secondIdentifierInvalid()
-                              ? 'errore-secondo-' + c.id
-                              : null
-                          "
-                        />
-                        @if (secondIdentifierInvalid()) {
-                          <span
-                            class="field-error"
-                            id="errore-secondo-{{ c.id }}"
-                            >Questa sala richiede anche questo dato.</span
+                      @if (canRequestAgain(a) && requestBlockedReason(c); as why) {
+                        <p class="aff-row__note">{{ why }}</p>
+                      }
+
+                      <!-- Conferma inline: nel progetto non esistono dialog. -->
+                      @if (confirmingRoomId() === c.id) {
+                        <div class="aff-confirm">
+                          <p class="aff-confirm__text">
+                            Il tracciamento presso la sala non si annulla da qui:
+                            smettiamo di conservare i tuoi dati di collegamento.
+                          </p>
+                          <div class="row">
+                            <button
+                              type="button"
+                              class="btn btn--danger-solid btn--sm"
+                              (click)="cancel(c)"
+                              [disabled]="actingRoomId() !== null"
+                            >
+                              {{
+                                actingRoomId() === c.id ? 'Attendi…' : 'Confermo'
+                              }}
+                            </button>
+                            <button
+                              type="button"
+                              class="btn btn--ghost btn--sm"
+                              (click)="dismissCancel()"
+                              [disabled]="actingRoomId() !== null"
+                            >
+                              Lascia com'è
+                            </button>
+                          </div>
+                        </div>
+                      }
+                    } @else if (requestBlockedReason(c); as why) {
+                      <p class="aff-row__note">{{ why }}</p>
+                    }
+
+                    <!-- ── Form 1: richiesta del link (tre spunte) ── -->
+                    @if (isFormOpen(c, 'richiesta')) {
+                      <form
+                        class="aff-form"
+                        id="richiesta-{{ c.id }}"
+                        [formGroup]="requestForm"
+                        (ngSubmit)="submitRequest(c)"
+                      >
+                        <fieldset class="aff-fieldset">
+                          <legend class="aff-fieldset__legend">
+                            Hai già un account su questa poker room?
+                          </legend>
+                          <!--
+                            ⚠️ Due aree separate, ciascuna alta almeno 44px:
+                            appaiate senza spazio erano un'unica riga illeggibile
+                            («○No, lo creo adesso○Sì, ce l'ho già»).
+                          -->
+                          <div class="aff-choices">
+                            <label class="check aff-choice">
+                              <input
+                                type="radio"
+                                formControlName="accountEsistente"
+                                [value]="false"
+                              />
+                              <span>No, lo creo adesso</span>
+                            </label>
+                            <label class="check aff-choice">
+                              <input
+                                type="radio"
+                                formControlName="accountEsistente"
+                                [value]="true"
+                              />
+                              <span>Sì, ce l'ho già</span>
+                            </label>
+                          </div>
+                        </fieldset>
+
+                        @if (blockedExistingAccount(c)) {
+                          <!--
+                            ⚠️ Non è un vicolo cieco: il ricollegamento di un
+                            conto esistente si fa a mano, e l'unica uscita è
+                            l'invito Discord del footer — mai un link a un
+                            profilo, che per chi non condivide un server non si
+                            può nemmeno scrivere.
+                          -->
+                          <p class="form-feedback is-info">
+                            Questa sala non collega un account già esistente in
+                            automatico. Quasi ovunque si può fare a mano:
+                            scrivicelo sul nostro
+                            <a
+                              [href]="discordUrl"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              canale Discord
+                              <span class="visually-hidden"
+                                >(si apre in una nuova scheda)</span
+                              > </a
+                            >, ci pensiamo noi.
+                          </p>
+                        }
+
+                        <p class="aff-note-rule">{{ firstLoginReminder }}</p>
+
+                        <div class="field field--check">
+                          <label class="check">
+                            <input
+                              type="checkbox"
+                              formControlName="dichiaraProprieta"
+                            />
+                            <span
+                              >Dichiaro che l'account su {{ c.name }} è
+                              mio.</span
+                            >
+                          </label>
+                        </div>
+
+                        <div class="field field--check">
+                          <label class="check">
+                            <input
+                              type="checkbox"
+                              formControlName="accettaTermini"
+                            />
+                            <span>
+                              Ho letto e accetto i
+                              <button
+                                type="button"
+                                class="btn--link"
+                                (click)="scrollToTerms()"
+                              >
+                                termini del programma</button
+                              >.
+                            </span>
+                          </label>
+                        </div>
+
+                        <!--
+                          ⚠️ Verso la sala non parte nulla di nostro: qui si dice
+                          cosa succede davvero al dato, non che "comunicheremo un
+                          codice" (falso).
+                        -->
+                        <p class="aff-form__note">
+                          L'username che ci manderai dopo serve a verificare il
+                          collegamento nel back-office della sala; lo conserviamo
+                          come descritto nella
+                          <a routerLink="/privacy">privacy policy</a>.
+                        </p>
+
+                        @if (formError()) {
+                          <p class="form-feedback is-error" role="alert">
+                            {{ formError() }}
+                          </p>
+                        }
+                        @if (requestForm.invalid && requestForm.touched) {
+                          <span class="field-error"
+                            >Scegli una risposta e spunta entrambe le
+                            dichiarazioni.</span
                           >
                         }
-                      </div>
+
+                        <div class="row aff-form__actions">
+                          <button
+                            type="submit"
+                            class="btn btn--primary btn--sm"
+                            [disabled]="
+                              actingRoomId() !== null ||
+                              blockedExistingAccount(c)
+                            "
+                          >
+                            {{
+                              actingRoomId() === c.id
+                                ? 'Attendi…'
+                                : 'Invia la richiesta'
+                            }}
+                          </button>
+                          <button
+                            type="button"
+                            class="btn btn--ghost btn--sm"
+                            (click)="closeForm(c)"
+                            [disabled]="actingRoomId() !== null"
+                          >
+                            Annulla
+                          </button>
+                        </div>
+                      </form>
                     }
 
-                    <p class="aff-form__reminder">{{ firstLoginReminder }}</p>
+                    <!-- ── Form 2: invio dell'identificativo ── -->
+                    @if (isFormOpen(c, 'dati')) {
+                      <form
+                        class="aff-form"
+                        id="dati-{{ c.id }}"
+                        [formGroup]="identifierForm"
+                        (ngSubmit)="submitIdentifier(c)"
+                      >
+                        <div class="field">
+                          <label for="username-{{ c.id }}">{{
+                            identifierLabel(c)
+                          }}</label>
+                          <input
+                            id="username-{{ c.id }}"
+                            type="text"
+                            class="input"
+                            formControlName="roomUsername"
+                            autocomplete="off"
+                            spellcheck="false"
+                            [maxlength]="identifierMax(c)"
+                            [attr.aria-invalid]="identifierInvalid()"
+                            [attr.aria-describedby]="identifierDescribedBy(c)"
+                          />
+                          @if (c.room?.identifierHelp) {
+                            <span class="aff-help" id="aiuto-{{ c.id }}">{{
+                              c.room!.identifierHelp
+                            }}</span>
+                          }
+                          @if (identifierInvalid()) {
+                            <span
+                              class="field-error"
+                              id="errore-username-{{ c.id }}"
+                              >{{ identifierErrorText(c) }}</span
+                            >
+                          }
+                        </div>
 
-                    <div class="field field--check">
-                      <label class="check">
-                        <input
-                          type="checkbox"
-                          formControlName="dichiaraProprieta"
-                        />
-                        <span
-                          >Dichiaro che l'account su {{ c.name }} è mio.</span
-                        >
-                      </label>
-                    </div>
+                        @if (c.room?.richiedeSecondoId) {
+                          <div class="field">
+                            <label for="secondo-{{ c.id }}">{{
+                              c.room!.secondIdentifierLabel ??
+                                'Secondo identificativo'
+                            }}</label>
+                            <input
+                              id="secondo-{{ c.id }}"
+                              type="text"
+                              class="input"
+                              formControlName="roomUserId"
+                              autocomplete="off"
+                              spellcheck="false"
+                              maxlength="60"
+                              [attr.aria-invalid]="secondIdentifierInvalid()"
+                              [attr.aria-describedby]="
+                                secondIdentifierInvalid()
+                                  ? 'errore-secondo-' + c.id
+                                  : null
+                              "
+                            />
+                            @if (secondIdentifierInvalid()) {
+                              <span
+                                class="field-error"
+                                id="errore-secondo-{{ c.id }}"
+                                >Questa sala richiede anche questo dato.</span
+                              >
+                            }
+                          </div>
+                        }
 
-                    @if (formError()) {
-                      <p class="form-feedback is-error" role="alert">
-                        {{ formError() }}
-                      </p>
+                        <p class="aff-note-rule">{{ firstLoginReminder }}</p>
+
+                        <div class="field field--check">
+                          <label class="check">
+                            <input
+                              type="checkbox"
+                              formControlName="dichiaraProprieta"
+                            />
+                            <span
+                              >Dichiaro che l'account su {{ c.name }} è
+                              mio.</span
+                            >
+                          </label>
+                        </div>
+
+                        @if (formError()) {
+                          <p class="form-feedback is-error" role="alert">
+                            {{ formError() }}
+                          </p>
+                        }
+
+                        <div class="row aff-form__actions">
+                          <button
+                            type="submit"
+                            class="btn btn--primary btn--sm"
+                            [disabled]="actingRoomId() !== null"
+                          >
+                            {{
+                              actingRoomId() === c.id
+                                ? 'Attendi…'
+                                : 'Invia i dati'
+                            }}
+                          </button>
+                          <button
+                            type="button"
+                            class="btn btn--ghost btn--sm"
+                            (click)="closeForm(c)"
+                            [disabled]="actingRoomId() !== null"
+                          >
+                            Annulla
+                          </button>
+                        </div>
+                      </form>
                     }
-
-                    <div class="row aff-form__actions">
-                      <button
-                        type="submit"
-                        class="btn btn--primary btn--sm"
-                        [disabled]="actingRoomId() !== null"
-                      >
-                        {{
-                          actingRoomId() === c.id ? 'Attendi…' : 'Invia i dati'
-                        }}
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn--ghost btn--sm"
-                        (click)="closeForm()"
-                        [disabled]="actingRoomId() !== null"
-                      >
-                        Annulla
-                      </button>
-                    </div>
-                  </form>
+                  </div>
                 }
-              </article>
+              </li>
             }
-          </div>
+          </ul>
         }
       </section>
     } @else {

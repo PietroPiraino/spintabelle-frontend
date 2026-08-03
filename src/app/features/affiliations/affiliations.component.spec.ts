@@ -99,6 +99,17 @@ const button = (
 const macrotask = (): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve));
 
+/** Il bottone che apre/chiude il dettaglio di una riga. */
+const toggle = (
+  fixture: ComponentFixture<unknown>,
+  roomId: string,
+): HTMLButtonElement | null =>
+  el(fixture).querySelector<HTMLButtonElement>(`#dettaglio-toggle-${roomId}`);
+
+/** Quante volte una frase compare nel testo della pagina. */
+const occorrenze = (fixture: ComponentFixture<unknown>, frase: string): number =>
+  text(fixture).split(frase).length - 1;
+
 /**
  * Sessione finta: `user` e `ready` sono signal scrivibili dal test, perché il
  * caso che conta è proprio l'ordine in cui i due arrivano (§3).
@@ -180,6 +191,25 @@ describe('AffiliationsComponent', () => {
     return ctx;
   }
 
+  /**
+   * Apre il dettaglio di una riga, se non è già aperto.
+   *
+   * ⚠️ **È un gesto, non un'asserzione**: da quando la riga chiusa tiene solo
+   * ciò che serve a decidere, codici, link, promemoria e azioni secondarie
+   * stanno dietro questo bottone. I test che li interrogano fanno il gesto e
+   * poi asseriscono esattamente quello che asserivano prima. Idempotente
+   * apposta: una riga può nascere aperta (vedi il caso della pratica unica), e
+   * un clic alla cieca la richiuderebbe.
+   */
+  async function apriDettaglio(ctx: Ctx, roomId: string): Promise<void> {
+    const btn = toggle(ctx.fixture, roomId);
+    expect(btn).withContext(`toggle di ${roomId}`).not.toBeNull();
+    if (btn!.getAttribute('aria-expanded') === 'true') return;
+    btn!.click();
+    await ctx.fixture.whenStable();
+    ctx.fixture.detectChanges();
+  }
+
   afterEach(() => {
     http?.verify();
     http = null;
@@ -215,6 +245,33 @@ describe('AffiliationsComponent', () => {
     // l'effect non ne fa partire nessuna. È l'altra metà dell'asserzione di
     // "quante ne flusho" (l'`afterEach` verificherebbe comunque).
     ctx.http.verify();
+  });
+
+  /**
+   * ⚠️ Vincolo **legale**, non estetico. Il ramo anonimo finisce nell'HTML
+   * prerenderizzato e indicizzabile: un premio in cambio di gioco lì dentro è un
+   * incentivo, mentre il perimetro approvato dal consulente è un *programma di
+   * affiliazione*. Il blocco dei punti vive solo dietro login — fuori resta il
+   * solo invito a iscriversi. E dentro non porta cifre: i punti li assegna
+   * l'owner a mano e a sua discrezione, e i termini in pagina dicono già che il
+   * programma non garantisce alcun vantaggio.
+   */
+  it('i punti BFF stanno solo dietro login, e senza promettere numeri', async () => {
+    const ctx = await setup({ user: null, ready: true });
+    expect(el(ctx.fixture).querySelector('.aff__points')).toBeNull();
+    expect(text(ctx.fixture)).not.toContain('punti BFF');
+
+    ctx.user.set(userOf());
+    await ctx.fixture.whenStable();
+    await flushCatalogo(ctx, [roomOf('sala-uno')]);
+
+    const punti = el(ctx.fixture).querySelector('.aff__points');
+    expect(punti).not.toBeNull();
+    expect(label(punti)).toContain('Giocando da affiliato guadagni punti BFF');
+    // Nessuna cifra, nessun tasso, nessuna cadenza.
+    expect(label(punti)).not.toMatch(/\d/);
+    // I punti si spendono nel Negozio: il rimando dev'essere un link vero.
+    expect(punti!.querySelector('a[href="/negozio"]')).not.toBeNull();
   });
 
   // ── L'ordine di arrivo della sessione (il caso che pinna la decisione) ─────
@@ -267,6 +324,8 @@ describe('AffiliationsComponent', () => {
       [roomOf('sala-uno')],
       [affOf({ status: 'APPROVATO', statusLabel: 'Tracciato' })],
     );
+    // Le azioni secondarie stanno nel dettaglio: il gesto in più è aprirlo.
+    await apriDettaglio(ctx, 'sala-uno');
 
     const annulla = button(ctx.fixture, 'Annulla il tracciamento');
     expect(annulla).toBeDefined();
@@ -291,6 +350,177 @@ describe('AffiliationsComponent', () => {
     expect(label(el(ctx.fixture).querySelector('.aff-chip'))).toBe('Annullato');
     // Uno stato terminale ha sempre una via di ritorno.
     expect(button(ctx.fixture, 'Richiedi di nuovo')).toBeDefined();
+  });
+
+  // ── Dettaglio a scomparsa (la cura della densità) ─────────────────────────
+
+  /**
+   * ⚠️ **Copia della copia**: `FIRST_CLIENT_LOGIN_REMINDER` vive nel backend,
+   * ne esiste un duplicato dichiarato nel componente, e questa è la terza. Sta
+   * qui perché è **la** frase che misurava il difetto: con cinque pratiche
+   * aperte compariva cinque volte nella stessa schermata. Se cambia, cambiano
+   * tutte e tre.
+   */
+  const PROMEMORIA =
+    'Dopo aver creato il conto, fai un primo accesso al client di poker. Prima di quel passaggio il tuo username non risulta e non possiamo verificarlo.';
+
+  it('riga chiusa: niente dettaglio ripetuto, ma offerta, stato, UNA azione e il gettone restano', async () => {
+    const ctx = await loggedWith(
+      [
+        roomOf('sala-uno', { condizioni: 'Rakeback 45%, ogni mese.' }),
+        roomOf('sala-due', { condizioni: 'Rakeback 38%, ogni mese.' }),
+      ],
+      [
+        affOf({ roomId: 'sala-uno', richiestoAt: '2026-07-20T10:00:00.000Z' }),
+        affOf({
+          id: 'a2',
+          roomId: 'sala-due',
+          roomName: 'Sala sala-due',
+          roomSlug: 'sala-due',
+          refCode: 'AFF-P4X8DNVB',
+          richiestoAt: '2026-07-21T10:00:00.000Z',
+        }),
+      ],
+    );
+    const page = el(ctx.fixture);
+
+    // Il difetto misurato: la stessa frase, una volta per pratica. Ora: zero.
+    expect(occorrenze(ctx.fixture, PROMEMORIA)).toBe(0);
+    expect(page.querySelectorAll('.aff-row__detail').length).toBe(0);
+    expect(page.querySelectorAll('.aff-code').length).toBe(0);
+    expect(text(ctx.fixture)).not.toContain('AFF-7K2M9QRT');
+
+    // Ciò che la riga chiusa DEVE tenere: offerta, stato + data, una sola
+    // azione, e il gettone "tocca a te" — che è il punto del ridisegno.
+    expect(text(ctx.fixture)).toContain('Rakeback 45%, ogni mese.');
+    expect(page.querySelectorAll('.aff-chip').length).toBe(2);
+    expect(text(ctx.fixture)).toContain('richiesta del 20/07/2026');
+    expect(page.querySelectorAll('.aff-turn').length).toBe(2);
+    expect(page.querySelectorAll('.aff-coin').length).toBe(2);
+    expect(text(ctx.fixture)).toContain(
+      'Tocca a te: crea il conto dal link, poi mandaci il tuo username.',
+    );
+    // Una azione per riga: la principale. Le secondarie sono nel dettaglio.
+    expect(button(ctx.fixture, 'Ho fatto: invia i miei dati')).toBeDefined();
+    expect(button(ctx.fixture, "Rinvia l'email")).toBeUndefined();
+    expect(button(ctx.fixture, 'Annulla la richiesta')).toBeUndefined();
+
+    // Aprendone una, e una sola, il dettaglio torna intero.
+    await apriDettaglio(ctx, 'sala-uno');
+    expect(occorrenze(ctx.fixture, PROMEMORIA)).toBe(1);
+    expect(text(ctx.fixture)).toContain('AFF-7K2M9QRT');
+    expect(button(ctx.fixture, "Rinvia l'email")).toBeDefined();
+  });
+
+  it('una sola riga aperta per volta: aprire la seconda chiude la prima', async () => {
+    const ctx = await loggedWith(
+      [roomOf('sala-uno'), roomOf('sala-due')],
+      [
+        affOf({ roomId: 'sala-uno' }),
+        affOf({
+          id: 'a2',
+          roomId: 'sala-due',
+          roomName: 'Sala sala-due',
+          roomSlug: 'sala-due',
+          refCode: 'AFF-P4X8DNVB',
+        }),
+      ],
+    );
+    const page = el(ctx.fixture);
+
+    await apriDettaglio(ctx, 'sala-uno');
+    expect(page.querySelector('#dettaglio-sala-uno')).not.toBeNull();
+    expect(toggle(ctx.fixture, 'sala-uno')!.getAttribute('aria-expanded')).toBe(
+      'true',
+    );
+
+    await apriDettaglio(ctx, 'sala-due');
+    expect(page.querySelectorAll('.aff-row__detail').length).toBe(1);
+    expect(page.querySelector('#dettaglio-sala-uno')).toBeNull();
+    expect(page.querySelector('#dettaglio-sala-due')).not.toBeNull();
+    expect(toggle(ctx.fixture, 'sala-uno')!.getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+  });
+
+  it('chiudendo il dettaglio il fuoco torna sul bottone che l\'ha aperto', async () => {
+    const ctx = await loggedWith([roomOf('sala-uno')], [affOf()]);
+    await apriDettaglio(ctx, 'sala-uno');
+
+    // Il fuoco è dentro il pannello: chiudendolo il DOM lo rimuove, e senza
+    // rimetterlo sul bottone chi usa la tastiera finisce sul `<body>`.
+    el(ctx.fixture)
+      .querySelector<HTMLButtonElement>('.aff-copy')!
+      .focus();
+
+    toggle(ctx.fixture, 'sala-uno')!.click();
+    await ctx.fixture.whenStable();
+    ctx.fixture.detectChanges();
+    await macrotask(); // il fuoco arriva in un `setTimeout(0)` (zoneless)
+
+    expect(el(ctx.fixture).querySelector('#dettaglio-sala-uno')).toBeNull();
+    const t = toggle(ctx.fixture, 'sala-uno')!;
+    expect(t.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(t);
+  });
+
+  /**
+   * ⚠️ **Scelta dichiarata** (vedi l'`effect` di apertura automatica nel
+   * componente): con **una sola** pratica in pagina non c'è nulla da scegliere
+   * e la riga nasce aperta; da **due in su** non se ne apre nessuna, perché
+   * sceglierne una sarebbe arbitrario e aprirle tutte rimetterebbe il muro.
+   */
+  it('con una sola pratica la riga nasce aperta', async () => {
+    const ctx = await loggedWith([roomOf('sala-uno')], [affOf()]);
+    expect(el(ctx.fixture).querySelector('#dettaglio-sala-uno')).not.toBeNull();
+    expect(toggle(ctx.fixture, 'sala-uno')!.getAttribute('aria-expanded')).toBe(
+      'true',
+    );
+    expect(text(ctx.fixture)).toContain('AFF-7K2M9QRT');
+  });
+
+  it('con due pratiche non ne nasce aperta nessuna', async () => {
+    const ctx = await loggedWith(
+      [roomOf('sala-uno'), roomOf('sala-due')],
+      [
+        affOf({ roomId: 'sala-uno' }),
+        affOf({
+          id: 'a2',
+          roomId: 'sala-due',
+          roomName: 'Sala sala-due',
+          roomSlug: 'sala-due',
+        }),
+      ],
+    );
+    expect(el(ctx.fixture).querySelectorAll('.aff-row__detail').length).toBe(0);
+  });
+
+  it('aprire un form apre il dettaglio: un clic solo, non due', async () => {
+    // Due pratiche: nessuna nasce aperta, quindi il merito è tutto del clic.
+    const ctx = await loggedWith(
+      [roomOf('sala-uno'), roomOf('sala-due')],
+      [
+        affOf({ roomId: 'sala-uno' }),
+        affOf({
+          id: 'a2',
+          roomId: 'sala-due',
+          roomName: 'Sala sala-due',
+          roomSlug: 'sala-due',
+        }),
+      ],
+    );
+    const page = el(ctx.fixture);
+    expect(page.querySelectorAll('.aff-row__detail').length).toBe(0);
+
+    page.querySelector<HTMLButtonElement>('#cta-sala-due')!.click();
+    await ctx.fixture.whenStable();
+    ctx.fixture.detectChanges();
+
+    expect(page.querySelector('#dati-sala-due')).not.toBeNull();
+    expect(page.querySelector('#dettaglio-sala-due')).not.toBeNull();
+    expect(toggle(ctx.fixture, 'sala-due')!.getAttribute('aria-expanded')).toBe(
+      'true',
+    );
   });
 
   // ── Errore di caricamento ─────────────────────────────────────────────────
@@ -473,6 +703,8 @@ describe('AffiliationsComponent', () => {
 
   it('copia: senza `navigator.clipboard` (contesto non sicuro) parte il ripiego e il codice resta visibile', async () => {
     const ctx = await loggedWith([roomOf('sala-uno')], [affOf()]);
+    // I codici stanno nel dettaglio: il gesto in più è aprirlo.
+    await apriDettaglio(ctx, 'sala-uno');
 
     // Fuori da un contesto sicuro l'API non esiste proprio.
     const own = Object.getOwnPropertyDescriptor(navigator, 'clipboard');

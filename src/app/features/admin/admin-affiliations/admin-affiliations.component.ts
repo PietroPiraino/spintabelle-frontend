@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -12,7 +13,13 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
+import {
+  Observable,
+  concat,
+  debounceTime,
+  distinctUntilChanged,
+  toArray,
+} from 'rxjs';
 import {
   AFFILIATION_STATUSES,
   AffiliationAdmin,
@@ -49,6 +56,31 @@ const IDENTIFIER_FORMATS: IdentifierFormat[] = [
   'ALFANUMERICO',
   'NUMERICO',
 ];
+
+/**
+ * Passo della scala che le frecce ▲▼ riscrivono sull'elenco: 10, 20, 30, …
+ *
+ * ⚠️ **Perché una rinumerazione e non uno scambio dei due valori.** Il backend
+ * ordina per `{ordine: 1, createdAt: -1}` e **tutte le sale nascono con
+ * `ordine = 100`**: nel caso reale di oggi ogni riga ha lo stesso numero e
+ * l'ordine visibile è deciso solo dal tiebreak sulla data. Scambiare i valori
+ * di due righe che valgono entrambe 100 non produce **alcun** movimento, e
+ * nessun valore singolo può spostare una riga di **una** posizione dentro un
+ * blocco di pari merito: qualunque numero minore di 100 la manda in cima al
+ * blocco, qualunque maggiore in fondo. L'unica mossa che vale una posizione è
+ * quindi ridistribuire numeri **distinti** su tutte le righe.
+ *
+ * Alla prima mossa la scala viene stesa da capo (10, 20, 30…) e si PATCHano
+ * solo le righe il cui numero cambia davvero; da lì in poi uno scambio fra
+ * adiacenti tocca **due sole righe**, perché il valore di posizione non dipende
+ * dalla riga ma dall'indice. Il passo 10 lascia spazio per infilare a mano un
+ * numero fra due sale dal campo «Ordine in vetrina» senza rifare la scala.
+ *
+ * ⚠️ Le frecce **possiedono** la scala: usarne una rinormalizza i numeri di
+ * tutte le sale (l'ordine visibile resta identico, cambiano solo i numeri). Chi
+ * vuole un valore preciso lo scrive nel campo del form — ed è detto lì.
+ */
+const ORDER_STEP = 10;
 
 type AffiliationsView = 'richieste' | 'sale';
 
@@ -141,6 +173,34 @@ export class AdminAffiliationsComponent {
   protected readonly logoRejected = signal(false);
   protected readonly confirmDeleteId = signal<string | null>(null);
   /**
+   * Sala su cui è in corso una rinumerazione: blocca entrambe le frecce di
+   * quella riga (e tutte le altre) finché la cascata non è finita. Stesso
+   * idioma di `actingId` nella coda delle richieste, signal separato perché è
+   * un'altra vista con un'altra banda errore.
+   */
+  protected readonly movingId = signal<string | null>(null);
+  /**
+   * Esito di uno spostamento. ⚠️ Banda propria, stampata **accanto all'elenco**
+   * e non in quella del form: il form sta in un'altra colonna (e su mobile
+   * sopra, fuori schermo), mentre `roomListError` viene azzerata da ogni
+   * `loadRooms()` — cioè proprio dalla ricarica che segue l'errore.
+   */
+  protected readonly moveError = signal<string | null>(null);
+  protected readonly moveFeedback = signal<string | null>(null);
+  /**
+   * ⚠️ Le frecce si spengono quando l'elenco non sta in una pagina sola.
+   *
+   * Una rinumerazione è sicura solo se **vede tutte le righe**: rifare la scala
+   * sulle 25 visibili mentre le altre restano a 100 riordinerebbe in silenzio
+   * righe che non sono sullo schermo (a parità di numero la pagina 2 vale
+   * quanto la 1). Sopra le 25 sale l'ordine si imposta col campo numerico del
+   * form, che è preciso e non ha bisogno di vedere il resto — e il pannello lo
+   * dice, invece di offrire frecce che spostano oltre il bordo pagina.
+   */
+  protected readonly ordinePaginato = computed(
+    () => (this.roomPage()?.totalPages ?? 1) > 1,
+  );
+  /**
    * Avviso dopo un PATCH che ha cambiato il template del link: quante righe
    * ancora in attesa portano il link precedente. ⚠️ Va stampato, altrimenti un
    * tracker ruotato è un guasto silenzioso il cui unico sintomo è che le
@@ -215,6 +275,11 @@ export class AdminAffiliationsComponent {
   protected setView(v: AffiliationsView): void {
     if (this.view() === v) return;
     this.view.set(v);
+    // L'esito di uno spostamento vale per il momento in cui è avvenuto: tornare
+    // sul catalogo più tardi non deve ritrovarlo lì come se fosse appena
+    // successo.
+    this.moveFeedback.set(null);
+    this.moveError.set(null);
     if (v === 'sale' && !this.roomPage()) this.loadRooms();
   }
 
@@ -430,6 +495,82 @@ export class AdminAffiliationsComponent {
     if (n < 1 || n > total || n === this.roomPageNum()) return;
     this.roomPageNum.set(n);
     this.loadRooms();
+  }
+
+  // ── Ordine in vetrina: frecce ▲▼ ──────────────────────────────────────────
+
+  /**
+   * ▲ e ▼ di una riga. Sono spente ai due estremi della **lista completa** (che
+   * qui coincide con la pagina: le frecce esistono solo a pagina unica, vedi
+   * `ordinePaginato`), mentre una cascata è in volo e mentre l'elenco si
+   * ricarica — altrimenti la seconda mossa partirebbe da un ordine che sta già
+   * cambiando sotto.
+   */
+  protected canMove(index: number, delta: -1 | 1): boolean {
+    const p = this.roomPage();
+    if (!p || this.ordinePaginato() || this.movingId() || this.roomLoading()) {
+      return false;
+    }
+    const to = index + delta;
+    return to >= 0 && to < p.items.length;
+  }
+
+  /**
+   * Sposta una sala di **una** posizione riscrivendo la scala `ORDER_STEP`
+   * sull'elenco riordinato (vedi la costante: con tutte le sale a 100 uno
+   * scambio di valori non muoverebbe nulla).
+   *
+   * ⚠️ Le PATCH partono **in sequenza** e non sono atomiche: `concat` ferma la
+   * cascata alla prima che fallisce, così le successive non partono nemmeno, e
+   * in **entrambi** i rami si ricarica l'elenco. Quello che si vede dopo è
+   * quindi sempre l'ordine che il server ha davvero, non quello che speravamo:
+   * una patch in place mostrerebbe una lista riordinata a metà come se fosse
+   * andata bene.
+   */
+  protected moveRoom(r: PokerRoomAdmin, delta: -1 | 1): void {
+    const p = this.roomPage();
+    if (!p || this.movingId()) return;
+    const from = p.items.findIndex((x) => x.id === r.id);
+    if (from < 0 || !this.canMove(from, delta)) return;
+
+    const riordinate = p.items.slice();
+    riordinate[from] = p.items[from + delta];
+    riordinate[from + delta] = p.items[from];
+
+    // Solo le righe il cui numero cambia davvero: dopo la prima stesura della
+    // scala uno scambio fra adiacenti diventa due sole PATCH.
+    const patches = riordinate
+      .map((room, i) => ({ room, ordine: (i + 1) * ORDER_STEP }))
+      .filter((x) => x.room.ordine !== x.ordine)
+      .map((x) => this.api.updateRoom(x.room.id, { ordine: x.ordine }));
+    if (!patches.length) return;
+
+    this.movingId.set(r.id);
+    this.moveError.set(null);
+    this.moveFeedback.set(null);
+    concat(...patches)
+      .pipe(toArray())
+      .subscribe({
+        next: () => {
+          this.movingId.set(null);
+          this.moveFeedback.set(
+            `${r.name}: spostata più in ${delta < 0 ? 'alto' : 'basso'}.`,
+          );
+          this.loadRooms();
+        },
+        error: (err: unknown) => {
+          this.movingId.set(null);
+          this.moveError.set(
+            apiErrorMessage(
+              err,
+              "Spostamento non riuscito: qui sotto c'è l'ordine che il server ha davvero.",
+            ),
+          );
+          // ⚠️ Anche (soprattutto) nell'errore: parte della cascata può essere
+          // già passata, e l'unica verità è quella che risponde il server.
+          this.loadRooms();
+        },
+      });
   }
 
   /**
