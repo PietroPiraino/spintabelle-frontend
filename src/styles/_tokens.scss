@@ -41,6 +41,13 @@
   --gold-text: #b06f00; // oro leggibile come testo
   --halo: rgba(247, 245, 240, 0.95); // alone di protezione testo hero
 
+  // ⚠️ Substrato dei loghi di terzi (piastrella delle sale in /affiliazioni).
+  // È l'UNICO token che vale lo stesso in tutti e tre i temi, e non è una
+  // dimenticanza: i marchi degli operatori sono disegnati per il bianco e non
+  // si ricolorano mai. Non è un colore di marca nostro, è la carta su cui si
+  // stampa quello altrui — se cambia col tema, cambia il logo che ci sta sopra.
+  --logo-plate: #ffffff;
+
   // Tipografia
   --font-display: 'Bricolage Grotesque', 'Segoe UI', sans-serif;
   --font-body: 'Instrument Sans', 'Segoe UI', sans-serif;
@@ -119,6 +126,10 @@
   --gold-text: #a05f00;
   --halo: rgba(253, 238, 228, 0.95);
 
+  // Substrato dei loghi di terzi: bianco anche qui, di proposito (vedi `:root`).
+  // Un marchio altrui non si ricolora: la piastrella non segue il tema.
+  --logo-plate: #ffffff;
+
   // matrice tabelle: fold malva, raise corallo, all-in magenta
   --act-fold: #cdb4c5;
   --act-check: #00b3a4;
@@ -171,6 +182,13 @@
   --btn-ghost-bg: rgba(237, 228, 205, 0.05);
   --gold-text: #ffb547;
   --halo: rgba(11, 17, 36, 0.92);
+
+  // ⚠️ Substrato dei loghi di terzi: bianco ANCHE nel tema scuro, di proposito
+  // (vedi `:root`). Qui è l'unico valore che non si ribalta: i marchi degli
+  // operatori sono disegnati per il bianco e non si ricolorano. Il bagliore del
+  // rettangolo si smorza col raggio e col bordo (`.aff-tile`), mai sporcando
+  // questo valore — un bianco "un po' meno bianco" è un logo stampato male.
+  --logo-plate: #ffffff;
 
   --act-fold: #38456b;
   --act-check: #0bc9b9;

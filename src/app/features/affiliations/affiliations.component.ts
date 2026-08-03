@@ -96,6 +96,19 @@ interface RoomCard {
 }
 
 /**
+ * Una voce della striscia di sintesi sopra l'elenco («2 tracciate · 1 in
+ * verifica»). L'etichetta arriva già declinata al plurale giusto: comporla nel
+ * template significherebbe scriverne una copia per ogni voce.
+ *
+ * ⚠️ È una **derivata di `mine()`**, non un dato nuovo: nessuna chiamata in più.
+ */
+interface RiepilogoVoce {
+  key: 'tracciate' | 'verifica' | 'completare' | 'riprendere';
+  label: string;
+  count: number;
+}
+
+/**
  * `/affiliazioni` — programma di affiliazione, lato utente.
  *
  * ⚠️ **La rotta è pubblica e PRERENDERIZZATA**: tutto ciò che sta fuori dal ramo
@@ -286,6 +299,34 @@ export class AffiliationsComponent {
     () => this.openRequests() >= MAX_PENDING,
   );
 
+  /**
+   * Striscia di sintesi sopra l'elenco: risponde alla domanda della **seconda**
+   * visita ("a che punto sono?") prima che l'utente scorra otto righe.
+   *
+   * ⚠️ Solo le voci con conteggio > 0: uno zero non è un'informazione, è rumore
+   * che allunga la riga e la fa sembrare un cruscotto pieno di niente.
+   */
+  protected readonly riepilogo = computed<RiepilogoVoce[]>(() => {
+    const mine = this.mine();
+    const conta = (p: (a: MyAffiliation) => boolean): number =>
+      mine.filter(p).length;
+    const tracciate = conta((a) => a.status === 'APPROVATO');
+    const verifica = conta((a) => a.status === 'IN_VERIFICA');
+    const completare = conta((a) => a.status === 'RICHIESTO');
+    const riprendere = conta((a) => this.canRequestAgain(a));
+    const voci: RiepilogoVoce[] = [
+      {
+        key: 'tracciate',
+        count: tracciate,
+        label: tracciate === 1 ? 'tracciata' : 'tracciate',
+      },
+      { key: 'verifica', count: verifica, label: 'in verifica' },
+      { key: 'completare', count: completare, label: 'da completare' },
+      { key: 'riprendere', count: riprendere, label: 'da riprendere' },
+    ];
+    return voci.filter((v) => v.count > 0);
+  });
+
   /** Slug del deep-link (`?completa=`), se presente. */
   protected readonly deepLinkSlug = computed(() => {
     const raw: unknown = this.queryParams()['completa'];
@@ -462,6 +503,42 @@ export class AffiliationsComponent {
 
   protected chipKo(s: AffiliationStatus): boolean {
     return s === 'RIFIUTATO' || s === 'REVOCATO';
+  }
+
+  /** Link spedito, palla all'utente: è il rame della pagina. */
+  protected chipTodo(s: AffiliationStatus): boolean {
+    return s === 'RICHIESTO';
+  }
+
+  /** Chiuso dall'utente: spento, non allarmante — non è un rifiuto. */
+  protected chipOff(s: AffiliationStatus): boolean {
+    return s === 'ANNULLATO';
+  }
+
+  /**
+   * La riga aspetta una mossa **dell'utente**, non nostra: `RICHIESTO` (ha il
+   * link, deve mandarci l'username) e i tre stati chiusi (può ripartire). Sono
+   * le uniche che portano il gettone: se lo portassero tutte non direbbe più
+   * niente.
+   *
+   * ⚠️ Prende la **card**, non la riga: su uno stato chiuso la mossa esiste solo
+   * se la richiesta è davvero riapribile (sala ancora attiva, tetto non
+   * raggiunto). Promettere "puoi ripartire" accanto a un bottone spento sarebbe
+   * una bugia con l'aria di un guasto — e il motivo vero è già stampato lì
+   * sotto da `requestBlockedReason`.
+   */
+  protected needsAction(card: RoomCard): boolean {
+    const a = card.aff;
+    if (!a) return false;
+    if (a.status === 'RICHIESTO') return true;
+    return this.canRequestAgain(a) && this.requestBlockedReason(card) === null;
+  }
+
+  /** Cosa deve fare, in una riga: il gettone segnala, questa spiega. */
+  protected actionHint(a: MyAffiliation): string {
+    return a.status === 'RICHIESTO'
+      ? 'Tocca a te: crea il conto dal link, poi mandaci il tuo username.'
+      : 'Tocca a te: se vuoi, puoi richiedere di nuovo il collegamento.';
   }
 
   // ── Apertura dei form ─────────────────────────────────────────────────────

@@ -584,7 +584,14 @@
             class="input"
             formControlName="ordine"
           />
-          <p class="admin-news__hint">Più basso = più in alto.</p>
+          <p class="admin-news__hint">
+            Il numero più basso va più in alto; a parità di numero vince la sala
+            creata più di recente — ed è per questo che con tutte a 100 l'ordine
+            sembra deciso a caso. Serve quando vuoi una posizione precisa: per
+            spostare di un posto ci sono le frecce ▲▼ nell'elenco, che
+            ridistribuiscono i numeri (10, 20, 30…) lasciando l'ordine visibile
+            com'è.
+          </p>
         </div>
 
         <label class="row admin-panel__check" style="gap: 0.4rem">
@@ -637,6 +644,21 @@
           </span>
         }
       </div>
+      <p class="aff-hint">
+        Le frecce ▲▼ spostano una sala di una posizione. Il numero più basso va
+        più in alto; a parità di numero vince la sala creata più di recente.
+        @if (ordinePaginato()) {
+          Qui sono spente: con più di una pagina non si vedono tutte le sale, e
+          rinumerare solo queste riordinerebbe in silenzio quelle sulle altre
+          pagine. Usa il campo «Ordine in vetrina» del form.
+        }
+      </p>
+      @if (moveFeedback()) {
+        <div class="form-feedback is-success" role="status">{{ moveFeedback() }}</div>
+      }
+      @if (moveError()) {
+        <div class="form-feedback is-error" role="alert">{{ moveError() }}</div>
+      }
       @if (roomListError()) {
         <div class="form-feedback is-error" role="alert">{{ roomListError() }}</div>
       }
@@ -647,9 +669,32 @@
           <p>Nessuna sala ancora: creane una dal form.</p>
         </div>
       } @else if (roomPage()) {
-        @for (r of roomPage()!.items; track r.id) {
+        @for (r of roomPage()!.items; track r.id; let i = $index) {
           <div class="card admin-item" [class.is-editing]="editingId() === r.id">
             <div class="row" style="gap: 0.9rem; align-items: center; min-width: 0">
+              <!-- Frecce di riordino: ▲▼ testuali perché nel set `IconName` non
+                   esiste un glifo direzionale, e il significato lo porta
+                   l'aria-label (i caratteri sono aria-hidden). -->
+              <div
+                class="aff-move"
+                role="group"
+                [attr.aria-label]="'Ordine in vetrina di ' + r.name"
+              >
+                <button
+                  type="button"
+                  class="aff-move__btn"
+                  [attr.aria-label]="'Sposta ' + r.name + ' più in alto'"
+                  [disabled]="!canMove(i, -1)"
+                  (click)="moveRoom(r, -1)"
+                ><span aria-hidden="true">▲</span></button>
+                <button
+                  type="button"
+                  class="aff-move__btn"
+                  [attr.aria-label]="'Sposta ' + r.name + ' più in basso'"
+                  [disabled]="!canMove(i, 1)"
+                  (click)="moveRoom(r, 1)"
+                ><span aria-hidden="true">▼</span></button>
+              </div>
               @if (r.logoUrl) {
                 <img class="aff-thumb" [src]="r.logoUrl" [alt]="r.name" />
               } @else {

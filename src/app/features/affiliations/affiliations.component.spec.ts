@@ -217,6 +217,33 @@ describe('AffiliationsComponent', () => {
     ctx.http.verify();
   });
 
+  /**
+   * ⚠️ Vincolo **legale**, non estetico. Il ramo anonimo finisce nell'HTML
+   * prerenderizzato e indicizzabile: un premio in cambio di gioco lì dentro è un
+   * incentivo, mentre il perimetro approvato dal consulente è un *programma di
+   * affiliazione*. Il blocco dei punti vive solo dietro login — fuori resta il
+   * solo invito a iscriversi. E dentro non porta cifre: i punti li assegna
+   * l'owner a mano e a sua discrezione, e i termini in pagina dicono già che il
+   * programma non garantisce alcun vantaggio.
+   */
+  it('i punti BFF stanno solo dietro login, e senza promettere numeri', async () => {
+    const ctx = await setup({ user: null, ready: true });
+    expect(el(ctx.fixture).querySelector('.aff__points')).toBeNull();
+    expect(text(ctx.fixture)).not.toContain('punti BFF');
+
+    ctx.user.set(userOf());
+    await ctx.fixture.whenStable();
+    await flushCatalogo(ctx, [roomOf('sala-uno')]);
+
+    const punti = el(ctx.fixture).querySelector('.aff__points');
+    expect(punti).not.toBeNull();
+    expect(label(punti)).toContain('Giocando da affiliato guadagni punti BFF');
+    // Nessuna cifra, nessun tasso, nessuna cadenza.
+    expect(label(punti)).not.toMatch(/\d/);
+    // I punti si spendono nel Negozio: il rimando dev'essere un link vero.
+    expect(punti!.querySelector('a[href="/negozio"]')).not.toBeNull();
+  });
+
   // ── L'ordine di arrivo della sessione (il caso che pinna la decisione) ─────
 
   it('carica quando `user` arriva DOPO `ready` (cap 8s), e non ricarica a ogni refresh di sessione', async () => {
