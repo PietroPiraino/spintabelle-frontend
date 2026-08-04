@@ -30,7 +30,11 @@ const MANIFEST = 'dist/frontend/prerendered-routes.json';
 // Prerenderizzate ma volutamente FUORI dalla sitemap. Questa non e' una lista
 // derivabile: e' una decisione editoriale, quindi ogni voce porta il suo perche'.
 const ESCLUSE = new Map([
-  ['/affiliazioni', 'placeholder: nessun contenuto reale da indicizzare'],
+  // Non è più un placeholder: la pagina è viva. Resta esclusa perché il
+  // programma è riservato agli iscritti — l'HTML indicizzabile non porta
+  // marchi di operatore, percentuali né incentivi, quindi in sitemap
+  // finirebbe un guscio senza il contenuto per cui varrebbe indicizzarlo.
+  ['/affiliazioni', 'programma riservato agli iscritti: il contenuto reale è dietro login'],
 ]);
 
 // changefreq/priority sono GIUDIZI editoriali (quanto conta questa pagina,
