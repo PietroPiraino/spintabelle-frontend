@@ -1,257 +1,107 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  HostListener,
   inject,
   signal,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { AdminAffiliationsComponent } from './admin-affiliations/admin-affiliations.component';
-import { AdminAuditComponent } from './admin-audit/admin-audit.component';
-import { AdminDiscountsComponent } from './admin-discounts/admin-discounts.component';
-import { AdminDocumentsComponent } from './admin-documents/admin-documents.component';
-import { AdminLessonsComponent } from './admin-lessons/admin-lessons.component';
-import { AdminLiveComponent } from './admin-live/admin-live.component';
-import { AdminNewsComponent } from './admin-news/admin-news.component';
-import { AdminParticipationComponent } from './admin-participation/admin-participation.component';
-import { AdminShopComponent } from './admin-shop/admin-shop.component';
-import { AdminStatsComponent } from './admin-stats/admin-stats.component';
-import { AdminSubscriptionRequestsComponent } from './admin-subscription-requests/admin-subscription-requests.component';
-import { AdminUsersComponent } from './admin-users/admin-users.component';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+} from '@angular/router';
+import { filter } from 'rxjs';
+import { AdminPendingService } from '../../core/services/admin-pending.service';
+import { IconComponent } from '../../shared/ui/icon/icon.component';
+import { ADMIN_NAV } from './admin-nav';
 
-type AdminTab =
-  | 'lezioni'
-  | 'live'
-  | 'news'
-  | 'documenti'
-  | 'negozio'
-  | 'iscritti'
-  | 'richieste'
-  | 'sconti'
-  | 'affiliazioni'
-  | 'partecipazione'
-  | 'statistiche'
-  | 'log';
-
+/**
+ * Shell della dashboard admin: sidebar di navigazione (gruppi + badge "in
+ * attesa") e `<router-outlet>` per le sezioni. Ogni sezione è una rotta figlia
+ * `/admin/<sezione>` col suo chunk lazy — la shell non importa più nessun tab.
+ *
+ * Sotto i 1024px (stesso breakpoint del burger dell'header) la sidebar diventa
+ * un pannello a scomparsa in-flow aperto dal pulsante "Sezioni" della topbar:
+ * accordion, non overlay — niente focus-trap/scroll-lock da scrivere a mano.
+ *
+ * I vecchi deep-link `?tab=` (email già inviate) sono gestiti da
+ * `adminTabCompatGuard` sulla rotta figlia a path vuoto.
+ */
 @Component({
   selector: 'app-admin',
-  imports: [
-    AdminLessonsComponent,
-    AdminLiveComponent,
-    AdminNewsComponent,
-    AdminDocumentsComponent,
-    AdminShopComponent,
-    AdminUsersComponent,
-    AdminSubscriptionRequestsComponent,
-    AdminDiscountsComponent,
-    AdminAffiliationsComponent,
-    AdminParticipationComponent,
-    AdminStatsComponent,
-    AdminAuditComponent,
-  ],
-  template: `
-    <section class="section">
-      <div class="container">
-        <div class="section-head">
-          <span class="eyebrow">Backstage</span>
-          <h1>Pannello admin</h1>
-        </div>
-
-        <div class="admin-tabs" role="tablist" aria-label="Sezioni del pannello">
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'lezioni'"
-            [attr.aria-selected]="tab() === 'lezioni'"
-            (click)="setTab('lezioni')"
-          >♠ Lezioni</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'live'"
-            [attr.aria-selected]="tab() === 'live'"
-            (click)="setTab('live')"
-          >▶ Live</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'news'"
-            [attr.aria-selected]="tab() === 'news'"
-            (click)="setTab('news')"
-          >♦ News</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'documenti'"
-            [attr.aria-selected]="tab() === 'documenti'"
-            (click)="setTab('documenti')"
-          >▤ Documenti</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'negozio'"
-            [attr.aria-selected]="tab() === 'negozio'"
-            (click)="setTab('negozio')"
-          >🛍 Negozio</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'iscritti'"
-            [attr.aria-selected]="tab() === 'iscritti'"
-            (click)="setTab('iscritti')"
-          >♣ Iscritti</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'richieste'"
-            [attr.aria-selected]="tab() === 'richieste'"
-            (click)="setTab('richieste')"
-          >♥ Richieste</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'sconti'"
-            [attr.aria-selected]="tab() === 'sconti'"
-            (click)="setTab('sconti')"
-          >% Sconti</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'affiliazioni'"
-            [attr.aria-selected]="tab() === 'affiliazioni'"
-            (click)="setTab('affiliazioni')"
-          >⛓ Affiliazioni</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'partecipazione'"
-            [attr.aria-selected]="tab() === 'partecipazione'"
-            (click)="setTab('partecipazione')"
-          >◉ Partecipazione</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'statistiche'"
-            [attr.aria-selected]="tab() === 'statistiche'"
-            (click)="setTab('statistiche')"
-          >▦ Statistiche</button>
-          <button
-            type="button"
-            role="tab"
-            class="admin-tabs__tab"
-            [class.is-active]="tab() === 'log'"
-            [attr.aria-selected]="tab() === 'log'"
-            (click)="setTab('log')"
-          >⛁ Log</button>
-        </div>
-
-        @if (tab() === 'lezioni') {
-          <app-admin-lessons />
-        } @else if (tab() === 'live') {
-          <app-admin-live />
-        } @else if (tab() === 'news') {
-          <app-admin-news />
-        } @else if (tab() === 'documenti') {
-          <app-admin-documents />
-        } @else if (tab() === 'negozio') {
-          <app-admin-shop />
-        } @else if (tab() === 'iscritti') {
-          <app-admin-users />
-        } @else if (tab() === 'richieste') {
-          <app-admin-subscription-requests />
-        } @else if (tab() === 'sconti') {
-          <app-admin-discounts />
-        } @else if (tab() === 'affiliazioni') {
-          <app-admin-affiliations />
-        } @else if (tab() === 'partecipazione') {
-          <app-admin-participation />
-        } @else if (tab() === 'statistiche') {
-          <app-admin-stats />
-        } @else {
-          <app-admin-audit />
-        }
-      </div>
-    </section>
-  `,
-  styles: `
-    .admin-tabs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 2.2rem;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .admin-tabs__tab {
-      padding: 0.7rem 1.4rem;
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      font-family: var(--font-display);
-      font-weight: 700;
-      font-size: 1rem;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: color var(--t-fast), border-color var(--t-fast);
-
-      &:hover {
-        color: var(--cream-100);
-      }
-
-      &.is-active {
-        color: var(--ember);
-        border-bottom-color: var(--copper-400);
-      }
-    }
-  `,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
+  templateUrl: './admin.component.html',
+  styleUrl: './admin.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminComponent {
-  private static readonly TABS: AdminTab[] = [
-    'lezioni',
-    'live',
-    'news',
-    'documenti',
-    'negozio',
-    'iscritti',
-    'richieste',
-    'sconti',
-    'affiliazioni',
-    'partecipazione',
-    'statistiche',
-    'log',
-  ];
-
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  protected readonly pending = inject(AdminPendingService);
 
-  // Tab deep-linkabile via ?tab= (es. il link nell'email all'owner → richieste).
-  protected readonly tab = signal<AdminTab>(this.initialTab());
+  protected readonly nav = ADMIN_NAV;
 
-  private initialTab(): AdminTab {
-    const q = this.route.snapshot.queryParamMap.get('tab') ?? '';
-    return (AdminComponent.TABS as string[]).includes(q)
-      ? (q as AdminTab)
-      : 'lezioni';
+  /** Pannello sezioni mobile (≤1024px) aperto. */
+  protected readonly drawerOpen = signal(false);
+
+  /** Etichetta della sezione corrente per l'h1 della topbar. */
+  protected readonly currentLabel = signal(this.labelFor(this.router.url));
+
+  constructor() {
+    this.pending.refresh();
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => {
+        this.currentLabel.set(this.labelFor(this.router.url));
+        this.drawerOpen.set(false);
+        // il min-interval sta nel service: cambiare sezione non fa raffiche
+        this.pending.refresh();
+      });
   }
 
-  protected setTab(tab: AdminTab): void {
-    this.tab.set(tab);
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
+  protected toggleDrawer(): void {
+    this.drawerOpen.update((open) => !open);
+  }
+
+  /** Conteggio per il badge di una voce (null/0 = badge assente). */
+  protected badgeCount(badge: 'richieste' | 'affiliazioni'): number | null {
+    return badge === 'richieste'
+      ? this.pending.richieste()
+      : this.pending.affiliazioni();
+  }
+
+  // chiude il pannello mobile cliccando fuori da sidebar e toggle
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    if (!this.drawerOpen()) return;
+    const target = event.target as Element | null;
+    if (
+      !target?.closest('.admin-shell__sidebar') &&
+      !target?.closest('.admin-shell__toggle')
+    ) {
+      this.drawerOpen.set(false);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    this.drawerOpen.set(false);
+  }
+
+  private labelFor(url: string): string {
+    const path = url.split('?')[0].split('#')[0];
+    const seg = path.startsWith('/admin')
+      ? path.slice('/admin'.length).replace(/^\//, '')
+      : '';
+    for (const group of ADMIN_NAV) {
+      const hit = group.items.find((item) => item.path === seg);
+      if (hit) return hit.label;
+    }
+    return 'Panoramica';
   }
 }

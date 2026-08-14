@@ -1,0 +1,53 @@
+<div class="admin-shell">
+  <div class="admin-shell__topbar">
+    <button
+      type="button"
+      class="admin-shell__toggle"
+      (click)="toggleDrawer()"
+      [attr.aria-expanded]="drawerOpen()"
+    >
+      <app-icon name="chevron-down" [size]="16" />
+      Sezioni
+    </button>
+    <h1 class="admin-shell__title">{{ currentLabel() }}</h1>
+  </div>
+
+  <aside class="admin-shell__sidebar" [class.is-open]="drawerOpen()">
+    <div class="admin-shell__brand">
+      <span class="eyebrow">Backstage</span>
+      <strong>Pannello admin</strong>
+    </div>
+
+    <nav class="admin-shell__nav" aria-label="Sezioni admin">
+      @for (group of nav; track group.id) {
+        @if (group.label) {
+          <span class="admin-shell__group-label">{{ group.label }}</span>
+        }
+        @for (item of group.items; track item.path) {
+          <a
+            class="admin-shell__link"
+            [routerLink]="['/admin', item.path]"
+            routerLinkActive="is-active"
+            [routerLinkActiveOptions]="{ exact: item.path === '' }"
+            ariaCurrentWhenActive="page"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+            <span class="admin-shell__link-label">{{ item.label }}</span>
+            @if (item.badge) {
+              @if (badgeCount(item.badge); as count) {
+                <span class="admin-shell__badge">{{ count }}</span>
+              }
+            }
+            @if (item.soon) {
+              <span class="admin-shell__soon">Presto</span>
+            }
+          </a>
+        }
+      }
+    </nav>
+  </aside>
+
+  <div class="admin-shell__main">
+    <router-outlet />
+  </div>
+</div>

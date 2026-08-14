@@ -1,0 +1,152 @@
+<div class="overview">
+  <!-- Card "in attesa": i due punti dove qualcuno aspetta una decisione. -->
+  <div class="overview__pending">
+    <a
+      class="card overview__pending-card"
+      routerLink="/admin/richieste"
+      [class.has-items]="(pending.richieste() ?? 0) > 0"
+    >
+      <app-icon name="inbox" [size]="22" />
+      <span class="overview__pending-text">
+        <strong>Richieste in attesa</strong>
+        <span>abbonamenti da approvare</span>
+      </span>
+      <span class="overview__pending-count">{{ pending.richieste() ?? '—' }}</span>
+    </a>
+    <a
+      class="card overview__pending-card"
+      routerLink="/admin/affiliazioni"
+      [class.has-items]="(pending.affiliazioni() ?? 0) > 0"
+    >
+      <app-icon name="link-2" [size]="22" />
+      <span class="overview__pending-text">
+        <strong>Affiliazioni in verifica</strong>
+        <span>username da controllare</span>
+      </span>
+      <span class="overview__pending-count">{{ pending.affiliazioni() ?? '—' }}</span>
+    </a>
+  </div>
+
+  <!-- Numeri chiave da /admin/stats (risposta cachata: dichiara la sua età). -->
+  <section class="overview__block">
+    <h2>Numeri chiave</h2>
+
+    @if (statsError()) {
+      <div class="form-feedback is-error overview__banner" role="alert">
+        <span>{{ statsError() }}</span>
+        <button type="button" class="btn btn--ghost btn--sm" (click)="loadStats()">
+          <app-icon name="refresh" [size]="15" />
+          Riprova
+        </button>
+      </div>
+    }
+
+    @if (!stats() && statsLoading()) {
+      <div class="spinner" role="status" aria-label="Caricamento statistiche"></div>
+    } @else if (stats(); as s) {
+      <div class="overview__kpis">
+        <div class="card overview__kpi">
+          <span class="overview__kpi-label">Abbonati attivi</span>
+          <strong class="overview__kpi-value">
+            {{ int(s.abbonati.conAbbonamentoValido) }}
+          </strong>
+          <span class="overview__kpi-sub">
+            con accesso ora: {{ int(s.abbonati.hannoAccessoOra) }}
+          </span>
+        </div>
+
+        <div class="card overview__kpi">
+          <span class="overview__kpi-label">Incasso abbonamenti · 30 giorni</span>
+          <strong class="overview__kpi-value">
+            {{ euro(s.incassoAbbonamenti.ultimi30Eur) }}
+          </strong>
+          <span class="overview__kpi-sub overview__kpi-sub--row">
+            <span>
+              {{ int(s.incassoAbbonamenti.ordini30) }}
+              {{ s.incassoAbbonamenti.ordini30 === 1 ? 'ordine' : 'ordini' }}
+            </span>
+            @if (s.incassoAbbonamenti.deltaPct !== null) {
+              <span
+                class="overview__delta"
+                [class.is-up]="s.incassoAbbonamenti.deltaPct > 0"
+                [class.is-down]="s.incassoAbbonamenti.deltaPct < 0"
+              >
+                {{ delta(s.incassoAbbonamenti.deltaPct) }}
+              </span>
+            }
+          </span>
+        </div>
+
+        @for (tier of s.abbonati.perTier; track tier.tier) {
+          <div class="card overview__kpi">
+            <span class="overview__kpi-label">{{ roleLabel(tier.tier) }}</span>
+            <strong class="overview__kpi-value">
+              {{ int(tier.conAbbonamentoValido) }}
+            </strong>
+            <span class="overview__kpi-sub">
+              con accesso ora: {{ int(tier.hannoAccessoOra) }}
+            </span>
+          </div>
+        }
+
+        <div class="card overview__kpi">
+          <span class="overview__kpi-label">In scadenza · 7 giorni</span>
+          <strong class="overview__kpi-value">
+            {{ int(s.scadenze.entro7.utenti) }}
+          </strong>
+          <span class="overview__kpi-sub">
+            entro 30: {{ int(s.scadenze.entro30.utenti) }}
+          </span>
+        </div>
+      </div>
+
+      <p class="overview__meta">
+        Aggiornato: {{ s.generatoIl | date: 'dd MMM yyyy, HH:mm' }} · ricalcolo
+        ogni {{ s.aggiornatoOgniMinuti }} min · tutti i dettagli nella sezione
+        Statistiche
+      </p>
+    }
+  </section>
+
+  <!-- Ultime azioni admin (stessa mappa etichette del Log). -->
+  <section class="overview__block">
+    <div class="overview__audit-head">
+      <h2>Ultime azioni admin</h2>
+      <a class="overview__audit-all" routerLink="/admin/log">Vedi tutto il log</a>
+    </div>
+
+    @if (actionsError()) {
+      <div class="form-feedback is-error overview__banner" role="alert">
+        <span>{{ actionsError() }}</span>
+        <button type="button" class="btn btn--ghost btn--sm" (click)="loadActions()">
+          <app-icon name="refresh" [size]="15" />
+          Riprova
+        </button>
+      </div>
+    }
+
+    @if (!actions() && actionsLoading()) {
+      <div class="spinner" role="status" aria-label="Caricamento log"></div>
+    } @else if (actions(); as list) {
+      @if (list.length === 0) {
+        <div class="empty-state">
+          <p>Nessuna azione registrata.</p>
+        </div>
+      } @else {
+        <ul class="overview__audit-list">
+          @for (e of list; track e.id) {
+            <li class="overview__audit-row">
+              <strong>{{ actionLabel(e.action) }}</strong>
+              @if (e.userEmail) {
+                <span class="overview__audit-target">su {{ e.userEmail }}</span>
+              }
+              <span class="overview__audit-when">
+                {{ e.createdAt | date: 'dd MMM, HH:mm' }}
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    }
+  </section>
+</div>

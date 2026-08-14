@@ -80,6 +80,15 @@ describe('AdminLiveComponent — pubblicazione della registrazione', () => {
     )!.click();
   }
 
+  it('i pulsanti della registrazione stanno FUORI dallo span meta', () => {
+    // .admin-item__meta è un inline mono senza gap e Angular scarta i nodi di
+    // solo whitespace: un bottone lì dentro nasce incollato al testo (bug
+    // visto in prod). Il fix li ha spostati in un div.row col suo gap.
+    const publish = buttonWith(el, 'Pubblica come lezione');
+    expect(publish.closest('.admin-item__meta')).toBeNull();
+    expect(publish.closest('.row')).not.toBeNull();
+  });
+
   it('il pannello nasce precompilato con i dati della live e il tag "live"', async () => {
     await openPanel();
 

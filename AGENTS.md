@@ -3,7 +3,7 @@
 Istruzioni per agenti AI che lavorano in questo repo. Dettaglio operativo in [`README.md`](./README.md); architettura completa nel `CLAUDE.md` della root del monorepo (`../CLAUDE.md`, se presente).
 
 ## Cosa è
-SPA **Angular 22 standalone, signals, ZONELESS** (no NgModules, no Zone.js) di **bestfishforever.it**, scuola di poker italiana. Sezioni: `/tabelle`, `/lezioni`, `/allenamento`, `/live` (+ `/live/:id/stanza`), `/docs`, `/abbonati`, `/negozio`, `/account`, `/chi-siamo`, `/admin`.
+SPA **Angular 22 standalone, signals, ZONELESS** (no NgModules, no Zone.js) di **bestfishforever.it**, scuola di poker italiana. Sezioni: `/tabelle`, `/lezioni`, `/allenamento`, `/live` (+ `/live/:id/stanza`), `/docs`, `/abbonati`, `/negozio`, `/account`, `/chi-siamo`, `/admin` (dashboard a sidebar con rotte figlie `/admin/<sezione>`).
 
 ## Regole critiche (leggere PRIMA di toccare il codice)
 - **Node 24** obbligatorio (il globale è 20). Anteporre alla PATH nella stessa invocazione:

@@ -1,0 +1,205 @@
+// Shell della dashboard admin: sidebar sticky + topbar + outlet.
+//
+// NON importa admin-shared.scss (quello serve alle sezioni); il chrome della
+// sidebar vive qui. La larghezza supera il .container standard (1180px): con
+// una colonna laterale da 240px la dashboard ha bisogno di respiro.
+
+:host {
+  display: block;
+}
+
+.admin-shell {
+  width: min(1400px, 100% - 2.5rem);
+  margin-inline: auto;
+  padding-block: 1.6rem 3rem;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'side topbar'
+    'side main';
+  column-gap: 2rem;
+  row-gap: 1.4rem;
+  align-items: start;
+}
+
+// ── Topbar ──────────────────────────────────────────────────────────────────
+
+.admin-shell__topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.admin-shell__title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+// visibile solo sotto il breakpoint: apre il pannello sezioni
+.admin-shell__toggle {
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  background: var(--btn-ghost-bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+
+  .app-icon {
+    transition: transform var(--t-fast);
+  }
+
+  &[aria-expanded='true'] .app-icon {
+    transform: rotate(180deg);
+  }
+}
+
+// ── Sidebar ─────────────────────────────────────────────────────────────────
+
+.admin-shell__sidebar {
+  grid-area: side;
+  position: sticky;
+  top: 84px; // header (59px) + margine, stessa convenzione di .admin-form
+  max-height: calc(100dvh - 100px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  // compatta: le 15 voci + 5 intestazioni devono stare tutte in vista su un
+  // laptop (~900px di viewport), senza scroll interno
+  padding: 0.9rem 0.8rem;
+}
+
+.admin-shell__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.1rem 0.75rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.45rem;
+
+  strong {
+    font-family: var(--font-display);
+    font-size: 1.02rem;
+    color: var(--cream-100);
+  }
+}
+
+.admin-shell__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-shell__group-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  padding: 0.55rem 0.75rem 0.3rem;
+}
+
+.admin-shell__link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.42rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition:
+    color var(--t-fast),
+    background-color var(--t-fast);
+
+  .app-icon {
+    flex: 0 0 auto;
+  }
+
+  &:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+
+  // accento attivo del sito: ember per il testo, copper per l'indicatore
+  &.is-active {
+    color: var(--ember);
+    background: var(--surface-2);
+    box-shadow: inset 2px 0 0 var(--copper-400);
+  }
+}
+
+.admin-shell__link-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-shell__badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  padding: 0 0.45rem;
+  border: 1px solid var(--copper-400);
+  border-radius: 999px;
+  color: var(--ember);
+}
+
+.admin-shell__soon {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  padding: 0 0.4rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 999px;
+  color: var(--text-faint);
+}
+
+// ── Contenuto ───────────────────────────────────────────────────────────────
+
+.admin-shell__main {
+  grid-area: main;
+  min-width: 0; // portante: senza, le tabelle delle sezioni sfondano la griglia
+}
+
+// ── Mobile: pannello a scomparsa (breakpoint = burger dell'header) ──────────
+
+@media (max-width: 1024px) {
+  .admin-shell {
+    display: block;
+  }
+
+  .admin-shell__topbar {
+    margin-bottom: 1rem;
+  }
+
+  .admin-shell__toggle {
+    display: inline-flex;
+  }
+
+  // pannello in-flow sotto la topbar (l'ordine nel markup è topbar → sidebar
+  // → main proprio per questo), chiuso a ogni navigazione
+  .admin-shell__sidebar {
+    display: none;
+    position: static;
+    max-height: none;
+    margin-bottom: 1.2rem;
+
+    &.is-open {
+      display: flex;
+    }
+  }
+}

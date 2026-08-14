@@ -73,7 +73,8 @@ export const serverRoutes: ServerRoute[] = [
     },
   },
 
-  // Tutto il resto (allenamento, lezioni, live, docs, negozio, account, admin,
-  // login, registrazione, verifica/reset token, wildcard 404) → client.
+  // Tutto il resto (allenamento, lezioni, live, docs, negozio, account,
+  // admin e le sue figlie /admin/<sezione>, login, registrazione,
+  // verifica/reset token, wildcard 404) → client.
   { path: '**', renderMode: RenderMode.Client },
 ];

@@ -18,18 +18,12 @@ import {
 import { AdminStatsService } from '../../../core/services/admin-stats.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ROLE_LABELS } from '../role-labels';
 
 /** Profondità della serie mensile (il DTO backend accetta 1..24). */
 const MESI_RANGES = [6, 12, 24] as const;
 /** Finestra dell'andamento video (il DTO backend accetta 1..90). */
 const GIORNI_RANGES = [7, 30, 90] as const;
-
-const ROLE_LABELS: Record<Role, string> = {
-  USER: 'Iscritto',
-  PESCE_ROSSO: 'Pesce Rosso',
-  SQUALO: 'Squalo',
-  ADMIN: 'Admin',
-};
 
 /** `visibility` arriva come stringa libera dal backend: fallback sul grezzo. */
 const VISIBILITY_LABELS: Record<string, string> = {

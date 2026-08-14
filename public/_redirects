@@ -34,6 +34,7 @@
 
 /account                /index.csr  200
 /admin                  /index.csr  200
+/admin/*                /index.csr  200
 /allenamento            /index.csr  200
 /allenamento/*          /index.csr  200
 /docs                   /index.csr  200

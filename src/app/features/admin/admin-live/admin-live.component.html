@@ -175,33 +175,44 @@
             ) {
               <span class="admin-item__meta">
                 🔴 Registrazione: <strong>{{ recLabel(s.recordingState) }}</strong>
-                @if (s.recordingState === 'READY') {
-                  <button
-                    type="button"
-                    class="btn btn--primary btn--sm"
-                    [disabled]="publishing()"
-                    [attr.aria-expanded]="publishPanelId() === s.id"
-                    (click)="openPublish(s)"
-                  >
-                    Pubblica come lezione
-                  </button>
-                }
                 @if (s.recordingState === 'DONE' && s.recordedLessonId) {
                   · <a routerLink="/lezioni">vedi lezione</a>
                 }
-                @if (s.recordingState === 'FAILED') {
-                  @if (s.recordingError) {
-                    <br /><span class="field-error">{{ s.recordingError }}</span>
-                  }
-                  <button
-                    type="button"
-                    class="btn btn--ghost btn--sm"
-                    (click)="retryRecording(s)"
-                  >
-                    Riprocessa
-                  </button>
+                @if (s.recordingState === 'FAILED' && s.recordingError) {
+                  <br /><span class="field-error">{{ s.recordingError }}</span>
                 }
               </span>
+              <!--
+                Pulsanti FUORI dallo span meta: è un inline senza gap e Angular
+                scarta i nodi di solo whitespace — un bottone lì dentro nasce
+                incollato al testo.
+              -->
+              @if (
+                s.recordingState === 'READY' || s.recordingState === 'FAILED'
+              ) {
+                <div class="row" style="gap: 0.5rem">
+                  @if (s.recordingState === 'READY') {
+                    <button
+                      type="button"
+                      class="btn btn--primary btn--sm"
+                      [disabled]="publishing()"
+                      [attr.aria-expanded]="publishPanelId() === s.id"
+                      (click)="openPublish(s)"
+                    >
+                      Pubblica come lezione
+                    </button>
+                  }
+                  @if (s.recordingState === 'FAILED') {
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      (click)="retryRecording(s)"
+                    >
+                      Riprocessa
+                    </button>
+                  }
+                </div>
+              }
             }
           </div>
           <div class="row" style="gap: 0.5rem">

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard, roleGuard } from './core/guards/auth.guard';
+import { adminTabCompatGuard } from './features/admin/admin-tab-compat.guard';
 
 export const routes: Routes = [
   {
@@ -235,11 +236,140 @@ export const routes: Routes = [
     title: 'Il mio account — Best Fish Forever',
   },
   {
+    // Dashboard admin: la shell (sidebar) è il padre, ogni sezione una rotta
+    // figlia lazy. ⚠️ I children DEVONO restare un array letterale inline con
+    // path letterali: la guardia rotte (scripts/lib/route-inventory.mjs) li
+    // appiattisce così — `loadChildren` le è INVISIBILE e via _redirects la
+    // rotta tornerebbe a ricevere l'HTML della home, in silenzio. Ogni figlio
+    // dichiara il suo `title` (il listener SEO scende alla foglia).
     path: 'admin',
     loadComponent: () =>
       import('./features/admin/admin.component').then((m) => m.AdminComponent),
     canActivate: [roleGuard(['ADMIN'])],
-    title: 'Admin — Best Fish Forever',
+    children: [
+      {
+        // Panoramica; la guard traduce i vecchi ?tab= delle email inviate
+        path: '',
+        canActivate: [adminTabCompatGuard],
+        loadComponent: () =>
+          import('./features/admin/admin-overview/admin-overview.component').then(
+            (m) => m.AdminOverviewComponent,
+          ),
+        title: 'Admin — Best Fish Forever',
+      },
+      {
+        path: 'lezioni',
+        loadComponent: () =>
+          import('./features/admin/admin-lessons/admin-lessons.component').then(
+            (m) => m.AdminLessonsComponent,
+          ),
+        title: 'Admin · Lezioni — Best Fish Forever',
+      },
+      {
+        path: 'live',
+        loadComponent: () =>
+          import('./features/admin/admin-live/admin-live.component').then(
+            (m) => m.AdminLiveComponent,
+          ),
+        title: 'Admin · Live — Best Fish Forever',
+      },
+      {
+        path: 'news',
+        loadComponent: () =>
+          import('./features/admin/admin-news/admin-news.component').then(
+            (m) => m.AdminNewsComponent,
+          ),
+        title: 'Admin · News — Best Fish Forever',
+      },
+      {
+        path: 'documenti',
+        loadComponent: () =>
+          import(
+            './features/admin/admin-documents/admin-documents.component'
+          ).then((m) => m.AdminDocumentsComponent),
+        title: 'Admin · Documenti — Best Fish Forever',
+      },
+      {
+        path: 'negozio',
+        loadComponent: () =>
+          import('./features/admin/admin-shop/admin-shop.component').then(
+            (m) => m.AdminShopComponent,
+          ),
+        title: 'Admin · Negozio — Best Fish Forever',
+      },
+      {
+        path: 'iscritti',
+        loadComponent: () =>
+          import('./features/admin/admin-users/admin-users.component').then(
+            (m) => m.AdminUsersComponent,
+          ),
+        title: 'Admin · Iscritti — Best Fish Forever',
+      },
+      {
+        path: 'richieste',
+        loadComponent: () =>
+          import(
+            './features/admin/admin-subscription-requests/admin-subscription-requests.component'
+          ).then((m) => m.AdminSubscriptionRequestsComponent),
+        title: 'Admin · Richieste — Best Fish Forever',
+      },
+      {
+        path: 'sconti',
+        loadComponent: () =>
+          import(
+            './features/admin/admin-discounts/admin-discounts.component'
+          ).then((m) => m.AdminDiscountsComponent),
+        title: 'Admin · Sconti — Best Fish Forever',
+      },
+      {
+        path: 'affiliazioni',
+        loadComponent: () =>
+          import(
+            './features/admin/admin-affiliations/admin-affiliations.component'
+          ).then((m) => m.AdminAffiliationsComponent),
+        title: 'Admin · Affiliazioni — Best Fish Forever',
+      },
+      {
+        path: 'partecipazione',
+        loadComponent: () =>
+          import(
+            './features/admin/admin-participation/admin-participation.component'
+          ).then((m) => m.AdminParticipationComponent),
+        title: 'Admin · Partecipazione — Best Fish Forever',
+      },
+      {
+        path: 'stakings',
+        loadComponent: () =>
+          import(
+            './features/admin/admin-stakings/admin-stakings.component'
+          ).then((m) => m.AdminStakingsComponent),
+        title: 'Admin · Stakings — Best Fish Forever',
+      },
+      {
+        path: 'conteggi-mensili',
+        loadComponent: () =>
+          import(
+            './features/admin/admin-conteggi-mensili/admin-conteggi-mensili.component'
+          ).then((m) => m.AdminConteggiMensiliComponent),
+        title: 'Admin · Conteggi mensili — Best Fish Forever',
+      },
+      {
+        path: 'statistiche',
+        loadComponent: () =>
+          import('./features/admin/admin-stats/admin-stats.component').then(
+            (m) => m.AdminStatsComponent,
+          ),
+        title: 'Admin · Statistiche — Best Fish Forever',
+      },
+      {
+        path: 'log',
+        loadComponent: () =>
+          import('./features/admin/admin-audit/admin-audit.component').then(
+            (m) => m.AdminAuditComponent,
+          ),
+        title: 'Admin · Log — Best Fish Forever',
+      },
+    ],
   },
   {
     path: 'privacy',

@@ -27,13 +27,8 @@ import { AffiliationsService } from '../../../core/services/affiliations.service
 import { AuthService } from '../../../core/services/auth.service';
 import { PointsService } from '../../../core/services/points.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
-
-const ROLE_LABELS: Record<Role, string> = {
-  USER: 'Iscritto',
-  PESCE_ROSSO: 'Pesce Rosso',
-  SQUALO: 'Squalo',
-  ADMIN: 'Admin',
-};
+import { actionLabel } from '../action-labels';
+import { ROLE_LABELS } from '../role-labels';
 
 type PanelKind =
   | 'points'
@@ -532,30 +527,8 @@ export class AdminUsersComponent {
     });
   }
 
-  /**
-   * ⚠️ Mappa GEMELLA di `ACTION_LABELS` in `admin-audit.component.ts`: le stesse
-   * azioni sono stampate qui (storico del singolo iscritto) e là (log globale).
-   * Aggiornarne una sola lascia lo slug grezzo visibile nell'altra.
-   */
-  protected actionLabel(action: string): string {
-    const map: Record<string, string> = {
-      'set-expiry': 'Scadenza modificata',
-      'grant-subscription': 'Abbonamento concesso',
-      'set-role': 'Ruolo modificato',
-      'edit-profile': 'Dati modificati',
-      'grant-discount-eligibility': 'Codice sconto assegnato',
-      'revoke-discount-eligibility': 'Codice sconto revocato',
-      'approve-affiliation': 'Affiliazione approvata',
-      'reject-affiliation': 'Affiliazione rifiutata',
-      'revoke-affiliation': 'Affiliazione revocata',
-      'note-affiliation': 'Nota interna affiliazione',
-      'resend-affiliation': 'Email affiliazione reinviata',
-      'create-poker-room': 'Sala creata',
-      'update-poker-room': 'Sala modificata',
-      'delete-poker-room': 'Sala eliminata',
-    };
-    return map[action] ?? action;
-  }
+  /** Etichette azioni dalla mappa unica condivisa (vedi `action-labels.ts`). */
+  protected readonly actionLabel = actionLabel;
 
   // ── Assegna codice sconto ───────────────────────────────────────────────--
 

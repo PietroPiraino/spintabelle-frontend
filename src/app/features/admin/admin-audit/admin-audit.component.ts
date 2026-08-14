@@ -11,36 +11,7 @@ import {
 } from '../../../core/models/api.models';
 import { AdminUsersService } from '../../../core/services/admin-users.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
-
-/**
- * ⚠️ Mappa GEMELLA di `actionLabel()` in `admin-users.component.ts` (storico del
- * singolo iscritto): le stesse azioni si stampano nei due posti. Aggiornarne una
- * sola lascia lo slug grezzo visibile nell'altra.
- */
-const ACTION_LABELS: Record<string, string> = {
-  'set-expiry': 'Scadenza modificata',
-  'grant-subscription': 'Abbonamento concesso',
-  'set-role': 'Ruolo modificato',
-  'edit-profile': 'Dati modificati',
-  'grant-discount-eligibility': 'Codice sconto assegnato',
-  'revoke-discount-eligibility': 'Codice sconto revocato',
-  'create-discount': 'Codice sconto creato',
-  'update-discount': 'Codice sconto modificato',
-  'delete-discount': 'Codice sconto eliminato',
-  'create-gadget': 'Gadget creato',
-  'update-gadget': 'Gadget modificato',
-  'delete-gadget': 'Gadget eliminato',
-  'fulfill-order': 'Ordine evaso',
-  'cancel-order': 'Ordine annullato',
-  'approve-affiliation': 'Affiliazione approvata',
-  'reject-affiliation': 'Affiliazione rifiutata',
-  'revoke-affiliation': 'Affiliazione revocata',
-  'note-affiliation': 'Nota interna affiliazione',
-  'resend-affiliation': 'Email affiliazione reinviata',
-  'create-poker-room': 'Sala creata',
-  'update-poker-room': 'Sala modificata',
-  'delete-poker-room': 'Sala eliminata',
-};
+import { actionLabel } from '../action-labels';
 
 /**
  * Etichette dei campi confrontati in `before`/`after`.
@@ -121,9 +92,7 @@ export class AdminAuditComponent {
     this.load();
   }
 
-  protected actionLabel(action: string): string {
-    return ACTION_LABELS[action] ?? action;
-  }
+  protected readonly actionLabel = actionLabel;
 
   /** Riepilogo compatto delle modifiche (prima → dopo) per i campi noti. */
   protected details(e: AdminActionLogEntry): string {

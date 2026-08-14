@@ -1,0 +1,205 @@
+// Panoramica: card "in attesa", KPI e ultime azioni. Chrome dalle .card
+// globali; qui solo tipografia e griglie. NON importa admin-shared.scss.
+
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.8rem;
+}
+
+// ── Card "in attesa" ────────────────────────────────────────────────────────
+
+.overview__pending {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.overview__pending-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.2rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+
+  &:hover {
+    border-color: var(--copper-400);
+  }
+
+  // qualcuno sta davvero aspettando: la card lo dice da lontano
+  &.has-items {
+    border-color: var(--copper-400);
+    box-shadow: var(--glow-copper);
+  }
+
+  .app-icon {
+    flex: 0 0 auto;
+    color: var(--copper-600);
+  }
+}
+
+.overview__pending-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+
+  strong {
+    color: var(--cream-100);
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+  }
+
+  span {
+    font-size: 0.8rem;
+    color: var(--text-faint);
+  }
+}
+
+.overview__pending-count {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.6rem;
+  color: var(--ember);
+}
+
+// ── Blocchi con titolo ──────────────────────────────────────────────────────
+
+.overview__block {
+  h2 {
+    font-size: 1.2rem;
+    margin: 0 0 0.9rem;
+  }
+}
+
+.overview__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+}
+
+// ── KPI ─────────────────────────────────────────────────────────────────────
+
+.overview__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+}
+
+.overview__kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem 1.2rem;
+}
+
+.overview__kpi-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.overview__kpi-value {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 1.1;
+  color: var(--cream-100);
+}
+
+.overview__kpi-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.overview__kpi-sub--row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.overview__delta {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+
+  &.is-up {
+    color: var(--felt);
+  }
+
+  &.is-down {
+    color: var(--danger);
+  }
+}
+
+.overview__meta {
+  margin: 0.7rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+// ── Ultime azioni ───────────────────────────────────────────────────────────
+
+.overview__audit-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.overview__audit-all {
+  font-size: 0.85rem;
+  color: var(--copper-600);
+}
+
+.overview__audit-list {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+// Riga flex col gap: testo e data NON adiacenti inline (Angular scarta i nodi
+// di solo whitespace e nascerebbero incollati — la classe di bug dei pulsanti
+// della registrazione in admin-live).
+.overview__audit-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+
+  strong {
+    color: var(--cream-100);
+  }
+}
+
+.overview__audit-target {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.overview__audit-when {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
