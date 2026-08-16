@@ -1,3 +1,103 @@
+<!--
+  ⚠️ Ramo anonimo = ciò che finisce nell'HTML prerenderizzato. Vedi il commento
+  in cima a lessons.component.html: fino al 16/08/2026 questa rotta aveva
+  `authGuard` e Google riceveva la shell CSR col canonical della home, tanto che
+  Search Console la classificava come duplicato della homepage ("Pagina
+  alternativa con tag canonical appropriato"). Il gate sta nel componente; i
+  dati restano protetti dal backend (`GET /documents` e' JwtAuthGuard, e il
+  link di download e' firmato per-richiesta).
+-->
+@if (!auth.isAuthenticated()) {
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Docs</span>
+        <h1>Materiali di studio per Spin &amp; Go e Twister</h1>
+        <p class="lead">
+          Filtri e report per PokerTracker 4, PDF, fogli di calcolo e documenti
+          scaricabili: il materiale che si usa lontano dal tavolo, quando si
+          rivede una sessione invece di giocarne un'altra.
+        </p>
+      </div>
+
+      <section class="seo-block" aria-labelledby="docs-seo-title">
+        <h2 id="docs-seo-title">Cosa c'è nella libreria</h2>
+        <p>
+          Studiare un formato hyper turbo non è solo guardare lezioni: è anche
+          riguardare le proprie mani con gli strumenti giusti. Questa sezione
+          raccoglie i file che i coach usano davvero, pronti da importare,
+          invece di lasciarti costruire da zero un report che esiste già.
+        </p>
+        <ul>
+          <li>
+            <strong>Filtri per PokerTracker 4</strong>: per isolare gli spot
+            che contano — profondità di stack, posizione, tipo di decisione —
+            invece di scorrere migliaia di mani a caso.
+          </li>
+          <li>
+            <strong>Report PT4</strong> preconfigurati sulle statistiche che
+            hanno senso in un tre-max con stack corti, non su quelle pensate
+            per i tavoli profondi.
+          </li>
+          <li>
+            <strong>PDF e fogli di calcolo</strong>: schemi di riferimento,
+            tabelle riassuntive e strumenti di calcolo da tenere aperti mentre
+            si studia.
+          </li>
+        </ul>
+
+        <h2>Come funziona l'accesso</h2>
+        <p>
+          Ogni materiale ha il proprio livello: alcuni sono aperti a tutti gli
+          iscritti, altri riservati agli abbonati. Quelli bloccati restano
+          visibili nell'elenco con l'indicazione di cosa serve per sbloccarli.
+          I download passano da un link firmato che scade dopo pochi secondi,
+          quindi non sono condivisibili fuori dalla scuola.
+        </p>
+
+        <div class="seo-block__cta">
+          <p>
+            Registrarsi è gratis e apre subito le
+            <a routerLink="/tabelle">tabelle preflop</a> e il
+            <a routerLink="/simulatore-varianza">simulatore di varianza</a>. I
+            piani con i materiali completi sono su
+            <a routerLink="/abbonati">abbonamenti</a>.
+          </p>
+        </div>
+
+        <h2>Domande frequenti sui materiali</h2>
+        <div class="faq">
+          @for (item of faq; track item.q) {
+            <div class="faq__item">
+              <h3 class="faq__q">{{ item.q }}</h3>
+              <p class="faq__a">{{ item.a }}</p>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="seo-block" aria-labelledby="docs-gate">
+        <h2 id="docs-gate">La libreria è riservata agli iscritti</h2>
+        <p>
+          Per sfogliare e scaricare i materiali serve un account. La
+          registrazione è gratuita.
+        </p>
+        <div class="row">
+          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
+          <a
+            class="btn btn--ghost"
+            [routerLink]="['/login']"
+            [queryParams]="{ redirect: '/docs' }"
+            >Accedi</a
+          >
+        </div>
+        @if (!auth.ready()) {
+          <p class="text-muted">Stiamo verificando la tua sessione…</p>
+        }
+      </section>
+    </div>
+  </section>
+} @else {
 <section class="section">
   <div class="container">
     <div class="section-head">
@@ -141,3 +241,4 @@
     }
   </div>
 </section>
+}

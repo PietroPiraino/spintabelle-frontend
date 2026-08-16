@@ -42,6 +42,9 @@ const MIN_PAROLE = {
   // un raffreddore del backend.
   '/': 900,
   '/tabelle': 400, // il visualizzatore e' dietro login: qui vive solo l'evergreen
+  '/lezioni': 350, // idem: il catalogo e' dietro il JWT, qui c'e' solo il teaser
+  '/docs': 300, // idem
+  '/live': 300, // idem: il calendario e' dietro il JWT
   '/abbonati': 100, // TODO fase 3: sale a 400 quando arriva il blocco editoriale
   '/chi-siamo': 300,
   '/simulatore-varianza': 400,

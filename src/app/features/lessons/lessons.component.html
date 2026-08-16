@@ -1,3 +1,109 @@
+<!--
+  ⚠️ Il ramo anonimo qui sotto è ciò che finisce nell'HTML prerenderizzato.
+  Fino al 16/08/2026 questa rotta aveva `authGuard`, quindi NON era
+  prerenderizzabile (il guard aspetta `ready$`, che in Node non emette mai) e
+  Cloudflare le serviva la shell CSR: 13 parole, con titolo e canonical DELLA
+  HOME. Search Console la trattava di conseguenza — `/live` e `/docs`, identiche,
+  finivano nel bucket "Pagina alternativa con tag canonical appropriato", cioè
+  scartate come duplicati della homepage.
+  Il gate è passato dalla rotta al componente: i dati restano protetti comunque,
+  perché `GET /lessons` è `@UseGuards(JwtAuthGuard)` lato backend.
+  ⚠️ Il teaser è copy STATICO e non può mostrare dati reali (titoli, conteggi):
+  l'endpoint della lista richiede il JWT. Non promettere numeri qui dentro.
+-->
+@if (!auth.isAuthenticated()) {
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Studio</span>
+        <h1>Lezioni di poker per Spin &amp; Go e Twister</h1>
+        <p class="lead">
+          Il percorso video della scuola: dalle decisioni preflop che decidono
+          la maggior parte dei tornei 3-max hyper turbo fino agli spot postflop
+          e all'ICM di fine torneo. In italiano, spiegate dai coach.
+        </p>
+      </div>
+
+      <section class="seo-block" aria-labelledby="lez-seo-title">
+        <h2 id="lez-seo-title">Cosa contiene il percorso</h2>
+        <p>
+          Le lezioni sono organizzate per argomento e per livello, non come una
+          playlist da guardare dall'inizio alla fine: si cerca il tema che
+          serve, lo si studia, si torna al tavolo. Ogni lezione è taggata, così
+          «push/fold», «difesa dal big blind» o «ICM» sono un filtro e non una
+          caccia al minuto giusto dentro un video da un'ora.
+        </p>
+        <ul>
+          <li>
+            <strong>Preflop</strong>: range di apertura, difesa dai bui,
+            push/fold alle profondità corte, e come cambiano con l'ante o
+            quando uno dei giocatori parte più corto.
+          </li>
+          <li>
+            <strong>Postflop</strong>: gli spot che si ripetono davvero in un
+            formato dove lo stack è basso e le strade sono poche.
+          </li>
+          <li>
+            <strong>ICM e fine torneo</strong>: quando il valore delle fiches
+            smette di essere lineare e le decisioni cambiano.
+          </li>
+          <li>
+            <strong>Review di sessione</strong>: mani vere commentate, che è il
+            modo in cui la teoria diventa una scelta al tavolo.
+          </li>
+        </ul>
+
+        <h2>Come funziona l'accesso</h2>
+        <p>
+          Una parte delle lezioni è aperta a tutti gli iscritti — la
+          registrazione è gratuita. Il resto è riservato agli abbonati, divisi
+          in due piani a seconda dei limiti di gioco coperti. Le lezioni
+          bloccate restano visibili nel catalogo: si vede sempre cosa si
+          sbloccherebbe, non una lista vuota.
+        </p>
+
+        <div class="seo-block__cta">
+          <p>
+            Le <a routerLink="/tabelle">tabelle GTO preflop</a> e il
+            <a routerLink="/simulatore-varianza">simulatore di varianza</a> sono
+            già inclusi nell'account gratuito. I piani con le lezioni complete
+            sono su <a routerLink="/abbonati">abbonamenti</a>.
+          </p>
+        </div>
+
+        <h2>Domande frequenti sulle lezioni</h2>
+        <div class="faq">
+          @for (item of faq; track item.q) {
+            <div class="faq__item">
+              <h3 class="faq__q">{{ item.q }}</h3>
+              <p class="faq__a">{{ item.a }}</p>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="seo-block" aria-labelledby="lez-gate">
+        <h2 id="lez-gate">Il catalogo è riservato agli iscritti</h2>
+        <p>
+          Per sfogliare le lezioni serve un account: la registrazione è gratuita
+          e dà subito accesso alle lezioni aperte, alle tabelle e agli esercizi.
+        </p>
+        <div class="row">
+          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
+          <a
+            class="btn btn--ghost"
+            [routerLink]="['/login']"
+            [queryParams]="{ redirect: '/lezioni' }"
+            >Accedi</a
+          >
+        </div>
+        @if (!auth.ready()) {
+          <p class="text-muted">Stiamo verificando la tua sessione…</p>
+        }
+      </section>
+    </div>
+  </section>
+} @else {
 <section class="section">
   <div class="container">
     <div class="section-head">
@@ -191,3 +297,4 @@
     }
   </div>
 </section>
+}

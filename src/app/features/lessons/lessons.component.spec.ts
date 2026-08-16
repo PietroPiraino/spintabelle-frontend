@@ -8,6 +8,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { Lesson, Paginated } from '../../core/models/api.models';
+import { AuthService } from '../../core/services/auth.service';
 import { LessonsComponent } from './lessons.component';
 
 const API = environment.API_URL;
@@ -55,7 +56,21 @@ describe('LessonsComponent (lista paginata, filtri server-side)', () => {
 
     fixture = TestBed.createComponent(LessonsComponent);
     http = TestBed.inject(HttpTestingController);
-    // i tag della toolbar partono subito col componente
+
+    // ⚠️ Sessione finta OBBLIGATORIA da quando /lezioni non ha più `authGuard`.
+    // La rotta è prerenderizzata e il componente monta anche per un anonimo: il
+    // caricamento parte da un effect gated su `auth.user()`, e senza utente non
+    // parte NESSUNA chiamata (renderebbe il teaser pubblico). Prima le chiamate
+    // erano nel costruttore e partivano sempre.
+    TestBed.inject(AuthService).user.set({
+      id: 'u1',
+      email: 'test@bestfishforever.it',
+      role: 'USER',
+      verified: true,
+    });
+    fixture.detectChanges(); // fa girare l'effect
+
+    // i tag della toolbar partono col primo utente disponibile
     http.expectOne(`${API}/lessons/tags`).flush(['icm', '3bet']);
     // e con loro le lezioni già viste (badge "già visto"): una sola richiesta
     // per sessione, best-effort — va comunque consumata o http.verify() fallisce

@@ -2,9 +2,12 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -15,6 +18,7 @@ import {
 } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { DocumentsService } from '../../core/services/documents.service';
+import { SeoService } from '../../core/services/seo.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
 
 /** Filtro categoria: tutte o una specifica. */
@@ -43,6 +47,35 @@ const CATEGORY_LABELS: Record<DocumentCategory, string> = {
 export class DocsComponent {
   private readonly docsApi = inject(DocumentsService);
   protected readonly auth = inject(AuthService);
+
+  /** La libreria è già stata caricata per questo utente (guardia dell'effect). */
+  private loadedForUserId: string | null = null;
+
+  private readonly seo = inject(SeoService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /**
+   * FAQ del teaser pubblico: unica sorgente per il testo a schermo e per il
+   * JSON-LD FAQPage. ⚠️ Niente conteggi di file: la lista richiede il JWT.
+   */
+  protected readonly faq: readonly { q: string; a: string }[] = [
+    {
+      q: 'Serve PokerTracker 4 per usare questi materiali?',
+      a: "Solo per i filtri e i report, che sono file di configurazione di PT4 e senza il programma non hanno dove essere importati. PDF, fogli di calcolo e schemi di riferimento si aprono con qualunque strumento e non richiedono nulla di specifico.",
+    },
+    {
+      q: 'A cosa serve un filtro per PokerTracker?',
+      a: "A guardare solo le mani che rispondono a una domanda precisa — una certa profondità di stack, una certa posizione, un certo tipo di decisione — invece di scorrere migliaia di mani in ordine cronologico. È la differenza fra rivedere una sessione e studiarla.",
+    },
+    {
+      q: 'I materiali sono compresi nell’abbonamento?',
+      a: "Alcuni sono aperti a tutti gli iscritti, altri riservati agli abbonati, e ognuno riporta il proprio livello. Quelli riservati restano visibili nell'elenco, così si vede sempre cosa contiene la libreria.",
+    },
+    {
+      q: 'Posso condividere i file scaricati?',
+      a: "I download passano da un link firmato che scade dopo pochi secondi, quindi il link in sé non è condivisibile. I materiali sono pensati per lo studio personale degli iscritti alla scuola.",
+    },
+  ];
 
   protected readonly pageSize = PAGE_SIZE;
   protected readonly categories: { key: CategoryFilter; label: string }[] = [
@@ -80,6 +113,18 @@ export class DocsComponent {
   );
 
   constructor() {
+    // FAQPage dallo stesso `faq` del teaser pubblico, rimosso su destroy.
+    this.seo.setJsonLd('ld-docs-faq', {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: this.faq.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    });
+    this.destroyRef.onDestroy(() => this.seo.removeJsonLd('ld-docs-faq'));
+
     this.search$
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe((term) => {
@@ -87,7 +132,21 @@ export class DocsComponent {
         this.searchTerm.set(term);
         this.reload();
       });
-    this.load();
+    // ⚠️ Gated su `auth.user()`: senza `authGuard` sulla rotta il componente
+    // monta anche per un anonimo e in prerender, e `GET /documents` richiede il
+    // JWT. Una `load()` incondizionata qui faceva morire in timeout il
+    // prerender di /lezioni, stessa causa. Guardia "già caricato per questo id"
+    // come in features/affiliations.
+    effect(() => {
+      const user = this.auth.user();
+      if (!user) {
+        this.loadedForUserId = null;
+        return;
+      }
+      if (this.loadedForUserId === user.id) return;
+      this.loadedForUserId = user.id;
+      untracked(() => this.load());
+    });
   }
 
   protected categoryLabel(cat: DocumentCategory): string {

@@ -37,10 +37,7 @@
 /admin/*                /index.csr  200
 /allenamento            /index.csr  200
 /allenamento/*          /index.csr  200
-/docs                   /index.csr  200
-/lezioni                /index.csr  200
-/live                   /index.csr  200
-/live/*                 /index.csr  200
+/live/:id/stanza        /index.csr  200
 /login                  /index.csr  200
 /negozio                /index.csr  200
 /password-dimenticata   /index.csr  200

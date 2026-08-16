@@ -1,3 +1,92 @@
+<!--
+  ⚠️ Ramo anonimo = ciò che finisce nell'HTML prerenderizzato. Vedi il commento
+  in cima a lessons.component.html. ⚠️ Perché questa pagina ha potuto diventare
+  prerenderizzata solo il 16/08/2026: la regola `/live/*` in public/_redirects
+  catturava ANCHE `/live/`, e le regole precedono gli asset statici — le avrebbe
+  servito la shell vuota al posto del suo HTML. La regola è diventata
+  `/live/:id/stanza`, che copre la sala e lascia libero l'indice (il matcher in
+  scripts/lib/redirects.mjs ha imparato i placeholder apposta).
+-->
+@if (!auth.isAuthenticated()) {
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Dal vivo</span>
+        <h1>Lezioni di poker dal vivo per Spin &amp; Go e Twister</h1>
+        <p class="lead">
+          Sessioni settimanali con i coach, in una sala interna al sito: si
+          guarda, si fanno domande, e chi vuole condivide il proprio schermo per
+          farsi rivedere una sessione.
+        </p>
+      </div>
+
+      <section class="seo-block" aria-labelledby="live-seo-title">
+        <h2 id="live-seo-title">Com'è fatta una sessione dal vivo</h2>
+        <p>
+          Una lezione registrata spiega un concetto; una sessione dal vivo
+          risponde alla domanda che ti sei fatto tu. È lì che si chiariscono gli
+          spot in cui la teoria sembrava chiara e al tavolo non lo era: si porta
+          una mano, la si mette sullo schermo e la si smonta insieme.
+        </p>
+        <ul>
+          <li>
+            <strong>Nel browser, senza installare nulla</strong>: la sala è una
+            pagina del sito, non un programma esterno da configurare.
+          </li>
+          <li>
+            <strong>Si interviene davvero</strong>: microfono per tutti, chat
+            sempre aperta, e lo schermo concesso su richiesta a chi vuole
+            mostrare le proprie mani.
+          </li>
+          <li>
+            <strong>Restano disponibili</strong>: le sessioni registrate
+            diventano lezioni nel catalogo, per chi non c'era o vuole
+            rivederle.
+          </li>
+        </ul>
+
+        <div class="seo-block__cta">
+          <p>
+            Il calendario delle prossime sessioni è visibile a tutti gli
+            iscritti — <a routerLink="/registrazione">registrarsi è gratis</a>.
+            La partecipazione è riservata agli abbonati:
+            <a routerLink="/abbonati">i piani sono qui</a>.
+          </p>
+        </div>
+
+        <h2>Domande frequenti sulle live</h2>
+        <div class="faq">
+          @for (item of faq; track item.q) {
+            <div class="faq__item">
+              <h3 class="faq__q">{{ item.q }}</h3>
+              <p class="faq__a">{{ item.a }}</p>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="seo-block" aria-labelledby="live-gate">
+        <h2 id="live-gate">Il calendario è riservato agli iscritti</h2>
+        <p>
+          Per vedere le sessioni in programma serve un account. La registrazione
+          è gratuita.
+        </p>
+        <div class="row">
+          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
+          <a
+            class="btn btn--ghost"
+            [routerLink]="['/login']"
+            [queryParams]="{ redirect: '/live' }"
+            >Accedi</a
+          >
+        </div>
+        @if (!auth.ready()) {
+          <p class="text-muted">Stiamo verificando la tua sessione…</p>
+        }
+      </section>
+    </div>
+  </section>
+} @else {
 <section class="section">
   <div class="container">
     <div class="section-head">
@@ -96,3 +185,4 @@
     }
   </div>
 </section>
+}

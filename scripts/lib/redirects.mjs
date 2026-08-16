@@ -15,12 +15,38 @@ export function parseRedirects(text) {
   return rules;
 }
 
-// Semantica Cloudflare: match esatto, oppure splat `/*` finale che cattura
-// qualsiasi coda (anche con `/`).
+// Semantica Cloudflare, tre forme:
+//   1. match esatto                      `/login`
+//   2. splat `/*` finale, cattura qualsiasi coda (anche con `/`)
+//   3. placeholder `:nome`, che vale UN solo segmento    `/live/:id/stanza`
+//
+// ⚠️ Il placeholder non e' un vezzo: la regola `/live/*` cattura ANCHE `/live/`
+// (prefix + '/'), quindi finche' era quella la regola in uso, `/live` non poteva
+// diventare una pagina prerenderizzata — le regole precedono gli asset statici e
+// le avrebbero servito la shell vuota al posto del suo HTML. Con
+// `/live/:id/stanza` la regola copre la sala e lascia libero l'indice.
+// Cloudflare Pages supporta i placeholder nativamente; questo matcher esisteva
+// per due forme su tre e avrebbe segnalato come "rotta senza regola" una rotta
+// perfettamente coperta.
 export function ruleMatches(from, url) {
   if (from.endsWith('/*')) {
     const prefix = from.slice(0, -2);
     return url === prefix || url.startsWith(prefix + '/');
+  }
+  if (from.includes('/:')) {
+    const rx = new RegExp(
+      '^' +
+        from
+          .split('/')
+          .map((s) =>
+            s.startsWith(':')
+              ? '[^/]+'
+              : s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+          )
+          .join('/') +
+        '/?$',
+    );
+    return rx.test(url);
   }
   return from === url;
 }

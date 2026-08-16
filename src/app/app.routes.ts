@@ -89,20 +89,38 @@ export const routes: Routes = [
     ],
   },
   {
+    // ⚠️ Niente `authGuard`, ed è una scelta necessaria, non una svista: una
+    // rotta guardata NON è prerenderizzabile (il guard aspetta `ready$`, che in
+    // Node non emette mai → la rotta non si attiva e il prerender non
+    // stabilizza). Con il guard, Cloudflare serviva qui la shell CSR: 13 parole
+    // con titolo e canonical DELLA HOME, e Search Console la scartava come
+    // duplicato della homepage. Il gate è nel componente (ramo anonimo con
+    // teaser + CTA) e i dati restano protetti dal backend, dove
+    // `GET /lessons` è `@UseGuards(JwtAuthGuard)`. Stesso modello di /abbonati.
     path: 'lezioni',
     loadComponent: () =>
       import('./features/lessons/lessons.component').then(
         (m) => m.LessonsComponent,
       ),
-    canActivate: [authGuard],
-    title: 'Lezioni — Best Fish Forever',
+    title: 'Lezioni di poker per Spin & Go e Twister — Best Fish Forever',
+    data: {
+      description:
+        'Le lezioni video della scuola, in italiano: preflop, postflop e ICM per Spin & Go e Twister. Una parte è aperta a tutti gli iscritti, la registrazione è gratis.',
+    },
   },
   {
+    // Niente `authGuard`: vedi il commento sulla rotta `lezioni`. ⚠️ Questa ha
+    // richiesto anche di cambiare la regola in `public/_redirects` da `/live/*`
+    // a `/live/:id/stanza`: lo splat catturava pure `/live/` e le avrebbe
+    // servito la shell vuota al posto del suo HTML prerenderizzato.
     path: 'live',
     loadComponent: () =>
       import('./features/live/live.component').then((m) => m.LiveComponent),
-    canActivate: [authGuard],
-    title: 'Live — Best Fish Forever',
+    title: 'Lezioni di poker dal vivo per Spin & Go — Best Fish Forever',
+    data: {
+      description:
+        'Le sessioni dal vivo della scuola, in una sala interna al sito: si guarda, si fanno domande e si condivide lo schermo con i coach. Calendario per gli iscritti.',
+    },
   },
   {
     // Sala on-site (LIVEKIT). Il gate per tier vero è il 403 del backend sul
@@ -142,11 +160,18 @@ export const routes: Routes = [
     },
   },
   {
+    // Niente `authGuard`: vedi il commento sulla rotta `lezioni` — una rotta
+    // guardata non è prerenderizzabile, e senza prerender Google riceveva la
+    // shell CSR col canonical della home. Gate nel componente, dati protetti
+    // dal backend (`GET /documents` è JwtAuthGuard, il download è firmato).
     path: 'docs',
     loadComponent: () =>
       import('./features/docs/docs.component').then((m) => m.DocsComponent),
-    canActivate: [authGuard],
-    title: 'Docs — Best Fish Forever',
+    title: 'Materiali e filtri PT4 per Spin & Go — Best Fish Forever',
+    data: {
+      description:
+        'Filtri e report per PokerTracker 4, PDF e fogli di calcolo per studiare Spin & Go e Twister lontano dal tavolo. Riservati agli iscritti, registrazione gratuita.',
+    },
   },
   {
     path: 'affiliazioni',

@@ -2,9 +2,12 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -12,6 +15,7 @@ import { Subject, catchError, debounceTime, of } from 'rxjs';
 import { Lesson, LessonStakes } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { LessonsService } from '../../core/services/lessons.service';
+import { SeoService } from '../../core/services/seo.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
 import {
   BunnyPlayerComponent,
@@ -34,6 +38,40 @@ const PAGE_SIZE = 24;
 export class LessonsComponent {
   private readonly lessonsApi = inject(LessonsService);
   protected readonly auth = inject(AuthService);
+  private readonly seo = inject(SeoService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** Il catalogo è già stato caricato per questo utente (guardia dell'effect). */
+  private loadedForUserId: string | null = null;
+
+  /**
+   * FAQ del teaser pubblico: unica sorgente per il testo a schermo e per il
+   * JSON-LD FAQPage. ⚠️ Niente prezzi e niente conteggi di lezioni: i primi
+   * sono env-driven (`SUB_PRICE_*` vince sul codice), i secondi arriverebbero
+   * da un endpoint che richiede il JWT e qui non è disponibile.
+   */
+  protected readonly faq: readonly { q: string; a: string }[] = [
+    {
+      q: 'Le lezioni sono adatte a chi inizia adesso?',
+      a: "Sì, purché tu conosca le regole del Texas Hold'em. Il percorso parte dalle decisioni preflop, che nel 3-max hyper turbo sono la maggior parte del gioco, e sale gradualmente verso postflop e ICM. Chi gioca già da tempo di solito salta la parte iniziale e usa i tag per andare sull'argomento che gli manca.",
+    },
+    {
+      q: 'In che lingua sono?',
+      a: 'Tutte in italiano, spiegate dai coach della scuola. È la ragione principale per cui molti giocatori italiani arrivano qui: il materiale serio su Spin & Go e Twister è quasi tutto in inglese.',
+    },
+    {
+      q: 'Posso vedere qualcosa senza abbonarmi?',
+      a: "Sì. Una parte del catalogo è aperta a tutti gli iscritti e la registrazione è gratuita. Le lezioni riservate restano comunque visibili nell'elenco, con l'indicazione di cosa serve per sbloccarle: si vede sempre cosa contiene la scuola, non una pagina vuota.",
+    },
+    {
+      q: 'Ogni quanto vengono aggiunte nuove lezioni?',
+      a: 'Il catalogo cresce con i nuovi contenuti dei coach e con le registrazioni delle sessioni dal vivo, che vengono pubblicate come lezioni. Gli abbonati ricevono un avviso via email a ogni nuova pubblicazione, disattivabile dalle impostazioni account.',
+    },
+    {
+      q: 'Servono software o strumenti a pagamento per seguirle?',
+      a: "No. Le tabelle preflop e il simulatore di varianza sono già sul sito e inclusi nell'account. Alcuni materiali di supporto sono filtri e report per PokerTracker 4, utili se lo usi già, ma non sono necessari per seguire le lezioni.",
+    },
+  ];
 
   protected readonly pageSize = PAGE_SIZE;
 
@@ -47,10 +85,16 @@ export class LessonsComponent {
   /** Errore dell'ultima richiesta lista: mai mascherato da "nessuna lezione". */
   protected readonly error = signal<string | null>(null);
 
-  protected readonly tags = toSignal(
-    this.lessonsApi.getTags().pipe(catchError(() => of([] as string[]))),
-    { initialValue: [] as string[] },
-  );
+  /**
+   * Tag disponibili per i filtri.
+   * ⚠️ Era un `toSignal(getTags())` come field initializer, quindi partiva
+   * SEMPRE — anche per un anonimo e in prerender. `GET /lessons/tags` richiede
+   * il JWT: il 401 mandava l'interceptor sul giro di refresh, che senza cookie
+   * di sessione non si chiudeva, e il prerender di /lezioni moriva in timeout
+   * ("Request for: http://ng-localhost/lezioni was aborted"). Ora si popola
+   * dentro l'effect gated su `auth.user()`, come il catalogo.
+   */
+  protected readonly tags = signal<string[]>([]);
 
   protected readonly searchTerm = signal('');
   /** tag selezionati: una lezione passa solo se li contiene TUTTI (logica AND) */
@@ -80,6 +124,19 @@ export class LessonsComponent {
   );
 
   constructor() {
+    // FAQPage dello stesso `faq` mostrato nel teaser pubblico. Rimosso su
+    // destroy, altrimenti resta nel <head> navigando altrove.
+    this.seo.setJsonLd('ld-lezioni-faq', {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: this.faq.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    });
+    this.destroyRef.onDestroy(() => this.seo.removeJsonLd('ld-lezioni-faq'));
+
     this.search$
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe((term) => {
@@ -87,12 +144,36 @@ export class LessonsComponent {
         this.searchTerm.set(term);
         this.reload();
       });
-    this.load();
-    // Una sola richiesta per sessione: quali lezioni ho già aperto. Best-effort,
-    // il badge è un di più — se fallisce la lista funziona identica.
-    this.lessonsApi.myViews().subscribe({
-      next: (rows) => this.viste.set(new Set(rows.map((r) => r.lessonId))),
-      error: () => undefined,
+    // ⚠️ Il catalogo parte da un effect su `auth.user()`, non da una chiamata
+    // secca: da quando la rotta non ha più `authGuard`, il componente monta
+    // anche per un anonimo e in prerender. Una `load()` incondizionata qui
+    // sparerebbe un 401 a ogni visita pubblica e, al build, terrebbe il
+    // prerender in attesa di una chiamata destinata a fallire.
+    // Guardia "già caricato per questo id": un refresh di sessione ricrea
+    // l'oggetto User ma non ne cambia l'id, quindi non ricarica nulla.
+    // Stesso idioma di features/affiliations.
+    effect(() => {
+      const user = this.auth.user();
+      if (!user) {
+        this.loadedForUserId = null;
+        return;
+      }
+      if (this.loadedForUserId === user.id) return;
+      this.loadedForUserId = user.id;
+      untracked(() => {
+        this.load();
+        // Una sola richiesta per sessione: quali lezioni ho già aperto.
+        // Best-effort, il badge è un di più — se fallisce la lista funziona
+        // identica. Sta qui dentro perché anch'essa richiede il JWT.
+        this.lessonsApi.myViews().subscribe({
+          next: (rows) => this.viste.set(new Set(rows.map((r) => r.lessonId))),
+          error: () => undefined,
+        });
+        this.lessonsApi
+          .getTags()
+          .pipe(catchError(() => of([] as string[])))
+          .subscribe((t) => this.tags.set(t));
+      });
     });
   }
 

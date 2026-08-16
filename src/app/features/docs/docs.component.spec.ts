@@ -8,6 +8,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { DocumentResource, Paginated } from '../../core/models/api.models';
+import { AuthService } from '../../core/services/auth.service';
 import { DocsComponent } from './docs.component';
 
 const API = environment.API_URL;
@@ -61,6 +62,18 @@ describe('DocsComponent', () => {
 
     fixture = TestBed.createComponent(DocsComponent);
     http = TestBed.inject(HttpTestingController);
+
+    // ⚠️ Sessione finta OBBLIGATORIA da quando /docs non ha più `authGuard`.
+    // La rotta è prerenderizzata e il componente monta anche per un anonimo: il
+    // caricamento parte da un effect gated su `auth.user()`, e senza utente non
+    // parte nessuna chiamata (renderebbe il teaser pubblico).
+    TestBed.inject(AuthService).user.set({
+      id: 'u1',
+      email: 'test@bestfishforever.it',
+      role: 'USER',
+      verified: true,
+    });
+    fixture.detectChanges(); // fa girare l'effect
   });
 
   afterEach(() => http.verify());

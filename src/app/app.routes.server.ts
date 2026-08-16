@@ -32,6 +32,13 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'simulatore-varianza', renderMode: RenderMode.Prerender },
   { path: 'chi-siamo', renderMode: RenderMode.Prerender },
   { path: 'abbonati', renderMode: RenderMode.Prerender },
+  // Pagina prodotto: prerenderizzata dal 16/08/2026, quando le e' stato tolto
+  // `authGuard` (una rotta guardata non stabilizza in prerender). Il ramo che
+  // finisce nell'HTML statico e' il teaser anonimo; il catalogo vero resta
+  // dietro il JWT, lato backend. ⚠️ Va tolta anche da public/_redirects.
+  { path: 'lezioni', renderMode: RenderMode.Prerender },
+  { path: 'docs', renderMode: RenderMode.Prerender },
+  { path: 'live', renderMode: RenderMode.Prerender },
   { path: 'news', renderMode: RenderMode.Prerender },
   { path: 'affiliazioni', renderMode: RenderMode.Prerender },
   { path: 'privacy', renderMode: RenderMode.Prerender },

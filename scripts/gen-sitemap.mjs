@@ -44,6 +44,9 @@ const ESCLUSE = new Map([
 const META = new Map([
   ['/', { changefreq: 'weekly', priority: '1.0' }],
   ['/abbonati', { changefreq: 'monthly', priority: '0.9' }],
+  ['/lezioni', { changefreq: 'weekly', priority: '0.8' }],
+  ['/live', { changefreq: 'weekly', priority: '0.7' }],
+  ['/docs', { changefreq: 'monthly', priority: '0.6' }],
   ['/chi-siamo', { changefreq: 'monthly', priority: '0.7' }],
   ['/tabelle', { changefreq: 'monthly', priority: '0.7' }],
   ['/simulatore-varianza', { changefreq: 'monthly', priority: '0.7' }],

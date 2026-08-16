@@ -52,6 +52,20 @@ test('ruleMatches: lo splat /* cattura anche le code con piu\' segmenti', () => 
   assert.equal(ruleMatches('/live/*', '/live'), true); // il prefisso nudo
 });
 
+test('ruleMatches: il placeholder :id vale UN segmento, e lascia libero l\'indice', () => {
+  // E' il motivo per cui il placeholder e' stato aggiunto: `/live/*` cattura
+  // anche `/live/` (vedi il test qui sopra), e finche' era quella la regola in
+  // uso l'indice /live non poteva diventare una pagina prerenderizzata — le
+  // regole precedono gli asset statici e le avrebbero servito la shell vuota.
+  assert.equal(ruleMatches('/live/:id/stanza', '/live/abc/stanza'), true);
+  assert.equal(ruleMatches('/live/:id/stanza', '/live/abc/stanza/'), true);
+  assert.equal(ruleMatches('/live/:id/stanza', '/live'), false);
+  assert.equal(ruleMatches('/live/:id/stanza', '/live/'), false);
+  assert.equal(ruleMatches('/live/:id/stanza', '/live/abc'), false);
+  // un placeholder non attraversa lo slash: due segmenti non lo soddisfano
+  assert.equal(ruleMatches('/live/:id/stanza', '/live/a/b/stanza'), false);
+});
+
 test('ruleMatches: lo splat NON sconfina su un fratello con lo stesso prefisso', () => {
   // Se sconfinasse, /live/* "coprirebbe" /livello e il controllo direbbe
   // "coperta" per una rotta che in prod prende l'HTML della home.
