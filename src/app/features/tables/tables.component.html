@@ -1,12 +1,19 @@
 <section class="section pf">
   <div class="container">
-    @if (!auth.ready()) {
-      <div class="pf__boot" role="status">
-        <span class="pf__spinner" aria-hidden="true"></span>
-        Controllo della sessione…
-      </div>
-    } @else if (!auth.isAuthenticated()) {
-      <!-- Visitatori: le tabelle sono riservate agli iscritti -->
+    <!--
+      ⚠️ Il ramo anonimo qui sotto è ESATTAMENTE ciò che finisce nell'HTML
+      prerenderizzato e indicizzabile: in prerender `auth.ready()` non diventa
+      mai true (`ready$` emette solo da `AuthService.bootstrap()`, chiamato solo
+      se isPlatformBrowser — vedi app.config.ts), quindi la vecchia condizione
+      `@if (!auth.ready())` vinceva SEMPRE e in dist/frontend/browser/tabelle/
+      index.html finivano 3 parole: "Controllo della sessione…". Stesso idioma
+      di features/affiliations: si gatta su `isAuthenticated()`, e lo spinner
+      resta un hint DENTRO il ramo anonimo — mai la condizione che decide cosa
+      vede Google. La guardia scripts/check-prerender-content.mjs lo verifica
+      a ogni build.
+    -->
+    @if (!auth.isAuthenticated()) {
+      <!-- Visitatori: la consultazione è riservata agli iscritti -->
       <div class="pf__teaser">
         <div class="pf__teaser-cards" aria-hidden="true">
           <span class="pf__card pf__card--1">A♣</span>
@@ -15,18 +22,109 @@
         </div>
         <span class="eyebrow rise">Tabelle preflop</span>
         <h1 class="rise" style="animation-delay: 80ms">
-          Le tabelle sono <span class="text-gradient">al tavolo</span>.
+          Tabelle <span class="text-gradient">GTO</span> preflop per Spin &amp; Go e Twister
         </h1>
         <p class="lead rise" style="animation-delay: 160ms">
-          Range GTO per Spin &amp; Go e Heads-Up a ogni profondità di stack,
-          con frequenze ed EV di ogni singola mano. La consultazione è
+          Range di apertura, push/fold e raise a ogni profondità di stack, con
+          la frequenza e l'EV di ognuna delle 169 mani. La consultazione è
           riservata agli iscritti: registrarsi è gratis.
         </p>
         <div class="row rise" style="animation-delay: 240ms">
           <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
           <a routerLink="/login" class="btn btn--ghost">Accedi</a>
         </div>
+        @if (!auth.ready()) {
+          <p class="pf__teaser-hint">Stiamo verificando la tua sessione…</p>
+        }
       </div>
+
+      <!--
+        Contenuto evergreen: sta nel ramo anonimo perché è quello che viene
+        prerenderizzato, ed è l'unico testo che Google legge di questa pagina
+        (il visualizzatore vero è dietro login). Le FAQ hanno una sola sorgente,
+        `faq` in tables.component.ts, condivisa col JSON-LD FAQPage.
+      -->
+      <section class="seo-block" aria-labelledby="pf-seo-title">
+        <h2 id="pf-seo-title">Cosa sono le tabelle GTO preflop</h2>
+        <p>
+          Una tabella preflop dice, per ognuna delle 169 mani di partenza, con
+          che frequenza conviene aprire, rilanciare, chiamare o passare in una
+          situazione precisa: quel formato, quella profondità di stack, quella
+          posizione e quella sequenza di azioni già avvenute. Non è una lista di
+          mani «buone» e mani «cattive» — è una strategia, e nella maggior parte
+          degli spot la risposta giusta è una miscela: la stessa mano si apre una
+          volta su tre e si passa le altre due.
+        </p>
+        <p>
+          Negli Spin &amp; Go e nei Twister questo conta più che altrove. Sono
+          tornei 3-max hyper turbo: gli stack partono bassi e scendono in fretta,
+          e una parte enorme dell'EV si decide prima del flop. Sapere a memoria
+          il range di push a 10 big blind vale, in un formato del genere, più di
+          qualunque lettura postflop.
+        </p>
+
+        <h2>Cosa trovi nelle tabelle di Best Fish Forever</h2>
+        <p>
+          Le tabelle coprono <strong>Spin &amp; Go</strong> (Spin and Go) e
+          <strong>Heads-Up</strong>, con le varianti che cambiano davvero la
+          strategia: tavoli con <strong>ante</strong>, formati
+          <strong>senza limp</strong> (raise only, con le diverse taglie di
+          apertura) e formati <strong>asimmetrici</strong>, quelli in cui uno dei
+          due bui parte con uno stack più corto degli altri.
+        </p>
+        <ul>
+          <li>
+            <strong>Ogni nodo dell'albero</strong>, non solo l'apertura: si
+            naviga la mano azione per azione e si vede il range di chi deve
+            decidere in quel momento.
+          </li>
+          <li>
+            <strong>Frequenze ed EV per singola mano</strong>: la matrice 13×13
+            colora ogni casella in segmenti proporzionali alle frequenze, e
+            passando sopra una mano si leggono i numeri esatti.
+          </li>
+          <li>
+            <strong>Stack reali</strong>: la timeline della mano calcola quanto
+            resta a ciascun giocatore dopo bui, ante e puntate già versate.
+          </li>
+        </ul>
+
+        <h2>Come si legge una tabella preflop</h2>
+        <p>
+          Ogni casella della matrice è divisa in segmenti: la larghezza di un
+          segmento è la frequenza con cui quella mano prende quell'azione. Una
+          casella tutta di un colore è una decisione pura, una casella divisa a
+          metà è una miscela. Le caselle spente sono mani che a quel punto della
+          mano non ci arrivano mai, e per quelle l'EV non ha significato.
+        </p>
+        <p>
+          L'EV è espresso in big blind e va letto come confronto, non come
+          promessa: dice quanto vale quella scelta rispetto alle alternative
+          nella stessa situazione. Un valore di poco superiore a zero significa
+          che la decisione è marginale — cambiare avversario, ante o profondità
+          la ribalta.
+        </p>
+
+        <div class="seo-block__cta">
+          <p>
+            Le tabelle sono il primo passo: per capire quanto la fortuna può
+            allontanarti dal tuo EV nel breve periodo, prova il
+            <a routerLink="/simulatore-varianza">simulatore di varianza</a> —
+            è gratuito e non serve registrarsi. Per studiarle con i coach, dai
+            un'occhiata agli <a routerLink="/abbonati">abbonamenti della scuola</a>.
+          </p>
+        </div>
+
+        <h2>Domande frequenti sulle tabelle preflop</h2>
+        <div class="faq">
+          @for (item of faq; track item.q) {
+            <div class="faq__item">
+              <h3 class="faq__q">{{ item.q }}</h3>
+              <p class="faq__a">{{ item.a }}</p>
+            </div>
+          }
+        </div>
+      </section>
     } @else {
       <header class="pf__head">
         <span class="eyebrow">Tabelle preflop</span>

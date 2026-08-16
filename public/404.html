@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <title>Pagina non trovata — Best Fish Forever</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--
+    ⚠️ QUESTA PAGINA ESISTE PER RESTITUIRE UN 404 VERO.
+    Prima, su Cloudflare Pages, qualunque URL inesistente cadeva nel fallback
+    automatico e riceveva `index.html` — cioe' la HOME intera, con status 200.
+    Per un visitatore: la landing al posto dell'errore. Per Google: un soft-404
+    su ogni refuso e su ogni vecchio percorso del dominio dismesso, con dentro
+    l'HTML completo della home. E un redirect che atterra su una pagina non
+    pertinente non trasferisce i segnali: e' documentato da Google.
+    Le rotte client (/login, /lezioni…) NON passano di qui: hanno le proprie
+    regole a 200 in public/_redirects, valutate prima degli asset statici.
+    ⚠️ Autonoma di proposito: niente bundle Angular, niente chiamate esterne
+    (una 404 deve funzionare anche quando qualcos'altro e' rotto).
+  -->
+  <meta name="robots" content="noindex, follow">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/bricolage-grotesque-latin.woff2" crossorigin>
+  <!-- Stesso tema pre-paint del sito: niente flash chiaro/scuro arrivando qui -->
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('bff-theme');
+        if (theme !== 'light' && theme !== 'dark' && theme !== 'tramonto') {
+          theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = theme;
+      } catch (e) {
+        document.documentElement.dataset.theme = 'light';
+      }
+    })();
+  </script>
+  <style>
+    @font-face {
+      font-family: 'Bricolage Grotesque';
+      src: url('/fonts/bricolage-grotesque-latin.woff2') format('woff2');
+      font-weight: 200 800;
+      font-display: swap;
+    }
+    :root {
+      --bg: #f7f5f0;
+      --ink: #16223f;
+      --muted: rgba(22, 34, 63, 0.64);
+      --line: rgba(22, 34, 63, 0.14);
+      --copper: #e25510;
+      --glow-1: rgba(255, 106, 31, 0.12);
+      --glow-2: rgba(0, 212, 212, 0.1);
+      --card-bg: #ffffff;
+      --card-ink: #1b2a4a;
+    }
+    :root[data-theme='tramonto'] {
+      --bg: #fdf1ec;
+      --ink: #46213c;
+      --muted: rgba(70, 33, 60, 0.66);
+      --line: rgba(70, 33, 60, 0.16);
+      --copper: #d34b2a;
+      --glow-1: rgba(233, 116, 81, 0.16);
+      --glow-2: rgba(198, 93, 138, 0.12);
+      --card-bg: #fffaf7;
+      --card-ink: #46213c;
+    }
+    :root[data-theme='dark'] {
+      --bg: #0d1526;
+      --ink: #f3eee2;
+      --muted: rgba(243, 238, 226, 0.62);
+      --line: rgba(243, 238, 226, 0.14);
+      --copper: #ff7d36;
+      --glow-1: rgba(255, 106, 31, 0.14);
+      --glow-2: rgba(0, 212, 212, 0.1);
+      --card-bg: #ffffff;
+      --card-ink: #1b2a4a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.4rem;
+      padding: 2rem 1.25rem 4rem;
+      text-align: center;
+      background: var(--bg);
+      background-image:
+        radial-gradient(700px 420px at 85% -6%, var(--glow-1), transparent 60%),
+        radial-gradient(560px 400px at -8% 18%, var(--glow-2), transparent 62%);
+      color: var(--ink);
+      font-family: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+      line-height: 1.6;
+    }
+    .cards { display: flex; margin-bottom: 0.4rem; }
+    .card {
+      display: grid;
+      place-items: center;
+      width: 62px;
+      height: 88px;
+      border-radius: 10px;
+      background: var(--card-bg);
+      color: var(--card-ink);
+      border: 1px solid rgba(27, 42, 74, 0.25);
+      box-shadow: 0 10px 30px -14px rgba(22, 34, 63, 0.5);
+      font-weight: 800;
+      font-size: 1.15rem;
+    }
+    .card:nth-child(1) { transform: rotate(-12deg) translateX(10px); }
+    .card:nth-child(2) { transform: rotate(2deg) translateY(-8px); color: var(--copper); z-index: 1; }
+    .card:nth-child(3) { transform: rotate(14deg) translateX(-10px); }
+    .eyebrow {
+      font-family: 'Spline Sans Mono', ui-monospace, monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    p.lead { margin: 0; max-width: 46ch; color: var(--muted); }
+    nav { display: flex; flex-wrap: wrap; gap: 0.7rem; justify-content: center; margin-top: 0.6rem; }
+    a.btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.65rem 1.15rem;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      transition: border-color 0.2s ease, color 0.2s ease;
+    }
+    a.btn--primary { background: var(--copper); border-color: var(--copper); color: #fff; }
+    a.btn:hover { border-color: var(--copper); color: var(--copper); }
+    a.btn--primary:hover { color: #fff; opacity: 0.92; }
+    a.btn:focus-visible { outline: 2px solid var(--copper); outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <div class="cards" aria-hidden="true">
+    <span class="card">A♣</span>
+    <span class="card">7♣</span>
+    <span class="card">4♣</span>
+  </div>
+  <p class="eyebrow">Errore 404</p>
+  <h1>Mano foldata</h1>
+  <p class="lead">
+    Questa pagina non esiste o è stata spostata dal tavolo. Da qui puoi tornare
+    in gioco.
+  </p>
+  <nav>
+    <a class="btn btn--primary" href="/">Torna alla home</a>
+    <a class="btn" href="/tabelle/">Tabelle preflop</a>
+    <a class="btn" href="/simulatore-varianza/">Simulatore di varianza</a>
+    <a class="btn" href="/news/">News</a>
+  </nav>
+</body>
+</html>

@@ -9,10 +9,15 @@ export const routes: Routes = [
       import('./features/landing/landing.component').then(
         (m) => m.LandingComponent,
       ),
-    title: 'Best Fish Forever — Scuola di Poker Spin & Go',
+    // ⚠️ Parola chiave PRIMA del marchio (16/08/2026). Prima era
+    // "Best Fish Forever — Scuola di Poker Spin & Go": il marchio non è ancora
+    // noto e occupava la posizione di testa, quella che pesa di più e che in
+    // SERP si legge per prima. Chi cerca "scuola spin and go" non sa chi siamo:
+    // deve vedere prima cosa trova, poi da chi.
+    title: 'Scuola di poker Spin & Go e Twister — Best Fish Forever',
     data: {
       description:
-        'Best Fish Forever è la scuola italiana di poker dedicata a Spin & Go e Twister: lezioni video, tabelle GTO e una community di studio su Discord.',
+        'La scuola italiana di poker dedicata a Spin & Go e Twister: lezioni video dei coach in italiano, tabelle GTO preflop, allenamento e lezioni dal vivo. Iscriversi è gratis.',
     },
   },
   {
@@ -158,6 +163,14 @@ export const routes: Routes = [
     data: {
       description:
         'Il programma di affiliazione di Best Fish Forever: come funziona e come si richiede dal tuo account. Condizioni riservate agli iscritti. 18+, gioca responsabilmente.',
+      // ⚠️ noindex: la pagina è prerenderizzata E linkata dalla nav di OGNI
+      // pagina, quindi la sola esclusione dalla sitemap (gen-sitemap.mjs,
+      // ESCLUSE) non la teneva fuori dall'indice — una sitemap dice a Google
+      // cosa guardare, non cosa ignorare. Il programma invia per email link
+      // affiliati a sale da gioco: promuoverlo in ricerca è esattamente ciò
+      // che l'art. 9 del DL 87/2018 vieta. `follow` resta, così i link verso
+      // il resto del sito continuano a valere.
+      noindex: true,
     },
   },
   {
@@ -396,11 +409,20 @@ export const routes: Routes = [
     },
   },
   {
+    // 404 lato client (navigazione interna verso un URL inesistente). Il 404
+    // vero, con lo status HTTP giusto, lo serve public/404.html: Cloudflare
+    // Pages lo restituisce sugli URL che non corrispondono a nessun asset ne'
+    // a nessuna regola di _redirects.
     path: '**',
     loadComponent: () =>
       import('./features/not-found/not-found.component').then(
         (m) => m.NotFoundComponent,
       ),
     title: 'Pagina non trovata — Best Fish Forever',
+    data: {
+      description:
+        'La pagina che cercavi non esiste o è stata spostata. Torna alla home di Best Fish Forever.',
+      noindex: true,
+    },
   },
 ];

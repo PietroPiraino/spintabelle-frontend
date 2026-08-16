@@ -3,14 +3,25 @@
   <app-hero-3d />
   <div class="container hero__inner">
     <div class="hero__copy">
-      <span class="eyebrow rise">Scuola di poker · Spin &amp; Go / Twister</span>
+      <!--
+        ⚠️ H1 e occhiello si sono SCAMBIATI i ruoli (16/08/2026, scelta SEO).
+        Prima: occhiello "Scuola di poker · Spin & Go / Twister" e H1 "Smetti di
+        essere il fish del tavolo." — una gran riga di marca, e invisibile alla
+        ricerca: l'H1 e' il segnale on-page piu' forte dopo il <title>, e non
+        conteneva una sola parola che qualcuno digiti. Ora l'occhiello porta il
+        marchio, l'H1 dice che cos'e' il sito, e la riga di marca apre il lead
+        in grassetto — dove si legge uguale. La lunghezza dell'H1 e' scelta per
+        stare in due righe dentro .hero__copy (max-width 620px): allungarla la
+        manda a quattro.
+      -->
+      <span class="eyebrow rise">Best Fish Forever</span>
       <h1 class="rise" style="animation-delay: 80ms">
-        Smetti di essere il<br /><span class="text-gradient">fish</span> del tavolo.
+        La scuola di poker<br /><span class="text-gradient">Spin &amp; Go</span> e Twister
       </h1>
       <p class="lead rise" style="animation-delay: 160ms">
-        Best Fish Forever è il gruppo studio italiano dedicato agli
-        Spin&nbsp;&amp;&nbsp;Go: lezioni video dei coach, tabelle di gioco e una
-        community che analizza ogni spot.
+        <strong>Smetti di essere il fish del tavolo.</strong> La scuola italiana
+        dedicata al 3-max hyper turbo: lezioni video dei coach, tabelle GTO
+        preflop e una community che analizza ogni spot.
       </p>
       <div class="row rise" style="animation-delay: 240ms">
         @if (auth.isAuthenticated()) {
@@ -97,6 +108,124 @@
     </div>
   </section>
 }
+
+<!--
+  CONTENUTO EVERGREEN (SEO)
+  Questa e' la pagina che deve vincere le query "scuola spin and go" / "scuola
+  di poker spin & go": prima aveva ~215 parole di copy proprio, quasi tutte in
+  card da tre righe. Il resto del conteggio erano estratti delle news e chrome —
+  contenuto che cambia sotto i piedi e che non parla della scuola.
+  Il blocco sta FUORI da ogni @if: e' identico per chi e' loggato e per Google.
+  ⚠️ Le FAQ hanno UNA sola sorgente, `faq` in landing.component.ts, condivisa
+  col JSON-LD FAQPage: testo visibile e dati strutturati che divergono sono una
+  segnalazione di spam.
+  ⚠️ Vincolo art. 9 DL 87/2018: taglio didattico, nessun nome di sala, nessun
+  bonus, mai un inquadramento "guadagna".
+-->
+<section class="section">
+  <div class="container">
+    <section class="seo-block" aria-labelledby="home-seo-title">
+      <h2 id="home-seo-title">Cos'è Best Fish Forever</h2>
+      <p>
+        Best Fish Forever è una <strong>scuola di poker italiana</strong>
+        specializzata in un formato solo: i tornei 3-max hyper turbo, quelli che
+        le varie sale chiamano <strong>Spin &amp; Go</strong> (Spin and Go) o
+        <strong>Twister</strong>. Non è un portale generalista che tocca tutte le
+        varianti: è un percorso di studio costruito attorno a un formato preciso,
+        tenuto da coach che quel formato lo giocano.
+      </p>
+      <p>
+        La specializzazione non è un vezzo. In un torneo che parte da 25 big
+        blind e sale di livello ogni pochi minuti, le decisioni che contano sono
+        poche, si ripetono migliaia di volte e si possono studiare fino a
+        conoscerle a memoria. È l'opposto di un formato profondo, dove il
+        vantaggio si costruisce leggendo l'avversario mano per mano.
+      </p>
+
+      <h2>Come funziona la scuola</h2>
+      <p>
+        La registrazione è gratuita e apre subito la parte di studio autonomo:
+        le <a routerLink="/tabelle">tabelle GTO preflop</a>, gli esercizi di
+        allenamento e il <a routerLink="/simulatore-varianza">simulatore di
+        varianza</a>. L'abbonamento aggiunge la parte guidata — le lezioni video
+        dei coach, i materiali di supporto e le sessioni dal vivo.
+      </p>
+      <ul>
+        <li>
+          <strong>Lezioni video</strong> in italiano, organizzate per argomento
+          e per livello, con ricerca e tag: si studia un tema alla volta, non si
+          guarda una playlist dall'inizio alla fine.
+        </li>
+        <li>
+          <strong>Tabelle preflop navigabili</strong>: non un PDF, ma l'albero
+          delle azioni percorribile nodo per nodo, con frequenza ed EV di
+          ognuna delle 169 mani.
+        </li>
+        <li>
+          <strong>Lezioni dal vivo</strong> con i coach, in una sala interna al
+          sito: si guarda, si fanno domande, e chi vuole condivide il proprio
+          schermo per farsi rivedere una sessione.
+        </li>
+        <li>
+          <strong>Community su Discord</strong>: review delle mani, confronto sui
+          punti dubbi e un posto dove chiedere invece di restare bloccati.
+        </li>
+      </ul>
+
+      <h2>Cosa si studia</h2>
+      <p>
+        Il grosso del lavoro è preflop, perché è lì che nel 3-max hyper turbo si
+        decide la maggior parte dell'EV: range di apertura, difesa dai bui,
+        push/fold quando lo stack si accorcia, e come cambia tutto quando c'è
+        l'ante o quando uno dei giocatori parte più corto. Da lì si sale verso
+        gli spot postflop ricorrenti e verso le decisioni ICM di fine torneo.
+      </p>
+      <p>
+        Accanto alla strategia c'è la parte che quasi nessuno insegna e che fa
+        smettere più giocatori di qualunque errore tecnico: la
+        <strong>gestione della varianza</strong>. Capire quanto può durare un
+        downswing normale, e quanti buy-in servono per attraversarlo senza
+        rovinarsi, è ciò che separa chi resiste da chi molla al primo tratto
+        storto.
+      </p>
+
+      <h2>Per chi è, e per chi no</h2>
+      <p>
+        È per chi gioca già questo formato e vuole smettere di andare a
+        sensazione: chi parte da zero, chi è fermo da mesi allo stesso livello,
+        chi vuole capire se i risultati che sta ottenendo dipendono dal gioco o
+        dalla fortuna. Le lezioni sono in italiano, e questo è il motivo per cui
+        molti arrivano qui: il materiale serio su questo formato è quasi tutto
+        in inglese.
+      </p>
+      <p>
+        <strong>Non è</strong> un posto dove si promettono guadagni. Il poker è
+        un gioco con vincite in denaro e comporta un rischio economico reale:
+        qui si insegna a prendere decisioni migliori, non si vende un risultato.
+        Se cerchi una scorciatoia, questa non lo è.
+      </p>
+
+      <div class="seo-block__cta">
+        <p>
+          Puoi cominciare gratis: <a routerLink="/registrazione">crea un
+          account</a> e apri le <a routerLink="/tabelle">tabelle preflop</a>.
+          Quando vuoi la parte guidata, i piani sono su
+          <a routerLink="/abbonati">abbonamenti</a>.
+        </p>
+      </div>
+
+      <h2>Domande frequenti sulla scuola</h2>
+      <div class="faq">
+        @for (item of faq; track item.q) {
+          <div class="faq__item">
+            <h3 class="faq__q">{{ item.q }}</h3>
+            <p class="faq__a">{{ item.a }}</p>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+</section>
 
 <!-- CTA COMMUNITY -->
 <section class="section">

@@ -48,6 +48,15 @@
   }
 }
 
+// Hint, non gate: compare mentre il ripristino sessione è in volo. Sostituisce
+// lo spinner a tutta pagina, che in prerender era l'UNICA cosa che usciva.
+.pf__teaser-hint {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-faint);
+  margin: 0;
+}
+
 .pf__teaser-cards {
   display: flex;
   margin-bottom: 1rem;

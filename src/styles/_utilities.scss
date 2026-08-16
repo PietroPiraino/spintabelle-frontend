@@ -208,3 +208,105 @@
     }
   }
 }
+
+// ------------------------------------------------------------
+// Blocco editoriale "evergreen" + FAQ
+// ------------------------------------------------------------
+// Testo sempre presente nell'HTML PRERENDERIZZATO: dà a una pagina il
+// contenuto indicizzabile che l'app dietro login non può dare. Il pattern
+// nasce in /simulatore-varianza (`vz__seo`/`vz__faq`, che resta com'è) ed è
+// stato promosso qui perché serve identico su /tabelle, sulla home e su ogni
+// guida — averlo in tre copie locali significherebbe tre tipografie diverse.
+// ⚠️ Le FAQ hanno UNA sola sorgente per pagina, l'array `faq` del componente:
+// lo stesso che alimenta il JSON-LD FAQPage. Testo visibile e dati strutturati
+// che divergono sono una segnalazione di spam, non una svista.
+.seo-block {
+  // Colonna di lettura centrata, come `.legal`: dentro un .container da 1180px
+  // i paragrafi limitati a 70ch restavano appiccicati a sinistra con mezza
+  // pagina vuota a destra.
+  max-width: 74ch;
+  margin-inline: auto;
+  margin-top: 2.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--line);
+
+  h2 {
+    font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+    margin-top: 2.2rem;
+    margin-bottom: 0.7rem;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  p {
+    max-width: 70ch;
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+  }
+
+  ul {
+    max-width: 70ch;
+    margin: 0 0 1.2rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  li {
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  strong {
+    color: var(--cream-100);
+  }
+
+  a {
+    color: var(--copper-600);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: var(--copper-500);
+    }
+  }
+}
+
+// Richiamo con link interni: è il punto in cui una pagina passa autorevolezza
+// alle altre. Bordo oro a sinistra, come su /simulatore-varianza.
+.seo-block__cta {
+  border-left: 3px solid var(--gold);
+  padding: 0.1rem 0 0.1rem 1.1rem;
+  margin: 1.6rem 0 2rem;
+
+  p {
+    margin-bottom: 0;
+  }
+}
+
+.faq {
+  display: grid;
+  gap: 0.9rem;
+  max-width: 75ch;
+}
+
+.faq__item {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+.faq__q {
+  font-size: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.faq__a {
+  margin-bottom: 0;
+  color: var(--text-muted);
+  line-height: 1.7;
+}

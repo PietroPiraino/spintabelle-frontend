@@ -50,3 +50,8 @@ _preview-*.html
 _preview-*.mjs
 _preview-*.png
 inspect-glb.mjs
+
+# Crash dump dei binari msys/Git Bash (grep.exe, sed.exe...): rapporti d'errore
+# della shell, non file di progetto. Ne era finito uno in src/, dove un
+# `git add .` distratto se lo sarebbe portato dentro.
+*.stackdump

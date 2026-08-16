@@ -34,6 +34,14 @@
   }
 }
 
+// La riga di marca ("Smetti di essere il fish del tavolo.") ha lasciato l'H1 ed
+// e' passata in testa al lead: senza questo, .lead la renderebbe grigia come il
+// resto e il claim perderebbe il peso che aveva da titolo.
+.hero__copy .lead strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .hero__hint {
   font-family: var(--font-mono);
   font-size: 0.8rem;

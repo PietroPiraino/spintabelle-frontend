@@ -4,6 +4,21 @@ import { RouterLink } from '@angular/router';
 import { News } from '../../../core/models/api.models';
 import { stripMarkdown } from '../../../core/utils/strip-markdown';
 
+/**
+ * Lunghezza massima dell'anteprima: ~3 righe di card, cioè quanto il
+ * `-webkit-line-clamp` mostra davvero.
+ */
+const EXCERPT_MAX = 200;
+
+/** Taglia all'ultima parola intera prima del limite, senza mozzarla a metà. */
+function troncaAlleParole(testo: string, max: number): string {
+  if (testo.length <= max) return testo;
+  const tagliato = testo.slice(0, max);
+  const spazio = tagliato.lastIndexOf(' ');
+  const base = spazio > max * 0.6 ? tagliato.slice(0, spazio) : tagliato;
+  return `${base.replace(/[.,;:!?…]+$/, '')}…`;
+}
+
 @Component({
   selector: 'app-news-card',
   imports: [RouterLink, DatePipe],
@@ -86,6 +101,18 @@ import { stripMarkdown } from '../../../core/utils/strip-markdown';
 export class NewsCardComponent {
   readonly news = input.required<News>();
 
-  /** Anteprima in chiaro: niente sintassi markdown nel testo della card. */
-  protected readonly excerpt = computed(() => stripMarkdown(this.news().body));
+  /**
+   * Anteprima in chiaro e TRONCATA.
+   * ⚠️ Il troncamento è nel DOM, non solo nel CSS. Prima qui finiva il corpo
+   * INTERO dell'articolo, ritagliato a 3 righe da `-webkit-line-clamp`: una
+   * clip visiva non nasconde niente a un crawler, che legge il nodo di testo
+   * per intero. Misurato sull'HTML prerenderizzato: 1.562 parole di articoli
+   * dentro la home, invisibili a schermo. E poiché questa card è usata dalla
+   * home E da /news, il testo di ogni articolo esisteva su TRE URL — home,
+   * indice news e pagina dell'articolo — cioè lo stesso contenuto duplicato
+   * tre volte sul dominio che deve posizionarsi.
+   */
+  protected readonly excerpt = computed(() =>
+    troncaAlleParole(stripMarkdown(this.news().body), EXCERPT_MAX),
+  );
 }

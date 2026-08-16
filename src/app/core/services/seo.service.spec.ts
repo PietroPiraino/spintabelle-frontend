@@ -55,3 +55,44 @@ describe('SeoService — canonical con slash finale', () => {
     expect(canonical()).toBe('https://bestfishforever.it/');
   });
 });
+
+/**
+ * Blocca il `noindex` per-rotta, e soprattutto la sua RIMOZIONE.
+ * In una SPA i meta sopravvivono alla navigazione: senza il ramo che toglie il
+ * tag, bastava passare una volta da /affiliazioni (noindex per l'art. 9 del DL
+ * 87/2018) perché ogni pagina visitata dopo, nella stessa sessione, restasse
+ * `noindex`. Googlebot naviga anche così, e il danno sarebbe stato invisibile a
+ * qualunque controllo sul singolo HTML prerenderizzato.
+ */
+describe('SeoService — noindex per rotta', () => {
+  let seo: SeoService;
+  let doc: Document;
+
+  beforeEach(() => {
+    seo = TestBed.inject(SeoService);
+    doc = TestBed.inject(DOCUMENT);
+  });
+
+  const robots = () =>
+    doc.querySelector('meta[name="robots"]')?.getAttribute('content') ?? null;
+
+  it('non emette alcun meta robots su una rotta indicizzabile', () => {
+    seo.setRouteMeta('T — Best Fish Forever', 'D', '/tabelle');
+    expect(robots()).toBeNull();
+  });
+
+  it('marca noindex,follow quando la rotta lo chiede', () => {
+    seo.setRouteMeta('T — Best Fish Forever', 'D', '/affiliazioni', undefined, true);
+    expect(robots()).toBe('noindex, follow');
+  });
+
+  it('RIMUOVE il noindex navigando verso una rotta indicizzabile', () => {
+    seo.setRouteMeta('T — Best Fish Forever', 'D', '/affiliazioni', undefined, true);
+    expect(robots()).toBe('noindex, follow');
+
+    seo.setRouteMeta('T — Best Fish Forever', 'D', '/tabelle');
+    expect(robots())
+      .withContext('un noindex che sopravvive alla navigazione deindicizza il sito')
+      .toBeNull();
+  });
+});

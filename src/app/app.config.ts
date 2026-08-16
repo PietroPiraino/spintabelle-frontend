@@ -89,6 +89,7 @@ export const appConfig: ApplicationConfig = {
             DEFAULT_DESCRIPTION,
           path,
           snapshot.data['ogImage'] as string | undefined,
+          snapshot.data['noindex'] === true,
         );
       });
     }),

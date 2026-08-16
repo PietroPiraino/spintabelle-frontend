@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   effect,
   inject,
@@ -18,6 +19,7 @@ import {
 } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { PreflopService } from '../../core/services/preflop.service';
+import { SeoService } from '../../core/services/seo.service';
 import {
   BASE_LABELS,
   PreflopBase,
@@ -82,6 +84,50 @@ export class TablesComponent {
   protected readonly auth = inject(AuthService);
   private readonly preflop = inject(PreflopService);
   private readonly router = inject(Router);
+  private readonly seo = inject(SeoService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /**
+   * FAQ del blocco evergreen: UNICA sorgente per il testo a schermo e per il
+   * JSON-LD FAQPage (vedi `applyStructuredData`). Il visualizzatore vero è
+   * dietro login, quindi questo è quasi tutto ciò che Google può leggere di
+   * /tabelle: risposte reali, non riempitivo. Testo e dati strutturati che
+   * divergono sono una segnalazione di spam.
+   */
+  protected readonly faq: readonly { q: string; a: string }[] = [
+    {
+      q: 'Cosa sono le tabelle GTO preflop negli Spin & Go?',
+      a: "Sono la strategia di equilibrio calcolata per ogni situazione preflop del formato: per ognuna delle 169 mani di partenza dicono con che frequenza aprire, rilanciare, chiamare o passare, dato il formato, la profondità di stack, la posizione e le azioni già avvenute. Non sono una lista di mani buone: nella maggior parte degli spot la risposta è una miscela di azioni.",
+    },
+    {
+      q: 'Perché nel preflop degli Spin & Go la stessa mano a volte si apre e a volte si passa?',
+      a: "Perché la strategia di equilibrio è mista: se una mano fosse sempre giocata allo stesso modo, un avversario attento potrebbe sfruttarla. Una frequenza del 33% significa che quella mano va aperta circa una volta su tre, e che le due opzioni hanno un valore atteso molto simile — è uno spot marginale, non un errore.",
+    },
+    {
+      q: 'Cosa significa push/fold e a che stack comincia?',
+      a: "Push/fold è la semplificazione che nasce quando lo stack è così corto che le uniche azioni sensate sono andare all-in o passare: qualunque rilancio più piccolo impegnerebbe comunque quasi tutte le fiches. Negli Spin & Go, che partono da 25 big blind e salgono di livello in fretta, si arriva a spot di push/fold in pochissime mani — è il motivo per cui in questo formato il preflop pesa tanto.",
+    },
+    {
+      q: 'Come si legge l’EV di una mano nelle tabelle?',
+      a: "L'EV è espresso in big blind ed è un confronto, non una promessa di vincita: dice quanto vale quella scelta rispetto alle alternative nella stessa identica situazione. Un valore appena sopra lo zero indica una decisione marginale, che un cambio di ante, di profondità o di avversario può ribaltare. Sulle mani che a quel punto della mano non arrivano mai, l'EV non ha significato e la casella è spenta.",
+    },
+    {
+      q: 'Le tabelle valgono anche per i Twister?',
+      a: "Sì. Twister è il nome che il formato ha su alcune sale, ma la struttura è la stessa: tre giocatori, stack iniziali corti, livelli hyper turbo e un moltiplicatore estratto a inizio torneo. Cambiano il moltiplicatore, il rake e in qualche caso lo split del montepremi — non le decisioni preflop a una data profondità di stack.",
+    },
+    {
+      q: 'Cosa cambia nei formati con ante e in quelli asimmetrici?',
+      a: "L'ante aumenta il piatto morto, quindi rende profittevole giocare più mani: i range si allargano, soprattutto in attacco. I formati asimmetrici sono quelli in cui uno dei due bui parte con uno stack diverso dagli altri: cambiano contemporaneamente il rischio e la ricompensa di ogni giocatore al tavolo, e vanno studiati per combinazione di stack, non per profondità media.",
+    },
+    {
+      q: 'Servono a qualcosa se gioco micro stake?',
+      a: "Sì, ma non come regole da eseguire alla lettera. Ai limiti bassi gli avversari sbagliano in modo sistematico, e la strategia più redditizia si discosta dall'equilibrio per sfruttarli. Le tabelle restano il riferimento da cui misurare quello scostamento: senza sapere qual è la linea di equilibrio non si può sapere se ci si sta allontanando per un motivo o per abitudine.",
+    },
+    {
+      q: 'Serve un abbonamento per consultare le tabelle?',
+      a: 'No: la consultazione è aperta a tutti gli iscritti e la registrazione è gratuita. L’abbonamento serve per le lezioni video, i materiali di studio e le sessioni dal vivo con i coach.',
+    },
+  ];
 
   // Query param legati dal router (withComponentInputBinding):
   // /tabelle?formato=spin&stack=25&azioni=R2-RAI&combo=25-25-12
@@ -370,6 +416,8 @@ export class TablesComponent {
   private loadSeq = 0;
 
   constructor() {
+    this.applyStructuredData();
+
     // La meta serve a popolare i selettori: parte appena l'utente è loggato
     effect(() => {
       if (!this.auth.user() || this.meta() || this.metaError()) return;
@@ -400,6 +448,26 @@ export class TablesComponent {
       }
       untracked(() => this.load(format, depth, path, combo));
     });
+  }
+
+  /**
+   * Dati strutturati della pagina: FAQPage dallo stesso `faq` mostrato a
+   * schermo. Rimosso su destroy, altrimenti resta nel <head> navigando altrove.
+   * NB: title/description/OG/canonical li imposta già il listener globale in
+   * app.config dai `data` della rotta — qui si aggiunge SOLO il JSON-LD.
+   * Stesso schema di varianza.component.ts.
+   */
+  private applyStructuredData(): void {
+    this.seo.setJsonLd('ld-tabelle-faq', {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: this.faq.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    });
+    this.destroyRef.onDestroy(() => this.seo.removeJsonLd('ld-tabelle-faq'));
   }
 
   private load(

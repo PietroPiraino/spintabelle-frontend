@@ -63,8 +63,26 @@ export class SeoService {
     description: string,
     path: string,
     image?: string,
+    noindex = false,
   ): void {
     this.applyMeta(fullTitle, description, this.absUrl(path), image);
+    this.setRobots(noindex);
+  }
+
+  /**
+   * `noindex, follow` sulle rotte che non devono finire nell'indice pur essendo
+   * raggiungibili e prerenderizzate (oggi /affiliazioni: art. 9 DL 87/2018, il
+   * programma non va promosso in ricerca; e la 404 lato client).
+   * ⚠️ Il ramo `else` NON è simmetria decorativa: in una SPA i meta persistono
+   * fra le navigazioni, quindi senza la rimozione basterebbe passare una volta
+   * da /affiliazioni per rendere `noindex` ogni pagina visitata dopo, nella
+   * stessa sessione. Googlebot naviga anche così.
+   * `follow` e non `nofollow`: la pagina non va indicizzata, ma i link che
+   * contiene verso il resto del sito devono continuare a valere.
+   */
+  private setRobots(noindex: boolean): void {
+    if (noindex) this.meta.updateTag({ name: 'robots', content: 'noindex, follow' });
+    else this.meta.removeTag('name="robots"');
   }
 
   private applyMeta(

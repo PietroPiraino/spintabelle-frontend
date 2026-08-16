@@ -41,6 +41,10 @@ export function loadMarked(): Promise<MarkdownRenderer> {
 /**
  * Loader iniettabile: nei test si sostituisce con uno stub sincrono così
  * ChromeHeadless non importa mai il chunk reale di marked.
+ *
+ * ⚠️ Il loader NON registra il PendingTask che serve al prerender: lo fa
+ * MarkdownComponent, perché la stabilità va bloccata fino a `renderer.set()`,
+ * non fino alla fine dell'import. Vedi il commento nel costruttore lì.
  */
 export const MARKED_LOADER = new InjectionToken<() => Promise<MarkdownRenderer>>(
   'MARKED_LOADER',
