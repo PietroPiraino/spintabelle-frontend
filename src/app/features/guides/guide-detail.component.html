@@ -1,0 +1,92 @@
+@if (guida(); as g) {
+  <section class="section">
+    <div class="container">
+      <article class="guida">
+        <nav class="guida__breadcrumb" aria-label="Percorso">
+          <a routerLink="/guide">Guide</a>
+          <span aria-hidden="true">/</span>
+          <span>{{ g.occhiello }}</span>
+        </nav>
+
+        <span class="eyebrow">{{ g.occhiello }}</span>
+        <h1>{{ g.h1 }}</h1>
+        <p class="lead">{{ g.lead }}</p>
+        <p class="guida__meta">
+          Aggiornata il {{ g.aggiornata | date: 'd MMMM yyyy' }}
+        </p>
+
+        @for (s of g.sezioni; track s.h2) {
+          <h2>{{ s.h2 }}</h2>
+          @for (p of s.paragrafi; track p) {
+            <p>{{ p }}</p>
+          }
+          @if (s.lista?.length) {
+            <ul>
+              @for (voce of s.lista; track voce) {
+                <li>{{ voce }}</li>
+              }
+            </ul>
+          }
+        }
+
+        @if (g.strumenti?.length) {
+          <div class="seo-block__cta">
+            <p>
+              Da qui puoi continuare con gli strumenti della scuola:
+              @for (s of g.strumenti; track s.href; let last = $last) {
+                <a [routerLink]="s.href">{{ s.testo }}</a>{{ last ? '.' : ' · ' }}
+              }
+            </p>
+          </div>
+        }
+
+        <h2>Domande frequenti</h2>
+        <div class="faq">
+          @for (item of g.faq; track item.q) {
+            <div class="faq__item">
+              <h3 class="faq__q">{{ item.q }}</h3>
+              <p class="faq__a">{{ item.a }}</p>
+            </div>
+          }
+        </div>
+
+        @if (correlate().length) {
+          <h2>Continua da qui</h2>
+          <ul class="guida__correlate">
+            @for (c of correlate(); track c.slug) {
+              <li>
+                <a [routerLink]="['/guide', c.slug]">{{ c.titolo }}</a>
+                <span class="guida__correlate-desc">{{ c.descrizione }}</span>
+              </li>
+            }
+          </ul>
+        }
+
+        <div class="guida__chiusura">
+          <p>
+            Le guide sono gratuite e non richiedono un account. Per le tabelle
+            preflop e gli esercizi serve solo
+            <a routerLink="/registrazione">registrarsi</a>, anche quello gratis;
+            le lezioni video dei coach sono negli
+            <a routerLink="/abbonati">abbonamenti</a>.
+          </p>
+        </div>
+      </article>
+    </div>
+  </section>
+} @else {
+  <!--
+    Slug sconosciuto. In produzione non ci si arriva quasi mai: `guide/:slug` e'
+    prerenderizzata per ogni slug noto e Cloudflare risponde 404 (public/404.html)
+    sugli altri. Questo ramo copre la navigazione interna verso un link rotto.
+  -->
+  <section class="section">
+    <div class="container">
+      <div class="empty-state">
+        <div class="empty-state__suit" aria-hidden="true">♠ ♥ ♣ ♦</div>
+        <p>Questa guida non esiste o e' stata spostata.</p>
+        <a routerLink="/guide" class="btn btn--primary">Tutte le guide</a>
+      </div>
+    </div>
+  </section>
+}

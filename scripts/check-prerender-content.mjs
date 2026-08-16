@@ -50,6 +50,11 @@ const MIN_PAROLE = {
   '/simulatore-varianza': 400,
   '/affiliazioni': 200, // volutamente neutra (art. 9 DL 87/2018), non gonfiarla
   '/news': 60, // indice: solo estratti troncati, cresce col numero di articoli
+  '/guide': 60, // indice: occhiello + titolo + descrizione per guida
+  // ⚠️ Le singole /guide/<slug> NON hanno una soglia propria: prendono il
+  // default (120). E' voluto — una guida nuova non deve richiedere una modifica
+  // qui — ma il default e' un pavimento anti-pagina-vuota, non l'obiettivo: una
+  // guida sta fra le 900 e le 1400 parole.
   '/privacy': 500,
   '/cookie-policy': 400,
 };

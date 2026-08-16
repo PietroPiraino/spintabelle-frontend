@@ -1,5 +1,6 @@
 import { PrerenderFallback, RenderMode, ServerRoute } from '@angular/ssr';
 import { environment } from '../environments/environment';
+import { slugGuide } from './features/guides/guides.data';
 
 const API = environment.API_URL;
 
@@ -39,6 +40,19 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'lezioni', renderMode: RenderMode.Prerender },
   { path: 'docs', renderMode: RenderMode.Prerender },
   { path: 'live', renderMode: RenderMode.Prerender },
+  { path: 'guide', renderMode: RenderMode.Prerender },
+
+  // Guide per-slug. ⚠️ A differenza di `news/:id`, gli slug NON arrivano da una
+  // fetch all'API: stanno in un file TS del repo, quindi il prerender non puo'
+  // ne' fallire ne' saltare una pagina perche' il backend era lento. Fallback
+  // `None`: uno slug sconosciuto non e' una pagina che uscira' domani, e' un
+  // link rotto — Cloudflare risponde 404 con public/404.html.
+  {
+    path: 'guide/:slug',
+    renderMode: RenderMode.Prerender,
+    fallback: PrerenderFallback.None,
+    getPrerenderParams: async () => slugGuide().map((slug) => ({ slug })),
+  },
   { path: 'news', renderMode: RenderMode.Prerender },
   { path: 'affiliazioni', renderMode: RenderMode.Prerender },
   { path: 'privacy', renderMode: RenderMode.Prerender },

@@ -1,0 +1,112 @@
+// Colonna di lettura di una guida. La tipografia di base (h2, p, ul, a, strong)
+// arriva da `.seo-block` in styles/_utilities.scss: qui solo cio' che e' proprio
+// della guida.
+.guida {
+  max-width: 74ch;
+  margin-inline: auto;
+
+  h1 {
+    margin-top: 0.5rem;
+  }
+
+  h2 {
+    font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+    margin-top: 2.4rem;
+    margin-bottom: 0.7rem;
+  }
+
+  p {
+    color: var(--text-muted);
+    line-height: 1.75;
+    margin-bottom: 1rem;
+  }
+
+  ul {
+    margin: 0 0 1.4rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  li {
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  a {
+    color: var(--copper-600);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: var(--copper-500);
+    }
+  }
+}
+
+.guida__breadcrumb {
+  display: flex;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin-bottom: 1.2rem;
+
+  a {
+    color: var(--text-faint);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--copper-600);
+    }
+  }
+}
+
+.guida__meta {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin-bottom: 2rem;
+}
+
+.guida__correlate {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+
+  li {
+    padding: 0.9rem 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  a {
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--cream-100);
+
+    &:hover {
+      color: var(--copper-600);
+    }
+  }
+}
+
+.guida__correlate-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.guida__chiusura {
+  margin-top: 2.2rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+}

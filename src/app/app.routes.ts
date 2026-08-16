@@ -148,6 +148,34 @@ export const routes: Routes = [
     },
   },
   {
+    // Sezione guide: contenuto evergreen, distinto dalle news. ⚠️ Il contenuto
+    // vive in `features/guides/guides.data.ts`, non nel CMS: deve stare
+    // nell'HTML prerenderizzato sempre, e le news non lo garantiscono (un
+    // articolo pubblicato fra due build non e' nel manifest).
+    path: 'guide',
+    loadComponent: () =>
+      import('./features/guides/guides-list.component').then(
+        (m) => m.GuidesListComponent,
+      ),
+    title: 'Guide di strategia per Spin & Go e Twister — Best Fish Forever',
+    data: {
+      description:
+        'Guide gratuite in italiano su Spin & Go e Twister: preflop e push/fold, bankroll, varianza e ICM. Spiegate per intero, senza registrazione.',
+    },
+  },
+  {
+    // ⚠️ Una sola rotta per N pagine: title, description e canonical NON possono
+    // arrivare dai `data` qui, li imposta il componente da `guides.data.ts`
+    // (stesso schema di news/:id). Il prerender enumera gli slug dal file
+    // locale — vedi app.routes.server.ts.
+    path: 'guide/:slug',
+    loadComponent: () =>
+      import('./features/guides/guide-detail.component').then(
+        (m) => m.GuideDetailComponent,
+      ),
+    title: 'Guide — Best Fish Forever',
+  },
+  {
     path: 'news',
     loadComponent: () =>
       import('./features/news/news-list/news-list.component').then(

@@ -54,8 +54,12 @@ export class HeaderComponent {
       id: 'studia',
       label: 'Studia',
       children: [
+        // ⚠️ Le guide stanno in cima e sono pubbliche: sono la porta d'ingresso
+        // per chi arriva da una ricerca e non ci conosce. Il link dalla nav di
+        // ogni pagina e' anche cio' che le fa scoprire a un crawler.
+        { path: '/guide', label: 'Guide', isNew: true },
         { path: '/allenamento', label: 'Allenamento' },
-        { path: '/simulatore-varianza', label: 'Simulatore varianza', isNew: true },
+        { path: '/simulatore-varianza', label: 'Simulatore varianza' },
         { path: '/lezioni', label: 'Lezioni' },
         { path: '/live', label: 'Live' },
       ],
