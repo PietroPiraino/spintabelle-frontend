@@ -1,16 +1,33 @@
 User-agent: *
 Allow: /
 
-# Aree private/funzionali: niente valore per i motori
-Disallow: /admin
-Disallow: /account
-Disallow: /allenamento
-Disallow: /negozio
-Disallow: /login
-Disallow: /registrazione
-Disallow: /verifica-email
-Disallow: /recupera-verifica
-Disallow: /password-dimenticata
-Disallow: /reimposta-password
+# ⚠️ NIENTE «Disallow» PER LE ROTTE PRIVATE — è una scelta, non una dimenticanza.
+#
+# Fino al 17/08/2026 qui c'erano dieci righe di Disallow (/admin, /account,
+# /allenamento, /negozio, /login, /registrazione, /verifica-email,
+# /recupera-verifica, /password-dimenticata, /reimposta-password). Hanno
+# ottenuto l'opposto di quello che volevano: Search Console ha aperto la voce
+# «Indicizzata ma bloccata da robots.txt».
+#
+# Il meccanismo. Quelle rotte sono linkate dal menu di OGNI pagina pubblica
+# prerenderizzata: /allenamento e /negozio dai gruppi «Studia» e «Risorse»,
+# /registrazione e /login dalle CTA e dall'header. Google le scopre dai link,
+# ma il Disallow gli vieta di SCARICARLE — e quindi di leggere il `noindex` e
+# il `<link rel="canonical">` che quelle pagine già servivano. Un URL scoperto
+# e non scaricabile viene indicizzato lo stesso, senza descrizione. Bloccare la
+# scansione non è un modo per tenere una pagina fuori dall'indice: è il modo per
+# NON poterglielo più dire.
+#
+# Adesso la scansione è libera e il segnale è `noindex`, che Google può
+# finalmente leggere. Tutte le rotte client ricevono la stessa shell CSR
+# (`index.csr.html`) e nessuna di esse deve comparire in ricerca: il meta ce lo
+# inietta `scripts/inject-csr-noindex.mjs` a fine build, una volta e per tutte.
+# La coerenza è verificata da `scripts/check-prerender-content.mjs`, che fallisce
+# il build sia se la shell perde il meta, sia se una pagina pubblica se lo
+# ritrova addosso.
+#
+# Se un giorno serve davvero escludere qualcosa dalla scansione (non
+# dall'indice: dalla scansione), quello è il caso del Disallow — e va scritto
+# qui con la sua motivazione, come questa.
 
 Sitemap: https://bestfishforever.it/sitemap.xml
