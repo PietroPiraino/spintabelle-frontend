@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build && node scripts/gen-sitemap.mjs && node scripts/check-routes.mjs && node scripts/check-prerender-content.mjs",
+    "build": "ng build && node scripts/inject-csr-noindex.mjs && node scripts/gen-sitemap.mjs && node scripts/check-routes.mjs && node scripts/check-prerender-content.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:scripts": "node --test \"scripts/lib/*.test.mjs\""

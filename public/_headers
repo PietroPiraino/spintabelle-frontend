@@ -1,0 +1,74 @@
+# Deindicizzazione delle rotte NON prerenderizzate (RenderMode.Client).
+#
+# PERCHE' ESISTE. Queste rotte ricevono tutte la stessa shell CSR
+# (`/index.csr`, ~13 KB) tramite le riscritture 200 di `_redirects`. Quella
+# shell dichiara come canonical la HOME e non ha nulla di proprio da offrire a
+# un motore. Fino al 17/08/2026 erano tenute fuori con dei `Disallow` in
+# robots.txt, che pero' vietano la SCANSIONE: Google le scopriva dai link
+# interni, non poteva scaricarle, e quindi non poteva leggere nessuna
+# direttiva — le indicizzava «nude» e non c'era piu' modo di farle uscire
+# (avvisi Search Console «Indicizzata ma bloccata da robots.txt»).
+# Ora la scansione e' libera e il segnale e' questo header.
+#
+# ⚠️ CLOUDFLARE VALUTA `_headers` SULL'URL RICHIESTO, non sul bersaglio della
+#    riscrittura 200 di `_redirects`: le regole vanno scritte su `/login`, NON
+#    su `/index.csr`. (Lo dice la doc nella sezione «Proxying», e lo conferma la
+#    produzione: `/negozio` — che e' riscritta — porta gia' gli header che Pages
+#    aggiunge sempre, `x-content-type-options` e compagnia. Se la pipeline degli
+#    header saltasse dopo un rewrite, quelli non ci sarebbero.)
+#
+# ⚠️ MAI UNA REGOLA `/*` QUI. Le regole di `_headers` sono CUMULATIVE: una
+#    richiesta che ne matcha piu' d'una eredita gli header di tutte. Una `/*`
+#    metterebbe `noindex` sulle 26 pagine prerenderizzate, cioe' cancellerebbe
+#    il sito da Google. E' l'equivalente, per questo file, della catch-all
+#    vietata in `_redirects`.
+#
+# ⚠️ NON basta questo file. `scripts/inject-csr-noindex.mjs` scrive lo stesso
+#    `noindex` come `<meta>` dentro `index.csr.html` a fine build. I due
+#    coprono buchi diversi: l'header sopravvive all'idratazione (il JS non puo'
+#    toglierlo) ma dipende dal matcher di Cloudflare; il meta viaggia nel corpo
+#    della risposta e arriva comunque. Se uno salta, l'altro regge.
+#
+# ⚠️ Nessuna guardia di build legge questo file: l'elenco va tenuto allineato a
+#    `public/_redirects` A MANO, e verificato dopo il deploy con
+#    `curl -sI https://bestfishforever.it/negozio | grep -i x-robots`.
+#
+# `follow` e non `nofollow`: la pagina non deve entrare nell'indice, ma i link
+# che contiene verso il resto del sito devono continuare a valere.
+#
+# Fonte dell'elenco: public/_redirects (stessi percorsi, stesso ordine).
+
+/account
+  X-Robots-Tag: noindex, follow
+/admin
+  X-Robots-Tag: noindex, follow
+/admin/*
+  X-Robots-Tag: noindex, follow
+/allenamento
+  X-Robots-Tag: noindex, follow
+/allenamento/*
+  X-Robots-Tag: noindex, follow
+/live/:id/stanza
+  X-Robots-Tag: noindex, follow
+/login
+  X-Robots-Tag: noindex, follow
+/negozio
+  X-Robots-Tag: noindex, follow
+/password-dimenticata
+  X-Robots-Tag: noindex, follow
+/recupera-verifica
+  X-Robots-Tag: noindex, follow
+/registrazione
+  X-Robots-Tag: noindex, follow
+/reimposta-password
+  X-Robots-Tag: noindex, follow
+/verifica-email
+  X-Robots-Tag: noindex, follow
+
+# La shell in se'. ⚠️ NON e' coperta dalle regole qui sopra — quelle valgono
+# per l'URL richiesto, e `/index.csr` e' un URL vero che risponde 200 a
+# chiunque lo chieda. Non e' in robots.txt e non e' in sitemap, quindi finora
+# era l'unica pagina del sito scansionabile e indicizzabile senza nemmeno un
+# canonical proprio.
+/index.csr
+  X-Robots-Tag: noindex, follow

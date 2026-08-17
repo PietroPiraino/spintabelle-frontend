@@ -19,8 +19,15 @@
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve, relative, dirname, sep } from 'node:path';
+import { hasNoindex } from './lib/csr-noindex.mjs';
 
-const ROOT = resolve(process.argv[2] ?? 'C:/Projects/poker-ranges/frontend');
+// ⚠️ Il default e' `process.cwd()` e NON un percorso Windows assoluto. Con
+// `'C:/Projects/poker-ranges/frontend'` questa guardia era MUTA su Cloudflare:
+// su POSIX `C:/…` non e' un percorso assoluto, quindi `resolve` lo attaccava
+// alla cwd (`/build/frontend/C:/Projects/…`), la cartella non esisteva e lo
+// script usciva 0 dal ramo "controllo non eseguibile". Girava solo sul portatile
+// dell'autore. `npm run build` parte sempre da frontend/, qui e sul runner.
+const ROOT = resolve(process.argv[2] ?? process.cwd());
 const BROWSER = join(ROOT, 'dist/frontend/browser');
 const SITE = 'https://bestfishforever.it';
 
@@ -64,6 +71,16 @@ const MIN_PAROLE = {
 // motivazione, non ottenuta abbassando la soglia di tutti.
 const ESENTI = new Map();
 
+// Le UNICHE pagine prerenderizzate che devono uscire con `noindex`. Tutte le
+// altre devono uscirne senza: e' la meta' che conta di piu' del controllo (d),
+// perche' un `noindex` finito per errore sull'HTML pubblico e' il difetto piu'
+// costoso che questo sito possa deployare — cancella le pagine dall'indice e
+// non se ne accorge nessuno finche' non sparisce il traffico.
+const NOINDEX_ATTESO = new Set([
+  // art. 9 DL 87/2018: il programma di affiliazione non va promosso in ricerca.
+  '/affiliazioni',
+]);
+
 const errori = [];
 const nota = (m) => errori.push(m);
 
@@ -105,6 +122,29 @@ try {
 // index.csr.html e' la shell CSR delle rotte client: e' VUOTA di proposito,
 // non e' una pagina prerenderizzata e non va misurata.
 pagine = pagine.filter((f) => !f.endsWith(`${sep}index.csr.html`));
+
+// ---- 1-bis. La shell CSR deve uscire con il noindex ---------------------
+//
+// Ce lo scrive `scripts/inject-csr-noindex.mjs` subito dopo `ng build`. Qui si
+// verifica che ci sia ARRIVATO: la shell e' l'unico corpo che Google riceve su
+// /login, /registrazione, /negozio, /allenamento, /account, /admin e
+// /live/:id/stanza, e da quando `public/robots.txt` non le blocca piu' e'
+// l'unica cosa che le tiene fuori dall'indice insieme all'header X-Robots-Tag.
+// Se l'iniezione smettesse di funzionare (rinomina del file, cambio di forma
+// dell'artefatto, script tolto dalla catena di build) il sito tornerebbe a
+// offrire 13 URL con lo stesso corpo e il canonical della home, in silenzio.
+const SHELL = join(BROWSER, 'index.csr.html');
+if (!existsSync(SHELL))
+  nonCapisco(
+    'manca dist/frontend/browser/index.csr.html — e\' la shell servita a ogni ' +
+      'rotta client (public/_redirects): senza, quelle rotte ricevono altro.',
+  );
+if (!hasNoindex(readFileSync(SHELL, 'utf8')))
+  nota(
+    'index.csr.html — manca il <meta name="robots" content="noindex">. ' +
+      'Lo inietta scripts/inject-csr-noindex.mjs: e\' ancora nella catena di ' +
+      '`npm run build`? Senza, ogni rotta client torna indicizzabile.',
+  );
 
 if (pagine.length < MIN_PAGINE)
   nonCapisco(
@@ -153,10 +193,11 @@ for (const file of pagine.sort()) {
   const parole = paroleVisibili(html);
   const h1 = contaTag(html, 'h1');
   const canonical = (html.match(/<link rel="canonical" href="([^"]+)"/) || [])[1] ?? null;
+  const noindex = hasNoindex(html);
   const soglia = MIN_PAROLE[rotta] ?? MIN_PAROLE_DEFAULT;
   const esente = ESENTI.get(rotta);
 
-  righe.push({ rotta, parole, h1, canonical, soglia });
+  righe.push({ rotta, parole, h1, canonical, soglia, noindex });
   if (esente) continue;
 
   // (a) contenuto. E' il controllo per cui questo file esiste.
@@ -177,6 +218,24 @@ for (const file of pagine.sort()) {
   if (!canonical) nota(`${rotta} — manca <link rel="canonical">.`);
   else if (canonical !== atteso)
     nota(`${rotta} — canonical "${canonical}", atteso "${atteso}" (forma con slash finale).`);
+
+  // (d) `noindex` esattamente dove e' dichiarato, e da nessun'altra parte.
+  // Il verso che conta e' il primo: una pagina pubblica che esce con noindex
+  // sparisce da Google senza rompere niente di visibile, e finora nessun
+  // controllo la guardava. Il verso opposto serve a non perdere in silenzio un
+  // vincolo legale (/affiliazioni, art. 9 DL 87/2018).
+  const deveEssereNoindex = NOINDEX_ATTESO.has(rotta);
+  if (noindex && !deveEssereNoindex)
+    nota(
+      `${rotta} — esce con <meta name="robots" ... noindex>, e non e' fra le rotte ` +
+        'che devono averlo (NOINDEX_ATTESO). Cosi\' sparisce da Google: se e\' voluto, ' +
+        'dichiaralo li\' con la sua motivazione.',
+    );
+  else if (!noindex && deveEssereNoindex)
+    nota(
+      `${rotta} — deve uscire con noindex (NOINDEX_ATTESO) e non ce l'ha. ` +
+        'Il meccanismo e\' `data: { noindex: true }` in app.routes.ts → SeoService.setRobots.',
+    );
 }
 
 // ---- 3. Esito -----------------------------------------------------------
@@ -184,10 +243,15 @@ for (const file of pagine.sort()) {
 const larghezza = Math.max(...righe.map((r) => r.rotta.length), 12);
 console.log('\nContenuto prerenderizzato:');
 for (const r of righe) {
-  const ok = r.parole >= r.soglia && r.h1 === 1 && r.canonical;
+  const ok =
+    r.parole >= r.soglia &&
+    r.h1 === 1 &&
+    r.canonical &&
+    r.noindex === NOINDEX_ATTESO.has(r.rotta);
   console.log(
     `  ${ok ? '✓' : '✗'} ${r.rotta.padEnd(larghezza)} ` +
-      `${String(r.parole).padStart(5)} parole (min ${r.soglia})  h1:${r.h1}`,
+      `${String(r.parole).padStart(5)} parole (min ${r.soglia})  h1:${r.h1}` +
+      (r.noindex ? '  [noindex]' : ''),
   );
 }
 
@@ -198,4 +262,7 @@ if (errori.length) {
   process.exit(1);
 }
 
-console.log(`\n✓ ${righe.length} pagine prerenderizzate, tutte con contenuto, h1 e canonical.\n`);
+console.log(
+  `\n✓ ${righe.length} pagine prerenderizzate, tutte con contenuto, h1 e canonical` +
+    ` (noindex solo su ${[...NOINDEX_ATTESO].join(', ')}); shell CSR con noindex.\n`,
+);

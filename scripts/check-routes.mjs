@@ -15,7 +15,14 @@ import { join, resolve } from 'node:path';
 import { readRoutes } from './lib/route-inventory.mjs';
 import { parseRedirects, findMatch, lintRules, sampleUrl, routeCoversUrl } from './lib/redirects.mjs';
 
-const ROOT = resolve(process.argv[2] ?? 'C:/Projects/poker-ranges/frontend');
+// ⚠️ Il default e' `process.cwd()` e NON un percorso Windows assoluto. Con
+// `'C:/Projects/poker-ranges/frontend'` questa guardia era MUTA su Cloudflare:
+// su POSIX `C:/…` non e' assoluto, quindi `resolve` lo attaccava alla cwd
+// (`/build/frontend/C:/Projects/…`), la cartella non esisteva e lo script
+// usciva 0 dal ramo fail-safe qui sotto. Girava solo sul portatile dell'autore,
+// mentre CLAUDE.md dichiarava che bloccava il deploy. `npm run build` parte
+// sempre da frontend/, qui e sul runner di Cloudflare.
+const ROOT = resolve(process.argv[2] ?? process.cwd());
 const DIST = join(ROOT, 'dist/frontend');
 const BROWSER = join(DIST, 'browser');
 

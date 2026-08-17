@@ -47,8 +47,27 @@
     }
   </script>
 
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link rel="apple-touch-icon" href="logo-256.png">
+  <!--
+    Icone. ⚠️ PERCORSI ASSOLUTI, e non e' pedanteria: le pagine prerenderizzate
+    sono servite con lo slash finale (`/simulatore-varianza/`), e un href
+    relativo risolto contro l'URL DI RICHIESTA invece che contro <base> diventa
+    `/simulatore-varianza/favicon.ico`, che risponde 404. Un browser onora
+    <base>, ma non tutto quello che legge questo <head> e' un browser — ed e'
+    esattamente la classe di difetto gia' pagata qui con gli Early Hints di
+    Cloudflare, che ripubblicano i preload come header `Link:` risolti contro
+    l'URL di richiesta (vedi `deployUrl` in CLAUDE.md). Con il percorso assoluto
+    la domanda non si pone piu'.
+
+    Il PNG 96x96 non e' un doppione del .ico: Google raccomanda per la favicon
+    dei risultati di ricerca un quadrato multiplo di 48px, e questo e' anche un
+    URL NUOVO — /favicon.ico e' lo stesso indirizzo da settembre 2025 (il
+    contenuto e' cambiato il 06/06/2026, l'indirizzo no), quindi puo' essere in
+    cache come "gia' vista". logo-96.png e' lo stesso disegno del .ico ed e' gia'
+    in public/ (lo usa il layout delle email).
+  -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" href="/logo-96.png" sizes="96x96">
+  <link rel="apple-touch-icon" href="/logo-256.png">
 
   <!-- Font self-hostati (vedi src/styles/_fonts.scss): nessuna chiamata a Google Fonts / gstatic. -->
   <link rel="preload" as="font" type="font/woff2" href="/fonts/bricolage-grotesque-latin.woff2" crossorigin>
