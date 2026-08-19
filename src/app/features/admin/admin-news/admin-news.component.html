@@ -99,31 +99,263 @@
     </form>
   </div>
 
-  <!-- LISTA -->
+  <!-- ARCHIVIO -->
   <div class="admin-list">
-    <h2>News pubblicate</h2>
-    @if (!items()) {
-      <div class="spinner" role="status" aria-label="Caricamento"></div>
-    } @else if (items()!.length === 0) {
-      <div class="empty-state">
-        <p>Nessuna news ancora: pubblica la prima dal form.</p>
+    <div class="admin-users__head">
+      <h2>Archivio news</h2>
+      <span class="admin-news__stato-elenco">
+        @if (pagina(); as p) {
+          <!-- ⚠️ Il conteggio dice sempre a QUALE filtro si riferisce, e nomina
+               quello **caricato**, non quello chiesto: `total` arriva dalla
+               stessa risposta delle righe, quindi finché la nuova non atterra
+               (o se non atterra mai) intestazione ed elenco parlano della
+               stessa cosa. -->
+          <span class="admin-users__count admin-news__conteggio">
+            {{ p.total }} {{ p.total === 1 ? 'articolo' : 'articoli' }} · filtro:
+            {{ filtroLabel(filtroCaricato()) }}
+          </span>
+        }
+        <!-- ⚠️ Dal secondo caricamento in poi lo spinner non compare (la lista
+             resta a schermo): senza questo un elenco stantio sembra la risposta. -->
+        @if (pagina() && caricamento()) {
+          <span class="admin-item__meta admin-news__aggiorno" role="status"
+            >Aggiorno l'elenco…</span
+          >
+        }
+      </span>
+    </div>
+
+    <!-- Filtro: un solo stato per volta, «Tutti» compreso (sentinella lato API). -->
+    <div
+      class="row admin-news__filtri"
+      role="group"
+      aria-label="Filtra per stato"
+    >
+      @for (f of filtri; track f) {
+        <button
+          type="button"
+          class="badge badge--tag"
+          [class.is-active]="filtro() === f"
+          [attr.aria-pressed]="filtro() === f"
+          [disabled]="inVolo() || caricamento()"
+          (click)="setFiltro(f)"
+        >{{ filtroLabel(f) }}</button>
+      }
+    </div>
+
+    <p class="admin-news__hint">
+      Qui c'è l'archivio completo: anche le bozze, gli scartati e gli scaduti, che
+      da qui tornano in coda. Le decisioni (pubblica o scarta) restano in
+      <a routerLink="/admin/redazione">Redazione</a>.
+    </p>
+
+    <!-- ⚠️ Banda persistente: un guasto di rete non deve somigliare a un archivio vuoto. -->
+    @if (erroreLista(); as e) {
+      <div class="form-feedback is-error admin-news__errore" role="alert">
+        <span>{{ e }}</span>
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm"
+          [disabled]="caricamento()"
+          (click)="riprova()"
+        >{{ caricamento() ? 'Riprovo…' : 'Riprova' }}</button>
       </div>
-    } @else {
-      @for (news of items()!; track news._id) {
-        <div class="card admin-item" [class.is-editing]="editingId() === news._id">
-          <div class="admin-item__info">
-            <strong>{{ news.title }}</strong>
-            <span class="admin-item__meta">{{ news.createdAt | date: 'dd MMM yyyy, HH:mm' }}</span>
-          </div>
-          <div class="row" style="gap: 0.5rem">
-            <button type="button" class="btn btn--ghost btn--sm" (click)="edit(news)">
-              Modifica
-            </button>
-            <button type="button" class="btn btn--danger btn--sm" (click)="remove(news)">
-              Elimina
-            </button>
-          </div>
+    }
+
+    @if (!pagina() && caricamento()) {
+      <div class="spinner" role="status" aria-label="Caricamento dell'archivio"></div>
+    } @else if (pagina(); as p) {
+      @if (p.items.length === 0) {
+        <!-- ⚠️ Il vuoto NOMINA sempre il filtro attivo: un elenco vuoto muto si
+             legge come "ho perso gli articoli". -->
+        <div class="empty-state">
+          <p class="empty-state__suit">♠</p>
+          <p>{{ vuotoTesto() }}</p>
+          @if (filtroCaricato() !== TUTTI) {
+            <p class="admin-item__meta">
+              Il filtro attivo è «{{ filtroLabel(filtroCaricato()) }}»: passa a
+              «Tutti» per vedere l'archivio intero.
+            </p>
+          }
         </div>
+      } @else {
+        @for (news of p.items; track news._id) {
+          <div class="card admin-item" [class.is-editing]="editingId() === news._id">
+            <div class="admin-item__info">
+              <strong>{{ news.title }}</strong>
+              <span class="admin-item__meta admin-news__riga">
+                <span [class]="chipClass(news.status)">{{ statoLabel(news.status) }}</span>
+                @if (news.createdAt) {
+                  <span>{{ news.createdAt | date: 'dd MMM yyyy, HH:mm' }}</span>
+                }
+                <!-- ⚠️ `publishedAt` si mostra a QUALUNQUE stato, non solo a
+                     `PUBBLICATO`: il ritiro riporta in bozza conservando data,
+                     slug e slugStorici, quindi un articolo ritirato era a
+                     schermo identico a una bozza mai vista da nessuno — e la
+                     conferma di eliminazione parla di «indirizzo pubblico» che
+                     in un caso esiste (ed è indicizzato) e nell'altro no. -->
+                @if (news.publishedAt) {
+                  <span>
+                    ·
+                    {{ news.status === 'PUBBLICATO' ? 'online dal' : 'già pubblicato il' }}
+                    {{ news.publishedAt | date: 'dd MMM yyyy' }}
+                  </span>
+                }
+                @if (news.status === 'SCADUTO' && news.scadutoAt) {
+                  <span>· finestra chiusa il {{ news.scadutoAt | date: 'dd MMM yyyy' }}</span>
+                }
+              </span>
+              @if (news.status === 'SCARTATO' && news.decisionNote) {
+                <span class="admin-news__motivo">Motivo: {{ news.decisionNote }}</span>
+              }
+              @if (!news.status) {
+                <!-- ⚠️ La riga senza stato non è un errore di questo pannello:
+                     è un articolo antecedente alla redazione che la migrazione
+                     d'avvio non ha toccato (il suo catch non rilancia, per non
+                     far cadere il boot dell'intera API). Nessuna transizione
+                     può partire da qui — `ALLOWED_TRANSITIONS` non ha una riga
+                     per «nessuno stato» — quindi al posto di un pulsante che
+                     darebbe 409 c'è la via d'uscita vera. -->
+                <span class="admin-news__motivo">
+                  Articolo antecedente alla redazione: la migrazione d'avvio non
+                  l'ha ancora toccato, quindi non è né in coda né online e da
+                  qui non si può muovere. Un riavvio dell'API la rimette in moto.
+                </span>
+              }
+            </div>
+
+            <div
+              class="row admin-news__azioni"
+              [class.is-confirming]="
+                isConfirming('ritira:' + news._id) || isConfirming('elimina:' + news._id)
+              "
+            >
+              @if (isConfirming('ritira:' + news._id)) {
+                <!-- Inline-confirm del ritiro: toglie l'articolo dal pubblico. -->
+                <div class="admin-news__conferma">
+                  <input
+                    type="text"
+                    class="input"
+                    maxlength="2000"
+                    placeholder="Motivo del ritiro (facoltativo)"
+                    aria-label="Motivo del ritiro, facoltativo"
+                    [value]="notaRitiro()"
+                    (input)="onNotaRitiro($event)"
+                  />
+                  <div class="row admin-news__azioni">
+                    <button
+                      type="button"
+                      class="btn btn--danger-solid btn--sm"
+                      [disabled]="inVolo()"
+                      (click)="confermaRitiro(news)"
+                    >{{ inVoloSu(news._id, 'ritira') ? 'Ritiro…' : 'Conferma ritiro' }}</button>
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      [disabled]="inVolo()"
+                      (click)="cancelConfirm()"
+                    >Annulla</button>
+                  </div>
+                  <p class="admin-news__motivo">
+                    L'articolo torna in bozza: la data di prima pubblicazione
+                    resta, il motivo finisce nel registro e non lo legge nessun
+                    lettore.
+                  </p>
+                </div>
+              } @else if (isConfirming('elimina:' + news._id)) {
+                <!-- Inline-confirm della cancellazione: irreversibile. -->
+                <div class="admin-news__conferma">
+                  <!-- ⚠️ Due frasi diverse perché descrivono due perdite
+                       diverse: un articolo già pubblicato (anche se ritirato)
+                       porta con sé un indirizzo indicizzato e i 301 che ci
+                       puntano; una bozza mai uscita non ha niente da perdere, e
+                       promettergliela sarebbe una minaccia inventata. -->
+                  <p class="admin-news__motivo">
+                    @if (news.publishedAt || news.slug) {
+                      Eliminare «{{ news.title }}»? La riga sparisce per sempre,
+                      e con lei il suo indirizzo pubblico — che è già stato
+                      online. Per toglierla dal sito conservandola basta
+                      «Ritira».
+                    } @else {
+                      Eliminare «{{ news.title }}»? La riga sparisce per sempre.
+                      Non è mai stata pubblicata: non ha un indirizzo pubblico
+                      da perdere.
+                    }
+                  </p>
+                  <div class="row admin-news__azioni">
+                    <button
+                      type="button"
+                      class="btn btn--danger-solid btn--sm"
+                      [disabled]="inVolo()"
+                      (click)="confermaElimina(news)"
+                    >{{ inVoloSu(news._id, 'elimina') ? 'Elimino…' : 'Conferma eliminazione' }}</button>
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      [disabled]="inVolo()"
+                      (click)="cancelConfirm()"
+                    >Annulla</button>
+                  </div>
+                </div>
+              } @else {
+                @if (news.status === 'IN_REVISIONE') {
+                  <!-- ⚠️ Nessuna decisione qui: si decide in Redazione, e basta. -->
+                  <a class="btn btn--ghost btn--sm" routerLink="/admin/redazione"
+                    >Decidi in Redazione →</a
+                  >
+                } @else if (ritorno(news.status); as r) {
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm admin-news__ritorno"
+                    [disabled]="inVolo()"
+                    (click)="ritornoClick(news)"
+                  >{{ inVoloSu(news._id, r.azione) ? r.inCorso : r.etichetta }}</button>
+                }
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="inVolo()"
+                  (click)="edit(news)"
+                >
+                  Modifica
+                </button>
+                <!-- ⚠️ L'etichetta «Elimino…» sta QUI e non solo nel blocco di
+                     conferma: `esegui()` chiude la conferma nello stesso
+                     istante in cui parte la richiesta, quindi quella dentro non
+                     è raggiungibile e la cancellazione — l'unica azione
+                     irreversibile — restava senza alcun segno su rete lenta. -->
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  [disabled]="inVolo()"
+                  (click)="askConfirm('elimina:' + news._id)"
+                >
+                  {{ inVoloSu(news._id, 'elimina') ? 'Elimino…' : 'Elimina' }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        @if (p.totalPages > 1) {
+          <div class="row admin-users__pager">
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              [disabled]="p.page <= 1 || caricamento() || inVolo()"
+              (click)="vaiA(p.page - 1)"
+            >← Precedenti</button>
+            <span class="admin-item__meta">
+              Pagina {{ p.page }} di {{ p.totalPages }}
+            </span>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              [disabled]="p.page >= p.totalPages || caricamento() || inVolo()"
+              (click)="vaiA(p.page + 1)"
+            >Successive →</button>
+          </div>
+        }
       }
     }
   </div>

@@ -16,6 +16,7 @@ import {
   NewsCategory,
   CodaRedazione,
 } from '../../../core/models/api.models';
+import { PAUSA_MAX_GIORNI } from '../../../core/news.constants';
 import { AdminPendingService } from '../../../core/services/admin-pending.service';
 import { NewsService } from '../../../core/services/news.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
@@ -93,6 +94,24 @@ const GIORNO = new Intl.DateTimeFormat('it-IT', {
   year: 'numeric',
 });
 
+/**
+ * `yyyy-mm-dd` di un istante, nel fuso LOCALE — il formato che vuole un
+ * `<input type="date">`.
+ *
+ * ⚠️ NON `toISOString().slice(0,10)`: quello lavora in UTC, e per l'Italia
+ * (UTC+1/+2) restituirebbe il GIORNO PRIMA per tutte le ore piccole della
+ * notte. Un `min` sbagliato di un giorno rende non selezionabile una data
+ * legittima, e sembra un guasto del selettore invece di un errore di fuso —
+ * la stessa trappola già pagata nelle statistiche admin, dove i mesi si
+ * costruiscono dentro la pipeline proprio per non usare il fuso del processo.
+ */
+function isoGiorno(ms: number): string {
+  const d = new Date(ms);
+  const mese = String(d.getMonth() + 1).padStart(2, '0');
+  const giorno = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mese}-${giorno}`;
+}
+
 /** Una riga della bibliografia: il link e il nome leggibile della testata. */
 interface Fonte {
   url: string | null;
@@ -139,6 +158,8 @@ export class AdminRedazioneComponent {
   private readonly pending = inject(AdminPendingService);
 
   protected readonly titoloMax = TITOLO_MAX;
+  /** Il tetto della pausa, stampato nel pannello. */
+  protected readonly pausaMaxGiorni = PAUSA_MAX_GIORNI;
 
   // ── Stato della coda ──
 
@@ -190,6 +211,36 @@ export class AdminRedazioneComponent {
 
   /** Data scelta nel pannello "metti in pausa" (`yyyy-mm-dd` dell'input). */
   protected readonly pausaData = signal('');
+
+  /**
+   * Estremi del selettore data della pausa, in `yyyy-mm-dd`.
+   *
+   * ⚠️ Servono a PREVENIRE, non a segnalare: col `max` il browser non lascia
+   * nemmeno scegliere un anno sbagliato, che è il guasto vero — «2036» al posto
+   * di «2026» fermerebbe la redazione per dieci anni, e una pausa che finisce da
+   * sola smette di proteggere proprio nel caso in cui servirebbe.
+   *
+   * ⚠️ L'AUTORITÀ RESTA IL SERVER: qui si rende difficile sbagliare, ma chi
+   * rifiuta è `impostaPausa`, che risponde 400 nominando il limite. Un controllo
+   * che vivesse solo qui sarebbe aggirabile da qualunque chiamata diretta.
+   */
+  protected readonly pausaMinData = computed(() => isoGiorno(this.adesso()));
+
+  /**
+   * ⚠️ `PAUSA_MAX_GIORNI - 1`, e non è un errore di conteggio: si sceglie un
+   * GIORNO ma si manda la sua **fine** (`23:59:59.999`, perché «in pausa fino
+   * al 25» vuol dire il 25 compreso), mentre il tetto del server è `adesso + 90
+   * giorni` **all'ora corrente**. Col giorno del novantesimo come `max`,
+   * l'ultimo valore selezionabile del controllo era quindi *sempre* oltre il
+   * limite — a qualunque ora tranne l'ultimo millisecondo della giornata — e il
+   * 400 che ne seguiva nominava proprio la data appena scelta, dentro i limiti
+   * che il controllo stesso aveva imposto. Un selettore che PREVIENE non può
+   * offrire un valore che verrà rifiutato: l'ultimo giorno proponibile è
+   * l'ultimo che si può onorare **per intero**.
+   */
+  protected readonly pausaMaxData = computed(() =>
+    isoGiorno(this.adesso() + (PAUSA_MAX_GIORNI - 1) * 86_400_000),
+  );
 
   /** Orologio interno: fa scadere da soli conto alla rovescia e banner. */
   private readonly adesso = signal(Date.now());
@@ -480,6 +531,18 @@ export class AdminRedazioneComponent {
 
   protected askConfirm(key: string): void {
     this.confirming.set(key);
+
+    // ⚠️ La data si precompila all'apertura, e non è una comodità: su iOS un
+    // `<input type="date">` VUOTO non mostra né segnaposto né formato — collassa
+    // in un rettangolino muto largo un dito (segnalato dall'owner il 19/08 su
+    // iPhone). Chi lo guarda non capisce che è un campo data, tocca «Metti in
+    // pausa» e si prende un rimprovero da un campo che non sembrava un campo.
+    // Con un valore dentro il controllo si disegna per intero e si capisce da
+    // solo. Una settimana è il caso d'uso normale, ed è comunque modificabile;
+    // il gesto che ferma la redazione resta il pulsante, non l'apertura.
+    if (key === 'pausa' && !this.pausaData()) {
+      this.pausaData.set(isoGiorno(this.adesso() + 7 * 86_400_000));
+    }
   }
 
   protected cancelConfirm(): void {

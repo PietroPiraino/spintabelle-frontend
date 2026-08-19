@@ -547,6 +547,78 @@ describe('AdminRedazioneComponent', () => {
     await fixture.whenStable();
   });
 
+  it('⚠️ il selettore della pausa ha un tetto: un anno sbagliato non è scegliibile', async () => {
+    await flushBoot([newsOf('a1')]);
+
+    bottone('.rz__pausa-apri')!.click();
+    fixture.detectChanges();
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector(
+      'input.rz__pausa-data',
+    ) as HTMLInputElement;
+
+    const max = input.getAttribute('max')!;
+    const min = input.getAttribute('min')!;
+
+    // ⚠️ Il `max` è il vero contenuto di questo test: senza, digitare 2036 al
+    // posto di 2026 ferma la redazione per dieci anni e la forma «finisce da
+    // sola» non protegge più. L'anno 2036 deve stare FUORI dall'intervallo.
+    expect(max).toBeTruthy();
+    expect(max < '2036-01-01').toBeTrue();
+    // E il tetto non deve mordere un'assenza legittima di un mese.
+    const fraUnMese = new Date(Date.now() + 30 * 86_400_000);
+    const isoMese = [
+      fraUnMese.getFullYear(),
+      String(fraUnMese.getMonth() + 1).padStart(2, '0'),
+      String(fraUnMese.getDate()).padStart(2, '0'),
+    ].join('-');
+    expect(isoMese <= max).toBeTrue();
+    expect(min <= isoMese).toBeTrue();
+    // Il pannello dichiara il limite a parole, non solo nell'attributo.
+    expect(testo()).toContain('90');
+
+    // ⚠️ E il tetto dev'essere COERENTE con ciò che si manda: si sceglie un
+    // giorno ma si invia la sua FINE (`23:59:59.999`, perché «fino al 25»
+    // vuol dire il 25 compreso), mentre il server rifiuta oltre `adesso + 90
+    // giorni` all'ORA corrente. Col giorno del novantesimo come `max`,
+    // l'ultimo valore selezionabile — il bordo destro del calendario, un
+    // tocco — era *sempre* fuori limite, e il 400 nominava proprio la data
+    // appena scelta dentro i limiti imposti dal controllo stesso.
+    const [y, m, d] = max.split('-').map(Number);
+    const fineScelta = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+    expect(fineScelta).toBeLessThanOrEqual(Date.now() + 90 * 86_400_000);
+  });
+
+  it('⚠️ aprendo il pannello la data è già compilata (su iOS un date input vuoto è muto)', async () => {
+    await flushBoot([newsOf('a1')]);
+
+    bottone('.rz__pausa-apri')!.click();
+    fixture.detectChanges();
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector(
+      'input.rz__pausa-data',
+    ) as HTMLInputElement;
+
+    // ⚠️ Il valore NON deve essere vuoto: su iPhone un `<input type="date">`
+    // senza valore non mostra né segnaposto né formato, collassa in un
+    // rettangolino muto e chi lo guarda non capisce che è un campo data —
+    // tocca «Metti in pausa» e riceve un errore da un campo che non sembrava
+    // un campo. Segnalato dall'owner il 19/08/2026 su iPhone.
+    // ⚠️ La PROPRIETÀ, non l'attributo: Angular lega `[value]` come proprietà
+    // DOM, quindi `getAttribute('value')` resta null anche a campo pieno.
+    expect(input.value).toBeTruthy();
+    expect(input.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    // E il valore precompilato deve stare dentro gli estremi dichiarati,
+    // altrimenti il selettore si apre già su una data che rifiuta.
+    const v = input.value;
+    expect(v >= input.min).toBeTrue();
+    expect(v <= input.max).toBeTrue();
+
+    // L'etichetta è VISIBILE, non solo per gli screen reader.
+    expect(testo()).toContain('Ultimo giorno di pausa');
+  });
+
   it('pausa già scaduta: nessun banner (la data la spegne da sola)', async () => {
     await flushBoot([newsOf('a1')], fra(-3600_000));
 

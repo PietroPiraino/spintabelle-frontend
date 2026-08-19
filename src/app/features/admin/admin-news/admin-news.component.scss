@@ -1,0 +1,152 @@
+// Archivio news: chip di stato, pillole di filtro e blocchi di conferma.
+//
+// ⚠️ Locale al tab, come le `.aff-chip` delle affiliazioni: quelle classi sono
+// il MODELLO da copiare, non da importare — un chip condiviso fra due sezioni
+// legherebbe due macchine a stati diverse allo stesso foglio.
+
+// Chip di stato: stesso chrome del badge, un colore per stato. L'etichetta
+// arriva da `NEWS_STATUS_LABELS` (sede unica), qui c'è solo il colore.
+.an-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+// Non ancora in gioco.
+.an-chip--bozza {
+  color: var(--text-faint);
+}
+
+// Aspetta una persona: è l'unico stato che ha una coda dedicata.
+.an-chip--in_revisione {
+  color: var(--ember);
+}
+
+// Online.
+.an-chip--pubblicato {
+  color: var(--gold-text);
+}
+
+// Deciso in negativo.
+.an-chip--scartato {
+  color: var(--danger);
+}
+
+// Chiuso dal tempo, non da una persona: muto, ma distinto dalla bozza.
+.an-chip--scaduto {
+  color: var(--text-muted);
+}
+
+// ⚠️ NON è un sesto stato: è la sua ASSENZA (riga storica che la migrazione
+// legacy non ha toccato — il suo catch non rilancia, quindi è uno stato del
+// mondo possibile). Bordo tratteggiato di proposito: con lo stesso chrome degli
+// altri si leggerebbe come uno stato legittimo della macchina, e la riga
+// sembrerebbe decidibile quando non lo è.
+.an-chip--ignoto {
+  color: var(--danger);
+  border-style: dashed;
+}
+
+// ⚠️ `.admin-users__count` è `nowrap` (nasce per "12 iscritti"): qui la riga
+// porta anche il nome del filtro e su telefono deve poter andare a capo.
+.admin-news__conteggio {
+  white-space: normal;
+}
+
+// Conteggio e avviso di aggiornamento sono UN blocco solo: `.admin-users__head`
+// è `space-between`, e da figli separati l'arrivo dell'avviso spingerebbe il
+// conteggio in mezzo alla riga a ogni ricarica.
+.admin-news__stato-elenco {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
+  margin-left: auto;
+}
+
+.admin-news__aggiorno {
+  white-space: nowrap;
+}
+
+.admin-news__filtri {
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.2rem 0 0.4rem;
+
+  // ⚠️ `.badge--tag` non prevede lo stato disabilitato (nasce come pillola
+  // sempre cliccabile): senza questa riga una pillola spenta durante
+  // un'azione resterebbe identica a una viva, e si illuminerebbe pure
+  // all'hover.
+  .badge--tag:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  // ⚠️ Solo la pillola NON attiva: l'hover su una spenta non deve fingere di
+  // poter cambiare filtro, ma quella attiva resta accesa perché dice qual è.
+  .badge--tag:disabled:not(.is-active):hover {
+    border-color: var(--line-strong);
+    color: inherit;
+    background: none;
+    box-shadow: none;
+  }
+}
+
+// Riga secondaria della card: chip + date, che a schermo stretto vanno a capo.
+.admin-news__riga {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+// Motivo dello scarto e testi di conferma: leggibili, non monospace.
+.admin-news__motivo {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.admin-news__errore {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.admin-news__azioni {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  // Con una conferma aperta la colonna azioni prende tutta la riga: il campo
+  // del motivo e i due pulsanti non devono stare in una colonna da 8rem.
+  &.is-confirming {
+    flex: 1 1 100%;
+  }
+}
+
+.admin-news__conferma {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  // Su telefono l'elenco è a una colonna: i pulsanti stanno sotto il titolo e
+  // restano bersagli pieni invece di stringersi in fondo alla riga.
+  .admin-news__azioni {
+    flex: 1 1 100%;
+  }
+}

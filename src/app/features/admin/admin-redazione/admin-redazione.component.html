@@ -66,16 +66,30 @@
       <h3>Metti in pausa la generazione</h3>
       <p class="rz__hint">
         Fino a tutto il giorno scelto. La pausa finisce da sola: non c'è nessun
-        interruttore da ricordarsi di rialzare.
+        interruttore da ricordarsi di rialzare. Al massimo
+        {{ pausaMaxGiorni }} giorni: oltre non è un'assenza, è una chiusura, e
+        va ridecisa.
       </p>
       <div class="rz__pausa-row">
-        <input
-          type="date"
-          class="input rz__pausa-data"
-          aria-label="Ultimo giorno di pausa"
-          [value]="pausaData()"
-          (input)="onPausaData($event)"
-        />
+        <!-- ⚠️ `min`/`max` per PREVENIRE, non per segnalare: col tetto sul
+             selettore un anno sbagliato non è nemmeno scegliibile. Chi rifiuta
+             davvero resta il server (400 che nomina il limite) — questo evita
+             che ci si arrivi. -->
+        <!-- ⚠️ Etichetta VISIBILE, non solo `aria-label`: su un telefono un
+             riquadro data senza intestazione è un mistero anche quando è pieno,
+             e chi legge deve sapere che sta scegliendo l'ULTIMO giorno di
+             pausa, non il primo. -->
+        <label class="rz__pausa-campo">
+          <span class="rz__pausa-label">Ultimo giorno di pausa</span>
+          <input
+            type="date"
+            class="input rz__pausa-data"
+            [min]="pausaMinData()"
+            [max]="pausaMaxData()"
+            [value]="pausaData()"
+            (input)="onPausaData($event)"
+          />
+        </label>
         <button
           type="button"
           class="btn btn--primary btn--sm rz__btn"

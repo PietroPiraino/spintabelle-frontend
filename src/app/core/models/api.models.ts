@@ -546,6 +546,53 @@ export const NEWS_STATUS_LABELS: Record<NewsStatus, string> = {
 };
 
 /**
+ * I cinque stati nell'ordine del backend (`NEWS_STATUSES`): alimenta le pillole
+ * di filtro dell'archivio. ⚠️ L'ordine è quello della macchina a stati, non
+ * alfabetico: si legge come il percorso di un articolo.
+ */
+export const NEWS_STATUSES: readonly NewsStatus[] = [
+  'BOZZA',
+  'IN_REVISIONE',
+  'PUBBLICATO',
+  'SCARTATO',
+  'SCADUTO',
+];
+
+/**
+ * Sentinella «tutti gli stati» della **query** della lista admin
+ * (`NEWS_STATUS_TUTTI` lato backend). ⚠️ Non è uno stato: non entra in
+ * `NEWS_STATUSES`, non ha una riga nella macchina a stati e non può finire su
+ * `NewsAdmin.status`. Vale solo come valore di `?status=`.
+ *
+ * ⚠️ Maiuscolo: il `@IsIn` del DTO distingue le maiuscole, un `'tutti'` è un
+ * 400 sull'intera chiamata.
+ */
+export const NEWS_STATUS_TUTTI = 'TUTTI' as const;
+
+/** Cosa può valere `status` nella query admin: uno stato, oppure «tutti». */
+export type NewsStatusFiltro = NewsStatus | typeof NEWS_STATUS_TUTTI;
+
+/**
+ * I valori ammessi dal filtro, nell'ordine delle pillole. «Tutti» sta per primo
+ * perché è la vista dell'archivio: è l'unica che mostra anche `SCARTATO` e
+ * `SCADUTO`, cioè gli stati che nessuna schermata raggiungeva.
+ */
+export const NEWS_STATUS_FILTRI: readonly NewsStatusFiltro[] = [
+  NEWS_STATUS_TUTTI,
+  ...NEWS_STATUSES,
+];
+
+/**
+ * Etichette del filtro: gli stati riusano `NEWS_STATUS_LABELS` — mai una
+ * seconda mappa — e la sentinella aggiunge la sua, che uno stato non ha perché
+ * «in che stato è questa riga» su un filtro non è una domanda sensata.
+ */
+export const NEWS_FILTRO_LABELS: Record<NewsStatusFiltro, string> = {
+  ...NEWS_STATUS_LABELS,
+  [NEWS_STATUS_TUTTI]: 'Tutti',
+};
+
+/**
  * Le otto categorie: enum chiusa, **una sola per articolo e obbligatoria** (il
  * default lato schema è `online`). I tag restano liberi e separati.
  */
@@ -608,7 +655,22 @@ export interface NewsAdmin {
   title: string;
   body: string;
   coverImageUrl?: string;
-  status: NewsStatus;
+  /**
+   * ⚠️ **Opzionale, e non per prudenza.** `GET /admin/news?status=TUTTI` filtra
+   * con `{}` e **non** con un `$in` sui cinque stati, di proposito: così una
+   * riga priva di `status` (gli articoli storici, se `migraArticoliLegacy` è
+   * fallita — il suo catch NON rilancia, o cadrebbe il boot dell'intera API)
+   * resta visibile proprio nell'unica schermata che serve a ritrovare ciò che
+   * non si vede. Il backend lo pinna con un test dedicato («TUTTI» vede anche
+   * una riga senza `status`) e legge in `.lean()`, che **non** applica i
+   * default di schema: quel campo arriva davvero `undefined`.
+   *
+   * Dichiararlo obbligatorio non dava alcun errore di compilazione utile — è
+   * solo un tipo — ma faceva scrivere `status.toLowerCase()`: un TypeError
+   * dentro un binding, cioè l'archivio che si rompe sulla riga che esiste per
+   * farsi ritrovare.
+   */
+  status?: NewsStatus;
   categoria: NewsCategory;
   tags: string[];
   /** Prima pubblicazione: non si riscrive mai, nemmeno dopo un ritiro. */
@@ -677,9 +739,15 @@ export interface NewsPendingCount {
   inCoda: number;
 }
 
-/** Filtri della coda admin (default lato server: `IN_REVISIONE`, 25/pagina). */
+/**
+ * Filtri della lista admin (default lato server: `IN_REVISIONE`, 25/pagina).
+ *
+ * ⚠️ `status` accetta anche la sentinella `'TUTTI'` (nessun filtro), e omettere
+ * il campo **non** significa «tutti»: significa la coda. Chi vuole l'archivio
+ * completo lo chiede esplicitamente.
+ */
 export interface AdminNewsListOpts {
-  status?: NewsStatus;
+  status?: NewsStatusFiltro;
   page?: number;
   limit?: number;
 }

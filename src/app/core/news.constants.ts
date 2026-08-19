@@ -59,3 +59,19 @@ export const AI_DISCLOSURE = {
   /** La frase intera, in chiaro (spec, prove, riuso fuori dal template). */
   testo: (revisore: string) => `${APERTURA(revisore)}${ANCORA}${CHIUSURA}`,
 } as const;
+
+/**
+ * Quanti giorni può durare al massimo la pausa della generazione.
+ *
+ * ⚠️ **DEVE COINCIDERE con `NEWS_PAUSA_MAX_GIORNI` del backend**
+ * (`backend/src/news/news.types.ts`), che è l'AUTORITÀ: qui il numero serve solo
+ * a rendere impossibile scegliere una data fuori limite nel selettore del
+ * browser — prevenire invece di segnalare. Se i due dovessero divergere, chi
+ * vince è il server, e il suo 400 nomina il limite vero.
+ *
+ * Perché un limite esiste: la pausa è una data libera, e una data libera si
+ * sbaglia in un modo che non si vede — 2036 al posto di 2026 ferma la redazione
+ * per dieci anni. Oltre i tre mesi non è un'assenza, è una chiusura, e va
+ * ridecisa invece che ereditata da un campo compilato una volta.
+ */
+export const PAUSA_MAX_GIORNI = 90;
