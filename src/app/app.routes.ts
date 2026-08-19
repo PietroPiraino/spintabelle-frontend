@@ -462,6 +462,33 @@ export const routes: Routes = [
     },
   },
   {
+    // ⚠️ Rotta di PRIMO LIVELLO, non `/news/redazione`: quest'ultima
+    // collide con la rotta parametrica dell'articolo (`news/:id`) e
+    // finirebbe dentro l'include `/news/*` della Pages Function.
+    path: 'redazione',
+    loadComponent: () =>
+      import('./features/legal/redazione/redazione.component').then(
+        (m) => m.RedazioneComponent,
+      ),
+    title: 'Redazione — Best Fish Forever',
+    data: {
+      description:
+        'Chi scrive le notizie di Best Fish Forever, chi ne risponde e a chi scrivere per segnalazioni e rettifiche.',
+    },
+  },
+  {
+    path: 'policy-editoriale',
+    loadComponent: () =>
+      import(
+        './features/legal/policy-editoriale/policy-editoriale.component'
+      ).then((m) => m.PolicyEditorialeComponent),
+    title: 'Policy editoriale — Best Fish Forever',
+    data: {
+      description:
+        'Come citiamo le fonti, come usiamo l\'intelligenza artificiale, come correggiamo un errore e come chiedere una rettifica.',
+    },
+  },
+  {
     // 404 lato client (navigazione interna verso un URL inesistente). Il 404
     // vero, con lo status HTTP giusto, lo serve public/404.html: Cloudflare
     // Pages lo restituisce sugli URL che non corrispondono a nessun asset ne'

@@ -12,12 +12,71 @@
   gap: 0.7rem;
 }
 
+// Data + firma sulla stessa riga; a schermo stretto vanno a capo insieme.
+.news-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.9rem;
+  margin: 0;
+}
+
 .news-detail__date {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--copper-400);
+}
+
+// La firma è dello stesso registro della data, ma NON maiuscola: un nome di
+// persona urlato in maiuscoletto si legge come un'etichetta, non come una firma.
+.news-detail__byline {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  a:hover {
+    color: var(--copper-400);
+  }
+}
+
+// Nota di rettifica: bordata e prima del corpo, perché deve farsi vedere.
+// Il filetto colorato è a sinistra e non è decorazione: distingue a colpo
+// d'occhio una correzione dal testo dell'articolo.
+.news-detail__rettifiche {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.news-detail__rettifica {
+  margin: 0;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--copper-400);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+// Etichetta IA in calce: dichiarazione, non contenuto — quindi piccola,
+// smorzata e separata dal corpo da un filetto.
+.news-detail__ia {
+  margin: 0;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 .news-detail__cover {

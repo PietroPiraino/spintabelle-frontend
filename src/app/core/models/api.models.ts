@@ -456,11 +456,54 @@ export interface LiveRoomToken {
   recordingStartedAt?: string | null;
 }
 
+/** Nota di rettifica pubblicata in calce a un articolo (§4.4). */
+export interface NewsRettifica {
+  at: string;
+  nota: string;
+}
+
+/**
+ * Articolo delle news.
+ *
+ * ⚠️ **Tutti i campi della redazione sono opzionali, e non per pigrizia**: il
+ * frontend si deploya prima o dopo il backend a seconda del lotto, e un articolo
+ * scritto a mano nel vecchio pannello non ha né `aiGeneratedAt` né rettifiche.
+ * Un campo obbligatorio qui non farebbe fallire niente a compilazione — è solo un
+ * tipo — ma farebbe scrivere codice che dà per certo un valore che può mancare.
+ *
+ * ⚠️ `revisionatoDaNome` è l'UNICO campo di questa interfaccia che l'API **non
+ * espone ancora**: la proiezione pubblica del backend (`CAMPI_PUBBLICI`) porta
+ * `autore`, `publishedAt`, `rettifiche`, `ultimaRettificaAt` e `aiGeneratedAt`,
+ * ma di `revisionatoDa` tiene fuori sia l'ObjectId sia il nome — ed è giusto
+ * così: la coda non deve trapelare. Finché quel nome non arriva, l'etichetta IA
+ * **non si rende** (vedi `news-detail.component.ts`), il che oggi non si vede
+ * perché nessun articolo ha `aiGeneratedAt`. Diventa visibile il giorno in cui la
+ * pipeline pubblica il primo pezzo: è un **prerequisito di P4**, non un dettaglio
+ * di tipizzazione.
+ */
 export interface News {
   _id: string;
   title: string;
   body: string;
   coverImageUrl?: string;
+  /** Slug pubblico dell'articolo: è la forma buona del suo indirizzo (§4.5). */
+  slug?: string;
+  /**
+   * Prima pubblicazione. ⚠️ È questa la data che il lettore vede e che finisce
+   * nei dati strutturati, **non** `createdAt`: fra la bozza e la pubblicazione
+   * possono passare giorni.
+   */
+  publishedAt?: string;
+  /** Byline reale (D40): il nome che la pagina `/redazione` dichiara. */
+  autore?: string;
+  /** Quando il pezzo è stato generato con l'ausilio dell'IA (interruttore dell'etichetta). */
+  aiGeneratedAt?: string;
+  /** Nome del revisore umano — vedi l'avviso sull'interfaccia. */
+  revisionatoDaNome?: string;
+  /** Note di rettifica, in ordine di pubblicazione. */
+  rettifiche?: NewsRettifica[];
+  /** Data dell'ultima rettifica: pilota `dateModified` (D45), mai `updatedAt`. */
+  ultimaRettificaAt?: string;
   createdAt: string;
   updatedAt: string;
 }

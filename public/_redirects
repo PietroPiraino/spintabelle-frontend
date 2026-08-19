@@ -20,10 +20,13 @@
 #    a mano: e' verboso ed e' il punto.
 #
 # 3. LE PRERENDERIZZATE NON VANNO ELENCATE (`/`, /tabelle, /simulatore-varianza,
-#    /chi-siamo, /abbonati, /news, /news/:id, /affiliazioni, /privacy,
-#    /cookie-policy): hanno il proprio HTML statico e nessuna regola le tocca.
-#    Elencarle qui le romperebbe, servendo la shell vuota al posto dell'HTML
-#    con i meta -> addio anteprime social e SEO.
+#    /chi-siamo, /abbonati, /lezioni, /docs, /live, /guide, /guide/:slug,
+#    /affiliazioni, /privacy, /cookie-policy, /redazione, /policy-editoriale):
+#    hanno il proprio HTML statico e nessuna regola le tocca. Elencarle qui le
+#    romperebbe, servendo la shell vuota al posto dell'HTML con i meta -> addio
+#    anteprime social e SEO. ⚠️ Stessa cosa, per una ragione diversa, per /news
+#    e /news/:id: dal 19/08/2026 non sono prerenderizzate ma composte dalla
+#    Pages Function (public/_routes.json), e una regola qui le scavalcherebbe.
 #
 # 4. AGGIUNGENDO UNA ROTTA CLIENT ad app.routes.ts, aggiungila anche qui:
 #    e' l'unico punto che non si aggiorna da solo. Se te ne dimentichi non si

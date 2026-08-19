@@ -91,6 +91,15 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'privacy', renderMode: RenderMode.Prerender },
   { path: 'cookie-policy', renderMode: RenderMode.Prerender },
 
+  // Responsabilita' editoriale della sezione notizie: chi firma, chi risponde,
+  // con che procedura si chiede una rettifica. ⚠️ Prerender e PUBBLICHE: niente
+  // regola in `public/_redirects` (riceverebbero la shell CSR al posto del loro
+  // HTML), niente riga in `public/_headers` e niente voce in `NOINDEX_ATTESO` —
+  // sono esattamente le pagine su cui si argomenta la responsabilita', devono
+  // essere raggiungibili e indicizzabili.
+  { path: 'redazione', renderMode: RenderMode.Prerender },
+  { path: 'policy-editoriale', renderMode: RenderMode.Prerender },
+
   // NEWS PER-ARTICOLO — stessa storia dell'indice qui sopra: l'HTML iniziale lo
   // scrive la Pages Function, questo `Client` riguarda solo la navigazione
   // interna dello SPA.

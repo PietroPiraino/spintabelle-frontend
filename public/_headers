@@ -19,9 +19,9 @@
 #
 # ⚠️ MAI UNA REGOLA `/*` QUI. Le regole di `_headers` sono CUMULATIVE: una
 #    richiesta che ne matcha piu' d'una eredita gli header di tutte. Una `/*`
-#    metterebbe `noindex` sulle 26 pagine prerenderizzate, cioe' cancellerebbe
-#    il sito da Google. E' l'equivalente, per questo file, della catch-all
-#    vietata in `_redirects`.
+#    metterebbe `noindex` sulle 24 pagine prerenderizzate (e sulle news, che la
+#    Pages Function compone a parte), cioe' cancellerebbe il sito da Google.
+#    E' l'equivalente, per questo file, della catch-all vietata in `_redirects`.
 #
 # ⚠️ NON basta questo file. `scripts/inject-csr-noindex.mjs` scrive lo stesso
 #    `noindex` come `<meta>` dentro `index.csr.html` a fine build. I due

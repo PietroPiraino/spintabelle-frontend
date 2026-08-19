@@ -13,9 +13,24 @@
         <a routerLink="/news" class="btn btn--link">← Tutte le news</a>
 
         <header class="news-detail__head">
-          <time class="news-detail__date" [attr.datetime]="news()!.createdAt">
-            {{ news()!.createdAt | date: 'dd MMMM yyyy' }}
-          </time>
+          <!--
+            Data e firma sulla stessa riga. ⚠️ La data è `publishedAt` (via
+            `dataPubblica`), non `createdAt`: vedi il componente. ⚠️ La byline è
+            un COLLEGAMENTO a /redazione e non testo semplice — è lì che il
+            lettore trova chi risponde degli articoli, ed è la seconda gamba
+            dell'esonero art. 50(4) AI Act: senza quella pagina raggiungibile
+            sarebbe un ornamento.
+          -->
+          <p class="news-detail__meta">
+            <time class="news-detail__date" [attr.datetime]="dataPubblica()">
+              {{ dataPubblica() | date: 'dd MMMM yyyy' }}
+            </time>
+            @if (news()!.autore; as autore) {
+              <span class="news-detail__byline">
+                di <a routerLink="/redazione">{{ autore }}</a>
+              </span>
+            }
+          </p>
           <h1>{{ news()!.title }}</h1>
         </header>
 
@@ -23,7 +38,37 @@
           <img class="news-detail__cover" [src]="cover" alt="" />
         }
 
+        <!--
+          Note di rettifica, fra intestazione e corpo (§4.4). Sono PUBBLICHE e
+          stanno prima del testo di proposito: una correzione che il lettore
+          trova solo dopo aver letto l'articolo sbagliato non è una correzione.
+          Si stampano tutte, nell'ordine in cui sono state pubblicate — la
+          policy editoriale promette che la correzione «si aggiunge, non cancella
+          la traccia dell'errore».
+        -->
+        @if (rettifiche().length) {
+          <div class="news-detail__rettifiche">
+            @for (r of rettifiche(); track $index) {
+              <p class="news-detail__rettifica">
+                <strong>Nota di rettifica ({{ r.at | date: 'dd MMMM yyyy' }}):</strong>
+                {{ r.nota }}
+              </p>
+            }
+          </div>
+        }
+
         <app-markdown [markdown]="news()!.body" />
+
+        <!--
+          Etichetta IA del TESTO. ⚠️ Sta solo qui e non nel renderer all'edge, ed
+          è una scelta: è volontaria, mentre quella dell'IMMAGINE sarà l'obbligo
+          in sé e dovrà stare in entrambi. Le ragioni in `core/news.constants.ts`.
+          ⚠️ Non si rende affatto senza il nome del revisore: vedi `etichettaIa`.
+        -->
+        @if (etichettaIa(); as ia) {
+          <!-- prettier-ignore -->
+          <p class="news-detail__ia">{{ ia.apertura }}<a [routerLink]="rottaPolicy">{{ ia.ancora }}</a>{{ ia.chiusura }}</p>
+        }
       </article>
     }
   </div>
