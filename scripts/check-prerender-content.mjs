@@ -19,7 +19,7 @@
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve, relative, dirname, sep } from 'node:path';
-import { hasNoindex } from './lib/csr-noindex.mjs';
+import { hasCanonical, hasNoindex } from './lib/csr-noindex.mjs';
 
 // ⚠️ Il default e' `process.cwd()` e NON un percorso Windows assoluto. Con
 // `'C:/Projects/poker-ranges/frontend'` questa guardia era MUTA su Cloudflare:
@@ -132,18 +132,34 @@ pagine = pagine.filter((f) => !f.endsWith(`${sep}index.csr.html`));
 // l'unica cosa che le tiene fuori dall'indice insieme all'header X-Robots-Tag.
 // Se l'iniezione smettesse di funzionare (rinomina del file, cambio di forma
 // dell'artefatto, script tolto dalla catena di build) il sito tornerebbe a
-// offrire 13 URL con lo stesso corpo e il canonical della home, in silenzio.
+// offrire 13 URL con lo stesso corpo, tutti indicizzabili, in silenzio.
 const SHELL = join(BROWSER, 'index.csr.html');
 if (!existsSync(SHELL))
   nonCapisco(
     'manca dist/frontend/browser/index.csr.html — e\' la shell servita a ogni ' +
       'rotta client (public/_redirects): senza, quelle rotte ricevono altro.',
   );
-if (!hasNoindex(readFileSync(SHELL, 'utf8')))
+const shellHtml = readFileSync(SHELL, 'utf8');
+if (!hasNoindex(shellHtml))
   nota(
     'index.csr.html — manca il <meta name="robots" content="noindex">. ' +
       'Lo inietta scripts/inject-csr-noindex.mjs: e\' ancora nella catena di ' +
       '`npm run build`? Senza, ogni rotta client torna indicizzabile.',
+  );
+
+// ⚠️ E la shell NON deve dichiarare un canonical (dal 19/08/2026). Lo ereditava
+// da `src/index.html`, che punta alla HOME: giusto per la home, sbagliato per
+// le altre 13 rotte che ricevono lo stesso file. Servivano insieme due segnali
+// che si contraddicono — «non indicizzarmi» e «la pagina buona e' la home» — e
+// il modo in cui quella coppia puo' finire male non e' che /login resti in
+// indice: e' che il noindex venga consolidato SUL BERSAGLIO del canonical,
+// cioe' sulla home. Lo toglie lo stesso iniettore; qui si verifica che sia
+// arrivato.
+if (hasCanonical(shellHtml))
+  nota(
+    'index.csr.html — dichiara ancora un <link rel="canonical"> (verso la ' +
+      'home). Lo rimuove scripts/inject-csr-noindex.mjs: noindex + canonical ' +
+      'altrui e\' la coppia che puo\' far consolidare il noindex sulla home.',
   );
 
 if (pagine.length < MIN_PAGINE)

@@ -38,3 +38,33 @@ export function injectNoindex(html) {
   if (i === -1) throw new Error('nessun </head> nella shell CSR');
   return html.slice(0, i) + `  ${META_ROBOTS}\n` + html.slice(i);
 }
+
+/** Vero se l'HTML dichiara un `<link rel="canonical">`. */
+export function hasCanonical(html) {
+  return /<link[^>]+rel=["']canonical["'][^>]*>/i.test(html);
+}
+
+/**
+ * Toglie il `<link rel="canonical">` dalla shell CSR.
+ *
+ * ⚠️ PERCHE' SI TOGLIE, invece di lasciarlo com'era fino al 19/08/2026.
+ * La shell nasce da `src/index.html`, che dichiara la HOME come canonica —
+ * corretto per la home, sbagliato per le altre 13 rotte che ricevono lo stesso
+ * file. Il risultato era che `/login`, `/account`, `/admin`… servivano insieme
+ * due segnali che si contraddicono: «non indicizzarmi» (noindex) e «la pagina
+ * buona e' la home» (canonical). Google sconsiglia esplicitamente la coppia, e
+ * il modo in cui puo' finire male non e' che la rotta client resti in indice —
+ * e' che il `noindex` venga CONSOLIDATO sul bersaglio del canonical, cioe'
+ * sulla home. Probabilita' bassa, danno massimo: la home e' la pagina piu'
+ * preziosa del sito.
+ *
+ * Senza canonical la shell dice una cosa sola e non ambigua. Le pagine
+ * PRERENDERIZZATE non sono toccate: ognuna ha il suo canonical corretto,
+ * scritto dal prerender, e `check-prerender-content.mjs` continua a
+ * verificarlo una per una.
+ *
+ * Idempotente: se il canonical non c'e', restituisce l'HTML invariato.
+ */
+export function stripCanonical(html) {
+  return html.replace(/[ \t]*<link[^>]+rel=["']canonical["'][^>]*>\s*\n?/gi, '');
+}

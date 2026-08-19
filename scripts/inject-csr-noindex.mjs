@@ -31,7 +31,13 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { META_ROBOTS, hasNoindex, injectNoindex } from './lib/csr-noindex.mjs';
+import {
+  META_ROBOTS,
+  hasCanonical,
+  hasNoindex,
+  injectNoindex,
+  stripCanonical,
+} from './lib/csr-noindex.mjs';
 
 // ⚠️ Default `process.cwd()` e non un percorso Windows assoluto: su POSIX
 // `C:/…` non e' assoluto e verrebbe attaccato alla cwd, con il risultato che
@@ -66,18 +72,46 @@ try {
   process.exit(1);
 }
 
-if (hasNoindex(html)) {
-  console.log('\n✓ Shell CSR: noindex gia\' presente, niente da fare.\n');
+// Due interventi, indipendenti e ognuno idempotente: si aggiunge il `noindex` e
+// si TOGLIE il canonical ereditato da `src/index.html` (che punta alla home —
+// vedi `stripCanonical`, e' li' che c'e' scritto perche' la coppia
+// noindex+canonical e' il problema). Si scrive solo se qualcosa e' cambiato.
+const fatto = [];
+let out = html;
+
+if (hasNoindex(out)) {
+  fatto.push("noindex gia' presente");
+} else {
+  try {
+    out = injectNoindex(out);
+  } catch (e) {
+    console.error(`\n❌ Non riesco a iniettare il noindex nella shell CSR: ${e.message}\n`);
+    process.exit(1);
+  }
+  fatto.push(`iniettato ${META_ROBOTS}`);
+}
+
+if (hasCanonical(out)) {
+  out = stripCanonical(out);
+  // ⚠️ Se dopo la rimozione ne resta uno, la forma del tag e' cambiata e la
+  // shell continuerebbe a dichiarare una canonica altrui: rumore, non silenzio.
+  if (hasCanonical(out)) {
+    console.error(
+      '\n❌ Il <link rel="canonical"> della shell CSR non e\' stato rimosso.' +
+        '\n   La forma del tag e\' cambiata: aggiorna stripCanonical() in' +
+        '\n   scripts/lib/csr-noindex.mjs (coperta da npm run test:scripts).\n',
+    );
+    process.exit(1);
+  }
+  fatto.push('rimosso il <link rel="canonical"> verso la home');
+} else {
+  fatto.push('nessun canonical da rimuovere');
+}
+
+if (out === html) {
+  console.log(`\n✓ Shell CSR: ${fatto.join(' · ')}.\n`);
   process.exit(0);
 }
 
-let out;
-try {
-  out = injectNoindex(html);
-} catch (e) {
-  console.error(`\n❌ Non riesco a iniettare il noindex nella shell CSR: ${e.message}\n`);
-  process.exit(1);
-}
-
 writeFileSync(SHELL, out, 'utf8');
-console.log(`\n✓ Shell CSR: iniettato ${META_ROBOTS}\n`);
+console.log(`\n✓ Shell CSR: ${fatto.join(' · ')}.\n`);
