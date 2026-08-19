@@ -5,12 +5,8 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import localeIt from '@angular/common/locales/it';
-import {
-  LOCALE_ID,
-  RESPONSE_INIT,
-  provideZonelessChangeDetection,
-} from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { LOCALE_ID, provideZonelessChangeDetection } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { NewsDetailComponent } from './news-detail.component';
@@ -20,80 +16,25 @@ const API = environment.API_URL;
 registerLocaleData(localeIt);
 
 /**
- * ⚠️ QUESTA SPEC ESISTE PER UNA COSA SOLA: fissare il 404.
+ * ⚠️ QUESTA SPEC NASCE DA UNA RIMOZIONE, e vale la pena dire quale.
  *
- * Da quando `news/:id` e' `RenderMode.Server` (19/08/2026) non c'e' piu' un
- * file per articolo: la pagina la rende l'app a ogni richiesta, e l'unico modo
- * che ha di dire "questo articolo non esiste" e' mutare lo stato della risposta
- * SSR attraverso il token `RESPONSE_INIT` di `@angular/core`. Senza quella
- * mutazione, QUALSIASI id inventato risponde 200 con la pagina "News non
- * trovata": un soft-404 su infinite URL, cioe' il difetto che `public/404.html`
- * ha chiuso il 16/08/2026, riaperto da un'altra porta.
+ * Fino al 19/08/2026 verificava che il componente mutasse `RESPONSE_INIT` per
+ * far rispondere 404 all'SSR su un articolo inesistente. L'SSR non c'è più (il
+ * bundle server pesa 11 MB e Cloudflare rifiuta una Function sopra i 3 MiB:
+ * la storia è nel commento di angular.json), quindi quel token è `null` sempre
+ * e la spec verificava una mutazione che in produzione non avveniva mai — cioè
+ * dava per coperto proprio il caso che non lo era più.
  *
- * E' un contratto di MUTAZIONE su un oggetto iniettato — fragile per natura, e
- * invisibile in locale (in prerender e nel browser il token e' `null`). Se
- * questa spec un giorno fallisce dopo un aggiornamento di Angular, NON e' la
- * spec da aggiustare: e' il ripiego del piano da attivare (far riconoscere alla
- * Pages Function il marcatore di "non trovato" e riscrivere lo stato li').
+ * ⚠️ IL 404 VERO ORA È ALTROVE: lo produce `functions/news/[[path]].ts`, che
+ * risponde 404 con il corpo di `public/404.html` quando l'API dice 404. Non è
+ * verificabile da Karma (è una Pages Function, non c'è in `dist/`): lo verifica
+ * dal vivo, dopo il deploy, `node scripts/check-news-live.mjs`.
+ *
+ * Quello che resta qui è l'altro caso, che è dello SPA e solo suo: chi sta già
+ * navigando il sito e apre un articolo cancellato. Lì non c'è nessuna risposta
+ * HTTP da marcare — c'è una pagina da mostrare, e deve mostrarla.
  */
-describe('NewsDetailComponent — stato 404 della risposta SSR', () => {
-  let fixture: ComponentFixture<NewsDetailComponent>;
-  let http: HttpTestingController;
-  let responseInit: ResponseInit;
-
-  const crea = (id: string) => {
-    fixture = TestBed.createComponent(NewsDetailComponent);
-    fixture.componentRef.setInput('id', id);
-    fixture.detectChanges();
-  };
-
-  beforeEach(() => {
-    // L'oggetto che l'engine di @angular/ssr passa come `useValue` e con cui poi
-    // costruisce la Response: qui lo si simula com'e' davvero, un oggetto nudo.
-    responseInit = { status: 200 };
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([]),
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        { provide: LOCALE_ID, useValue: 'it' },
-        { provide: RESPONSE_INIT, useValue: responseInit },
-      ],
-    });
-    http = TestBed.inject(HttpTestingController);
-  });
-
-  afterEach(() => http.verify());
-
-  it('mette 404 sulla risposta quando l\'articolo non esiste', () => {
-    crea('id-inventato');
-    http
-      .expectOne(`${API}/news/id-inventato`)
-      .flush({ message: 'News non trovata' }, { status: 404, statusText: 'Not Found' });
-    fixture.detectChanges();
-
-    expect(responseInit.status).toBe(404);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('News non trovata');
-  });
-
-  it('lascia 200 quando l\'articolo esiste', () => {
-    crea('articolo-vero');
-    http.expectOne(`${API}/news/articolo-vero`).flush({
-      _id: 'articolo-vero',
-      title: 'Titolo di prova',
-      body: 'Corpo di prova.',
-      createdAt: '2026-08-19T10:00:00.000Z',
-      updatedAt: '2026-08-19T10:00:00.000Z',
-    });
-    fixture.detectChanges();
-
-    expect(responseInit.status).toBe(200);
-  });
-
-});
-
-describe('NewsDetailComponent — senza RESPONSE_INIT (browser e prerender)', () => {
+describe('NewsDetailComponent', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
@@ -104,10 +45,6 @@ describe('NewsDetailComponent — senza RESPONSE_INIT (browser e prerender)', ()
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: LOCALE_ID, useValue: 'it' },
-        // ⚠️ Nessun RESPONSE_INIT: e' il caso NORMALE, non un caso limite — il
-        // token esiste solo durante una resa lato server. Se l'iniezione nel
-        // componente perdesse l'`{ optional: true }`, l'app non partirebbe
-        // affatto nel browser, e lo si scoprirebbe in produzione.
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -115,7 +52,7 @@ describe('NewsDetailComponent — senza RESPONSE_INIT (browser e prerender)', ()
 
   afterEach(() => http.verify());
 
-  it('mostra la pagina «non trovata» senza sollevare eccezioni', () => {
+  it('mostra «News non trovata» quando l\'articolo non esiste', () => {
     const f = TestBed.createComponent(NewsDetailComponent);
     f.componentRef.setInput('id', 'id-inventato');
     f.detectChanges();
@@ -125,5 +62,23 @@ describe('NewsDetailComponent — senza RESPONSE_INIT (browser e prerender)', ()
     f.detectChanges();
 
     expect((f.nativeElement as HTMLElement).textContent).toContain('News non trovata');
+  });
+
+  it('mostra titolo e corpo quando l\'articolo esiste', () => {
+    const f = TestBed.createComponent(NewsDetailComponent);
+    f.componentRef.setInput('id', 'articolo-vero');
+    f.detectChanges();
+    http.expectOne(`${API}/news/articolo-vero`).flush({
+      _id: 'articolo-vero',
+      title: 'Titolo di prova',
+      body: 'Corpo di prova.',
+      createdAt: '2026-08-19T10:00:00.000Z',
+      updatedAt: '2026-08-19T10:00:00.000Z',
+    });
+    f.detectChanges();
+
+    const testo = (f.nativeElement as HTMLElement).textContent ?? '';
+    expect(testo).toContain('Titolo di prova');
+    expect(testo).not.toContain('News non trovata');
   });
 });

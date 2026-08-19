@@ -1,6 +1,23 @@
-// Le due liste che decidono chi passa dalle Cloudflare Pages Functions:
-// `app.routes.server.ts` (chi e' Prerender, chi Client, chi Server) e
-// `public/_routes.json` (quali URL invocano la Function).
+// Chi viene servito da una Cloudflare Pages Function: `public/_routes.json`
+// (quali URL invocano `functions/`) e la semantica dei suoi pattern.
+//
+// ⚠️ PERCHE' NON SI CHIAMA PIU' `server-routes.mjs`. Fino al 19/08/2026 questo
+// file leggeva ANCHE `app.routes.server.ts`, perche' per qualche ora la terza
+// categoria di rotte e' stata "RenderMode.Server": la Function delegava
+// all'handler SSR di Angular. Cloudflare ha rifiutato quella Function («Your
+// Worker exceeded the size limit of 3 MiB»: `dist/frontend/server` pesa 11 MB
+// non compressi / 2,84 MB gzip, e il pezzo dominante e' un chunk lazy che con
+// le notizie non c'entra niente), e la Function e' tornata a comporre l'HTML da
+// se'. Da allora `/news` e `news/:id` sono `RenderMode.Client` — il render mode
+// governa solo la navigazione INTERNA dello SPA — e l'unico fatto che dice chi
+// e' servito dall'edge e' l'`include` qui sotto. Il nome del file dice cosa il
+// file decide.
+//
+// ⚠️ E il pezzo che leggeva i render mode e' stato TOLTO, non tenuto "per
+// prudenza": nessuno lo usava piu', e finche' angular.json dice
+// `outputMode: "static"` una rotta `RenderMode.Server` non arriva nemmeno a
+// essere costruita — il builder si ferma con un errore di schema. Un controllo
+// che non puo' fallire occupa il posto di uno vero e fa sentire coperti.
 //
 // PERCHE' UN FILE A PARTE. E' lo stesso motivo di `redirects.mjs`: qui vive il
 // pezzo che DECIDE ("questa URL invoca la Function?"). Se sbaglia, il controllo
@@ -10,89 +27,6 @@
 // REGOLA D'ORO ereditata da route-inventory.mjs: se non capisce, LANCIA. Un
 // parser che salta in silenzio e' il modo in cui questa guardia si spegnerebbe
 // senza dirlo.
-
-import { readFileSync } from 'node:fs';
-import ts from 'typescript';
-
-// ---- app.routes.server.ts ----------------------------------------------
-
-/**
- * Legge `export const serverRoutes: ServerRoute[] = [...]` e restituisce
- * `[{ path, renderMode, line }]`. Guarda SOLO `path` e `renderMode`: tutto il
- * resto (`fallback`, `getPrerenderParams`) e' roba di Angular e non ci riguarda.
- *
- * Lancia se: non trova l'array, un elemento non e' un oggetto letterale, `path`
- * non e' un letterale stringa, `renderMode` manca o non e' nella forma
- * `RenderMode.<Nome>`.
- */
-export function readServerRoutes(file) {
-  const src = ts.createSourceFile(
-    file,
-    readFileSync(file, 'utf8'),
-    ts.ScriptTarget.Latest,
-    true,
-  );
-
-  let arr = null;
-  for (const stmt of src.statements) {
-    if (!ts.isVariableStatement(stmt)) continue;
-    for (const d of stmt.declarationList.declarations) {
-      if (ts.isIdentifier(d.name) && d.name.text === 'serverRoutes') arr = d.initializer;
-    }
-  }
-  if (!arr || !ts.isArrayLiteralExpression(arr))
-    throw new Error('app.routes.server.ts: non trovo `export const serverRoutes = [...]`');
-
-  const riga = (n) => n.getSourceFile().getLineAndCharacterOfPosition(n.getStart()).line + 1;
-  const out = [];
-
-  for (const el of arr.elements) {
-    if (!ts.isObjectLiteralExpression(el))
-      throw new Error(
-        `app.routes.server.ts: elemento non riconosciuto (spread? variabile?) a riga ${riga(el)}` +
-          ' — il controllo rotte si rifiuta di indovinare.',
-      );
-
-    let path = null;
-    let renderMode = null;
-    for (const p of el.properties) {
-      if (!ts.isPropertyAssignment(p) || !ts.isIdentifier(p.name)) continue;
-      if (p.name.text === 'path') {
-        if (!ts.isStringLiteral(p.initializer))
-          throw new Error(
-            `app.routes.server.ts: \`path\` non e' un letterale stringa a riga ${riga(p)}.`,
-          );
-        path = p.initializer.text;
-      }
-      if (p.name.text === 'renderMode') {
-        const init = p.initializer;
-        if (
-          !ts.isPropertyAccessExpression(init) ||
-          !ts.isIdentifier(init.expression) ||
-          init.expression.text !== 'RenderMode'
-        )
-          throw new Error(
-            `app.routes.server.ts: \`renderMode\` non e' nella forma \`RenderMode.<Nome>\`` +
-              ` a riga ${riga(p)}.`,
-          );
-        renderMode = init.name.text;
-      }
-    }
-    if (path === null)
-      throw new Error(`app.routes.server.ts: rotta senza \`path\` a riga ${riga(el)}`);
-    if (renderMode === null)
-      throw new Error(
-        `app.routes.server.ts: la rotta \`${path}\` non dichiara \`renderMode\` (riga ${riga(el)}).`,
-      );
-    out.push({ path, renderMode, line: riga(el) });
-  }
-  return out;
-}
-
-/** Solo le rotte rese dal server (`RenderMode.Server`), che e' chi ha bisogno della Function. */
-export function serverPaths(routes) {
-  return routes.filter((r) => r.renderMode === 'Server').map((r) => r.path);
-}
 
 // ---- public/_routes.json ------------------------------------------------
 
@@ -139,6 +73,12 @@ export function parseRoutesJson(text) {
  * include la barra. E' la stessa trappola gia' pagata con `/live/*` in
  * `_redirects` (li' pero' al contrario: quella regola catturava anche il
  * prefisso nudo). Due file, due semantiche opposte: non riusare il matcher.
+ *
+ * Conseguenza concreta oggi: l'indice `/news` e' composto all'edge come gli
+ * articoli, quindi va elencato A PARTE nell'include — e infatti
+ * `public/_routes.json` ha sia `/news` sia `/news/*`. Per lo stesso motivo la
+ * Function si chiama `[[path]].ts` (catch-all OPZIONALE): un `[path].ts`
+ * prenderebbe solo i figli e lascerebbe scoperto il prefisso nudo.
  */
 export function includeMatches(pattern, url) {
   if (pattern.endsWith('*')) return url.startsWith(pattern.slice(0, -1));
@@ -173,10 +113,10 @@ export function lintIncludes(patterns) {
 }
 
 /**
- * Una rotta di `app.routes.server.ts` (`news/:id`, `news`) -> le URL concrete
- * che Cloudflare deve saper instradare. Due forme, perche' l'SSG serve le
- * pagine con lo slash finale ma i link interni usano la forma nuda: se una
- * delle due non e' coperta, quella meta' del traffico non arriva alla Function.
+ * Una rotta di `app.routes.ts` (`news/:id`, `news`) -> le URL concrete che
+ * Cloudflare deve saper instradare. Due forme, perche' l'SSG serve le pagine
+ * con lo slash finale ma i link interni usano la forma nuda: se una delle due
+ * non e' coperta, quella meta' del traffico non arriva alla Function.
  */
 export function urlDiEsempio(routePath) {
   const nuda = '/' + routePath.split('/').map((s) => (s.startsWith(':') ? '__esempio__' : s)).join('/').replace(/^\/+/, '');

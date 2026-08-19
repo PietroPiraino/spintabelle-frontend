@@ -1,97 +1,32 @@
-// Test di scripts/lib/server-routes.mjs — `npm run test:scripts` (Node 24,
+// Test di scripts/lib/pages-functions.mjs — `npm run test:scripts` (Node 24,
 // zero dipendenze). Qui si testa il pezzo che DECIDE quali URL passano dalla
 // Cloudflare Pages Function: se il matcher sbaglia, `check-routes.mjs` passa
 // per il motivo sbagliato e non protegge piu' niente.
+//
+// ⚠️ Erede di `server-routes.test.mjs`: i test che leggevano i `renderMode` di
+// `app.routes.server.ts` sono spariti insieme al codice che li leggeva — la
+// terza categoria di rotte non e' piu' "RenderMode.Server" ma "servita da una
+// Pages Function", ed e' un fatto di `_routes.json`, non di Angular.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  readServerRoutes,
-  serverPaths,
   parseRoutesJson,
   includeMatches,
   findInclude,
   lintInclude,
   lintIncludes,
   urlDiEsempio,
-} from './server-routes.mjs';
+} from './pages-functions.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(QUI, '../..');
 
-/** Scrive un finto app.routes.server.ts e restituisce il percorso. */
-function fixtureTs(contenuto) {
-  const dir = mkdtempSync(join(tmpdir(), 'bff-server-routes-'));
-  const f = join(dir, 'app.routes.server.ts');
-  writeFileSync(f, contenuto, 'utf8');
-  return f;
-}
-
-const sorgente = (corpo) =>
-  `import { RenderMode, ServerRoute } from '@angular/ssr';\nexport const serverRoutes: ServerRoute[] = [\n${corpo}\n];\n`;
-
-// ---- readServerRoutes ---------------------------------------------------
-
-test('readServerRoutes: legge path e renderMode, ignorando il resto della rotta', () => {
-  const f = fixtureTs(
-    sorgente(
-      [
-        "  { path: '', renderMode: RenderMode.Prerender },",
-        "  { path: 'news', renderMode: RenderMode.Server },",
-        "  { path: 'news/:id', renderMode: RenderMode.Server, fallback: PrerenderFallback.None,",
-        '    async getPrerenderParams() { return []; } },',
-        "  { path: '**', renderMode: RenderMode.Client },",
-      ].join('\n'),
-    ),
-  );
-  const rotte = readServerRoutes(f);
-  assert.deepEqual(
-    rotte.map((r) => [r.path, r.renderMode]),
-    [
-      ['', 'Prerender'],
-      ['news', 'Server'],
-      ['news/:id', 'Server'],
-      ['**', 'Client'],
-    ],
-  );
-  assert.deepEqual(serverPaths(rotte), ['news', 'news/:id']);
-});
-
-test('readServerRoutes: `path` non letterale -> lancia (non tira a indovinare)', () => {
-  const f = fixtureTs(sorgente('  { path: ROTTA_NEWS, renderMode: RenderMode.Server },'));
-  assert.throws(() => readServerRoutes(f), /letterale stringa/);
-});
-
-test('readServerRoutes: `renderMode` calcolato -> lancia', () => {
-  const f = fixtureTs(sorgente("  { path: 'news', renderMode: modalita() },"));
-  assert.throws(() => readServerRoutes(f), /RenderMode\./);
-});
-
-test('readServerRoutes: rotta senza renderMode -> lancia', () => {
-  const f = fixtureTs(sorgente("  { path: 'news' },"));
-  assert.throws(() => readServerRoutes(f), /renderMode/);
-});
-
-test('readServerRoutes: spread nell array -> lancia invece di saltarlo', () => {
-  const f = fixtureTs(sorgente('  ...altreRotte,'));
-  assert.throws(() => readServerRoutes(f), /si rifiuta di indovinare/);
-});
-
-test('readServerRoutes: array assente -> lancia', () => {
-  const f = fixtureTs('export const altro = [];\n');
-  assert.throws(() => readServerRoutes(f), /serverRoutes/);
-});
-
-test('readServerRoutes: legge il file VERO del repo (il parser regge la forma reale)', () => {
-  const rotte = readServerRoutes(join(REPO, 'src/app/app.routes.server.ts'));
-  assert.ok(rotte.length >= 15, `trovate solo ${rotte.length} rotte server`);
-  assert.ok(rotte.some((r) => r.path === '' && r.renderMode === 'Prerender'));
-  assert.ok(rotte.some((r) => r.path === '**' && r.renderMode === 'Client'));
-});
+const includeVeri = () =>
+  parseRoutesJson(readFileSync(join(REPO, 'public/_routes.json'), 'utf8')).include;
 
 // ---- parseRoutesJson ----------------------------------------------------
 
@@ -100,8 +35,8 @@ test('parseRoutesJson: forma buona', () => {
   assert.deepEqual(r, { version: 1, include: ['/news/*'], exclude: [] });
 });
 
-test('parseRoutesJson: il file vero del repo e\' valido e non e\' una catch-all', () => {
-  const { include } = parseRoutesJson(readFileSync(join(REPO, 'public/_routes.json'), 'utf8'));
+test("parseRoutesJson: il file vero del repo e' valido e non e' una catch-all", () => {
+  const include = includeVeri();
   assert.ok(include.length > 0);
   assert.deepEqual(lintIncludes(include), []);
 });
@@ -133,10 +68,11 @@ test('parseRoutesJson: JSON rotto -> lancia', () => {
 // ---- includeMatches: la semantica che conta ----------------------------
 
 test('includeMatches: `/news/*` NON copre il prefisso nudo `/news`', () => {
-  // ⚠️ E' l'invariante di tutta la tappa 1: l'indice /news resta una pagina
-  // prerenderizzata e non deve passare dalla Function. Al contrario di
-  // `_redirects`, dove `/live/*` catturava ANCHE `/live` — due file, due
-  // semantiche opposte.
+  // ⚠️ L'INVARIANTE PIU' IMPORTANTE DI QUESTO FILE. L'indice /news lo compone
+  // la Function come gli articoli: se lo si desse per coperto da `/news/*`,
+  // Cloudflare non la chiamerebbe e cercherebbe un asset che non esiste.
+  // Al contrario di `_redirects`, dove `/live/*` catturava ANCHE `/live` — due
+  // file, due semantiche opposte.
   assert.equal(includeMatches('/news/*', '/news'), false);
   assert.equal(includeMatches('/news/*', '/news/'), true);
   assert.equal(includeMatches('/news/*', '/news/abc'), true);
@@ -144,7 +80,7 @@ test('includeMatches: `/news/*` NON copre il prefisso nudo `/news`', () => {
   assert.equal(includeMatches('/news/*', '/newsletter'), false);
 });
 
-test('includeMatches: senza `*` e\' match esatto', () => {
+test("includeMatches: senza `*` e' match esatto", () => {
   assert.equal(includeMatches('/news', '/news'), true);
   assert.equal(includeMatches('/news', '/news/'), false);
   assert.equal(includeMatches('/news', '/news/abc'), false);
@@ -160,9 +96,33 @@ test('findInclude: restituisce il pattern che cattura, o null', () => {
   assert.equal(findInclude(['/news/*'], '/news'), null);
 });
 
+// ---- Il file vero, misurato sulle URL vere ------------------------------
+
+test("public/_routes.json copre TUTTE E QUATTRO le forme delle news (indice e articolo, nuda e con lo slash)", () => {
+  const include = includeVeri();
+  const attese = [
+    ...urlDiEsempio('news'), //      /news   e /news/
+    ...urlDiEsempio('news/:id'), //  /news/x e /news/x/
+  ];
+  for (const url of attese)
+    assert.ok(findInclude(include, url), `${url} non e' coperta da nessun include: ${include.join(' ')}`);
+});
+
+test("public/_routes.json elenca `/news` A PARTE: togliendolo, il prefisso nudo resta scoperto", () => {
+  // La prova che l'invariante qui sopra non e' teorica ma e' quella che tiene
+  // in piedi la configurazione VERA: basta cancellare una riga dall'include e
+  // l'indice smette di arrivare alla Function, mentre gli articoli continuano
+  // a funzionare benissimo — il difetto piu' facile da non vedere provando a
+  // mano, perche' si prova quasi sempre un articolo.
+  const senzaIndice = includeVeri().filter((p) => p !== '/news');
+  assert.ok(senzaIndice.includes('/news/*'), 'atteso `/news/*` nel file vero');
+  assert.equal(findInclude(senzaIndice, '/news'), null);
+  assert.ok(findInclude(senzaIndice, '/news/abc'));
+});
+
 // ---- lintInclude --------------------------------------------------------
 
-test('lintInclude: la catch-all e\' vietata anche qui (terza incarnazione della regola)', () => {
+test("lintInclude: la catch-all e' vietata anche qui (terza incarnazione della regola)", () => {
   assert.match(lintInclude('/*'), /catch-all/);
   assert.match(lintInclude('/**'), /catch-all/);
   assert.equal(lintInclude('/news/*'), null);

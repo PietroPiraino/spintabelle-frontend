@@ -15,13 +15,11 @@ import { join, resolve } from 'node:path';
 import { readRoutes } from './lib/route-inventory.mjs';
 import { parseRedirects, findMatch, lintRules, sampleUrl, routeCoversUrl } from './lib/redirects.mjs';
 import {
-  readServerRoutes,
-  serverPaths,
   parseRoutesJson,
   findInclude,
   lintIncludes,
   urlDiEsempio,
-} from './lib/server-routes.mjs';
+} from './lib/pages-functions.mjs';
 
 // ⚠️ Il default e' `process.cwd()` e NON un percorso Windows assoluto. Con
 // `'C:/Projects/poker-ranges/frontend'` questa guardia era MUTA su Cloudflare:
@@ -81,23 +79,67 @@ try {
 
 // LA TERZA CATEGORIA. Fino al 19/08/2026 una rotta era Prerender (un file in
 // dist) oppure Client (una regola in _redirects), e questo controllo conosceva
-// solo quelle due. Da oggi ce n'e' una terza — `RenderMode.Server`, resa a ogni
-// richiesta dalla Pages Function — e va letta QUI, prima della sezione 4:
-// altrimenti `/news`, che non e' piu' un file e non ha (giustamente) alcuna
-// regola in _redirects, verrebbe segnalata come "rotta client senza regola" e
-// il primo build dopo la migrazione fallirebbe con la diagnosi sbagliata.
-let rotteServer = [];
-try {
-  rotteServer = serverPaths(readServerRoutes(join(ROOT, 'src/app/app.routes.server.ts')));
-} catch (e) {
-  nonCapisco(`app.routes.server.ts — ${e.message}`);
-}
-const eServer = (rotta) => rotteServer.includes(rotta);
+// solo quelle due. Da oggi ce n'e' una terza: SERVITA DA UNA PAGES FUNCTION.
+//
+// ⚠️ E SI RICONOSCE DA `public/_routes.json` + `functions/`, NON dal
+// `renderMode` di Angular. Per qualche ora le due cose hanno coinciso — `/news`
+// e `news/:id` erano `RenderMode.Server` e la Function delegava all'handler SSR
+// — poi Cloudflare ha rifiutato quella Function («Your Worker exceeded the size
+// limit of 3 MiB»: 11 MB di bundle) e la Function e' tornata a comporre l'HTML
+// da se'. Da allora quelle due rotte sono `RenderMode.Client` in Angular (il
+// render mode governa solo la navigazione INTERNA dello SPA) mentre il PRIMO
+// HTML lo scrive la Function: l'unica cosa che dice chi passa di li' e'
+// l'`include` di `_routes.json`, ed e' quella che questo file legge — nella
+// sezione 4, tramite `formeDallaFunction`. Va letta PRIMA di pretendere una
+// regola in _redirects, altrimenti `/news` — che non e' un file e non ha
+// (giustamente) alcuna regola li' — verrebbe segnalata come "rotta client senza
+// regola" e il primo build dopo la migrazione fallirebbe con la diagnosi
+// sbagliata.
+//
+// ⚠️ Il pezzo che leggeva i `renderMode` (`app.routes.server.ts`) e' stato TOLTO
+// insieme alla categoria che serviva a riconoscere, non tenuto "per il giorno
+// che tornasse": finche' angular.json dice `outputMode: "static"` una rotta
+// `RenderMode.Server` non arriva nemmeno a essere costruita — il builder si
+// ferma con un errore di schema — quindi era un controllo che non poteva piu'
+// fallire, e uno cosi' occupa il posto di uno vero. E se un domani si tornasse a
+// `outputMode: "server"`, quel fallimento NON sarebbe silenzioso: e' Cloudflare
+// a rifiutare la pubblicazione della Function, a build finito.
+
 try {
   prerender = Object.keys(JSON.parse(readFileSync(manifest, 'utf8')).routes);
 } catch (e) {
   nonCapisco(`prerendered-routes.json illeggibile (${e.message})`);
 }
+
+const DIR_FUNCTIONS = join(ROOT, 'functions');
+const SRC_ROUTES_JSON = join(ROOT, 'public/_routes.json');
+const DIST_ROUTES_JSON = join(BROWSER, '_routes.json');
+const haFunctions = existsSync(DIR_FUNCTIONS);
+const haRoutesJson = existsSync(SRC_ROUTES_JSON);
+
+let routesJson = null;
+if (haRoutesJson) {
+  try {
+    routesJson = parseRoutesJson(readFileSync(SRC_ROUTES_JSON, 'utf8'));
+  } catch (e) {
+    nonCapisco(`public/_routes.json — ${e.message}`);
+  }
+}
+
+/**
+ * Le URL di esempio di una rotta che finiscono davvero dentro la Function.
+ * ⚠️ Restituisce le due forme SEPARATE (nuda e con lo slash) perche' coprirne
+ * una sola non e' "quasi coperta": e' meta' del traffico che prende un'altra
+ * strada — la shell vuota o un asset che non c'e'.
+ */
+const formeDallaFunction = (rotta) => {
+  if (!routesJson) return { dentro: [], fuori: [] };
+  const dentro = [];
+  const fuori = [];
+  for (const url of urlDiEsempio(rotta))
+    (findInclude(routesJson.include, url) ? dentro : fuori).push(url);
+  return { dentro, fuori };
+};
 
 const fileRedirects = join(BROWSER, '_redirects');
 if (!existsSync(fileRedirects))
@@ -147,22 +189,40 @@ for (const url of prerender) {
 // catturerebbe anche le news prerenderizzate e ne perderebbe i meta — cioe'
 // il motivo per cui esistono.
 //
-// AGGIORNAMENTO (Fase 1 tappa 2, 19/08/2026): quel buco NON esiste piu', ed e'
-// morto per costruzione, non per una toppa. `/news` e `news/:id` sono
-// `RenderMode.Server`: non c'e' piu' un manifest che copre "solo gli id
-// esistenti al build", perche' non c'e' piu' nessun build di mezzo — la pagina
-// la rende la Pages Function `functions/news/[[path]].ts` a ogni richiesta.
-// Le rotte Server vengono saltate qui e controllate nella sezione 4-bis contro
+// AGGIORNAMENTO (Fase 1, 19/08/2026): quel buco NON esiste piu', ed e' morto per
+// costruzione, non per una toppa. `/news` e `news/:id` non sono piu'
+// prerenderizzate: non c'e' piu' un manifest che copre "solo gli id esistenti al
+// build", perche' non c'e' piu' nessun build di mezzo — la pagina la compone la
+// Pages Function `functions/news/[[path]].ts` a ogni richiesta.
+// Quelle rotte vengono saltate qui e controllate nella sezione 4-bis contro
 // `public/_routes.json`. Quello che questa guardia continua a NON poter vedere
 // e' il CORPO della risposta dell'edge (non e' un file in dist): lo verifica dal
 // vivo `scripts/check-news-live.mjs`, dopo il deploy.
 const parametricheCoperteAMeta = [];
+const dallaFunction = [];
 
 for (const rotta of rotte) {
   const url = sampleUrl(rotta);
-  // Terza categoria: non e' ne' un file ne' una riscrittura. Il suo controllo
-  // e' altrove (4-bis), qui sarebbe solo un falso positivo.
-  if (eServer(rotta)) continue;
+  // Terza categoria: ne' un file in dist ne' una riscrittura di _redirects. Se
+  // un `include` di _routes.json la copre, la pagina la compone la Function —
+  // e pretendere per lei una regola in _redirects sarebbe un falso positivo.
+  // Peggio: quella regola la SPEGNEREBBE, ed e' il controllo (d) qui sotto.
+  const { dentro, fuori } = formeDallaFunction(rotta);
+  if (dentro.length) {
+    dallaFunction.push(rotta);
+    // Coperta a meta': la forma rimasta fuori NON arriva alla Function e
+    // ricadrebbe sugli asset (404) o sulla shell vuota, mentre l'altra funziona
+    // benissimo — il difetto piu' facile da non vedere, perche' provando a mano
+    // si prova quasi sempre una forma sola.
+    for (const mancante of fuori)
+      nota(
+        `DERIVA: \`/${rotta}\` e' servita dalla Pages Function, ma \`${mancante}\` non e' ` +
+          "in nessun `include` di public/_routes.json. ⚠️ `/news/*` NON copre `/news`: " +
+          'il prefisso letterale include la barra (il contrario di _redirects). ' +
+          'Elenca a parte la forma che manca.',
+      );
+    continue;
+  }
   const prerenderizzata = prerender.some((p) => routeCoversUrl(rotta, p));
   if (prerenderizzata) {
     // Se e' parametrica, il manifest copre solo gli id esistenti al build.
@@ -186,36 +246,31 @@ for (const rotta of rotte) {
 // `public/_routes.json` decide QUALI URL vengono servite dalla Pages Function
 // (`functions/`) invece che dagli asset. E' l'SSR all'edge per gli articoli
 // (PLAN-news-redazione.md, Fase 1). La semantica dei pattern vive in
-// scripts/lib/server-routes.mjs, coperta da `npm run test:scripts`.
+// scripts/lib/pages-functions.mjs, coperta da `npm run test:scripts`.
 //
 // ⚠️ `/news/*` NON copre `/news`: il prefisso letterale include la barra. E' il
 // contrario di `_redirects`, dove `/live/*` catturava ANCHE `/live`. Due file,
-// due semantiche opposte, e qui la conseguenza e' concreta: `/news` (l'indice,
-// anch'esso RenderMode.Server dal 19/08/2026) va elencato A PARTE nell'include,
-// altrimenti Cloudflare non chiama la Function e cerca un asset che non esiste.
-// Lo stesso vale al contrario per il nome del file della Function, che infatti
-// e' `[[path]].ts` (catch-all OPZIONALE: prende il prefisso nudo e i figli).
+// due semantiche opposte, e qui la conseguenza e' concreta: `/news` (l'indice)
+// va elencato A PARTE nell'include, altrimenti Cloudflare non chiama la Function
+// e cerca un asset che non esiste. Lo stesso vale al contrario per il nome del
+// file della Function, che infatti e' `[[path]].ts` (catch-all OPZIONALE: prende
+// il prefisso nudo e i figli).
 
 // Pattern di `include` che possono legittimamente sovrapporsi alle pagine
-// prerenderizzate. ⚠️ OGGI E' VUOTO, ed e' la fotografia giusta della tappa 2:
-// le news non sono piu' prerenderizzate, quindi nessun include si sovrappone a
-// niente e la Function non ha piu' motivo di essere asset-first (non c'e'
-// nessun asset di news da preferire). Nella tappa 1 qui c'era `/news/*`, con
-// una premessa precisa: quella Function chiamava `ctx.next()` per prima, quindi
-// su un articolo gia' prerenderizzato vinceva il suo HTML statico coi suoi
-// meta. Senza quella premessa, un include che copre una pagina prerenderizzata
-// le fa perdere meta/OG/canonical esattamente come una regola sbagliata in
-// `_redirects` — per questo l'eccezione va dichiarata qui, una per una, col suo
-// motivo, e non ottenuta allargando il controllo.
+// prerenderizzate. ⚠️ OGGI E' VUOTO, ed e' la fotografia giusta: le news non
+// sono piu' prerenderizzate, quindi nessun include si sovrappone a niente e la
+// Function non ha motivo di essere asset-first (non c'e' nessun asset di news da
+// preferire). Una prima stesura prevedeva qui `/news/*`, con una premessa
+// precisa: quella Function chiamava `ctx.next()` per prima, quindi su un
+// articolo gia' prerenderizzato vinceva il suo HTML statico coi suoi meta. Senza
+// quella premessa, un include che copre una pagina prerenderizzata le fa perdere
+// meta/OG/canonical esattamente come una regola sbagliata in `_redirects` — per
+// questo l'eccezione va dichiarata qui, una per una, col suo motivo, e non
+// ottenuta allargando il controllo.
 const ASSET_FIRST = new Set();
 
-const DIR_FUNCTIONS = join(ROOT, 'functions');
-const SRC_ROUTES_JSON = join(ROOT, 'public/_routes.json');
-const DIST_ROUTES_JSON = join(BROWSER, '_routes.json');
-
 // (e) `functions/` <-> `_routes.json`: o ci sono entrambi, o nessuno dei due.
-const haFunctions = existsSync(DIR_FUNCTIONS);
-const haRoutesJson = existsSync(SRC_ROUTES_JSON);
+// (I tre percorsi e il parsing stanno nella sezione 1: servono gia' alla 4.)
 if (haFunctions && !haRoutesJson)
   nota(
     'DERIVA: c\'e\' `functions/` ma manca `public/_routes.json`. Senza, Cloudflare ' +
@@ -241,13 +296,7 @@ for (const w of [join(ROOT, 'public/_worker.js'), join(BROWSER, '_worker.js')])
         '+ public/_routes.json.',
   );
 
-let routesJson = null;
-if (haRoutesJson) {
-  try {
-    routesJson = parseRoutesJson(readFileSync(SRC_ROUTES_JSON, 'utf8'));
-  } catch (e) {
-    nonCapisco(`public/_routes.json — ${e.message}`);
-  }
+if (routesJson) {
   if (!existsSync(DIST_ROUTES_JSON))
     nota(
       'DERIVA: `public/_routes.json` non e\' finito in dist. Cloudflare lo legge ' +
@@ -275,39 +324,39 @@ if (haRoutesJson) {
   }
 }
 
-// (a) ogni rotta `RenderMode.Server` dev'essere raggiunta dalla Function.
-// (`rotteServer` e' letta nella sezione 1: serve gia' alla sezione 4.)
-for (const rotta of rotteServer) {
-  for (const url of urlDiEsempio(rotta)) {
-    if (routesJson && findInclude(routesJson.include, url)) continue;
-    nota(
-      `DERIVA: la rotta \`${rotta}\` e' RenderMode.Server ma \`${url}\` non e' in ` +
-        'nessun `include` di public/_routes.json -> Cloudflare non chiama la ' +
-        'Function e serve un asset che non esiste (404). ⚠️ `/news/*` NON copre ' +
-        '`/news`: se manca il prefisso nudo, elencalo a parte.',
-    );
-  }
-}
+// (a) LA COPERTURA — dov'e' finita, e cosa resta scoperto.
+// Che ogni rotta servita dalla Function sia raggiunta in ENTRAMBE le forme
+// (nuda e con lo slash) lo verifica la sezione 4, che legge `_routes.json` per
+// tutte le rotte di app.routes.ts. Qui c'era il ciclo gemello per le rotte
+// `RenderMode.Server`: e' sparito con loro, perche' due cicli sulla stessa
+// invariante producono due messaggi per un difetto solo.
+//
+// ⚠️ Quello che NESSUNO verifica e' la direzione opposta: un `include` che punta
+// a un percorso che in `app.routes.ts` non esiste (un refuso, una pagina
+// cancellata) resta li' e manda alla Function URL che l'app non conosce. Non e'
+// grave — la Function risponde 404 vero, cioe' quello che serve — ma non
+// pretendere da questo file una garanzia che non da'.
 
-// (d) e una rotta Server NON deve avere una regola in `_redirects`.
+// (d) e una rotta servita dalla Function NON deve avere una regola in
+// `_redirects`.
 //
 // Non e' pignoleria: le regole di `_redirects` sono valutate PRIMA di tutto,
 // Function comprese. Una riga `/news  /index.csr  200` rimasta li' non
-// "convive" con l'SSR — lo SPEGNE, e la pagina torna a essere la shell vuota
-// col canonical della home, mentre la Function esiste, e' configurata, e non
-// viene mai chiamata. E' il modo piu' silenzioso che questa migrazione ha di
-// fallire: nessun errore, nessun 404, solo una pagina vuota che sembra un
-// problema di Angular.
-for (const rotta of rotteServer) {
+// "convive" con la resa all'edge — la SPEGNE, e la pagina torna a essere la
+// shell vuota col canonical della home, mentre la Function esiste, e'
+// configurata, e non viene mai chiamata. E' il modo piu' silenzioso che questa
+// migrazione ha di fallire: nessun errore, nessun 404, solo una pagina vuota che
+// sembra un problema di Angular.
+for (const rotta of dallaFunction) {
   for (const url of urlDiEsempio(rotta)) {
     const m = findMatch(regole ?? [], url);
     if (!m) continue;
     nota(
-      `DERIVA GRAVE: la rotta \`${rotta}\` e' RenderMode.Server, ma la regola di ` +
-        `riga ${m.line} di public/_redirects (\`${m.from}\`) cattura \`${url}\`. ` +
-        'Le regole precedono le Function: quella riga serve la shell vuota al ' +
-        "posto dell'HTML reso all'edge -> niente contenuto, niente meta, " +
-        'canonical della home. Togli la regola: le rotte Server non ne vogliono.',
+      `DERIVA GRAVE: la rotta \`${rotta}\` e' servita dalla Pages Function, ma la ` +
+        `regola di riga ${m.line} di public/_redirects (\`${m.from}\`) cattura ` +
+        `\`${url}\`. Le regole precedono le Function: quella riga serve la shell ` +
+        "vuota al posto dell'HTML composto all'edge -> niente contenuto, niente " +
+        'meta, canonical della home. Togli la regola: queste rotte non ne vogliono.',
     );
   }
 }
@@ -328,7 +377,7 @@ console.log(
   `Controllo rotte: ${rotte.length} rotte, ${prerender.length} prerenderizzate, ` +
     `${regole?.length ?? 0} regole _redirects, ` +
     `${routesJson ? routesJson.include.length : 0} include in _routes.json ` +
-    `(${rotteServer.length} rotte RenderMode.Server).`,
+    `(${dallaFunction.length} rotte servite dalla Pages Function).`,
 );
 if (errori.length) {
   console.error(`\n❌ ${errori.length} problema/i:\n`);
@@ -341,20 +390,21 @@ console.log(
   '✅ ogni rotta client ha la sua regola, nessuna prerender e\' catturata' +
     (routesJson
       ? ', _routes.json senza catch-all e senza sovrapposizioni non dichiarate,' +
-        ' ogni rotta Server e\' raggiunta dalla Function e nessuna e\' scavalcata' +
-        ' da _redirects.'
+        ' ogni rotta della Function e\' raggiunta in entrambe le forme (nuda e con' +
+        ' lo slash) e nessuna e\' scavalcata da _redirects.'
       : '.'),
 );
 
-// ⚠️ E il limite piu' importante di questa guardia, dopo la migrazione all'SSR:
-// delle rotte Server verifica l'INSTRADAMENTO, non il CORPO. Che `/news/<id>`
-// arrivi alla Function lo sa; che quella risposta abbia un <h1>, il canonical
-// giusto e nessun `noindex` non puo' saperlo — non e' un file in dist. Lo
-// verifica dal vivo, dopo il deploy, `node scripts/check-news-live.mjs`.
-if (rotteServer.length)
+// ⚠️ E il limite piu' importante di questa guardia, da quando le news si
+// compongono all'edge: di quelle rotte verifica l'INSTRADAMENTO, non il CORPO.
+// Che `/news/<id>` arrivi alla Function lo sa; che quella risposta abbia un
+// <h1>, il canonical giusto e nessun `noindex` non puo' saperlo — non e' un file
+// in dist. Lo verifica dal vivo, dopo il deploy,
+// `node scripts/check-news-live.mjs`.
+if (dallaFunction.length)
   console.log(
-    `\n⚠️  Non verificato: il contenuto di ${rotteServer.map((r) => '`/' + r + '`').join(', ')}` +
-      ' (rese all\'edge, non sono file in dist).\n' +
+    `\n⚠️  Non verificato: il contenuto di ${dallaFunction.map((r) => '`/' + r + '`').join(', ')}` +
+      ' (composte all\'edge, non sono file in dist).\n' +
       "    Dopo il deploy: 'node scripts/check-news-live.mjs'.",
   );
 
@@ -370,5 +420,6 @@ if (parametricheCoperteAMeta.length)
       `    (features/guides/guides.data.ts), quindi un valore nuovo E' un deploy.\n` +
       `    ⚠️ Se un domani una rotta parametrica prendesse i valori dall'API — com'era\n` +
       `    news/:id fino al 19/08/2026 — questa riga smette di essere innocua: quella\n` +
-      `    rotta va resa all'edge (RenderMode.Server + include in _routes.json).`,
+      `    rotta va composta all'edge (una Pages Function + il suo include in\n` +
+      `    _routes.json), come si e' fatto per le news.`,
   );

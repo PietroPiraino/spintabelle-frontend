@@ -10,8 +10,9 @@
 //
 // ⚠️ QUI DENTRO NON C'E' PIU' NESSUNA NEWS, ed e' voluto (19/08/2026). Prima
 // c'era un fetch all'API che DECORAVA con <lastmod> gli articoli presenti nel
-// manifest; da quando `/news` e `news/:id` sono `RenderMode.Server`, il
-// manifest non li contiene piu' — non c'e' niente da decorare e non c'e' piu'
+// manifest; da quando `/news` e `news/:id` si compongono all'edge (la Pages
+// Function `functions/news/[[path]].ts`, non piu' il prerender) il manifest non
+// li contiene piu' — non c'e' niente da decorare e non c'e' piu'
 // alcuna ragione per cui questo script parli col backend. Gli articoli li
 // pubblicano le due sitemap generate all'edge (`functions/news-sitemap.xml.ts`
 // e `functions/sitemap-articoli.xml.ts`, dichiarate in public/robots.txt),

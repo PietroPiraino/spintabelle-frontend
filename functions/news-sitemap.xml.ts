@@ -4,9 +4,9 @@
  * PERCHE' UNA FUNCTION E NON `gen-sitemap.mjs`. La sitemap principale la DERIVA
  * il build da `prerendered-routes.json`: e' la sua forza (una pagina pubblica
  * nuova ci entra da sola) ed e' esattamente cio' che la rende inservibile per
- * le news, che si pubblicano dall'admin SENZA deploy. Dopo la migrazione a
- * `RenderMode.Server` gli articoli non sono piu' nel manifest e non sono piu'
- * un file: l'unico posto che puo' elencarli aggiornati e' l'edge.
+ * le news, che si pubblicano dall'admin SENZA deploy. Da quando gli articoli
+ * si compongono all'edge non sono piu' nel manifest e non sono piu' un file:
+ * l'unico posto che puo' elencarli aggiornati e' l'edge.
  *
  * ⚠️ SOLO LE ULTIME 48 ORE. Google News ignora gli articoli piu' vecchi: tenerli
  * qui gonfia il file e basta. L'archivio completo e' `/sitemap-articoli.xml`.

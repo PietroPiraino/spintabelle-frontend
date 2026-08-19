@@ -3,8 +3,8 @@
  * sitemap standard, generato all'edge.
  *
  * ⚠️ LA PRIMA <loc> E' L'INDICE `/news/` STESSO, e non e' una gentilezza: e' il
- * motivo per cui questo file e' obbligatorio e non un di piu'. Dalla migrazione
- * a `RenderMode.Server` l'indice delle news NON e' piu' in
+ * motivo per cui questo file e' obbligatorio e non un di piu'. Da quando la
+ * sezione news si compone all'edge, l'indice NON e' piu' in
  * `prerendered-routes.json`, e `gen-sitemap.mjs` DERIVA la sitemap principale da
  * quel manifest: senza questa riga `/news` non comparirebbe in NESSUNA sitemap
  * del sito, in silenzio, e nessuna guardia potrebbe accorgersene (misurano
