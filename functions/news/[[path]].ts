@@ -35,6 +35,17 @@
  * irriconoscibile -> shell CSR a 200, che monta la SPA e carica la pagina da
  * sola.
  *
+ * ⚠️ UN SOLO INDIRIZZO BUONO PER OGNI ARTICOLO. L'API apre tre porte sulla
+ * stessa pagina — slug corrente, slug storico, ObjectId — e fino al 19/08/2026
+ * rispondevano tutte e tre 200: tre URL per un contenuto solo, con lo stesso
+ * canonical. Ora le due porte vecchie rispondono **301** verso `/news/<slug>/`,
+ * la stessa forma che il canonical dichiara. Con loro cade il quarto doppione,
+ * la forma senza slash finale. Misurato in produzione lo stesso giorno:
+ * `/news/<slug>` rispondeva 200 con la stessa identica pagina, perche' quando una
+ * richiesta la prende una Function Cloudflare non normalizza un bel niente.
+ * La regola e' pura e sta in `render-news.mjs` (`redirezione`); qui c'e' solo la
+ * busta.
+ *
  * ⚠️ E MAI IN CACHE UN 404. La chiave della cache di bordo e' l'URL: un articolo
  * pubblicato un minuto dopo resterebbe coperto dal proprio 404 per un minuto.
  * In cache ci va solo il 200.
@@ -45,7 +56,7 @@
 // (nessun tsconfig del repo include `functions/`), quindi qui la rete di
 // sicurezza sono i test di `scripts/lib/news-render.test.mjs`.
 // @ts-ignore: modulo .mjs senza dichiarazioni di tipo.
-import { escapeHtml, renderArticolo, renderIndice } from '../lib/render-news.mjs';
+import { escapeHtml, redirezione, renderArticolo, renderIndice } from '../lib/render-news.mjs';
 
 /** Stessa origine di `environments/environment.prod.ts`. */
 const API = 'https://api.bestfishforever.it';
@@ -60,6 +71,12 @@ const PAGINA_404 = '/404.html';
 
 /** Vita della copia di bordo. Nessuna purge: vedi il commento su `caches`. */
 const S_MAXAGE = 60;
+
+/**
+ * Vita di bordo di un 301. Volutamente la stessa delle pagine, e volutamente
+ * NON di piu': vedi `rispostaRedirect`.
+ */
+const S_MAXAGE_301 = 60;
 
 /** Quanti articoli mostra l'indice: la prima pagina di `news-list.component.ts`. */
 const PER_PAGINA = 9;
@@ -89,14 +106,19 @@ interface CacheDefault {
 
 declare const caches: { default: CacheDefault };
 
-/** Cosa e' uscito dal render: una pagina, un "non esiste", o "ripiega". */
-type Esito = { tipo: 'html'; html: string } | { tipo: 'nonTrovata' } | { tipo: 'ripiego' };
+/** Cosa e' uscito dal render: una pagina, un salto, un "non esiste", o "ripiega". */
+type Esito =
+  | { tipo: 'html'; html: string }
+  | { tipo: 'redirect'; a: string }
+  | { tipo: 'nonTrovata' }
+  | { tipo: 'ripiego' };
 
 // ---- Handler -----------------------------------------------------------
 
 export async function onRequestGet(ctx: EdgeContext): Promise<Response> {
-  // Cache di bordo. Chiave = URL richiesta, quindi `/news/x` e `/news/x/` sono
-  // due voci: accettato, il costo e' una resa in piu' al minuto.
+  // Cache di bordo. Chiave = URL richiesta, quindi `/news/x` e `/news/x/` restano
+  // due voci — ma da quando la prima risponde 301 verso la seconda quelle due
+  // voci sono un salto e una pagina, non due copie della stessa pagina.
   // ⚠️ Nessuna purge: `cache.delete()` pulisce UN SOLO colo, quindi
   // prometterebbe un ritiro immediato che non avviene. Il ritiro immediato,
   // quando servira', e' una Cache Rule di zona + purge del singolo URL (azione
@@ -116,6 +138,14 @@ export async function onRequestGet(ctx: EdgeContext): Promise<Response> {
 
   if (esito.tipo === 'nonTrovata') return await paginaNonTrovata(ctx);
   if (esito.tipo === 'ripiego') return await shellFallback(ctx);
+
+  if (esito.tipo === 'redirect') {
+    const salto = rispostaRedirect(esito.a);
+    // In cache come il 200, stessa chiave e stessa vita breve: un indirizzo
+    // vecchio molto condiviso non deve interrogare l'API a ogni colpo.
+    ctx.waitUntil(caches.default.put(chiave, salto.clone()).catch(() => undefined));
+    return salto;
+  }
 
   const out = rispostaHtml(esito.html);
   // ⚠️ `.catch()`: la Cache API rifiuta certe risposte (per esempio un `no-store`)
@@ -152,7 +182,13 @@ async function rendi(ctx: EdgeContext): Promise<Esito> {
   const pulito = pathname.replace(/\/+$/, '');
   const segmenti = pulito.split('/').filter(Boolean); // ['news'] | ['news', chiave]
 
-  if (segmenti.length === 1) return await rendiIndice(ctx);
+  // ⚠️ Anche l'indice ha UNA forma buona. `/news` e `/news/` rispondevano
+  // tutte e due 200 con lo stesso HTML e lo stesso canonical: un doppione, cioe'
+  // lo stesso difetto degli indirizzi vecchi.
+  if (segmenti.length === 1) {
+    const salto = redirezione(pathname, '');
+    return salto ? { tipo: 'redirect', a: salto } : await rendiIndice(ctx);
+  }
   if (segmenti.length !== 2) return { tipo: 'nonTrovata' };
 
   // ⚠️ `decodeURIComponent` LANCIA su una percentuale malformata (`/news/%zz`),
@@ -165,10 +201,10 @@ async function rendi(ctx: EdgeContext): Promise<Esito> {
   } catch {
     return { tipo: 'nonTrovata' };
   }
-  return await rendiArticolo(ctx, chiave);
+  return await rendiArticolo(ctx, chiave, pathname);
 }
 
-async function rendiArticolo(ctx: EdgeContext, chiave: string): Promise<Esito> {
+async function rendiArticolo(ctx: EdgeContext, chiave: string, pathname: string): Promise<Esito> {
   if (!chiave) return { tipo: 'nonTrovata' };
   const res = await fetch(`${API}/news/${encodeURIComponent(chiave)}`, {
     headers: { accept: 'application/json' },
@@ -179,6 +215,19 @@ async function rendiArticolo(ctx: EdgeContext, chiave: string): Promise<Esito> {
   if (res.status === 404) return { tipo: 'nonTrovata' };
   if (!res.ok) return { tipo: 'ripiego' };
   const articolo = await res.json();
+
+  // ⚠️ IL CONFRONTO SI FA DOPO IL FETCH, e non prima: e' l'API a sapere qual e'
+  // lo slug corrente (risolve per slug, per slug storico e per ObjectId). Farlo
+  // dopo costa zero e vale due cose che prima non si potevano avere insieme: un
+  // ObjectId senza slash finale arriva a destinazione in UN salto solo, e una
+  // chiave che non esiste riceve il suo 404 invece di un 301 verso il nulla.
+  // ⚠️ Slug corrente assente o vuoto -> il bersaglio resta la chiave richiesta,
+  // cioe' non si reindirizza da nessuna parte e la pagina si rende. Costruire un
+  // bersaglio su una stringa vuota vorrebbe dire spedire l'articolo sull'indice.
+  const slugCorrente = typeof articolo?.slug === 'string' ? articolo.slug.trim() : '';
+  const salto = redirezione(pathname, slugCorrente || chiave);
+  if (salto) return { tipo: 'redirect', a: salto };
+
   return { tipo: 'html', html: renderArticolo(await scheletro(ctx), articolo, chiave) };
 }
 
@@ -232,6 +281,41 @@ function rispostaHtml(html: string): Response {
       'cache-control': `public, max-age=0, s-maxage=${S_MAXAGE}`,
       'x-content-type-options': 'nosniff',
       'x-bff-news': 'edge',
+    },
+  });
+}
+
+/**
+ * Il 301 verso l'unico indirizzo buono.
+ *
+ * ⚠️ `max-age=0` PER IL BROWSER, e non e' prudenza generica: un 301 e'
+ * "permanente" e senza una direttiva esplicita un browser se lo tiene per un
+ * tempo suo, indefinito. Un bersaglio sbagliato resterebbe inchiodato nei
+ * browser dei lettori, dove non arriva nessun purge di Cloudflare e nessun
+ * deploy: l'unico modo di ritirarlo sarebbe tenere in piedi per sempre una
+ * pagina all'indirizzo sbagliato. Con `max-age=0` il browser richiede ogni
+ * volta e una correzione entra in vigore al colpo dopo.
+ *
+ * ⚠️ `s-maxage=60`, cioe' lo stesso minuto delle pagine, e non di piu': il
+ * bersaglio NON e' un fatto immutabile — cambia ogni volta che l'admin ri-conia
+ * uno slug (il vecchio finisce in `slugStorici` e da quel momento punta al
+ * nuovo). Un minuto e' quanto puo' durare un bersaglio vecchio ai bordi; piu' in
+ * la' non si va, perche' una purge qui non c'e' (vedi l'intestazione).
+ *
+ * ⚠️ 301 e non 308: la differenza e' che il 308 conserva il metodo, che qui non
+ * serve (si risponde solo a GET e HEAD), mentre il 301 e' il segnale di
+ * "trasloco definitivo" che gli strumenti SEO e Search Console leggono senza
+ * ambiguita'. E il `Location` e' un PERCORSO, non una URL assoluta: cosi' su
+ * un'anteprima di ramo il salto resta dentro l'anteprima.
+ */
+function rispostaRedirect(percorso: string): Response {
+  return new Response(null, {
+    status: 301,
+    headers: {
+      location: percorso,
+      'cache-control': `public, max-age=0, s-maxage=${S_MAXAGE_301}`,
+      'x-content-type-options': 'nosniff',
+      'x-bff-news': 'edge-301',
     },
   });
 }
