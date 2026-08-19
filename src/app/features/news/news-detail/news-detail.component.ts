@@ -14,6 +14,27 @@ import { NewsService } from '../../../core/services/news.service';
 import { SeoService } from '../../../core/services/seo.service';
 import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.component';
 
+/**
+ * La pagina di un articolo DENTRO lo SPA. ⚠️ Non è la prima stesura di questa
+ * pagina: l'HTML che ricevono il lettore al primo colpo, gli scraper social e i
+ * motori lo scrive `functions/news/[[path]].ts` all'edge (titolo, meta,
+ * canonical, JSON-LD, corpo). Questo componente subentra al montaggio e per la
+ * navigazione interna — e per questo `applySeo` qui sotto deve dire le STESSE
+ * cose di `functions/lib/render-news.mjs`, o la pagina cambia meta un secondo
+ * dopo essere stata aperta.
+ *
+ * ⚠️ QUI C'ERA UN AGGANCIO A `RESPONSE_INIT` (il token di `@angular/core` che
+ * lascia mutare lo stato della risposta durante una resa lato server), per
+ * rispondere 404 su un articolo inesistente. È stato tolto il 19/08/2026
+ * insieme all'SSR: senza `outputMode: 'server'` quel token è `null` sempre —
+ * nel browser e in prerender — quindi non era più una difesa, era una difesa
+ * APPARENTE, il tipo di codice che si legge come «il 404 è gestito».
+ * ⚠️ Il 404 vero c'è ancora, e lo produce la Function: risponde 404 con il corpo
+ * di `public/404.html` quando l'API risponde 404. Il ramo `notFound` qui sotto
+ * copre un caso diverso e va lasciato dov'è — chi è già dentro lo SPA e apre un
+ * articolo cancellato mentre naviga: lì non c'è nessuna risposta HTTP da
+ * marcare, c'è solo una pagina da mostrare.
+ */
 @Component({
   selector: 'app-news-detail',
   imports: [RouterLink, DatePipe, MarkdownComponent],

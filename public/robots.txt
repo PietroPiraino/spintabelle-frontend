@@ -30,4 +30,21 @@ Allow: /
 # dall'indice: dalla scansione), quello è il caso del Disallow — e va scritto
 # qui con la sua motivazione, come questa.
 
+# Tre sitemap, tre fonti diverse — e nessuna e' ridondante.
+#
+# 1. sitemap.xml    — le pagine PRERENDERIZZATE, derivata al build dal manifest
+#                     di Angular (scripts/gen-sitemap.mjs). Non contiene piu'
+#                     nessuna news: dal 19/08/2026 /news e /news/<id> sono rese
+#                     all'edge e non sono piu' file.
+# 2. news-sitemap.xml     — formato Google News, SOLO le ultime 48 ore.
+# 3. sitemap-articoli.xml — l'archivio completo degli articoli, e la sola riga
+#                     rimasta che pubblichi l'indice /news/ (vedi il commento in
+#                     testa a functions/sitemap-articoli.xml.ts).
+#
+# Le ultime due sono generate a ogni richiesta dalle Pages Function: le news si
+# pubblicano dall'admin senza deploy, quindi una lista scritta al build sarebbe
+# vecchia dal minuto dopo.
+
 Sitemap: https://bestfishforever.it/sitemap.xml
+Sitemap: https://bestfishforever.it/news-sitemap.xml
+Sitemap: https://bestfishforever.it/sitemap-articoli.xml

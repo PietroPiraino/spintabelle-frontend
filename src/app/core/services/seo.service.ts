@@ -115,7 +115,17 @@ export class SeoService {
     link.setAttribute('href', url);
   }
 
-  /** Inserisce/aggiorna uno <script type="application/ld+json"> con un dato id. */
+  /**
+   * Inserisce/aggiorna uno <script type="application/ld+json"> con un dato id.
+   * ⚠️ Ogni `<` va SEMPRE riscritto nel suo escape unicode (JSON.stringify da
+   * solo NON lo fa, ed è l'unico carattere che serve toccare): dentro uno
+   * <script> il parser HTML non interpreta le entità e chiude il blocco al primo
+   * `</script`, quindi un `</script>` finito nel titolo di un articolo (dato di
+   * fonte esterna, vedi news-detail.component) uscirebbe dal JSON-LD e
+   * diventerebbe markup eseguito nell'HTML SERIALIZZATO da prerender/SSR: XSS
+   * memorizzato. L'escape non altera il dato — una volta parsato il JSON la
+   * stringa è identica.
+   */
   setJsonLd(id: string, data: Record<string, unknown>): void {
     let el = this.doc.getElementById(id) as HTMLScriptElement | null;
     if (!el) {
@@ -124,7 +134,7 @@ export class SeoService {
       el.id = id;
       this.doc.head.appendChild(el);
     }
-    el.textContent = JSON.stringify(data);
+    el.textContent = JSON.stringify(data).replace(/</g, '\\u003c');
   }
 
   /**

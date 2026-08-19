@@ -21,6 +21,20 @@
             "index": "src/index.html",
             "browser": "src/main.ts",
             "server": "src/main.server.ts",
+            // ⚠️ "static", e ci si e' tornati DOPO aver provato "server".
+            // Il 19/08/2026 questo blocco e' stato "server" + `ssr: {entry:
+            // "src/server.ts", platform: "neutral"}`, per far rendere /news e
+            // news/:id all'handler SSR di Angular dentro la Pages Function. Il
+            // build passava; a rifiutare era Cloudflare, al caricamento della
+            // Function: «Your Worker exceeded the size limit of 3 MiB».
+            // Misurato: dist/frontend/server = 11 MB non compressi / 2,84 MB
+            // gzip, e il pezzo dominante e' un chunk lazy che con le notizie non
+            // c'entra niente. Il limite non e' aggirabile e non e' nemmeno il
+            // punto: le news le compone da se' functions/lib/render-news.mjs,
+            // che di quell'HTML produce la parte che conta.
+            // Conseguenza da tenere a mente: NIENTE rotte RenderMode.Server in
+            // app.routes.server.ts finche' questa riga dice "static" — il
+            // builder si ferma con un errore di schema, non con un avviso.
             "outputMode": "static",
             "polyfills": [],
             "tsConfig": "tsconfig.app.json",
