@@ -40,9 +40,14 @@ const REPO = resolve(QUI, '../..');
 const INDEX = join(REPO, 'src/index.html');
 const ROTTE = join(REPO, 'src/app/app.routes.ts');
 const COMPONENTE = join(REPO, 'src/app/features/news/news-detail/news-detail.component.ts');
+const TEMPLATE = join(REPO, 'src/app/features/news/news-detail/news-detail.component.html');
 
 const scheletro = injectNoindex(readFileSync(INDEX, 'utf8'));
 
+// ⚠️ `createdAt` e `publishedAt` sono DIVERSI di proposito: la bozza nasce il 17
+// e il pezzo esce il 19. Con due date uguali i controlli sulla data in pagina e
+// sul `datePublished` passerebbero anche leggendo il campo sbagliato — che e'
+// esattamente lo stato in cui sono rimasti fino al 19/08/2026.
 const ARTICOLO = {
   _id: '65f0000000000000000000aa',
   slug: 'come-si-gioca-il-bottone',
@@ -56,7 +61,9 @@ const ARTICOLO = {
     '',
   ].join('\n'),
   coverImageUrl: 'https://cdn.bestfishforever.it/news/copertina.jpg',
-  createdAt: '2026-08-19T09:30:00.000Z',
+  autore: 'Pietro Piraino',
+  publishedAt: '2026-08-19T09:30:00.000Z',
+  createdAt: '2026-08-17T08:00:00.000Z',
   updatedAt: '2026-08-19T11:00:00.000Z',
 };
 
@@ -76,6 +83,18 @@ function contenutoMeta(html, attributo, nome) {
     new RegExp(`<meta[^>]+${attributo}=["']${nome}["'][^>]+content=["']([^"']*)["']`, 'i'),
   );
   return m ? m[1] : null;
+}
+
+/** I dati strutturati dell'articolo, gia' riportati a oggetto. */
+function jsonLd(html) {
+  const m = html.match(
+    /<script[^>]+id=["']ld-news-article["'][^>]*>([\s\S]*?)<\/script>/i,
+  );
+  assert.ok(m, 'la pagina composta all edge non ha il blocco JSON-LD dell articolo');
+  // ⚠️ `<` viaggia come escape unicode (vedi `jsonLdSicuro`): e' JSON valido, e
+  // `JSON.parse` lo riporta al carattere. Se un giorno smettesse di esserlo,
+  // qui non si romperebbe niente — lo tiene il test dell XSS memorizzato.
+  return JSON.parse(m[1]);
 }
 
 // ---- L'articolo ---------------------------------------------------------
@@ -192,9 +211,153 @@ test('la data e in italiano e nel fuso di Roma', () => {
   // 19 agosto 2026, 23:30 UTC = 20 agosto a Roma: con il fuso del colo che
   // risponde, meta' del mondo leggerebbe il giorno prima.
   const main = dentroMain(
-    renderArticolo(scheletro, { ...ARTICOLO, createdAt: '2026-08-19T23:30:00.000Z' }, 'x'),
+    renderArticolo(scheletro, { ...ARTICOLO, publishedAt: '2026-08-19T23:30:00.000Z' }, 'x'),
   );
   assert.match(main, /20 agosto 2026/);
+});
+
+// ---- Identita' editoriale: data, firma, rettifiche (Fase 4) -------------
+
+test('la data in pagina e publishedAt, non createdAt', () => {
+  // ⚠️ Fra la bozza e l'uscita passano giorni: la data di una notizia e' quella
+  // in cui e' uscita. Fino al 19/08/2026 qui c'era `createdAt`, e con le due
+  // date coincidenti sui tre articoli storici nessuno se ne sarebbe accorto.
+  const html = renderArticolo(scheletro, ARTICOLO, ARTICOLO.slug);
+  const main = dentroMain(html);
+  assert.match(main, /19 agosto 2026/);
+  assert.doesNotMatch(main, /17 agosto 2026/);
+  assert.match(main, new RegExp(`datetime="${ARTICOLO.publishedAt}"`));
+});
+
+test('senza publishedAt si ripiega su createdAt invece di lasciare il vuoto', () => {
+  const { publishedAt, ...senzaData } = ARTICOLO;
+  const main = dentroMain(renderArticolo(scheletro, senzaData, ARTICOLO.slug));
+  assert.match(main, /17 agosto 2026/);
+});
+
+test('la firma e in pagina ed e un collegamento a /redazione', () => {
+  // ⚠️ Deve stare QUI e non solo nel componente Angular: chi legge questa
+  // stesura e' il crawler, e una firma che compare dopo l'idratazione per un
+  // motore non esiste. Ed e' un collegamento perche' e' li' che si trova chi
+  // risponde degli articoli: e' la seconda gamba dell'esonero art. 50(4).
+  const main = dentroMain(renderArticolo(scheletro, ARTICOLO, ARTICOLO.slug));
+  assert.match(main, /di <a href="\/redazione\/">Pietro Piraino<\/a>/);
+});
+
+test('senza autore non si stampa una firma vuota', () => {
+  const { autore, ...anonimo } = ARTICOLO;
+  const main = dentroMain(renderArticolo(scheletro, anonimo, ARTICOLO.slug));
+  assert.doesNotMatch(main, /news-detail__byline/);
+  assert.doesNotMatch(main, /\/redazione\//);
+});
+
+test('la nota di rettifica sta fra l intestazione e il corpo', () => {
+  // Una correzione che il lettore trova solo dopo aver letto l'articolo
+  // sbagliato non e' una correzione: la posizione fa parte del contenuto.
+  const main = dentroMain(
+    renderArticolo(
+      scheletro,
+      {
+        ...ARTICOLO,
+        rettifiche: [{ at: '2026-08-20T07:00:00.000Z', nota: 'Il montepremi era 5.000, non 50.000.' }],
+        ultimaRettificaAt: '2026-08-20T07:00:00.000Z',
+      },
+      ARTICOLO.slug,
+    ),
+  );
+  assert.match(main, /Nota di rettifica \(20 agosto 2026\):/);
+  assert.match(main, /Il montepremi era 5\.000, non 50\.000\./);
+  assert.ok(main.indexOf('</header>') < main.indexOf('news-detail__rettifica'));
+  assert.ok(main.indexOf('news-detail__rettifica') < main.indexOf('class="prose"'));
+});
+
+test('piu rettifiche si stampano tutte, nell ordine in cui sono uscite', () => {
+  // La policy editoriale promette che la correzione «si aggiunge, non cancella
+  // la traccia dell'errore»: tenerne solo l'ultima sarebbe cancellarla.
+  const main = dentroMain(
+    renderArticolo(
+      scheletro,
+      {
+        ...ARTICOLO,
+        rettifiche: [
+          { at: '2026-08-20T07:00:00.000Z', nota: 'Prima correzione.' },
+          { at: '2026-08-21T07:00:00.000Z', nota: 'Seconda correzione.' },
+        ],
+      },
+      ARTICOLO.slug,
+    ),
+  );
+  assert.ok(main.indexOf('Prima correzione.') < main.indexOf('Seconda correzione.'));
+});
+
+test('una rettifica malformata non stampa un riquadro vuoto e non fa saltare l articolo', () => {
+  // Meglio un articolo senza una nota che un articolo che non esce: un errore
+  // qui diventerebbe il ripiego sulla shell, cioe' una pagina senza contenuto
+  // per gli scraper.
+  for (const rettifiche of [null, undefined, [], [{}], [{ at: 'boh', nota: '' }]]) {
+    const html = renderArticolo(scheletro, { ...ARTICOLO, rettifiche }, ARTICOLO.slug);
+    assert.doesNotMatch(dentroMain(html), /news-detail__rettifica/);
+  }
+  // Una nota senza data resta leggibile: si perde la data, non il testo.
+  const main = dentroMain(
+    renderArticolo(scheletro, { ...ARTICOLO, rettifiche: [{ nota: 'Corretto.' }] }, ARTICOLO.slug),
+  );
+  assert.match(main, /Nota di rettifica:<\/strong> Corretto\./);
+});
+
+test('il testo di una rettifica e scappato come HTML', () => {
+  // Lo scrive l'admin, ma passa dalla stessa strada di un dato esterno: qui non
+  // c'e' nessun sanitizer di Angular.
+  const main = dentroMain(
+    renderArticolo(
+      scheletro,
+      { ...ARTICOLO, rettifiche: [{ at: ARTICOLO.publishedAt, nota: '<img src=x onerror=alert(1)>' }] },
+      ARTICOLO.slug,
+    ),
+  );
+  assert.doesNotMatch(main, /<img src=x/);
+  assert.match(main, /&lt;img src=x/);
+});
+
+// ---- Dati strutturati ---------------------------------------------------
+
+test('datePublished e publishedAt, dateModified NON e updatedAt', () => {
+  // ⚠️ D45: con `updatedAt` qualunque salvataggio dell'admin — un refuso, un
+  // tag — alzava la data e la pagina si dichiarava aggiornata senza esserlo.
+  // Per un motore e' freschezza gonfiata.
+  const dati = jsonLd(renderArticolo(scheletro, ARTICOLO, ARTICOLO.slug));
+  assert.equal(dati.datePublished, ARTICOLO.publishedAt);
+  assert.equal(dati.dateModified, ARTICOLO.publishedAt);
+  assert.notEqual(dati.dateModified, ARTICOLO.updatedAt);
+});
+
+test('dateModified si muove SOLO con una rettifica pubblicata', () => {
+  const dati = jsonLd(
+    renderArticolo(
+      scheletro,
+      { ...ARTICOLO, ultimaRettificaAt: '2026-08-20T07:00:00.000Z' },
+      ARTICOLO.slug,
+    ),
+  );
+  assert.equal(dati.dateModified, '2026-08-20T07:00:00.000Z');
+  assert.equal(dati.datePublished, ARTICOLO.publishedAt);
+});
+
+test('l autore dei dati strutturati e una Person, e punta a /redazione', () => {
+  // ⚠️ `Person` e non `Organization` (D40): una byline umana in chiaro
+  // accoppiata a un autore-azienda e' la discrepanza che le linee guida sulla
+  // reputazione del sito leggono come una maschera.
+  const dati = jsonLd(renderArticolo(scheletro, ARTICOLO, ARTICOLO.slug));
+  assert.equal(dati.author['@type'], 'Person');
+  assert.equal(dati.author.name, 'Pietro Piraino');
+  assert.equal(dati.author.url, `${SITO}/redazione/`);
+  // Il publisher resta l'organizzazione: sono due cose diverse.
+  assert.equal(dati.publisher['@type'], 'Organization');
+});
+
+test('senza autore il JSON-LD non dichiara un author vuoto', () => {
+  const { autore, ...anonimo } = ARTICOLO;
+  assert.equal(jsonLd(renderArticolo(scheletro, anonimo, ARTICOLO.slug)).author, undefined);
 });
 
 // ---- L'indice -----------------------------------------------------------
@@ -342,6 +505,38 @@ test('deriva: titolo e description dell indice combaciano con app.routes.ts', ()
     sorgente.includes(DESCRIZIONE_INDICE),
     "app.routes.ts non contiene piu' la description dell'indice news. " +
       'Aggiorna DESCRIZIONE_INDICE in functions/lib/render-news.mjs insieme alla rotta.',
+  );
+});
+
+test('deriva: la data in pagina e publishedAt anche nel componente Angular', () => {
+  // ⚠️ Se il componente tornasse a `createdAt`, la data cambierebbe sotto gli
+  // occhi del lettore un secondo dopo l'apertura — e i tre articoli storici,
+  // dove le due date coincidono, non lo mostrerebbero.
+  const sorgente = readFileSync(COMPONENTE, 'utf8');
+  assert.match(
+    sorgente,
+    /publishedAt \?\? news\.createdAt|n\.publishedAt \?\? n\.createdAt/,
+    "news-detail.component.ts non legge piu' `publishedAt`: allinea `renderArticolo` " +
+      'in functions/lib/render-news.mjs, o la data cambia al montaggio.',
+  );
+});
+
+test('deriva: la byline e la nota di rettifica hanno la stessa forma nel template', () => {
+  // Sono la STESSA pagina scritta due volte. Qui si sorveglia la forma delle
+  // due frasi che il lettore vede: se una delle due sparisse dal template,
+  // l'articolo direbbe una cosa prima dell'idratazione e un'altra dopo.
+  const template = readFileSync(TEMPLATE, 'utf8');
+  assert.match(
+    template,
+    /di <a routerLink="\/redazione">/,
+    "news-detail.component.html non porta piu' la firma linkata a /redazione: " +
+      'la byline esiste in `renderArticolo` e deve esistere in entrambi.',
+  );
+  assert.match(
+    template,
+    /Nota di rettifica \(/,
+    "news-detail.component.html non porta piu' la nota di rettifica: " +
+      'e\' contenuto della pagina, e sta in entrambi i renderer.',
   );
 });
 

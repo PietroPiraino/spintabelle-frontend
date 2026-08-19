@@ -306,16 +306,48 @@ function applicaTesta(html, { titolo, descrizione, url, immagine, tipoOg }) {
 // ---- Le due pagine ------------------------------------------------------
 
 /**
+ * Le note di rettifica, o stringa vuota se non ce ne sono (§4.4).
+ *
+ * ⚠️ La forma della frase — «Nota di rettifica ({data}): {nota}» — e' la stessa
+ * del componente Angular, e un test di deriva rilegge quel template per
+ * assicurarsene: e' la stessa pagina scritta due volte, non due pagine.
+ *
+ * ⚠️ Regge una riga malformata invece di lanciare: una rettifica senza data o
+ * senza testo non deve poter togliere dalla rete l'intero articolo (la Function
+ * trasformerebbe l'eccezione nel ripiego sulla shell, cioe' una pagina senza
+ * contenuto per gli scraper).
+ */
+function rettificheHtml(note) {
+  const voci = (Array.isArray(note) ? note : [])
+    .map((r) => {
+      const testo = String(r?.nota ?? '').trim();
+      if (!testo) return '';
+      const quando = dataLeggibile(r?.at);
+      const etichetta = quando ? `Nota di rettifica (${quando}):` : 'Nota di rettifica:';
+      return `<p class="news-detail__rettifica"><strong>${escapeHtml(etichetta)}</strong> ${escapeHtml(testo)}</p>`;
+    })
+    .filter(Boolean);
+  return voci.length ? `<div class="news-detail__rettifiche">\n${voci.join('\n')}\n</div>` : '';
+}
+
+/**
  * Un articolo. `chiave` e' quella chiesta nell'URL (slug o ObjectId): serve solo
  * come ripiego per il canonical, perche' la forma buona e' lo `slug`
  * dell'articolo — e' quella che la sitemap pubblica e quella su cui la Fase 4
  * costruira' i 301.
  *
- * ⚠️ `createdAt`/`updatedAt` e non `publishedAt`, anche se l'API espone tutti e
- * tre: sono i campi che usa `news-detail.component.ts` (data in pagina e
- * JSON-LD). Il giorno che quel componente passa a `publishedAt`, questa riga si
- * muove con lui — altrimenti la data cambia sotto gli occhi del lettore quando
- * l'app si monta.
+ * ⚠️ LA DATA E' `publishedAt` (dal 19/08/2026, §4.2), non piu' `createdAt`: fra
+ * la creazione di una bozza e la sua pubblicazione possono passare giorni, e la
+ * data di una notizia e' quella in cui e' uscita. `createdAt` resta come rete
+ * per i pezzi anteriori al campo — sui tre articoli storici la migrazione ha
+ * fatto ereditare l'uno dall'altro, quindi oggi il valore e' lo stesso.
+ *
+ * ⚠️ BYLINE E NOTE DI RETTIFICA STANNO QUI, non solo nel componente Angular: chi
+ * legge questa stesura e' il crawler, e una firma che compare solo dopo
+ * l'idratazione — per un motore — non esiste. L'etichetta IA del TESTO invece
+ * non c'e', ed e' voluto: e' volontaria, e la ragione per esteso sta in
+ * `src/app/core/news.constants.ts` (⚠️ quella dell'IMMAGINE, quando arrivera',
+ * dovra' stare anche qui: e' l'obbligo in se', non una cortesia).
  */
 export function renderArticolo(scheletro, articolo, chiave) {
   const dati = articolo ?? {};
@@ -324,8 +356,10 @@ export function renderArticolo(scheletro, articolo, chiave) {
   const descrizione = estratto(dati.body);
   const copertina = typeof dati.coverImageUrl === 'string' ? dati.coverImageUrl : '';
   const url = urlCanonica(typeof dati.slug === 'string' && dati.slug ? dati.slug : chiave);
-  const iso = String(dati.createdAt ?? '');
+  const iso = String(dati.publishedAt ?? dati.createdAt ?? '');
   const quando = dataLeggibile(iso);
+  const autore = String(dati.autore ?? '').trim();
+  const note = Array.isArray(dati.rettifiche) ? dati.rettifiche : [];
 
   const corpo = [
     '<main class="app-main">',
@@ -333,14 +367,30 @@ export function renderArticolo(scheletro, articolo, chiave) {
     '<article class="news-detail__article">',
     '<p><a href="/news/">← Tutte le news</a></p>',
     '<header class="news-detail__head">',
+    '<p class="news-detail__meta">',
     quando
       ? `<time class="news-detail__date" datetime="${escapeHtml(iso)}">${escapeHtml(quando)}</time>`
       : '',
+    // ⚠️ La firma e' un COLLEGAMENTO a /redazione, come nel componente: e' li'
+    // che si trova chi risponde degli articoli, ed e' la seconda gamba
+    // dell'esonero art. 50(4). Senza quella pagina raggiungibile e' un ornamento.
+    // ⚠️ CON LO SLASH FINALE, e nel componente Angular no: non e' una svista.
+    // Qui l'indirizzo lo segue un crawler, e `/redazione/` e' la forma servita a
+    // 200 dall'SSG (quella senza slash prende un 308); di la' e' un `routerLink`,
+    // cioe' una navigazione interna che non passa dalla rete. Allinearli
+    // "per coerenza" vorrebbe dire regalare un salto in piu' a ogni scansione.
+    autore
+      ? `<span class="news-detail__byline">di <a href="/redazione/">${escapeHtml(autore)}</a></span>`
+      : '',
+    '</p>',
     `<h1>${escapeHtml(titolo || 'News')}</h1>`,
     '</header>',
     copertina
       ? `<img class="news-detail__cover" src="${escapeHtml(copertina)}" alt="">`
       : '',
+    // Note di rettifica PRIMA del corpo: una correzione che il lettore trova
+    // solo dopo aver letto l'articolo sbagliato non e' una correzione.
+    rettificheHtml(note),
     // ⚠️ NON passa da `escapeHtml`: e' HTML gia' reso. A difenderlo e' la
     // configurazione di `markdown.mjs`, che SCARTA l'HTML grezzo del Markdown —
     // fuori da Angular non c'e' nessun sanitizer di `[innerHTML]`.
@@ -368,7 +418,24 @@ export function renderArticolo(scheletro, articolo, chiave) {
     description: descrizione,
     ...(copertina ? { image: [copertina] } : {}),
     datePublished: iso,
-    dateModified: String(dati.updatedAt ?? iso),
+    // ⚠️ `ultimaRettificaAt`, MAI `updatedAt` (D45, ed e' un cambio del
+    // 19/08/2026): con `updatedAt` qualunque salvataggio dell'admin — un
+    // refuso, un tag — alzava questa data e la pagina si dichiarava aggiornata
+    // senza esserlo. Solo una rettifica pubblicata la muove.
+    dateModified: String(dati.ultimaRettificaAt ?? iso),
+    // ⚠️ `Person` e non `Organization` (D40): i dati strutturati devono dire
+    // quello che dice la pagina, e una byline umana in chiaro con un
+    // autore-azienda e' la discrepanza che le linee guida sulla reputazione del
+    // sito leggono come una maschera.
+    ...(autore
+      ? {
+          author: {
+            '@type': 'Person',
+            name: autore,
+            url: `${SITO}/redazione/`,
+          },
+        }
+      : {}),
     publisher: {
       '@type': 'Organization',
       name: 'Best Fish Forever',
@@ -386,6 +453,15 @@ export function renderArticolo(scheletro, articolo, chiave) {
  * copriva: l'indice era prerenderizzato, quindi congelato agli articoli
  * esistenti al momento del deploy — e le news si pubblicano dall'admin senza
  * deployare.
+ *
+ * ⚠️ QUI LA DATA RESTA `createdAt`, mentre nell'articolo e' passata a
+ * `publishedAt`: non e' una dimenticanza. Ogni stesura all'edge deve dire le
+ * stesse cose del suo gemello Angular, e il gemello di QUESTA e'
+ * `shared/ui/news-card` (che serve indice e home) — la quale stampa ancora
+ * `createdAt`. Cambiare solo qui vorrebbe dire una data che si muove sotto gli
+ * occhi del lettore un secondo dopo l'apertura. Le due si spostano insieme, ed
+ * e' il lotto degli slug sulle card (§4.5). Oggi la differenza non si vede: sui
+ * tre articoli storici `publishedAt` ha ereditato `createdAt`.
  */
 export function renderIndice(scheletro, articoli) {
   const elenco = Array.isArray(articoli) ? articoli : [];
