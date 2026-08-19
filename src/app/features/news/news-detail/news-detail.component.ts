@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  RESPONSE_INIT,
   effect,
   inject,
   input,
@@ -25,6 +26,31 @@ export class NewsDetailComponent {
   private readonly newsApi = inject(NewsService);
   private readonly seo = inject(SeoService);
 
+  /**
+   * Lo stato HTTP della risposta SSR, per poter rispondere 404 su un articolo
+   * che non esiste.
+   *
+   * ⚠️ IL TOKEN E' DI `@angular/core`, NON di `@angular/ssr` (che ne esporta
+   * altri, simili di nome). ⚠️ Ed e' `null` ovunque non ci sia una risposta da
+   * mutare: nel browser e durante il prerender. Da qui l'`{ optional: true }`,
+   * senza il quale l'app non partirebbe affatto lato client.
+   *
+   * COME FUNZIONA, verificato su @angular/ssr 22.0.0 e non a memoria: l'engine
+   * crea l'oggetto `ResponseInit` PRIMA di renderizzare, lo passa come
+   * `useValue`, e costruisce la `Response` con quello STESSO oggetto DOPO che il
+   * render e' finito (`await applicationRef.whenStable()` sta in mezzo). Quindi
+   * scrivere `status` durante il render arriva in tempo. E' un contratto di
+   * MUTAZIONE, cioe' fragile per natura: `news-detail.component.spec.ts` lo
+   * fissa con una spec, e se un domani Angular smettesse di rispettarlo il
+   * ripiego dichiarato nel piano e' far riscrivere lo stato alla Function.
+   *
+   * PERCHE' CONTA: da quando `news/:id` e' `RenderMode.Server` non esiste piu'
+   * nessun file, e senza questa riga OGNI id inventato risponderebbe 200 con la
+   * pagina "News non trovata" — un soft-404 su infinite URL, esattamente il
+   * difetto che `public/404.html` ha chiuso il 16/08/2026.
+   */
+  private readonly responseInit = inject(RESPONSE_INIT, { optional: true });
+
   /** Param della rotta news/:id (component input binding) */
   readonly id = input.required<string>();
 
@@ -41,7 +67,11 @@ export class NewsDetailComponent {
           this.news.set(news);
           this.applySeo(news);
         },
-        error: () => this.notFound.set(true),
+        error: () => {
+          this.notFound.set(true);
+          // Vedi il commento su `responseInit`: 404 vero, non un 200 travestito.
+          if (this.responseInit) this.responseInit.status = 404;
+        },
       });
     });
     // Rimuovi i dati strutturati specifici dell'articolo lasciando la pagina:

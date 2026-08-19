@@ -96,3 +96,67 @@ describe('SeoService — noindex per rotta', () => {
       .toBeNull();
   });
 });
+
+/**
+ * Blocca l'escape del `<` dentro il blocco JSON-LD.
+ * Il titolo di un articolo arriva da una fonte esterna e finisce nei dati
+ * strutturati (news-detail.component): con `JSON.stringify` nudo un `</script>`
+ * nel titolo CHIUDE il blocco nell'HTML serializzato da prerender/SSR — il
+ * parser HTML non interpreta le entità dentro uno <script> — e tutto ciò che
+ * segue diventa markup eseguito: XSS memorizzato, invisibile a qualunque
+ * controllo che guardi solo il JSON.
+ */
+describe('SeoService — JSON-LD, escape del <', () => {
+  let seo: SeoService;
+  let doc: Document;
+
+  beforeEach(() => {
+    seo = TestBed.inject(SeoService);
+    doc = TestBed.inject(DOCUMENT);
+  });
+
+  afterEach(() => {
+    doc.getElementById('ld-test')?.remove();
+  });
+
+  // Titolo ostile: chiude lo <script> e inietta markup subito dopo.
+  const TITOLO_OSTILE =
+    'Spin & Go </script><img src=x onerror="alert(1)"> resto del titolo';
+
+  it("non lascia uscire un </script> dal blocco: nell'HTML serializzato c'è un solo tag di chiusura", () => {
+    seo.setJsonLd('ld-test', {
+      '@context': 'https://schema.org',
+      '@type': 'NewsArticle',
+      headline: TITOLO_OSTILE,
+    });
+
+    const html = doc.getElementById('ld-test')!.outerHTML;
+    expect((html.match(/<\/script/gi) ?? []).length)
+      .withContext('un </script> nel titolo esce dal JSON-LD = XSS memorizzato')
+      .toBe(1);
+    // il markup iniettato non apre alcun tag: resta testo dentro il JSON
+    expect(html).not.toContain('<img');
+  });
+
+  it('non lascia alcun `<` grezzo nel contenuto dello script', () => {
+    seo.setJsonLd('ld-test', { headline: TITOLO_OSTILE });
+    expect(doc.getElementById('ld-test')!.textContent).not.toContain('<');
+  });
+
+  it('non altera il dato: il JSON resta valido e il titolo torna identico', () => {
+    seo.setJsonLd('ld-test', { headline: TITOLO_OSTILE });
+    const parsed = JSON.parse(doc.getElementById('ld-test')!.textContent!) as {
+      headline: string;
+    };
+    expect(parsed.headline).toBe(TITOLO_OSTILE);
+  });
+
+  it("aggiorna lo stesso nodo senza duplicarlo (l'escape vale anche in update)", () => {
+    seo.setJsonLd('ld-test', { headline: 'innocuo' });
+    seo.setJsonLd('ld-test', { headline: TITOLO_OSTILE });
+    expect(doc.querySelectorAll('#ld-test').length).toBe(1);
+    const html = doc.getElementById('ld-test')!.outerHTML;
+    expect((html.match(/<\/script/gi) ?? []).length).toBe(1);
+    expect(html).not.toContain('<img');
+  });
+});

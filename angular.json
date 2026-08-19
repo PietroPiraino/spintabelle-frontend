@@ -21,7 +21,23 @@
             "index": "src/index.html",
             "browser": "src/main.ts",
             "server": "src/main.server.ts",
-            "outputMode": "static",
+            // "server" e non piu' "static": le rotte /news e news/:id sono
+            // RenderMode.Server (rese a ogni richiesta dalla Pages Function),
+            // tutto il resto resta Prerender e continua a uscire in
+            // dist/frontend/browser con il suo prerendered-routes.json — che e'
+            // il cibo di gen-sitemap.mjs e delle due guardie.
+            "outputMode": "server",
+            // ⚠️ LA CHIAVE E' "platform", NON "experimentalPlatform": quest'ultima
+            // NON esiste in @angular/build@22 e lo schema del builder ha
+            // "additionalProperties": false → `ng build` non parte proprio,
+            // fallendo la validazione dello schema invece che il build.
+            // "neutral" = bundle senza API Node: e' quello che gira dentro un
+            // Worker Cloudflare. Con "node" (il default) il bundle importa
+            // node:module & co. e all'edge esplode al primo import.
+            "ssr": {
+              "entry": "src/server.ts",
+              "platform": "neutral"
+            },
             "polyfills": [],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",

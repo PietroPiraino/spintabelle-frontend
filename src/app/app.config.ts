@@ -7,15 +7,18 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import localeIt from '@angular/common/locales/it';
 import {
   ApplicationConfig,
+  ErrorHandler,
   LOCALE_ID,
   PLATFORM_ID,
   inject,
+  provideBrowserGlobalErrorListeners,
   provideEnvironmentInitializer,
   provideZonelessChangeDetection,
 } from '@angular/core';
 import {
   provideClientHydration,
   withEventReplay,
+  withHttpTransferCacheOptions,
 } from '@angular/platform-browser';
 import {
   NavigationEnd,
@@ -29,6 +32,7 @@ import {
 } from '@angular/router';
 
 import { routes } from './app.routes';
+import { ChunkErrorHandler } from './core/errors/chunk-error.handler';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { AuthService } from './core/services/auth.service';
 import { SeoService } from './core/services/seo.service';
@@ -45,10 +49,40 @@ const DEFAULT_DESCRIPTION =
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
+    // Errori globali → ErrorHandler dell'applicazione.
+    // ⚠️ Senza questo provider l'ErrorHandler vede solo gli errori sincroni
+    // dentro Angular (i click su routerLink, il back/forward): le promise
+    // rifiutate — cioè le `router.navigate()` imperative dei guard e ogni
+    // import dinamico fallito — resterebbero "unhandled rejection" sulla
+    // finestra, e il recupero dei chunk sotto non scatterebbe mai.
+    // È inerte in prerender (il provider Angular esce subito su server).
+    provideBrowserGlobalErrorListeners(),
+    // Un chunk lazy che non si carica più (deploy → nomi con hash nuovi, scheda
+    // rimasta aperta sulla shell vecchia) oggi è un click muto: si ricarica la
+    // pagina una volta sola. Vedi core/errors/chunk-error.handler.ts.
+    { provide: ErrorHandler, useClass: ChunkErrorHandler },
     // Idratazione dell'HTML prerenderizzato (SSG): il client riusa il DOM
     // statico invece di ricrearlo. withEventReplay riproduce i click avvenuti
     // prima che l'app fosse interattiva. Supportato con zoneless in Angular 22.
-    provideClientHydration(withEventReplay()),
+    //
+    // ⚠️ IL FILTRO DELLA TRANSFER CACHE NON E' UNA MICRO-OTTIMIZZAZIONE.
+    // La transfer cache serializza nell'HTML le risposte HTTP fatte durante il
+    // render e il client le RIUSA invece di richiamare l'API. Sulle pagine
+    // PRERENDERIZZATE quelle risposte sono vecchie di un build: la home
+    // (`landing.component.ts`, `getLatest(3)`) mostrerebbe per sempre gli
+    // articoli del giorno del deploy — e da quando le news si pubblicano senza
+    // rideployare (Fase 1) "per sempre" e' letterale. Escludendo le chiamate
+    // `/news` dalla cache, il blocco news si corregge da solo all'idratazione:
+    // l'HTML statico resta quello del build (accettato: e' visibile subito), poi
+    // il client rifa' la chiamata e lo aggiorna.
+    // `filter` risponde alla domanda "questa richiesta la metto in cache?":
+    // vero = si'. Quindi qui si nega esplicitamente solo /news.
+    provideClientHydration(
+      withEventReplay(),
+      withHttpTransferCacheOptions({
+        filter: (req) => !req.url.includes('/news'),
+      }),
+    ),
     provideRouter(
       routes,
       withComponentInputBinding(),
