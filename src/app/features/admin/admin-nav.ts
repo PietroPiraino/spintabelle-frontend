@@ -1,12 +1,19 @@
 import { IconName } from '../../shared/ui/icon/icon.component';
 
+/**
+ * Quali conteggi "in attesa" la sidebar sa mostrare. Union unica: la firma di
+ * `AdminComponent.badgeCount` la importa da qui invece di riscriverla, così
+ * aggiungere un badge non compila finché non gli si dà anche la sua fonte.
+ */
+export type AdminBadge = 'richieste' | 'affiliazioni' | 'redazione';
+
 export interface AdminNavItem {
   /** Segmento figlio sotto `/admin` (`''` = Panoramica). */
   path: string;
   label: string;
   icon: IconName;
   /** Quale conteggio di `AdminPendingService` mostrare come badge. */
-  badge?: 'richieste' | 'affiliazioni';
+  badge?: AdminBadge;
   /** Sezione placeholder: mostra il chip "Presto". */
   soon?: boolean;
 }
@@ -39,6 +46,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { path: 'lezioni', label: 'Lezioni', icon: 'graduation-cap' },
       { path: 'live', label: 'Live', icon: 'video' },
       { path: 'news', label: 'News', icon: 'newspaper' },
+      {
+        path: 'redazione',
+        label: 'Redazione',
+        icon: 'pen-tool',
+        badge: 'redazione',
+      },
       { path: 'documenti', label: 'Documenti', icon: 'file-text' },
     ],
   },

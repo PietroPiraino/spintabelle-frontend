@@ -1,0 +1,307 @@
+<!--
+  Coda di revisione: UNA card alla volta (§3.3).
+  L'ordine dall'alto in basso non è estetico — è l'ordine in cui si decide:
+  quanto tempo resta, che titolo esce, da dove viene, cosa dice, cosa rischia,
+  e solo in fondo i tre pulsanti.
+-->
+<div class="rz">
+  <div class="rz__head">
+    <div>
+      <h2>Coda di revisione</h2>
+      @if (coda()) {
+        <p class="admin-item__meta">
+          {{ totale() }} {{ totale() === 1 ? 'articolo in coda' : 'articoli in coda' }}
+          @if (totale() > articoli().length) {
+            · in mano {{ articoli().length }}: gli altri entrano man mano che decidi
+          }
+        </p>
+      }
+    </div>
+
+    @if (articoli().length > 0) {
+      <div class="rz__nav" role="group" aria-label="Naviga la coda">
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm rz__nav-btn"
+          [disabled]="indice() === 0"
+          aria-label="Articolo precedente"
+          (click)="precedente()"
+        >←</button>
+        <span class="rz__counter" aria-live="polite">
+          {{ indice() + 1 }} di {{ articoli().length }}
+        </span>
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm rz__nav-btn"
+          [disabled]="indice() >= articoli().length - 1"
+          aria-label="Articolo successivo"
+          (click)="successivo()"
+        >→</button>
+      </div>
+    }
+  </div>
+
+  <!--
+    Modalità assenza: banner persistente finché `pausaFino` è nel futuro.
+    ⚠️ Ferma la MACCHINA, non la persona: le azioni della card restano attive.
+  -->
+  @if (inPausa()) {
+    <div class="card card--pad rz__pausa" role="status">
+      <div class="rz__pausa-testo">
+        <strong>Generazione in pausa fino al {{ pausaEtichetta() }}</strong>
+        <p>
+          La coda non cresce. La revisione resta attiva: gli articoli già in coda
+          si decidono normalmente.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="btn btn--ghost btn--sm rz__btn"
+        [disabled]="pausaInVolo()"
+        (click)="riprendi()"
+      >{{ pausaInVolo() ? 'Riprendo…' : 'Riprendi ora' }}</button>
+    </div>
+  } @else if (isConfirming('pausa')) {
+    <div class="card card--pad admin-panel rz__pausa-form">
+      <h3>Metti in pausa la generazione</h3>
+      <p class="rz__hint">
+        Fino a tutto il giorno scelto. La pausa finisce da sola: non c'è nessun
+        interruttore da ricordarsi di rialzare.
+      </p>
+      <div class="rz__pausa-row">
+        <input
+          type="date"
+          class="input rz__pausa-data"
+          aria-label="Ultimo giorno di pausa"
+          [value]="pausaData()"
+          (input)="onPausaData($event)"
+        />
+        <button
+          type="button"
+          class="btn btn--primary btn--sm rz__btn"
+          [disabled]="pausaInVolo()"
+          (click)="confermaPausa()"
+        >{{ pausaInVolo() ? 'Salvo…' : 'Metti in pausa' }}</button>
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm rz__btn"
+          [disabled]="pausaInVolo()"
+          (click)="cancelConfirm()"
+        >Annulla</button>
+      </div>
+    </div>
+  } @else {
+    <button
+      type="button"
+      class="btn btn--link rz__pausa-apri"
+      (click)="askConfirm('pausa')"
+    >Metti in pausa la generazione…</button>
+  }
+
+  <!-- ⚠️ Banda persistente: un guasto di rete non deve somigliare a una coda vuota. -->
+  @if (erroreLista(); as e) {
+    <div class="form-feedback is-error rz__errore" role="alert">
+      <span>{{ e }}</span>
+      <button
+        type="button"
+        class="btn btn--ghost btn--sm rz__btn"
+        [disabled]="caricamento()"
+        (click)="riprova()"
+      >{{ caricamento() ? 'Riprovo…' : 'Riprova' }}</button>
+    </div>
+  }
+
+  @if (!coda() && caricamento()) {
+    <div class="spinner" role="status" aria-label="Caricamento della coda"></div>
+  } @else if (coda() && articoli().length === 0) {
+    <div class="empty-state">
+      <p class="empty-state__suit">♠</p>
+      <p>Nessun articolo in coda.</p>
+      <p class="admin-item__meta">
+        Quando la redazione ne propone uno, compare qui.
+      </p>
+    </div>
+  } @else if (corrente(); as a) {
+    <article class="card card--pad rz__card">
+      <!-- 1. Striscia di scadenza: l'ordinamento reso visibile. -->
+      <div class="rz__strip" [class.is-urgente]="scadenza().urgente">
+        <span class="badge rz__cat">{{ categoriaLabel(a.categoria) }}</span>
+        <span class="rz__deadline">{{ scadenza().testo }}</span>
+        @if (rimando(); as r) {
+          <span class="rz__snoozed">{{ r }}</span>
+        }
+      </div>
+      <p class="rz__hint">
+        La coda è ordinata per tempo residuo: prima ciò che scade prima, e le
+        rimandate in fondo.
+      </p>
+
+      <!-- 2. Titolo, correggibile in linea (non una "modalità modifica"). -->
+      <label class="visually-hidden" for="rz-titolo">Titolo dell'articolo</label>
+      <input
+        id="rz-titolo"
+        type="text"
+        class="input rz__titolo"
+        [attr.maxlength]="titoloMax"
+        [value]="titolo()"
+        (input)="onTitolo($event)"
+      />
+      @if (!titoloValido()) {
+        <p class="field-error">Il titolo deve avere fra 3 e {{ titoloMax }} caratteri.</p>
+      } @else if (titoloModificato()) {
+        <p class="rz__hint">Il titolo corretto viene salvato con la pubblicazione.</p>
+      }
+
+      <p class="admin-item__meta rz__meta">
+        <!--
+          ⚠️ `confidence` si mostra e basta (D32): non ordina la coda, e non
+          deve dare l'impressione di essere un voto su cui delegare la decisione.
+        -->
+        @if (confidenza() !== null) { Confidenza {{ confidenza() }}% · }
+        Firma: {{ a.autore }}
+        @if (a.aiGeneratedAt) { · generato con l'ausilio dell'IA }
+      </p>
+
+      <!-- 3. Fonti: LINK veri. Il controllo "la fonte dice davvero questo?" o è
+           a un tocco di distanza, o non avviene. -->
+      <section class="rz__block">
+        <h3 class="rz__h3">Fonti</h3>
+        @if (senzaFonti()) {
+          <p class="rz__blocco" role="alert">
+            <app-icon name="alert-triangle" [size]="16" />
+            Nessuna fonte: non pubblicabile. Aggiungi le fonti dal form News,
+            oppure scarta l'articolo.
+          </p>
+        } @else {
+          <ul class="rz__fonti">
+            @for (f of fonti(); track $index) {
+              <li>
+                @if (f.url) {
+                  <a [href]="f.url" target="_blank" rel="noopener">{{ f.testata }}</a>
+                  <span class="rz__url">{{ f.url }}</span>
+                } @else {
+                  <span>{{ f.testata }}</span>
+                  <span class="rz__url">senza indirizzo</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <!-- 3-bis. Specchio del cancello copertina (D57): senza credito e licenza
+           l'approvazione è un 400, e il pulsante non deve prometterla. -->
+      @if (copertinaIncompleta()) {
+        <p class="rz__blocco" role="alert">
+          <app-icon name="alert-triangle" [size]="16" />
+          Copertina licenziata senza credito o licenza: non pubblicabile.
+          Completa i due campi dal form News.
+        </p>
+      }
+
+      <!-- 4. Corpo: si legge quello che leggerà il lettore. -->
+      <section class="rz__block rz__corpo">
+        <h3 class="rz__h3">Testo</h3>
+        <app-markdown [markdown]="a.body" />
+      </section>
+
+      <!-- 5. Rischi: i rilievi si stampano VERBATIM, come i limiti[] delle
+           statistiche. ⚠️ Nessun rilievo = nessun riquadro, non un riquadro vuoto. -->
+      @if (rilievi().length > 0) {
+        <section class="card card--pad rz__rischi">
+          <h3 class="rz__h3">Rilievi della pipeline</h3>
+          <ul class="rz__flags">
+            <!-- ⚠️ `track $index` e non `track f`: sono stringhe che la
+                 pipeline scrive, e due rilievi identici sulla stessa riga
+                 sono chiavi duplicate — in dev un NG0955, in produzione un
+                 rilievo che sparisce dalla lista senza dire niente. Su
+                 questa scheda un rischio non stampato e' peggio di un
+                 rischio ripetuto. Stessa scelta delle fonti, qui sopra. -->
+            @for (f of rilievi(); track $index) {
+              <li>{{ f }}</li>
+            }
+          </ul>
+        </section>
+      }
+
+      <!-- 6. Barra azioni: appiccicata in basso, bersagli da 44px. -->
+      <div class="rz__bar">
+        @if (isConfirming('scarta')) {
+          <div class="rz__scarta">
+            <input
+              type="text"
+              class="input"
+              maxlength="2000"
+              placeholder="Motivo dello scarto (obbligatorio)"
+              aria-label="Motivo dello scarto, obbligatorio"
+              [value]="notaScarto()"
+              (input)="onNota($event)"
+            />
+            <div class="rz__bar-row">
+              <button
+                type="button"
+                class="btn btn--danger-solid rz__btn"
+                [disabled]="!notaValida() || inVolo()"
+                (click)="scarta()"
+              >{{ azione() === 'scarta' ? 'Scarto…' : 'Conferma scarto' }}</button>
+              <button
+                type="button"
+                class="btn btn--ghost rz__btn"
+                [disabled]="inVolo()"
+                (click)="cancelConfirm()"
+              >Annulla</button>
+            </div>
+            <p class="rz__hint">
+              Il motivo resta nella coda: serve a correggere la pipeline, non lo
+              legge nessun lettore.
+            </p>
+          </div>
+        } @else {
+          <div class="rz__bar-row">
+            <button
+              type="button"
+              class="btn btn--primary rz__btn"
+              [disabled]="!pubblicabile()"
+              (click)="pubblica()"
+            >
+              <app-icon name="check" [size]="16" />
+              <!-- ⚠️ `azione()`, non `inVolo()`: durante un Rimanda questo
+                   pulsante diceva «Pubblico…», cioè nominava un'azione che non
+                   stava avvenendo. -->
+              {{ azione() === 'pubblica' ? 'Pubblico…' : 'Pubblica' }}
+            </button>
+            <button
+              type="button"
+              class="btn btn--ghost rz__btn"
+              [disabled]="inVolo()"
+              (click)="rimanda()"
+            >{{ azione() === 'rimanda' ? 'Rimando…' : 'Rimanda' }}</button>
+            <button
+              type="button"
+              class="btn btn--danger rz__btn"
+              [disabled]="inVolo()"
+              (click)="askConfirm('scarta')"
+            >Scarta</button>
+          </div>
+          <!-- ⚠️ Il costo del rimando si dice PRIMA del tocco: due ore in fondo
+               alla coda non sono un rinvio se la scadenza arriva prima — la
+               spazzata lo porta a «scaduto» e nessuno lo rivede. -->
+          @if (rimandoOltreScadenza()) {
+            <p class="rz__hint rz__hint--avviso">
+              Rimandare costa: questo articolo scade prima di risalire la coda e
+              diventerà «scaduto» senza una decisione.
+            </p>
+          }
+        }
+      </div>
+
+      <!-- 7. La modifica profonda è rara e sta altrove: qui si decide. -->
+      <p class="rz__footer">
+        <a class="btn btn--link" routerLink="/admin/news">Apri nel form News →</a>
+        <span class="admin-item__meta">
+          Per riscrivere il corpo o cambiare la copertina.
+        </span>
+      </p>
+    </article>
+  }
+</div>

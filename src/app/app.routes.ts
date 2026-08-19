@@ -348,6 +348,14 @@ export const routes: Routes = [
         title: 'Admin · News — Best Fish Forever',
       },
       {
+        path: 'redazione',
+        loadComponent: () =>
+          import(
+            './features/admin/admin-redazione/admin-redazione.component'
+          ).then((m) => m.AdminRedazioneComponent),
+        title: 'Admin · Redazione — Best Fish Forever',
+      },
+      {
         path: 'documenti',
         loadComponent: () =>
           import(

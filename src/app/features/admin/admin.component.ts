@@ -16,7 +16,7 @@ import {
 import { filter } from 'rxjs';
 import { AdminPendingService } from '../../core/services/admin-pending.service';
 import { IconComponent } from '../../shared/ui/icon/icon.component';
-import { ADMIN_NAV } from './admin-nav';
+import { AdminBadge, ADMIN_NAV } from './admin-nav';
 
 /**
  * Shell della dashboard admin: sidebar di navigazione (gruppi + badge "in
@@ -68,11 +68,21 @@ export class AdminComponent {
     this.drawerOpen.update((open) => !open);
   }
 
-  /** Conteggio per il badge di una voce (null/0 = badge assente). */
-  protected badgeCount(badge: 'richieste' | 'affiliazioni'): number | null {
-    return badge === 'richieste'
-      ? this.pending.richieste()
-      : this.pending.affiliazioni();
+  /**
+   * Conteggio per il badge di una voce (null/0 = badge assente).
+   * ⚠️ Uno `switch` esaustivo, non un ternario: con la union a due valori il
+   * ramo `else` era corretto per costruzione, con tre un badge nuovo finirebbe
+   * in silenzio sul conteggio di un altro.
+   */
+  protected badgeCount(badge: AdminBadge): number | null {
+    switch (badge) {
+      case 'richieste':
+        return this.pending.richieste();
+      case 'affiliazioni':
+        return this.pending.affiliazioni();
+      case 'redazione':
+        return this.pending.redazione();
+    }
   }
 
   // chiude il pannello mobile cliccando fuori da sidebar e toggle

@@ -1,11 +1,12 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { AffiliationsService } from './affiliations.service';
+import { NewsService } from './news.service';
 import { SubscriptionsService } from './subscriptions.service';
 
 /**
  * Conteggi "in attesa di una decisione" per la dashboard admin: richieste di
- * abbonamento pending e affiliazioni in verifica. Alimenta i badge della
- * sidebar e le card della Panoramica.
+ * abbonamento pending, affiliazioni in verifica e articoli in coda di
+ * revisione. Alimenta i badge della sidebar e le card della Panoramica.
  *
  * Best-effort come il badge del tab affiliazioni: ogni chiamata degrada a
  * `null` (badge nascosto / "—") senza banner d'errore — il conteggio è un
@@ -17,10 +18,13 @@ import { SubscriptionsService } from './subscriptions.service';
 @Injectable({ providedIn: 'root' })
 export class AdminPendingService {
   private readonly affiliationsApi = inject(AffiliationsService);
+  private readonly newsApi = inject(NewsService);
   private readonly subscriptionsApi = inject(SubscriptionsService);
 
   readonly richieste = signal<number | null>(null);
   readonly affiliazioni = signal<number | null>(null);
+  /** Articoli `IN_REVISIONE`: la coda della Redazione. */
+  readonly redazione = signal<number | null>(null);
 
   /** Istante dell'ultimo refresh non forzato partito davvero. */
   private lastRefresh = 0;
@@ -48,6 +52,10 @@ export class AdminPendingService {
     this.affiliationsApi.pendingCount().subscribe({
       next: (res) => this.affiliazioni.set(res.inVerifica),
       error: () => this.affiliazioni.set(null),
+    });
+    this.newsApi.pendingCount().subscribe({
+      next: (res) => this.redazione.set(res.inCoda),
+      error: () => this.redazione.set(null),
     });
   }
 }

@@ -514,6 +514,198 @@ export interface NewsPayload {
   coverImageUrl?: string;
 }
 
+// ----- Redazione (news, lato admin) -----
+// ⚠️ Specchio di `backend/src/news/news.types.ts` e dello schema `news`: i nomi
+// dei campi sono quelli, **alla lettera**. Un nome sbagliato qui non dà errore
+// di compilazione — si manifesta come una card vuota.
+
+/** I cinque stati dell'articolo (`NEWS_STATUSES` lato backend). */
+export type NewsStatus =
+  | 'BOZZA'
+  | 'IN_REVISIONE'
+  | 'PUBBLICATO'
+  | 'SCARTATO'
+  | 'SCADUTO';
+
+/**
+ * Etichette italiane degli stati.
+ *
+ * ⚠️ Le affiliazioni non ne hanno una gemella perché lì l'italiano lo calcola il
+ * server (`statusLabel` viaggia sulla riga). La coda della redazione torna
+ * invece il documento **nudo**: `newsStatusLabel()` esiste sul backend ma non
+ * entra in nessuna risposta. Finché è così l'etichetta si calcola qui, in UNA
+ * sede sola — copia meccanica dello `switch` di `news.types.ts`. Mai una
+ * seconda mappa dentro un componente.
+ */
+export const NEWS_STATUS_LABELS: Record<NewsStatus, string> = {
+  BOZZA: 'Bozza',
+  IN_REVISIONE: 'In revisione',
+  PUBBLICATO: 'Pubblicato',
+  SCARTATO: 'Scartato',
+  SCADUTO: 'Scaduto',
+};
+
+/**
+ * Le otto categorie: enum chiusa, **una sola per articolo e obbligatoria** (il
+ * default lato schema è `online`). I tag restano liberi e separati.
+ */
+export type NewsCategory =
+  | 'live'
+  | 'online'
+  | 'mtt'
+  | 'cash'
+  | 'industry'
+  | 'regolamentazione'
+  | 'strategia'
+  | 'la-scuola';
+
+/** Le stesse otto, nell'ordine del backend: alimenta pillole e select. */
+export const NEWS_CATEGORIES: readonly NewsCategory[] = [
+  'live',
+  'online',
+  'mtt',
+  'cash',
+  'industry',
+  'regolamentazione',
+  'strategia',
+  'la-scuola',
+];
+
+/** ⚠️ Il **valore** è la chiave stabile (finisce nei filtri); l'etichetta no. */
+export const NEWS_CATEGORY_LABELS: Record<NewsCategory, string> = {
+  live: 'Poker live',
+  online: 'Poker online',
+  mtt: 'Tornei',
+  cash: 'Cash game',
+  industry: 'Industria',
+  regolamentazione: 'Regolamentazione',
+  strategia: 'Strategia',
+  'la-scuola': 'La scuola',
+};
+
+/**
+ * Provenienza della copertina (D57): pilota il layout della pagina pubblica —
+ * `GENERATA` né credito né etichetta, `LICENZIATA` credito e licenza
+ * obbligatori (il gate di pubblicazione risponde 400 senza), `AI` etichetta
+ * visibile sotto l'immagine.
+ */
+export type NewsImageSource = 'GENERATA' | 'LICENZIATA' | 'AI';
+
+/**
+ * L'articolo **come lo vede l'admin**: la riga intera di Mongo, senza
+ * proiezione — `GET /admin/news` non applica alcun `toView`.
+ *
+ * ⚠️ Tipo separato da `News` e non un suo allargamento: `News` è la proiezione
+ * **pubblica** (`CAMPI_PUBBLICI`), e aggiungerle questi campi come opzionali
+ * farebbe scrivere alla pagina pubblica codice che dà per certo un valore che lì
+ * non arriva mai.
+ *
+ * ⚠️ Le `Date` del backend arrivano serializzate come stringhe ISO, come ovunque
+ * in questo file.
+ */
+export interface NewsAdmin {
+  _id: string;
+  title: string;
+  body: string;
+  coverImageUrl?: string;
+  status: NewsStatus;
+  categoria: NewsCategory;
+  tags: string[];
+  /** Prima pubblicazione: non si riscrive mai, nemmeno dopo un ritiro. */
+  publishedAt?: string;
+  /** Chiave pubblica dell'articolo; assente finché non è mai stato pubblicato. */
+  slug?: string;
+  /** Slug precedenti: sono ciò che tiene in vita i 301 (§4.5). */
+  slugStorici: string[];
+  /**
+   * ⚠️ Le fonti sono la **condizione di liceità** (art. 101 LdA), non una
+   * bibliografia: la card le rende come link, e un elenco vuoto blocca la
+   * pubblicazione.
+   */
+  sourceUrls: string[];
+  /** Nomi leggibili delle testate, in parallelo a `sourceUrls`. */
+  sourceOutlets: string[];
+  /** Rilievi della pipeline: si stampano **verbatim**, mai riscritti. */
+  complianceFlags: string[];
+  /** 0-1. ⚠️ Campo da mostrare, **mai** una chiave di ordinamento (D32). */
+  confidence?: number;
+  /** Byline reale pubblicata (default `Pietro Piraino`). */
+  autore: string;
+  clusterId?: string;
+  simhash?: string;
+  contentHash?: string;
+  aiModel?: string;
+  promptVersion?: string;
+  /** Interruttore dell'etichetta IA in pagina. */
+  aiGeneratedAt?: string;
+  /** Prova della revisione umana (art. 50(4) AI Act): ObjectId del revisore. */
+  revisionatoDa?: string;
+  revisionatoAt?: string;
+  /** Motivo dello scarto: **interno alla coda**, non lo legge il pubblico. */
+  decisionNote?: string;
+  /** Fine della finestra di attualità. ⚠️ Assente = evergreen, non "scaduto". */
+  scadeIl?: string;
+  scadutoAt?: string;
+  /** Snooze (D35): la riga scende in fondo alla coda, lo stato NON cambia. */
+  rimandatoFino?: string;
+  /** Note di rettifica pubbliche, in ordine di pubblicazione. */
+  rettifiche: NewsRettifica[];
+  ultimaRettificaAt?: string;
+  imageSource: NewsImageSource;
+  imageCredit?: string;
+  imageLicense?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * L'envelope della coda: paginazione **più** lo stato della modalità assenza.
+ *
+ * ⚠️ `pausaFino` è una **data**, non un booleano: "in pausa" è
+ * `new Date(pausaFino) > now`, e una data passata significa pausa già finita.
+ * Non normalizzarla a `null` lato client — è la stessa forma che il backend
+ * scrive, e la sua scadenza automatica è la garanzia che una pausa dimenticata
+ * non spenga la redazione per sempre.
+ *
+ * ⚠️ La chiave c'è **sempre**, anche filtrando per uno stato diverso da
+ * `IN_REVISIONE`: il banner non deve sparire cambiando scheda.
+ */
+export type CodaRedazione = Paginated<NewsAdmin> & { pausaFino: string | null };
+
+/** Badge della sidebar: `GET /admin/news/pending-count`. */
+export interface NewsPendingCount {
+  inCoda: number;
+}
+
+/** Filtri della coda admin (default lato server: `IN_REVISIONE`, 25/pagina). */
+export interface AdminNewsListOpts {
+  status?: NewsStatus;
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * Correzioni al volo ammesse in approvazione.
+ *
+ * ⚠️ Tutti i campi sono facoltativi e **`body` non c'è**: `approve` è una
+ * decisione, non un editor — un testo da riscrivere passa dal `PATCH`. E il
+ * `ValidationPipe` gira con `forbidNonWhitelisted`: una chiave in più fa 400
+ * l'INTERA chiamata, non il campo.
+ */
+export interface NewsApprovePayload {
+  title?: string;
+  categoria?: NewsCategory;
+  tags?: string[];
+  imageSource?: NewsImageSource;
+  imageCredit?: string;
+  imageLicense?: string;
+}
+
+/** Stato della modalità assenza, sia in lettura sia come esito di `PUT`. */
+export interface NewsPausaSettings {
+  pausaFino: string | null;
+}
+
 export interface Paginated<T> {
   items: T[];
   total: number;

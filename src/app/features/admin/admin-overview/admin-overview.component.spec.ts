@@ -98,11 +98,15 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     r.url === `${API}/admin/subscription-requests`;
   const isAffiliazioni = (r: { url: string }) =>
     r.url === `${API}/admin/affiliations/pending-count`;
+  // ⚠️ Terza fonte di `AdminPendingService` (coda redazione): la Panoramica non
+  // la mostra, ma la chiamata parte lo stesso — senza flush, http.verify() cade.
+  const isRedazione = (r: { url: string }) =>
+    r.url === `${API}/admin/news/pending-count`;
 
   const el = () => fixture.nativeElement as HTMLElement;
   const text = () => el().textContent ?? '';
 
-  /** Risponde alle QUATTRO chiamate del costruttore (stats, audit, 2 conteggi). */
+  /** Risponde alle CINQUE chiamate del costruttore (stats, audit, 3 conteggi). */
   const flushAll = async ({
     stats = statsView() as AdminStatsView | null,
     actions = auditEntries as AdminActionLogEntry[] | null,
@@ -149,6 +153,8 @@ describe('AdminOverviewComponent (Panoramica)', () => {
       reqAff.flush({ inVerifica });
     }
 
+    http.expectOne(isRedazione).flush({ inCoda: 0 });
+
     await fixture.whenStable();
     fixture.detectChanges();
   };
@@ -185,6 +191,7 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     richieste.flush({ items: [], total: 0, page: 1, limit: 1, totalPages: 0 });
     http.expectOne(isStats).flush(statsView());
     http.expectOne(isAffiliazioni).flush({ inVerifica: 0 });
+    http.expectOne(isRedazione).flush({ inCoda: 0 });
     await fixture.whenStable();
   });
 

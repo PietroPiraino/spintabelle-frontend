@@ -35,6 +35,7 @@ export type IconName =
   | 'calendar-days'
   | 'bar-chart-3'
   | 'scroll-text'
+  | 'pen-tool'
   | 'chevron-down';
 
 /**
@@ -234,6 +235,12 @@ export type IconName =
         <path d="M15 8h-5" />
         <path d="M19 17V5a2 2 0 0 0-2-2H4" />
         <path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3" />
+      }
+      @case ('pen-tool') {
+        <path d="m12 19 7-7 3 3-7 7-3-3z" />
+        <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5Z" />
+        <path d="m2 2 7.586 7.586" />
+        <circle cx="11" cy="11" r="2" />
       }
       @case ('chevron-down') {
         <path d="m6 9 6 6 6-6" />

@@ -22,12 +22,18 @@ describe('AdminComponent (shell dashboard)', () => {
     r.url === `${API}/admin/subscription-requests`;
   const isAffiliazioni = (r: { url: string }) =>
     r.url === `${API}/admin/affiliations/pending-count`;
+  const isRedazione = (r: { url: string }) =>
+    r.url === `${API}/admin/news/pending-count`;
 
   const el = () => fixture.nativeElement as HTMLElement;
   const text = () => el().textContent ?? '';
 
-  /** Risponde ai due conteggi del costruttore (`AdminPendingService`). */
-  const flushPending = async (richieste: number | null, inVerifica: number | null) => {
+  /** Risponde ai tre conteggi del costruttore (`AdminPendingService`). */
+  const flushPending = async (
+    richieste: number | null,
+    inVerifica: number | null,
+    inCoda: number | null = 0,
+  ) => {
     const reqRichieste = http.expectOne(isRichieste);
     if (richieste === null) {
       reqRichieste.flush(null, { status: 500, statusText: 'Server Error' });
@@ -45,6 +51,12 @@ describe('AdminComponent (shell dashboard)', () => {
       reqAff.flush(null, { status: 500, statusText: 'Server Error' });
     } else {
       reqAff.flush({ inVerifica });
+    }
+    const reqRedazione = http.expectOne(isRedazione);
+    if (inCoda === null) {
+      reqRedazione.flush(null, { status: 500, statusText: 'Server Error' });
+    } else {
+      reqRedazione.flush({ inCoda });
     }
     await fixture.whenStable();
     fixture.detectChanges();
@@ -77,10 +89,10 @@ describe('AdminComponent (shell dashboard)', () => {
     return link?.querySelector('.admin-shell__badge')?.textContent?.trim() ?? null;
   };
 
-  it('rende le 15 voci raggruppate, con i chip "Presto" sui placeholder', async () => {
+  it('rende le 16 voci raggruppate, con i chip "Presto" sui placeholder', async () => {
     await flushPending(0, 0);
 
-    expect(el().querySelectorAll('.admin-shell__link').length).toBe(15);
+    expect(el().querySelectorAll('.admin-shell__link').length).toBe(16);
     for (const label of ['Contenuti', 'Vendite', 'Utenti', 'Finanze', 'Analisi']) {
       expect(text()).toContain(label);
     }
@@ -94,10 +106,13 @@ describe('AdminComponent (shell dashboard)', () => {
   });
 
   it('mostra i badge coi conteggi, ognuno sulla SUA voce', async () => {
-    await flushPending(5, 3);
+    await flushPending(5, 3, 4);
 
     expect(badgeOf('Richieste')).toBe('5');
     expect(badgeOf('Affiliazioni')).toBe('3');
+    // ⚠️ la terza fonte: con un ternario a due rami la Redazione mostrerebbe
+    // in silenzio il conteggio delle affiliazioni
+    expect(badgeOf('Redazione')).toBe('4');
   });
 
   it('NASCONDE il badge su errore o zero: mai un errore, mai uno "0"', async () => {
@@ -110,10 +125,11 @@ describe('AdminComponent (shell dashboard)', () => {
   });
 
   it('uno zero su una fonte non nasconde il badge dell\'altra', async () => {
-    await flushPending(0, 3);
+    await flushPending(0, 3, null);
 
     expect(badgeOf('Richieste')).toBeNull();
     expect(badgeOf('Affiliazioni')).toBe('3');
+    expect(badgeOf('Redazione')).toBeNull();
   });
 
   it('drawer mobile: si apre col toggle, si chiude con Escape e navigando', async () => {
