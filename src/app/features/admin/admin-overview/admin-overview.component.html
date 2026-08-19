@@ -1,6 +1,21 @@
 <div class="overview">
-  <!-- Card "in attesa": i due punti dove qualcuno aspetta una decisione. -->
+  <!-- Card "in attesa": i tre punti dove qualcuno aspetta una decisione.
+       ⚠️ La Redazione sta per PRIMA e non è un capriccio d'ordine: le altre due
+       code si svuotano quando capita, questa 3-5 volte al giorno. È il lavoro
+       ricorrente del pannello, e la pagina su cui si atterra deve dirlo. -->
   <div class="overview__pending">
+    <a
+      class="card overview__pending-card"
+      routerLink="/admin/redazione"
+      [class.has-items]="(pending.redazione() ?? 0) > 0"
+    >
+      <app-icon name="pen-tool" [size]="22" />
+      <span class="overview__pending-text">
+        <strong>Articoli da rivedere</strong>
+        <span>coda della redazione</span>
+      </span>
+      <span class="overview__pending-count">{{ pending.redazione() ?? '—' }}</span>
+    </a>
     <a
       class="card overview__pending-card"
       routerLink="/admin/richieste"

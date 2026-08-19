@@ -98,8 +98,7 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     r.url === `${API}/admin/subscription-requests`;
   const isAffiliazioni = (r: { url: string }) =>
     r.url === `${API}/admin/affiliations/pending-count`;
-  // ⚠️ Terza fonte di `AdminPendingService` (coda redazione): la Panoramica non
-  // la mostra, ma la chiamata parte lo stesso — senza flush, http.verify() cade.
+  // Terza fonte di `AdminPendingService`: la coda della redazione.
   const isRedazione = (r: { url: string }) =>
     r.url === `${API}/admin/news/pending-count`;
 
@@ -112,6 +111,7 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     actions = auditEntries as AdminActionLogEntry[] | null,
     richieste = 5 as number | null,
     inVerifica = 3 as number | null,
+    inCoda = 7 as number | null,
   } = {}) => {
     const reqStats = http.expectOne(isStats);
     if (stats === null) {
@@ -153,7 +153,12 @@ describe('AdminOverviewComponent (Panoramica)', () => {
       reqAff.flush({ inVerifica });
     }
 
-    http.expectOne(isRedazione).flush({ inCoda: 0 });
+    const reqRed = http.expectOne(isRedazione);
+    if (inCoda === null) {
+      reqRed.flush(null, { status: 500, statusText: 'Server Error' });
+    } else {
+      reqRed.flush({ inCoda });
+    }
 
     await fixture.whenStable();
     fixture.detectChanges();
@@ -206,12 +211,15 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     expect(text()).toContain('+12,5%');
     expect(text()).toContain('Aggiornato:');
     // card "in attesa": conteggi ancorati al loro elemento, non al testo pagina
+    expect(text()).toContain('Articoli da rivedere');
     expect(text()).toContain('Richieste in attesa');
     expect(text()).toContain('Affiliazioni in verifica');
+    // ⚠️ L'ordine È l'asserzione: la coda della redazione sta per PRIMA perché
+    // è quella che si svuota 3-5 volte al giorno, non quando capita.
     const counts = Array.from(
       el().querySelectorAll('.overview__pending-count'),
     ).map((c) => c.textContent?.trim());
-    expect(counts).toEqual(['5', '3']);
+    expect(counts).toEqual(['7', '5', '3']);
   });
 
   it('la striscia azioni usa la mappa etichette condivisa, slug grezzo in fallback', async () => {
@@ -239,7 +247,16 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     const counts = Array.from(
       el().querySelectorAll('.overview__pending-count'),
     ).map((c) => c.textContent?.trim());
-    expect(counts).toEqual(['5', '—']);
+    expect(counts).toEqual(['7', '5', '—']);
+  });
+
+  it('anche la coda redazione in errore mostra "—", non uno zero inventato', async () => {
+    await flushAll({ inCoda: null });
+
+    const counts = Array.from(
+      el().querySelectorAll('.overview__pending-count'),
+    ).map((c) => c.textContent?.trim());
+    expect(counts).toEqual(['—', '5', '3']);
   });
 
   it('"Riprova" delle statistiche rifà solo quella chiamata', async () => {
@@ -263,6 +280,7 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     const hrefs = Array.from(el().querySelectorAll<HTMLAnchorElement>('a')).map(
       (a) => a.getAttribute('href'),
     );
+    expect(hrefs).toContain('/admin/redazione');
     expect(hrefs).toContain('/admin/richieste');
     expect(hrefs).toContain('/admin/affiliazioni');
     expect(hrefs).toContain('/admin/log');
