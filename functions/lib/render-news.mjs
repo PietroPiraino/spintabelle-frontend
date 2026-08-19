@@ -131,10 +131,62 @@ export function dataLeggibile(iso) {
   }
 }
 
-/** URL canonica di un articolo o dell'indice: SEMPRE con lo slash finale. */
-export function urlCanonica(chiave) {
+// ---- L'indirizzo buono di un articolo -----------------------------------
+//
+// ⚠️ LA REGOLA DEI 301 STA QUI, non nella Function, per la stessa ragione di
+// tutto il resto di questo file: e' logica pura, quindi `npm run test:scripts`
+// la prova senza inventare un Worker. La Function resta la busta (stato,
+// intestazioni, cache).
+//
+// ⚠️ E IL BERSAGLIO DEL 301 ESCE DALLA STESSA FUNZIONE DEL CANONICAL. Se fossero
+// due stringhe costruite in due punti, il giorno che una cambia forma (una
+// barra, un encode) si otterrebbe un redirect verso una pagina il cui canonical
+// dichiara un'ALTRA url: per un motore e' peggio del doppione che il redirect
+// doveva chiudere.
+
+/** L'indice ha una sola forma buona, ed e' quella con lo slash finale. */
+export const PERCORSO_INDICE = '/news/';
+
+/**
+ * Il percorso canonico di una chiave — chiave vuota = l'indice. SEMPRE con lo
+ * slash finale: e' la forma servita a 200, quella che canonical e sitemap
+ * dichiarano e quella che un motore chiede (lezione Search Console 18/07/2026).
+ */
+export function percorsoCanonico(chiave) {
   const k = String(chiave ?? '').trim();
-  return k ? `${SITO}/news/${encodeURIComponent(k)}/` : `${SITO}/news/`;
+  return k ? `/news/${encodeURIComponent(k)}/` : PERCORSO_INDICE;
+}
+
+/** URL canonica = dominio di produzione + percorso canonico. */
+export function urlCanonica(chiave) {
+  return `${SITO}${percorsoCanonico(chiave)}`;
+}
+
+/**
+ * La correzione da fare sull'indirizzo richiesto, o `null` quando non c'e'
+ * niente da correggere. `chiaveCanonica` e' lo slug corrente dell'articolo —
+ * oppure, quando quello slug non c'e', la chiave con cui e' stato chiesto.
+ *
+ * ⚠️ UN SOLO SALTO, SEMPRE, e non e' un auspicio: il bersaglio e'
+ * `percorsoCanonico(k)`, e ripresentandolo `decodeURIComponent` lo riporta
+ * esattamente a `k` — quindi alla seconda richiesta destinazione === pathname e
+ * qui esce `null`. E' l'unica proprieta' che tiene lontano un ciclo di
+ * redirect, ed e' fissata da un test.
+ *
+ * ⚠️ CON UNA CHIAVE VUOTA NON SI REINDIRIZZA UN ARTICOLO: il bersaglio sarebbe
+ * `/news/`, cioe' l'INDICE, e un articolo senza slug verrebbe spedito su
+ * un'altra pagina invece di essere reso. Chi chiama passa `slug || chiave`, e
+ * la chiave a quel punto non e' mai vuota.
+ *
+ * ⚠️ IL BERSAGLIO E' UN PERCORSO, NON UNA URL ASSOLUTA. Un `Location` verso
+ * bestfishforever.it butterebbe fuori dall'anteprima di ramo chiunque stia
+ * verificando li', e la prova su preview e' obbligatoria prima di main. Il
+ * canonical invece nomina sempre la produzione: sono due cose diverse, e questa
+ * e' la sola in cui l'host di partenza va rispettato.
+ */
+export function redirezione(pathname, chiaveCanonica) {
+  const destinazione = percorsoCanonico(chiaveCanonica);
+  return destinazione === String(pathname ?? '') ? null : destinazione;
 }
 
 // ---- Chirurgia sullo scheletro -----------------------------------------

@@ -15,7 +15,16 @@
 // COSA VERIFICA, E PERCHE' PROPRIO QUESTE COSE.
 //   1. L'articolo piu' recente risponde 200, con un solo <h1>, contenuto vero e
 //      canonical nella forma con slash finale (lezione Search Console 18/07).
-//   2. L'INDICE `/news/`: stesse asserzioni (200, un solo <h1> — i titoli degli
+//   2. ⚠️ UN SOLO INDIRIZZO BUONO: gli indirizzi vecchi rispondono **301** verso
+//      `/news/<slug>/`. Due modi di essere vecchio, stesso problema — l'ObjectId
+//      (l'indirizzo che Google ha in indice da prima che gli slug esistessero, e
+//      che l'API risolve ancora) e la forma SENZA slash finale, misurata a 200 il
+//      19/08/2026: quando una richiesta la prende una Function, Cloudflare non
+//      normalizza niente. Un doppione servito a 200 e' cio' che il canonical
+//      chiede di ignorare e che a volte finisce in indice lo stesso. Nessun'altra
+//      guardia puo' vedere un 301: le altre leggono `dist/`, e un redirect
+//      deciso all'edge in `dist/` non esiste.
+//   3. L'INDICE `/news/`: stesse asserzioni (200, un solo <h1> — i titoli degli
 //      articoli sono <h2> — contenuto, canonical `/news/`), piu' quella che vale
 //      solo per lui: e' FRESCO, cioe' contiene il link all'articolo piu' recente
 //      restituito dall'API. E' la prova che l'indice lo compone la Function a
@@ -25,16 +34,17 @@
 //      ⚠️ E' anche l'unico controllo che tocca il prefisso NUDO: `/news/*` non
 //      copre `/news`, quindi l'indice sta o cade su una riga a parte
 //      dell'include in `public/_routes.json`.
-//   3. ⚠️ NIENTE `noindex` — su entrambe — ne' come <meta> ne' come header. E' il
+//   4. ⚠️ NIENTE `noindex` — su entrambe — ne' come <meta> ne' come header. E' il
 //      controllo per cui questo file esiste: lo scheletro dell'edge e'
 //      `index.csr.html`, che `inject-csr-noindex.mjs` deindicizza di proposito.
 //      Se la Function smettesse di togliere quel meta, OGNI pagina news resa
 //      all'edge nascerebbe fuori da Google — e `check-prerender-content.mjs` non
 //      se ne accorgerebbe MAI, perche' guarda `dist/` e queste risposte in
 //      `dist/` non esistono.
-//   4. Un id inventato -> 404 VERO. Il soft-404 (200 con l'HTML della home) e'
-//      il difetto che `public/404.html` ha chiuso il 16/08/2026.
-//   5. `/negozio` porta ancora `X-Robots-Tag`. Sembra fuori tema e non lo e':
+//   5. Un id inventato -> 404 VERO, e **non** un 301: un indirizzo che non
+//      esiste non e' un indirizzo traslocato. Il soft-404 (200 con l'HTML della
+//      home) e' il difetto che `public/404.html` ha chiuso il 16/08/2026.
+//   6. `/negozio` porta ancora `X-Robots-Tag`. Sembra fuori tema e non lo e':
 //      quell'header viene da `public/_headers`, che in advanced mode
 //      (`_worker.js`) smetterebbe di applicarsi. E' la prova, da fuori, che
 //      siamo ancora in directory mode.
@@ -261,7 +271,58 @@ async function sonda() {
       );
   }
 
-  // ---- 2. L'indice /news/ -------------------------------------------------
+  // ---- 2. Gli indirizzi vecchi rispondono 301 -----------------------------
+  //
+  // ⚠️ `redirect: 'manual'`, e non e' un dettaglio: `prendi` di suo SEGUE i
+  // redirect, quindi senza questa opzione il controllo vedrebbe il 200 finale e
+  // direbbe che va tutto bene qualunque cosa risponda l'indirizzo vecchio.
+
+  async function attesoRedirect(url, destinazione, etichetta) {
+    try {
+      const r = await prendi(url, { redirect: 'manual' });
+      const loc = r.headers.get('location');
+      info.push(`${url} -> ${r.status}${loc ? ` -> ${loc}` : ''} (${etichetta})`);
+      if (r.status !== 301) {
+        nota(
+          `${url} — risponde ${r.status} invece di 301 (${etichetta}). E' lo stesso ` +
+            `contenuto di ${destinazione} servito a un secondo indirizzo: il canonical lo ` +
+            'dichiara gia da solo, il 301 e cio che lo toglie di mezzo davvero.',
+        );
+        return;
+      }
+      if (!loc) {
+        nota(`${url} — 301 senza header Location: un salto verso il nulla.`);
+        return;
+      }
+      const dest = new URL(loc, url);
+      if (dest.pathname !== destinazione)
+        nota(`${url} — Location "${loc}", atteso "${destinazione}" (${etichetta}).`);
+      if (dest.origin !== new URL(url).origin)
+        nota(
+          `${url} — il Location porta su ${dest.origin}. Il bersaglio deve essere un ` +
+            "PERCORSO e non una URL assoluta: cosi' su un'anteprima di ramo il salto " +
+            "resta dentro l'anteprima invece di sbattere in produzione — e la prova su " +
+            'preview e obbligatoria prima di main.',
+        );
+    } catch (e) {
+      nota(`${url} — la richiesta non e' andata a buon fine (${e.message}).`);
+    }
+  }
+
+  const destinazione = `/news/${encodeURIComponent(chiave)}/`;
+  const idVecchio = String(items[0]._id ?? '');
+  // ⚠️ Il confronto con `chiave` non e' pleonastico: se l'articolo non avesse
+  // uno slug, la chiave SAREBBE l'ObjectId — cioe' l'indirizzo buono — e
+  // pretendere un 301 da li' vorrebbe dire pretendere un ciclo.
+  if (tipoChiave === 'slug' && idVecchio && idVecchio !== chiave)
+    await attesoRedirect(`${BASE}/news/${idVecchio}/`, destinazione, 'ObjectId -> slug corrente');
+  else
+    info.push("301 dall'ObjectId: saltato (l'articolo piu' recente non ha uno slug da cui differire)");
+
+  await attesoRedirect(`${BASE}/news/${chiave}`, destinazione, 'forma senza slash finale');
+  await attesoRedirect(`${BASE}/news`, '/news/', "indice senza slash finale");
+
+  // ---- 3. L'indice /news/ -------------------------------------------------
   //
   // ⚠️ Dal 19/08/2026 l'indice NON e' piu' una pagina prerenderizzata: lo compone
   // la stessa Function degli articoli. Ha quindi bisogno degli stessi controlli —
@@ -363,7 +424,7 @@ async function sonda() {
       );
   }
 
-  // ---- 3. Un id inventato deve dare un 404 vero ---------------------------
+  // ---- 4. Un id inventato deve dare un 404 vero ---------------------------
 
   const urlFinto = `${BASE}/news/${ID_INESISTENTE}/`;
   try {
@@ -381,7 +442,7 @@ async function sonda() {
     nota(`${urlFinto} — la richiesta non e' andata a buon fine (${e.message}).`);
   }
 
-  // ---- 4. `_headers` e' ancora in vigore (= siamo in directory mode) ------
+  // ---- 5. `_headers` e' ancora in vigore (= siamo in directory mode) ------
 
   const urlGated = `${BASE}/negozio`;
   try {
@@ -414,7 +475,8 @@ async function sonda() {
 
   console.log(
     '\n✅ articolo e indice serviti con contenuto, un solo h1, canonical e OG; indice ' +
-      "fresco (c'e' l'ultimo articolo); niente noindex; 404 vero; _headers in vigore.\n",
+      "fresco (c'e' l'ultimo articolo); indirizzi vecchi e forma senza slash in 301 " +
+      'verso lo slug corrente; niente noindex; 404 vero; _headers in vigore.\n',
   );
 }
 

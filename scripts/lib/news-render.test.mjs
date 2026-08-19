@@ -28,8 +28,11 @@ import {
   SITO,
   TITOLO_INDICE,
   estratto,
+  percorsoCanonico,
+  redirezione,
   renderArticolo,
   renderIndice,
+  urlCanonica,
 } from '../../functions/lib/render-news.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
@@ -223,6 +226,85 @@ test('l indice regge una risposta di forma inattesa senza lanciare', () => {
   // esce: la Function trasformerebbe l'eccezione in un ripiego sulla shell.
   for (const dati of [null, undefined, [{}], [{ title: '' }], [{ title: 'x' }]])
     assert.doesNotThrow(() => renderIndice(scheletro, dati));
+});
+
+// ---- L'indirizzo buono: i 301 ------------------------------------------
+//
+// ⚠️ PERCHE' QUESTI CASI SONO QUI E NON NELLA FUNCTION. La decisione "questo
+// indirizzo va corretto, e verso dove" e' una funzione pura di due stringhe:
+// tenerla dentro la Function vorrebbe dire poterla provare solo montando un
+// finto Worker. La Function fa il resto (stato 301, Location, cache), ed e' la
+// parte che un errore lo mostra subito.
+
+test('un ObjectId e uno slug storico portano allo slug corrente', () => {
+  // Sono LO STESSO problema: un indirizzo che non e' piu' quello buono. L'API
+  // li risolve tutti e due, quindi tutti e due rispondevano 200 — tre URL per
+  // un contenuto solo.
+  const attuale = 'come-si-gioca-il-bottone';
+  assert.equal(redirezione(`/news/${ARTICOLO._id}/`, attuale), '/news/come-si-gioca-il-bottone/');
+  assert.equal(redirezione('/news/vecchio-titolo-di-due-mesi-fa/', attuale), '/news/come-si-gioca-il-bottone/');
+});
+
+test('lo slug corrente con lo slash finale non si tocca', () => {
+  assert.equal(redirezione('/news/come-si-gioca-il-bottone/', 'come-si-gioca-il-bottone'), null);
+  assert.equal(redirezione('/news/', ''), null);
+});
+
+test('la forma SENZA slash finale e un doppione, e si normalizza', () => {
+  // ⚠️ Misurato in produzione il 19/08/2026, non dedotto: `/news/<slug>`
+  // rispondeva 200 con lo stesso HTML di `/news/<slug>/`. Quando una richiesta
+  // la prende una Pages Function, Cloudflare non normalizza niente — la
+  // normalizzazione degli asset statici non c'entra e non la vede nessuno.
+  assert.equal(
+    redirezione('/news/come-si-gioca-il-bottone', 'come-si-gioca-il-bottone'),
+    '/news/come-si-gioca-il-bottone/',
+  );
+  // E vale per l'indice, che aveva esattamente lo stesso doppione.
+  assert.equal(redirezione('/news', ''), '/news/');
+});
+
+test('un solo salto: il bersaglio di un 301 non si reindirizza a sua volta', () => {
+  // ⚠️ E' l'invariante che tiene lontano un ciclo, e regge su una proprieta'
+  // sola: `decodeURIComponent(encodeURIComponent(k)) === k`. La Function
+  // ri-decodifica il segmento, quindi alla seconda richiesta la chiave e'
+  // identica e il bersaglio coincide con il percorso chiesto.
+  for (const k of [
+    'come-si-gioca-il-bottone',
+    ARTICOLO._id,
+    'accenti-è-e-spazi vari',
+    'con/una/barra',
+    'con%20una%20percentuale',
+  ])
+    assert.equal(redirezione(percorsoCanonico(k), k), null, `ciclo di redirect su "${k}"`);
+});
+
+test('senza slug corrente non si reindirizza: si rende e basta', () => {
+  // Chi chiama passa `slug || chiave`: con lo slug vuoto il bersaglio ridiventa
+  // la chiave richiesta, quindi non c'e' nessun salto da fare.
+  assert.equal(redirezione(`/news/${ARTICOLO._id}/`, ARTICOLO._id), null);
+  // ⚠️ E una chiave vuota non deve MAI diventare il bersaglio di un articolo:
+  // `percorsoCanonico('')` e' l'INDICE, cioe' un'altra pagina.
+  assert.equal(percorsoCanonico(''), '/news/');
+  assert.equal(percorsoCanonico('   '), '/news/');
+  assert.equal(percorsoCanonico(null), '/news/');
+});
+
+test('il bersaglio del 301 e il canonical sono la stessa stringa', () => {
+  // ⚠️ Se divergessero, il 301 porterebbe su una pagina il cui canonical
+  // dichiara un'altra URL: per un motore e' peggio del doppione da chiudere.
+  // Non e' un auspicio: `urlCanonica` E' `SITO + percorsoCanonico`.
+  for (const k of ['come-si-gioca-il-bottone', ARTICOLO._id, 'titolo-con-è', ''])
+    assert.equal(urlCanonica(k), `${SITO}${percorsoCanonico(k)}`);
+});
+
+test('il bersaglio e un PERCORSO, mai una URL assoluta', () => {
+  // Un Location verso bestfishforever.it butterebbe fuori dall'anteprima di ramo
+  // chiunque stia verificando li' — e la prova su preview e' obbligatoria prima
+  // di main. Il canonical, al contrario, nomina sempre la produzione.
+  const dest = redirezione(`/news/${ARTICOLO._id}/`, 'come-si-gioca-il-bottone');
+  assert.equal(dest, '/news/come-si-gioca-il-bottone/');
+  assert.doesNotMatch(dest, /^https?:/);
+  assert.doesNotMatch(dest, /bestfishforever/);
 });
 
 // ---- Estratto -----------------------------------------------------------
