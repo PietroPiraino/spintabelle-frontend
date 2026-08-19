@@ -255,6 +255,89 @@ async function sonda() {
     if (!/<meta[^>]+property=["']og:title["']/i.test(html))
       nota(`${urlArticolo} — manca og:title: senza, l'anteprima social e' quella della home.`);
 
+    // ---- L'HTML dell'edge dice quello che dice l'API? ---------------------
+    //
+    // ⚠️ QUESTO BLOCCO ESISTE PER UN INCIDENTE PRECISO (19/08/2026): il push
+    // della "superficie legale" ha spedito i 19 file di Angular e ha lasciato
+    // fuori i due dell'edge. Il build e' passato, le guardie erano verdi, il
+    // deploy di Cloudflare ha detto "Success" — e per un'ora gli articoli sono
+    // usciti senza firma, perche' NIENTE guarda l'HTML che compone la Function:
+    // `check-prerender-content.mjs` misura `dist/`, e questa pagina in `dist/`
+    // non c'e'. Un renderer piu' vecchio del repo e' invisibile a ogni altro
+    // controllo del progetto: e' il buco che questo blocco chiude.
+    //
+    // ⚠️ Gli attesi si calcolano dal record dell'API (`items[0]`), mai da
+    // costanti scritte qui: un controllo che si scrive da solo l'atteso non
+    // misura niente.
+    const rec = items[0] ?? {};
+
+    // La firma. ⚠️ Condizionale sul dato: un articolo senza `autore` NON deve
+    // stampare una firma vuota (il renderer infatti non la stampa), quindi
+    // pretenderla sempre trasformerebbe un comportamento corretto in un rilievo.
+    const autoreApi = String(rec.autore ?? '').trim();
+    if (autoreApi) {
+      const firma = (html.match(/<span class="news-detail__byline">([\s\S]*?)<\/span>/) || [])[1] ?? null;
+      if (firma === null)
+        nota(
+          `${urlArticolo} — l'API dichiara l'autore "${autoreApi}" ma nell'HTML non c'e' la ` +
+            "firma. E' la gamba visibile dell'esonero art. 50(4) (chi risponde dell'articolo, " +
+            'raggiungibile da /redazione/), e per un crawler una firma che compare solo dopo ' +
+            "l'idratazione non esiste. Se il resto della pagina e' giusto, il sospetto e' che la " +
+            "Function all'edge sia piu' VECCHIA del repo: functions/ sta fuori da dist/, quindi " +
+            'nessuna guardia di build se ne accorge.',
+        );
+      else if (!firma.includes(autoreApi))
+        nota(`${urlArticolo} — c'e' la firma ma non riporta "${autoreApi}", l'autore dell'API.`);
+      else if (!firma.includes('href="/redazione/"'))
+        nota(
+          `${urlArticolo} — la firma non e' un collegamento a /redazione/ (forma con lo slash ` +
+            "finale, quella servita a 200: senza slash e' un 308 regalato a ogni scansione). " +
+            "Una firma che non porta a chi risponde e' un ornamento.",
+        );
+    }
+
+    // Le due date dei dati strutturati. ⚠️ `dateModified` NON e' `updatedAt`
+    // (D45): con `updatedAt` qualunque salvataggio dell'admin — un refuso, un
+    // tag — dichiarava la pagina aggiornata senza esserlo. Solo una rettifica
+    // pubblicata la muove.
+    // ⚠️ Il blocco GIUSTO, non il primo: la pagina ne porta piu' d'uno (lo
+    // scheletro ne ha gia' due, Organization e WebSite) e il NewsArticle e'
+    // l'ultimo ad arrivare. Prendere il primo faceva dire a questo controllo che
+    // datePublished era "null" su una pagina perfettamente corretta — cioe' un
+    // falso allarme, che e' il modo piu' rapido per far spegnere una guardia.
+    const blocchiLd = [
+      ...html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi),
+    ].map((m) => m[1]);
+    const jsonLd = blocchiLd.find((b) => /"@type":\s*"NewsArticle"/.test(b)) ?? null;
+    const attesoPub = String(rec.publishedAt ?? rec.createdAt ?? '');
+    const attesoMod = String(rec.ultimaRettificaAt ?? attesoPub);
+    const campo = (nome) => (jsonLd.match(new RegExp(`"${nome}":"([^"]*)"`)) || [])[1] ?? null;
+
+    if (!jsonLd) nota(`${urlArticolo} — manca il blocco JSON-LD dell'articolo.`);
+    else {
+      const pub = campo('datePublished');
+      const mod = campo('dateModified');
+      if (attesoPub && pub !== attesoPub)
+        nota(
+          `${urlArticolo} — datePublished "${pub}", atteso "${attesoPub}" (publishedAt ` +
+            "dell'API, con createdAt come rete per i pezzi anteriori al campo).",
+        );
+      if (mod !== attesoMod)
+        nota(
+          `${urlArticolo} — dateModified "${mod}", atteso "${attesoMod}"` +
+            (rec.updatedAt && mod === String(rec.updatedAt)
+              ? ": e' updatedAt, cioe' il comportamento di PRIMA del 19/08/2026 — la Function " +
+                "all'edge e' piu' vecchia del repo."
+              : " (ultimaRettificaAt se c'e', altrimenti la data di pubblicazione)."),
+        );
+      if (autoreApi && !/"@type":\s*"Person"/.test(jsonLd))
+        nota(
+          `${urlArticolo} — il JSON-LD non dichiara l'autore come Person. Una byline umana in ` +
+            "chiaro con un autore-azienda nei dati strutturati e' la discrepanza che le linee " +
+            'guida sulla reputazione del sito leggono come una maschera.',
+        );
+    }
+
     // ⚠️ Il controllo per cui esiste questo file.
     if (hasNoindex(html))
       nota(
