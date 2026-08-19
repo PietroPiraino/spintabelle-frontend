@@ -24,9 +24,17 @@
           <span class="admin-shell__group-label">{{ group.label }}</span>
         }
         @for (item of group.items; track item.path) {
+          <!-- ⚠️ Il ramo per il path vuoto (Panoramica) NON è pedanteria:
+               `['/admin', '']` serializza in `/admin/` — con la barra finale — e
+               il router ci vede un segmento vuoto IN PIÙ da agganciare. Non lo
+               aggancia nessuno, quindi si finiva sulla rotta jolly: cliccare
+               «Panoramica» nella sidebar portava alla pagina 404 dell'app. Dal
+               menù dell'header non si vedeva, perché quello punta a `/admin`
+               come stringa e combacia. Difetto presente dal 14/08/2026,
+               segnalato dall'owner il 19/08 e pinnato da una spec. -->
           <a
             class="admin-shell__link"
-            [routerLink]="['/admin', item.path]"
+            [routerLink]="item.path ? ['/admin', item.path] : ['/admin']"
             routerLinkActive="is-active"
             [routerLinkActiveOptions]="{ exact: item.path === '' }"
             ariaCurrentWhenActive="page"

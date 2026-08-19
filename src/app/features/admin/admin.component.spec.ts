@@ -175,6 +175,26 @@ describe('AdminComponent (shell dashboard)', () => {
     );
   });
 
+  it('⚠️ Panoramica punta a /admin, NON a /admin/ (la barra finale la manda in 404)', async () => {
+    await flushPending(0, 0);
+
+    const link = Array.from(
+      el().querySelectorAll<HTMLAnchorElement>('a.admin-shell__link'),
+    ).find((a) => a.textContent?.includes('Panoramica'))!;
+
+    // ⚠️ `['/admin', '']` serializza in `/admin/`: il router ci trova un segmento
+    // vuoto in più da agganciare, nessuna rotta lo prende e si finisce sulla
+    // jolly, cioè sulla pagina 404 dell'app. È successo davvero (19/08/2026), e
+    // non si vedeva perché l'header punta a `/admin` come stringa.
+    expect(link.getAttribute('href')).toBe('/admin');
+
+    // Le altre voci restano annidate: qui la barra finale non c'è per costruzione.
+    const lezioni = Array.from(
+      el().querySelectorAll<HTMLAnchorElement>('a.admin-shell__link'),
+    ).find((a) => a.textContent?.includes('Lezioni'))!;
+    expect(lezioni.getAttribute('href')).toBe('/admin/lezioni');
+  });
+
   it('il titolo della topbar parte da "Panoramica" e segue la sezione', async () => {
     await flushPending(0, 0);
     expect(el().querySelector('.admin-shell__title')?.textContent).toContain(
