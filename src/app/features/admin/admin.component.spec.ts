@@ -89,10 +89,10 @@ describe('AdminComponent (shell dashboard)', () => {
     return link?.querySelector('.admin-shell__badge')?.textContent?.trim() ?? null;
   };
 
-  it('rende le 16 voci raggruppate, con i chip "Presto" sui placeholder', async () => {
+  it('rende le 17 voci raggruppate, con i chip "Presto" sui placeholder', async () => {
     await flushPending(0, 0);
 
-    expect(el().querySelectorAll('.admin-shell__link').length).toBe(16);
+    expect(el().querySelectorAll('.admin-shell__link').length).toBe(17);
     for (const label of ['Contenuti', 'Vendite', 'Utenti', 'Finanze', 'Analisi']) {
       expect(text()).toContain(label);
     }

@@ -1,0 +1,816 @@
+<!--
+  Cruscotto delle Fonti. L'ordine dall'alto in basso è l'ordine delle domande:
+  1) il rubinetto generale è aperto? 2) come stanno le fonti, in un colpo
+  d'occhio? 3) che cosa è successo su questa riga? — e solo dopo la
+  configurazione, che è la parte che si tocca una volta ogni tanto.
+-->
+<div class="fnt">
+  <div class="fnt__head">
+    <div>
+      <h2>Fonti della redazione</h2>
+      <p class="admin-item__meta">
+        @if (fonti(); as elenco) {
+          {{ elenco.length }}
+          {{ elenco.length === 1 ? 'fonte configurata' : 'fonti configurate' }}
+          · {{ accese() }} {{ accese() === 1 ? 'accesa' : 'accese' }}
+        } @else {
+          Caricamento…
+        }
+      </p>
+    </div>
+
+    <!--
+      ⚠️ Il comando di aggiornamento sta QUI, sul percorso felice, e non solo
+      dentro la banda d'errore: quello lì esiste unicamente quando la GET è già
+      fallita, cioè mai nei dieci minuti in cui si guarda la prima fonte
+      lavorare. Accanto, l'età dei dati — con il battito al minuto dice sempre
+      «adesso», ed è il momento in cui smette di dirlo che vale.
+    -->
+    <div class="fnt__comandi">
+      @if (freschezza(); as fr) {
+        <span class="fnt__freschezza" role="status">{{ fr }}</span>
+      }
+      <button
+        type="button"
+        class="btn btn--ghost btn--sm fnt__aggiorna"
+        [disabled]="inVolo() || caricamento()"
+        (click)="riprova()"
+      >
+        {{ caricamento() ? 'Aggiorno…' : 'Aggiorna' }}
+      </button>
+      @if (!formAperto()) {
+        <button
+          type="button"
+          id="fnt-nuova"
+          class="btn btn--ghost fnt__nuova"
+          [disabled]="inVolo()"
+          (click)="apriNuova()"
+        >
+          Aggiungi una fonte
+        </button>
+      }
+    </div>
+  </div>
+
+  <!--
+    L'interruttore generale. ⚠️ È una env di Render (`NEWS_INGEST_ENABLED`)
+    letta a ogni tick: nessuna rotta delle sorgenti la espone, e senza questo
+    riquadro una fonte "accesa" che non raccoglie niente sarebbe un mistero.
+  -->
+  @if (salute()) {
+    @if (maestroSpento()) {
+      <div class="card card--pad fnt__master is-off" data-stato="off" role="status">
+        <p class="fnt__master-titolo">
+          <app-icon name="alert-triangle" [size]="18" />
+          La raccolta generale è <strong>spenta</strong>
+        </p>
+        <p>
+          Il tick esce prima ancora di guardare l'elenco: nessuna fonte viene
+          interrogata, qualunque cosa dica la sua riga qui sotto. Si riaccende
+          dall'interruttore <code>NEWS_INGEST_ENABLED</code> su Render — non da
+          questa pagina.
+        </p>
+        @if (acceseMaFerme()) {
+          <p class="fnt__master-avviso">
+            Ci sono {{ accese() }}
+            {{ accese() === 1 ? 'fonte accesa' : 'fonti accese' }} che non stanno
+            raccogliendo niente.
+          </p>
+        }
+      </div>
+    } @else {
+      <p class="fnt__master is-on" data-stato="on">
+        <app-icon name="check" [size]="16" />
+        Raccolta generale accesa · il controllo gira ogni
+        {{ tickIngestMinuti }} minuti e interroga solo le fonti accese,
+        rispettando la cadenza di ciascuna.
+      </p>
+    }
+
+    @if (generazioneInPausa()) {
+      <p class="fnt__master is-info" data-stato="pipeline-paused">
+        <app-icon name="info" [size]="16" />
+        La <strong>generazione delle bozze</strong> è in pausa (modalità assenza
+        della Redazione): la raccolta continua, ma la coda non cresce. È un
+        interruttore diverso da quello qui sopra.
+      </p>
+    }
+  } @else if (saluteIgnota()) {
+    <!-- ⚠️ «Non lo so» detto come tale: fingere un "acceso" qui vorrebbe dire
+         promettere una raccolta che potrebbe non partire mai. -->
+    <p class="fnt__master is-ignoto" data-stato="ignoto">
+      <app-icon name="info" [size]="16" />
+      Non è stato possibile leggere lo stato dell'interruttore generale della
+      raccolta: le righe qui sotto restano vere, ma non si sa se il rubinetto a
+      monte è aperto.
+    </p>
+  }
+
+  <!--
+    Le due parole che questa pagina deve insegnare. Sono la differenza fra una
+    fonte viva e una fonte che risponde e non pubblica più.
+  -->
+  <p class="fnt__legenda">
+    <strong>Ultimo successo</strong> dice che la sorgente
+    <em>risponde</em> — lo aggiorna anche una risposta «niente di nuovo».
+    <strong>Ultimo articolo</strong> dice che ha <em>portato</em> qualcosa. Il
+    guasto più comune è una fonte che continua a rispondere e non pubblica più:
+    si vede solo guardando le due date insieme.
+  </p>
+
+  <!-- ⚠️ Banda persistente e lista che resta in pagina: un guasto di rete non
+       deve somigliare a «nessuna fonte configurata». -->
+  @if (erroreLista(); as e) {
+    <div class="form-feedback is-error fnt__errore" role="alert">
+      <span>{{ e }}</span>
+      <button
+        type="button"
+        class="btn btn--ghost btn--sm"
+        [disabled]="caricamento()"
+        (click)="riprova()"
+      >
+        {{ caricamento() ? 'Riprovo…' : 'Riprova' }}
+      </button>
+    </div>
+  }
+
+  @if (riepilogo().length > 0) {
+    <p class="fnt__summary">
+      <span class="visually-hidden">Sintesi:</span>
+      @for (v of riepilogo(); track v.key) {
+        <span class="fnt__sum" [attr.data-voce]="v.key">
+          <strong>{{ v.count }}</strong> {{ v.label }}
+        </span>
+      }
+    </p>
+  }
+
+  <!--
+    Il form: un pannello inline, come ovunque nel pannello admin (niente
+    modali). Sta FUORI dalle righe, e la riga in modifica si marca da sola.
+  -->
+  @if (formAperto()) {
+    <section class="card card--pad admin-panel fnt__form" id="fonte-form">
+      <h3>
+        {{ modificaId() ? 'Modifica la fonte' : 'Nuova fonte' }}
+      </h3>
+
+      @if (formErrore(); as e) {
+        <div class="form-feedback is-error" role="alert">{{ e }}</div>
+      }
+
+      <div class="field">
+        <label for="fonte-nome">Nome della testata</label>
+        <input
+          id="fonte-nome"
+          type="text"
+          class="input"
+          [attr.maxlength]="nomeMax"
+          [value]="fNome()"
+          (input)="onNome($event)"
+        />
+        @if (erroreNome(); as e) {
+          <p class="field-error">{{ e }}</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="fonte-slug">Slug</label>
+        <input
+          id="fonte-slug"
+          type="text"
+          class="input fnt__mono"
+          [attr.maxlength]="slugMax"
+          [value]="fSlug()"
+          (input)="onSlug($event)"
+        />
+        <p class="fnt__hint">
+          È la stringa con cui questa fonte comparirà nei log e nelle email di
+          allarme: minuscole, cifre e trattini.
+        </p>
+        @if (erroreSlug(); as e) {
+          <p class="field-error">{{ e }}</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="fonte-strategia">Come si scarica</label>
+        <!--
+          ⚠️ **La selezione si dichiara sulle `<option>`, MAI con un `[value]`
+          sul `<select>`.** Angular esegue il property binding del select PRIMA
+          del repeater che crea le option, e assegnare `value` a un select
+          ancora vuoto è un no-op: `value` resta `''`. All'inserimento delle
+          option il browser sceglie la **prima abilitata**, e al giro dopo il
+          binding non riscrive più niente perché il valore non è cambiato — il
+          selettore resta bloccato sulla prima voce mentre il signal ne dice
+          un'altra. Il danno è silenzioso: precompilando Somuchpoker il form
+          mostrava «WordPress REST» e «Italiano» e salvava RSS2/en.
+          (Gli altri select del pannello admin non hanno il problema perché
+          passano da `formControlName`, e il `SelectControlValueAccessor`
+          riapplica il valore quando le option si registrano.)
+        -->
+        <select id="fonte-strategia" class="input" (change)="onStrategy($event)">
+          <!-- ⚠️ Atom e HTML si vedono ma non si scelgono: dichiararle e poi
+               rifiutarle al salvataggio farebbe scoprire il limite con un 400.
+               Nasconderle farebbe credere che non esistano. -->
+          @for (s of strategie; track s.valore) {
+            <option
+              [value]="s.valore"
+              [selected]="s.valore === fStrategy()"
+              [disabled]="!s.disponibile"
+            >
+              {{ s.label }}{{ s.disponibile ? '' : ' — nessun lettore disponibile' }}
+            </option>
+          }
+        </select>
+        @if (parserDerivato(); as p) {
+          <p class="fnt__hint">
+            Lettore: <code>{{ p }}</code> — lo sceglie la forma della fonte, non
+            c'è nulla da decidere.
+          </p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="fonte-endpoint">Indirizzo da interrogare</label>
+        <input
+          id="fonte-endpoint"
+          type="url"
+          class="input fnt__mono"
+          [attr.maxlength]="urlMax"
+          [value]="fEndpoint()"
+          (input)="onEndpoint($event)"
+        />
+        <p class="fnt__hint">
+          ⚠️ Da confermare sul sito vero prima di accendere: gli indirizzi del
+          censimento non sono mai stati provati da qui. Alcuni siti sono esclusi
+          in partenza per ragioni legali (fonti inibite da ADM, robots.txt che
+          vieta i crawler, condizioni d'uso che vietano lo scraping): in quel
+          caso il salvataggio risponde spiegando quale.
+        </p>
+        @if (erroreEndpoint(); as e) {
+          <p class="field-error">{{ e }}</p>
+        }
+      </div>
+
+      @if (mostraCategorie()) {
+        <div class="field">
+          <label for="fonte-categorie">Categorie da escludere</label>
+          <input
+            id="fonte-categorie"
+            type="text"
+            class="input fnt__mono"
+            inputmode="numeric"
+            placeholder="es. 16586"
+            [value]="fCategorie()"
+            (input)="onCategorie($event)"
+          />
+          <p class="fnt__hint">
+            Gli id numerici delle categorie di WordPress, separati da virgole.
+            Su una fonte come Assopoker questo filtro è ciò che tiene fuori
+            scommesse e casinò: se smette di funzionare, il volume in arrivo
+            sale di colpo — ed è per questo che anche il «troppo» è un allarme.
+          </p>
+          @if (erroreCategorie(); as e) {
+            <p class="field-error">{{ e }}</p>
+          }
+        </div>
+      } @else {
+        <p class="fnt__hint fnt__hint--nota">
+          Le categorie da escludere esistono solo sulle fonti WordPress: sono id
+          di WordPress, altrove non filtrerebbero niente.
+        </p>
+      }
+
+      <div class="admin-panel__row">
+        <div class="field">
+          <label for="fonte-lingua">Lingua</label>
+          <!-- ⚠️ Stessa ragione del selettore qui sopra: `[selected]` sulle
+               option, mai `[value]` sul select. -->
+          <select id="fonte-lingua" class="input" (change)="onLingua($event)">
+            @for (l of lingue; track l.valore) {
+              <option [value]="l.valore" [selected]="l.valore === fLingua()">
+                {{ l.label }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="fonte-poll">Ogni quanti minuti</label>
+          <input
+            id="fonte-poll"
+            type="number"
+            class="input"
+            [attr.min]="pollMin"
+            [attr.max]="pollMax"
+            step="1"
+            [value]="fPoll()"
+            (input)="onPoll($event)"
+          />
+          @if (errorePoll(); as e) {
+            <p class="field-error">{{ e }}</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="fonte-baseline">Articoli al giorno attesi</label>
+          <!-- ⚠️ `step="any"`: i volumi del censimento sono decimali (3,51 —
+               0,71 — 7,6), e uno `step` intero li farebbe rifiutare dal
+               browser prima ancora di partire. -->
+          <input
+            id="fonte-baseline"
+            type="number"
+            class="input"
+            min="0"
+            [attr.max]="baselineMax"
+            step="any"
+            [value]="fBaseline()"
+            (input)="onBaseline($event)"
+          />
+          @if (erroreBaseline(); as e) {
+            <p class="field-error">{{ e }}</p>
+          }
+        </div>
+      </div>
+      <p class="fnt__hint">
+        Il volume atteso è il metro di paragone per accorgersi che una fonte sta
+        pubblicando molto meno (o molto più) del solito.
+        <strong>Lasciandolo vuoto quel controllo resta spento</strong> su questa
+        fonte: non darà mai un allarme sul volume. Da qui non si può più
+        svuotare — per spegnerlo dopo, scrivi 0.
+      </p>
+
+      <div class="field">
+        <label for="fonte-note">Nota interna</label>
+        <textarea
+          id="fonte-note"
+          class="input"
+          rows="3"
+          [attr.maxlength]="notaMax"
+          [value]="fNote()"
+          (input)="onNote($event)"
+        ></textarea>
+        <p class="fnt__hint">
+          La ragione della cadenza, o la trappola già scoperta su questa fonte.
+          La legge solo chi apre questo pannello.
+        </p>
+        @if (erroreNota(); as e) {
+          <p class="field-error">{{ e }}</p>
+        }
+      </div>
+
+      <!--
+        ⚠️ L'effetto collaterale detto PRIMA del salvataggio: cambiare la
+        domanda che si fa alla sorgente azzera la pazienza accumulata e butta i
+        segnaposto della risposta precedente. Senza questa riga, un contatore
+        che torna a zero da solo sembra un bug.
+      -->
+      @if (cambiaLaRichiesta()) {
+        <p class="form-feedback is-info fnt__form-effetto">
+          Stai cambiando la <strong>domanda</strong> che si fa a questa fonte.
+          Salvando, i fallimenti consecutivi tornano a zero, l'eventuale
+          sospensione decade e i segnaposto della risposta precedente vengono
+          buttati — altrimenti la fonte potrebbe rispondere «niente di nuovo» a
+          una domanda che invece è nuova.
+          @if (inModifica(); as f) {
+            @if (f.consecutiveFailures > 0) {
+              Oggi la riga ha {{ f.consecutiveFailures }} fallimenti
+              consecutivi.
+            }
+          }
+        </p>
+      }
+
+      <p class="fnt__hint fnt__hint--nota">
+        Una fonte nuova nasce <strong>spenta</strong>: si accende dall'elenco,
+        una per volta, quando l'indirizzo è confermato.
+      </p>
+
+      <div class="admin-panel__actions">
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="!formValido() || inVolo()"
+          (click)="salva()"
+        >
+          {{
+            azione()?.quale === 'salva'
+              ? 'Salvo…'
+              : modificaId()
+                ? 'Salva le modifiche'
+                : 'Crea la fonte (spenta)'
+          }}
+        </button>
+        <button
+          type="button"
+          class="btn btn--ghost"
+          [disabled]="inVolo()"
+          (click)="chiudiForm()"
+        >
+          Annulla
+        </button>
+      </div>
+    </section>
+  }
+
+  <!--
+    Il censimento: cinque righe già scritte, con la ragione della cadenza
+    accanto. ⚠️ Il pulsante PRECOMPILA, non salva: gli indirizzi non sono stati
+    verificati contro i siti veri e la conferma resta umana.
+  -->
+  @if (seedMancanti().length > 0) {
+    <section class="card card--pad fnt__seed">
+      <h3 class="fnt__h3">
+        @if (elencoVuoto()) {
+          Comincia da qui
+        } @else {
+          Altre fonti dal censimento
+        }
+      </h3>
+      <p class="fnt__hint">
+        {{ seedMancanti().length }}
+        {{ seedMancanti().length === 1 ? 'fonte studiata' : 'fonti studiate' }}
+        e non ancora configurate. Il pulsante riempie il form: l'indirizzo va
+        controllato sul sito vero, poi si salva — e si accende dopo.
+      </p>
+      <ul class="fnt-seed">
+        @for (s of seedMancanti(); track s.slug) {
+          <li class="fnt-seed__riga" [attr.data-slug]="s.slug">
+            <div class="fnt-seed__info">
+              <strong>{{ s.name }}</strong>
+              <span class="admin-item__meta">
+                {{ strategiaLabel(s.strategy) }} · ogni {{ s.pollMinutes }} min ·
+                {{ linguaLabel(s.lingua) }} ·
+                ~{{ numero(s.baselineItemsPerDay) }} articoli al giorno
+              </span>
+              <!-- Testo scritto dal censimento: si stampa com'è. -->
+              <span class="fnt-seed__nota">{{ s.note }}</span>
+            </div>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm fnt-seed__usa"
+              [disabled]="inVolo()"
+              (click)="precompila(s)"
+            >
+              Precompila il form
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  } @else if (seedNonDisponibile() && elencoVuoto()) {
+    <p class="fnt__hint fnt__hint--nota">
+      Le fonti del censimento non sono raggiungibili in questo momento: la
+      configurazione si può comunque scrivere a mano.
+    </p>
+  }
+
+  <!-- ── L'elenco ──────────────────────────────────────────────────────── -->
+
+  @if (fonti() === null && caricamento()) {
+    <div class="spinner" role="status" aria-label="Caricamento delle fonti"></div>
+  } @else if (fonti() !== null && righe().length === 0) {
+    <div class="empty-state">
+      <p class="empty-state__suit" aria-hidden="true">♦</p>
+      <p>Nessuna fonte configurata.</p>
+      <p class="admin-item__meta">
+        Finché non ce n'è almeno una accesa, la redazione non riceve niente da
+        leggere.
+      </p>
+    </div>
+  } @else {
+    <div class="fnt__lista">
+      @for (r of righe(); track r.f.id) {
+        <article
+          class="fnt-row"
+          [class.is-open]="isAperta(r.f)"
+          [class.is-editing]="modificaId() === r.f.id"
+          [attr.data-slug]="r.f.slug"
+          [attr.data-tono]="r.stato.tono"
+        >
+          <div class="fnt-row__main">
+            <div class="fnt-row__id">
+              <strong>{{ r.f.name }}</strong>
+              <span class="admin-item__meta">
+                {{ strategiaLabel(r.f.strategy) }} · {{ r.cadenza }} ·
+                {{ linguaLabel(r.f.lingua) }}
+              </span>
+            </div>
+
+            <!--
+              I due segnali che rispondono alla domanda del cruscotto, uno
+              accanto all'altro: «risponde» e «porta».
+            -->
+            <div class="fnt-row__segnali">
+              <span class="fnt-row__segnale" data-segnale="articolo">
+                <span class="fnt-row__segnale-et">Ultimo articolo</span>
+                <strong [attr.title]="r.ultimoArticolo.esatto">{{
+                  r.ultimoArticolo.testo
+                }}</strong>
+              </span>
+              <span class="fnt-row__segnale" data-segnale="successo">
+                <span class="fnt-row__segnale-et">Ultimo successo</span>
+                <strong [attr.title]="r.ultimoSuccesso.esatto">{{
+                  r.ultimoSuccesso.testo
+                }}</strong>
+              </span>
+            </div>
+
+            <div class="fnt-row__stato">
+              <span class="fnt-chip" [attr.data-tono]="r.stato.tono">
+                {{ r.stato.etichetta }}
+              </span>
+              @if (r.stato.nota; as n) {
+                <span class="fnt-row__nota">{{ n }}</span>
+              }
+              @if (r.f.consecutiveFailures > 0) {
+                <span class="fnt-row__ko">
+                  {{ r.f.consecutiveFailures }}
+                  {{ r.f.consecutiveFailures === 1 ? 'fallimento' : 'fallimenti' }}
+                  di fila
+                </span>
+              }
+              <!--
+                ⚠️ La spia dell'errore che i contatori NON mostrano: il ramo
+                `ILLEGGIBILE` del tick scrive il messaggio ma lascia
+                `consecutiveFailures` a zero e non mette backoff, perché la
+                sorgente ha risposto. Senza questa riga la fonte mostrerebbe
+                solo segnali positivi e il motivo resterebbe dietro «Dettagli».
+              -->
+              @if (r.spiaErrore; as s) {
+                <span class="fnt-row__ko fnt-row__spia" data-spia="errore">
+                  {{ s }} — il testo è nei dettagli
+                </span>
+              }
+              @if (r.backoff; as b) {
+                <span class="fnt-row__ko fnt-row__backoff">{{ b }}</span>
+              }
+            </div>
+
+            <div class="fnt-row__acts">
+              @if (r.f.enabled) {
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm fnt-row__spegni"
+                  [disabled]="inVolo()"
+                  (click)="spegni(r.f)"
+                >
+                  {{ inVoloSu(r.f.id, 'spegni') ? 'Spengo…' : 'Spegni' }}
+                </button>
+              } @else if (!isConfirming('accendi:' + r.f.id)) {
+                <button
+                  type="button"
+                  id="cmd-accendi:{{ r.f.id }}"
+                  class="btn btn--primary btn--sm fnt-row__accendi"
+                  [disabled]="inVolo()"
+                  (click)="askConfirm('accendi:' + r.f.id)"
+                >
+                  Accendi
+                </button>
+              }
+
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm fnt-row__toggle"
+                id="dettaglio-toggle-{{ r.f.id }}"
+                [attr.aria-expanded]="isAperta(r.f)"
+                [attr.aria-controls]="'dettaglio-' + r.f.id"
+                (click)="toggleDettaglio(r.f)"
+              >
+                {{ isAperta(r.f) ? 'Chiudi' : 'Dettagli'
+                }}<span class="visually-hidden"> di {{ r.f.name }}</span>
+                <span class="fnt-row__caret" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+
+          <!--
+            Conferma di accensione: accendere fa partire richieste verso un sito
+            vero, quindi due tocchi e le conseguenze scritte in mezzo — mai un
+            interruttore che scatta al primo sfioramento.
+          -->
+          @if (isConfirming('accendi:' + r.f.id)) {
+            <!-- ⚠️ `role="group"` etichettato + il fuoco spostato dentro
+                 (`askConfirm`): senza, il riquadro compare e uno screen reader
+                 non ne sa niente, e chi naviga da tastiera resta sul <body>
+                 perché il bottone che l'ha aperto è uscito dal DOM. -->
+            <div
+              class="fnt-conferma"
+              data-conferma="accendi"
+              role="group"
+              [attr.aria-label]="'Conferma accensione di ' + r.f.name"
+            >
+              <p class="fnt-conferma__titolo">
+                Accendere «{{ r.f.name }}»?
+              </p>
+              <ul class="fnt-conferma__punti">
+                @for (a of avvisiAccensione(r.f); track $index) {
+                  <li>{{ a }}</li>
+                }
+              </ul>
+              <p class="fnt-conferma__url fnt__mono">{{ r.f.endpointUrl }}</p>
+              <div class="fnt-conferma__acts">
+                <button
+                  type="button"
+                  id="conferma-si-accendi:{{ r.f.id }}"
+                  class="btn btn--primary btn--sm"
+                  [disabled]="inVolo()"
+                  (click)="accendi(r.f)"
+                >
+                  {{ inVoloSu(r.f.id, 'accendi') ? 'Accendo…' : 'Sì, accendi' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="inVolo()"
+                  (click)="cancelConfirm('accendi:' + r.f.id)"
+                >
+                  Annulla
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (isAperta(r.f)) {
+            <div class="fnt-row__detail" id="dettaglio-{{ r.f.id }}">
+              <!-- 1. Perché lo stato è quello che è. -->
+              @if (r.perche.length > 0) {
+                <section class="fnt-blocco">
+                  <h4 class="fnt-blocco__h">Perché</h4>
+                  <ul class="fnt-row__perche">
+                    <!-- ⚠️ `track $index`: sono frasi composte, e due identiche
+                         sarebbero chiavi duplicate — cioè una ragione che
+                         sparisce dall'elenco senza dirlo. -->
+                    @for (p of r.perche; track $index) {
+                      <li>{{ p }}</li>
+                    }
+                  </ul>
+                  <p class="fnt__hint">
+                    Ricostruito dai contatori qui sotto: lo stato lo decide il
+                    controllo periodico, e fra i due può esserci un giro di
+                    ritardo.
+                  </p>
+                </section>
+              } @else if (!r.f.enabled) {
+                <p class="fnt__hint fnt__hint--nota">
+                  Una fonte spenta non viene valutata: lo stato qui sopra è
+                  quello dell'ultima volta in cui era accesa, e resterà così
+                  finché non la riaccendi.
+                </p>
+              }
+
+              <!-- 2. L'errore, per esteso. -->
+              @if (r.errore; as e) {
+                <section class="fnt-blocco">
+                  <h4 class="fnt-blocco__h">Ultimo errore · {{ e.quando }}</h4>
+                  <p class="fnt-row__errore fnt__mono">{{ e.testo }}</p>
+                </section>
+              }
+
+              <!-- 3. Ciò che il pannello non sa ancora: mai un allarme. -->
+              @if (r.avvisi.length > 0) {
+                <section class="fnt-blocco">
+                  <h4 class="fnt-blocco__h">Da sapere</h4>
+                  <ul class="fnt-row__avvisi">
+                    @for (a of r.avvisi; track $index) {
+                      <li>{{ a }}</li>
+                    }
+                  </ul>
+                </section>
+              }
+
+              <!-- 4. La configurazione, in fondo: si guarda di rado. -->
+              <section class="fnt-blocco">
+                <h4 class="fnt-blocco__h">Configurazione</h4>
+                <dl class="fnt-dati">
+                  <dt>Indirizzo</dt>
+                  <dd class="fnt__mono fnt-dati__url">{{ r.f.endpointUrl }}</dd>
+
+                  <dt>Slug</dt>
+                  <dd class="fnt__mono">{{ r.f.slug }}</dd>
+
+                  <dt>Lettore</dt>
+                  <dd class="fnt__mono">{{ r.f.parserKey }}</dd>
+
+                  @if (r.f.strategy === 'WP_REST') {
+                    <dt>Categorie escluse</dt>
+                    <dd>
+                      @if (r.f.excludeCategoryIds.length > 0) {
+                        <span class="fnt__mono">{{
+                          r.f.excludeCategoryIds.join(', ')
+                        }}</span>
+                      } @else {
+                        Nessuna
+                      }
+                    </dd>
+                  }
+
+                  <dt>Volume</dt>
+                  <dd>
+                    <!-- ⚠️ Tutti e due i rami passano dal formattatore
+                         italiano: un `{{ r.f.baselineItemsPerDay }}` crudo
+                         stamperebbe «3.51» accanto al «3,51» dell'altro ramo. -->
+                    @if (r.volume; as v) {
+                      {{ v }}
+                    } @else if (r.volumeAtteso; as b) {
+                      {{ b }}/g attesi · non ancora misurato
+                    } @else {
+                      Non impostato
+                    }
+                  </dd>
+
+                  @if (r.cadenzaMisurata; as g) {
+                    <dt>Cadenza misurata</dt>
+                    <dd>un articolo ogni {{ g }} min circa</dd>
+                  }
+
+                  @if (r.f.note) {
+                    <dt>Nota</dt>
+                    <dd>{{ r.f.note }}</dd>
+                  }
+                </dl>
+              </section>
+
+              <div class="fnt-row__detail-acts">
+                @if (isConfirming('elimina:' + r.f.id)) {
+                  <div
+                    class="fnt-conferma"
+                    data-conferma="elimina"
+                    role="group"
+                    [attr.aria-label]="'Conferma eliminazione di ' + r.f.name"
+                  >
+                    <p class="fnt-conferma__titolo">
+                      Eliminare «{{ r.f.name }}»?
+                    </p>
+                    <p class="fnt__hint">
+                      Sparisce la configurazione e con lei tutto il suo storico
+                      di salute. Gli articoli già raccolti restano fino alla
+                      loro scadenza. Se ti serve solo fermarla,
+                      <strong>spegnerla</strong> conserva tutto.
+                    </p>
+                    <div class="fnt-conferma__acts">
+                      <button
+                        type="button"
+                        id="conferma-si-elimina:{{ r.f.id }}"
+                        class="btn btn--danger-solid btn--sm"
+                        [disabled]="inVolo()"
+                        (click)="elimina(r.f)"
+                      >
+                        {{
+                          inVoloSu(r.f.id, 'elimina')
+                            ? 'Elimino…'
+                            : 'Conferma eliminazione'
+                        }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn--ghost btn--sm"
+                        [disabled]="inVolo()"
+                        (click)="cancelConfirm('elimina:' + r.f.id)"
+                      >
+                        Annulla
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm fnt-row__modifica"
+                    [disabled]="inVolo()"
+                    (click)="modifica(r.f)"
+                  >
+                    Modifica
+                  </button>
+                  <button
+                    type="button"
+                    id="cmd-elimina:{{ r.f.id }}"
+                    class="btn btn--danger btn--sm fnt-row__elimina"
+                    [disabled]="inVolo()"
+                    (click)="askConfirm('elimina:' + r.f.id)"
+                  >
+                    Elimina
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+
+  <!--
+    Le due cose che nessuna rotta espone e che qui servono: come si prova una
+    fonte (accendendola) e perché una fonte rotta rallenta da sola.
+  -->
+  @if ((fonti() ?? []).length > 0) {
+    <p class="fnt__coda">
+      Non esiste un pulsante «prova adesso»: la prova è accendere la fonte e
+      leggere il primo giro. Se una fonte comincia a fallire viene interrogata
+      sempre più di rado — si parte da 5 minuti e si raddoppia a ogni errore,
+      fino a un massimo di {{ backoffMaxOre }} ore — così un sito in difficoltà
+      non viene martellato.
+    </p>
+  }
+</div>

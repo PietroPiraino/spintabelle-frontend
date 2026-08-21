@@ -52,6 +52,14 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         icon: 'pen-tool',
         badge: 'redazione',
       },
+      // Il rubinetto che alimenta la coda della Redazione: sta accanto a lei
+      // perché è lì che si va a capire perché la coda non cresce.
+      // ⚠️ Nessun badge: `AdminBadge` conta ciò che **aspetta una decisione**, e
+      // una fonte degradata non è una decisione in attesa — è uno stato da
+      // guardare. Un badge qui vorrebbe anche una fonte in `AdminPendingService`,
+      // cioè una chiamata a ogni cambio di sezione per un numero che su una riga
+      // SPENTA sarebbe per giunta congelato all'ultima valutazione.
+      { path: 'fonti', label: 'Fonti', icon: 'rss' },
       { path: 'documenti', label: 'Documenti', icon: 'file-text' },
     ],
   },

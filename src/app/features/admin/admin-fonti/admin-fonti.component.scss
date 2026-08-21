@@ -1,0 +1,674 @@
+// Chrome del cruscotto Fonti. Card, bottoni, spinner, empty-state, .admin-panel
+// e .field arrivano da admin-shared.scss e dai globali.
+// ⚠️ Colori SOLO da _tokens.scss (tre temi): nessun valore hardcoded.
+// ⚠️ Il colore qui è un segnale, non una decorazione: una riga spenta non ne
+// prende (non è un allarme), una accesa e ferma sì.
+
+.fnt {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fnt__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+
+  h2 {
+    font-size: 1.3rem;
+    margin: 0 0 0.2rem;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.fnt__h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+// Comandi della testata: età dei dati + Aggiorna + Aggiungi.
+.fnt__comandi {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.7rem;
+
+  // ⚠️ 44px anche qui: «Aggiorna» è il comando che si preme più spesso di
+  // tutti su questa pagina.
+  .btn {
+    min-height: 44px;
+  }
+}
+
+// In sordina di proposito: è una nota a piè di comando, non un dato del
+// cruscotto. Diventa leggibile solo quando smette di dire «adesso».
+.fnt__freschezza {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+}
+
+.fnt__mono {
+  font-family: var(--font-mono);
+  // Un endpoint non si spezza da solo e sfonda la riga sul telefono.
+  overflow-wrap: anywhere;
+}
+
+.fnt__hint {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+
+  code {
+    font-family: var(--font-mono);
+    background: var(--line);
+    padding: 0.05em 0.35em;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.fnt__hint--nota {
+  margin-top: 0.6rem;
+}
+
+// ── Interruttore generale ───────────────────────────────────────────────────
+
+.fnt__master {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+
+  app-icon {
+    flex-shrink: 0;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--line);
+    padding: 0.05em 0.35em;
+    border-radius: var(--radius-sm);
+  }
+
+  &.is-on {
+    color: var(--text-muted);
+  }
+
+  &.is-info,
+  &.is-ignoto {
+    color: var(--text-muted);
+  }
+
+  // Lo spento è l'unico che diventa un riquadro: è la condizione che rende
+  // bugiarda ogni altra riga della pagina.
+  &.is-off {
+    display: block;
+    border-color: var(--danger);
+    color: var(--text);
+
+    p {
+      margin: 0.4rem 0 0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+  }
+}
+
+.fnt__master-titolo {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 !important;
+  font-size: 1rem !important;
+  color: var(--danger) !important;
+}
+
+.fnt__master-avviso {
+  color: var(--text) !important;
+}
+
+.fnt__legenda {
+  margin: 0;
+  padding: 0.7rem 0.95rem;
+  border-left: 3px solid var(--line-strong);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+
+  strong {
+    color: var(--cream-100);
+  }
+}
+
+.fnt__errore {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+
+  .btn {
+    min-height: 44px;
+  }
+}
+
+// ── Striscia di sintesi ─────────────────────────────────────────────────────
+
+.fnt__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.fnt__sum strong {
+  font-family: var(--font-mono);
+  color: var(--cream-100);
+}
+
+.fnt__sum[data-voce='allarme'] strong {
+  color: var(--gold-text);
+}
+
+.fnt__sum[data-voce='grave'] strong {
+  color: var(--danger);
+}
+
+// ── Form ────────────────────────────────────────────────────────────────────
+
+.fnt__form {
+  .field {
+    margin-bottom: 0.9rem;
+  }
+}
+
+.fnt__form-effetto {
+  margin-top: 0.8rem;
+}
+
+// ── Censimento ──────────────────────────────────────────────────────────────
+
+.fnt-seed {
+  list-style: none;
+  padding: 0;
+  margin: 0.8rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.fnt-seed__riga {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.fnt-seed__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+
+  strong {
+    color: var(--cream-100);
+  }
+}
+
+.fnt-seed__nota {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+// ⚠️ Stessi 44px delle azioni di riga: un `.btn--sm` nudo sta sui 33px, e con
+// `padding .45rem` + `font-size .85rem` quei 44 sono aritmeticamente
+// irraggiungibili senza dichiararli.
+.fnt-seed__usa {
+  min-height: 44px;
+}
+
+// ── Elenco ──────────────────────────────────────────────────────────────────
+
+.fnt__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.fnt-row {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  transition:
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
+
+  // L'ombra è riservata alla riga aperta: è l'unica che deve staccarsi.
+  &.is-open {
+    border-color: var(--copper-400);
+    box-shadow: var(--shadow-card);
+  }
+
+  // Stessa marcatura delle altre tab admin: la riga che il form sta modificando.
+  &.is-editing {
+    border-color: var(--copper-400);
+    box-shadow: var(--glow-copper);
+  }
+
+  // ⚠️ Il filo colorato sul bordo sinistro è il "colpo d'occhio": si legge
+  // scorrendo, prima di qualunque parola. Una riga SPENTA non ne ha — non è un
+  // allarme, ed è la distinzione che questa pagina non può sbagliare.
+  &[data-tono='ok'] {
+    border-left: 3px solid var(--felt);
+  }
+
+  &[data-tono='attesa'] {
+    border-left: 3px solid var(--neon-cyan);
+  }
+
+  &[data-tono='allarme'] {
+    border-left: 3px solid var(--gold);
+  }
+
+  &[data-tono='grave'] {
+    border-left: 3px solid var(--danger);
+  }
+}
+
+.fnt-row__main {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(11rem, 1.1fr) minmax(
+      10rem,
+      1fr
+    ) auto;
+  align-items: center;
+  gap: 0.8rem 1.1rem;
+  padding: 0.95rem 1.1rem;
+}
+
+.fnt-row__id {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+
+  strong {
+    color: var(--cream-100);
+  }
+}
+
+.fnt-row__segnali {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.fnt-row__segnale {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  flex-wrap: wrap;
+
+  strong {
+    color: var(--cream-100);
+    font-weight: 600;
+  }
+}
+
+.fnt-row__segnale-et {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.fnt-row__stato {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.fnt-row__nota {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.fnt-row__ko {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--gold-text);
+}
+
+// ⚠️ La spia dell'errore che i contatori non mostrano deve **stonare**: la riga
+// che la porta ha per il resto solo segnali positivi (pastiglia «in attesa»,
+// filo ciano, «ultimo successo 2 min fa»), e se questa avesse lo stesso peso
+// delle altre non la leggerebbe nessuno.
+.fnt-row__spia {
+  color: var(--danger);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.fnt-row__acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+
+  // ⚠️ 44px pieni: sono i bersagli che un pollice cerca scorrendo l'elenco.
+  .btn {
+    min-height: 44px;
+  }
+}
+
+.fnt-row__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+// Freccetta: stesso segno delle tendine dell'header, ruotata a pannello aperto.
+.fnt-row__caret {
+  width: 0.42em;
+  height: 0.42em;
+  margin-top: -3px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0.65;
+  transition: transform var(--t-fast);
+}
+
+[aria-expanded='true'] > .fnt-row__caret {
+  transform: rotate(225deg);
+}
+
+// ── Pastiglia di stato ──────────────────────────────────────────────────────
+
+.fnt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  // Spenta: nessun colore. È uno stato normale, non un guasto.
+  &[data-tono='spenta'] {
+    color: var(--text-faint);
+  }
+
+  &[data-tono='ok'] {
+    color: var(--felt);
+    border-color: var(--felt);
+  }
+
+  // Attesa = "non lo so ancora": si distingue dall'allarme, non lo imita.
+  &[data-tono='attesa'] {
+    color: var(--text-muted);
+    border-color: var(--neon-cyan);
+    white-space: normal;
+  }
+
+  &[data-tono='allarme'] {
+    color: var(--gold-text);
+    border-color: var(--gold);
+  }
+
+  &[data-tono='grave'] {
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+}
+
+// ── Conferme in linea (mai un modale, mai un confirm() nativo) ──────────────
+
+.fnt-conferma {
+  margin: 0 1.1rem 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--copper-400);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.fnt-conferma__titolo {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  color: var(--cream-100);
+}
+
+.fnt-conferma__punti {
+  margin: 0 0 0.6rem;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.fnt-conferma__url {
+  margin: 0 0 0.7rem;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.fnt-conferma__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  .btn {
+    min-height: 44px;
+  }
+}
+
+// ── Dettaglio ───────────────────────────────────────────────────────────────
+
+.fnt-row__detail {
+  border-top: 1px solid var(--line);
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: fnt-reveal var(--t-fast) both;
+}
+
+@keyframes fnt-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fnt-row__detail {
+    animation: none;
+  }
+}
+
+.fnt-blocco__h {
+  margin: 0 0 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.fnt-row__perche,
+.fnt-row__avvisi {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  li {
+    padding-left: 0.9rem;
+    position: relative;
+    font-size: 0.9rem;
+    line-height: 1.5;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.6em;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.5;
+    }
+  }
+}
+
+// Le ragioni sono la diagnosi: testo pieno.
+.fnt-row__perche li {
+  color: var(--cream-100);
+}
+
+// Ciò che non si sa ancora resta in sordina: non deve leggersi come un guasto.
+.fnt-row__avvisi li {
+  color: var(--text-muted);
+}
+
+// ⚠️ Stampato per esteso e selezionabile: i log di Render hanno ritenzione
+// corta, e questa può essere l'ultima copia del messaggio.
+.fnt-row__errore {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-0);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.fnt-dati {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+  font-size: 0.88rem;
+
+  dt {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    padding-top: 0.15rem;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text-muted);
+    min-width: 0;
+  }
+}
+
+.fnt-dati__url {
+  font-size: 0.82rem;
+}
+
+.fnt-row__detail-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  // ⚠️ Qui dentro c'è l'unica azione distruttiva della pagina: era proprio il
+  // gruppo di bottoni rimasto fuori dalla regola dei 44px.
+  > .btn {
+    min-height: 44px;
+  }
+
+  .fnt-conferma {
+    margin: 0;
+    flex: 1 1 100%;
+  }
+}
+
+.fnt__coda {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+// ── Stretto ─────────────────────────────────────────────────────────────────
+
+@media (max-width: 900px) {
+  .fnt-row__main {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .fnt-row__acts {
+    justify-content: flex-start;
+  }
+
+  .fnt-dati {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+
+    dd {
+      margin-bottom: 0.5rem;
+    }
+  }
+}
+
+@media (max-width: 560px) {
+  .fnt-row__acts .btn,
+  .fnt-conferma__acts .btn {
+    flex: 1 1 auto;
+  }
+
+  .fnt-seed__riga .btn {
+    width: 100%;
+  }
+}

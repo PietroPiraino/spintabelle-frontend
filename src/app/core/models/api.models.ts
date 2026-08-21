@@ -1632,3 +1632,197 @@ export interface AffiliationIdentifierPayload {
   roomUserId?: string;
   dichiaraProprieta: boolean;
 }
+
+// ── Fonti della redazione (`/admin/news-sources`) ────────────────────────────
+// Specchio di `backend/src/news-ingest/news-ingest.types.ts` e di
+// `NewsSourceView` (`news-sources.service.ts`). ⚠️ Le date arrivano come
+// stringhe ISO: qui sono `string`, non `Date`.
+
+/** Trasporto: **come** si scarica la sorgente. Enum chiusa lato server. */
+export type NewsStrategy =
+  | 'WP_REST'
+  | 'RSS2'
+  | 'ATOM'
+  | 'SITEMAP_NEWS'
+  | 'HTML';
+
+/** Implementazione che legge la risposta. */
+export type NewsParserKey =
+  | 'WP_REST_GENERICO'
+  | 'RSS2_GENERICO'
+  | 'SITEMAP_NEWS_GENERICO';
+
+export type NewsSourceLanguage = 'it' | 'en';
+
+/**
+ * Stato di salute scritto dai tre rilevatori del tick.
+ *
+ * ⚠️ `MORTA` è **un'etichetta, non un interruttore**: il polling continua (serve
+ * ad accorgersi che si è risanata). Spegnere resta un clic dell'owner, e il
+ * pannello non deve suggerire che il sistema si sia auto-disabilitato.
+ */
+export type NewsSourceHealth = 'SANA' | 'DEGRADATA' | 'MORTA';
+
+/** Le stesse etichette italiane di `newsSourceHealthLabel()` lato server. */
+export const NEWS_SOURCE_HEALTH_LABELS: Record<NewsSourceHealth, string> = {
+  SANA: 'Sana',
+  DEGRADATA: 'Degradata',
+  MORTA: 'Morta',
+};
+
+/** Etichette leggibili del trasporto (il valore grezzo non si mostra mai da solo). */
+export const NEWS_STRATEGY_LABELS: Record<NewsStrategy, string> = {
+  WP_REST: 'WordPress REST',
+  RSS2: 'RSS 2.0',
+  ATOM: 'Atom',
+  SITEMAP_NEWS: 'Sitemap Google News',
+  HTML: 'HTML',
+};
+
+/**
+ * Quali parser ammette ogni trasporto — specchio di `PARSER_KEYS_BY_STRATEGY`.
+ *
+ * ⚠️ Una lista **vuota** non è un buco da riempire: dichiara che quella
+ * strategia **non ha ancora un parser**, e il service risponde 400 a chi prova
+ * a salvarla. Il form la mostra come non disponibile invece di offrirla e far
+ * scoprire il limite con un errore.
+ *
+ * ⚠️ Oggi la relazione è **1:1**: il form deriva `parserKey` dalla strategia
+ * invece di chiederlo, ma il campo resta obbligatorio nel corpo.
+ */
+export const NEWS_PARSER_KEYS_BY_STRATEGY: Record<
+  NewsStrategy,
+  readonly NewsParserKey[]
+> = {
+  WP_REST: ['WP_REST_GENERICO'],
+  RSS2: ['RSS2_GENERICO'],
+  SITEMAP_NEWS: ['SITEMAP_NEWS_GENERICO'],
+  ATOM: [],
+  HTML: [],
+};
+
+/**
+ * Una riga di `GET /admin/news-sources`: configurazione **e** stato runtime
+ * sullo stesso oggetto (array nudo, nessun envelope, ≤20 righe per disegno).
+ *
+ * ⚠️ Lo stato runtime è **in sola lettura**: nessuno di questi campi esiste nei
+ * DTO, e mandarne uno è un 400 sull'intera chiamata (`forbidNonWhitelisted`).
+ */
+export interface NewsSource {
+  id: string;
+  name: string;
+  slug: string;
+  strategy: NewsStrategy;
+  parserKey: NewsParserKey;
+  endpointUrl: string;
+  excludeCategoryIds: number[];
+  lingua: NewsSourceLanguage;
+  pollMinutes: number;
+  /** ⚠️ Assente ⇒ il rilevatore di volume è **inerte** (nessun allarme). */
+  baselineItemsPerDay?: number;
+  note?: string;
+  enabled: boolean;
+  healthState: NewsSourceHealth;
+  /** Quando lo stato è cambiato: "Morta da 3 giorni" si conta da qui. */
+  healthChangedAt?: string;
+  /**
+   * Ultimo fetch riuscito. ⚠️ **Un 304 tocca questo e nient'altro**: dice che la
+   * sorgente *risponde*, non che ha *portato* qualcosa.
+   */
+  lastSuccessAt?: string;
+  /**
+   * Ultimo item nuovo davvero ingerito: **è il campo che risponde alla domanda
+   * del cruscotto**. Assente su una sorgente che non ha mai prodotto niente — e
+   * quello è il caso peggiore, non un caso neutro.
+   */
+  lastItemAt?: string;
+  lastErrorAt?: string;
+  /** ⚠️ Va **stampato**, non nascosto dietro un tooltip: i log di Render hanno
+   * ritenzione corta e su Atlas Flex non si scaricano — se non è qui, dopo non
+   * è da nessuna parte. */
+  lastErrorMessage?: string;
+  consecutiveFailures: number;
+  /** Prima di questo istante la sorgente **non viene interrogata**. */
+  backoffUntil?: string;
+  /** Da quando è sotto osservazione: di fatto, da quando è accesa. */
+  osservataDa?: string;
+  /** Mediana degli intervalli fra due item, in minuti. */
+  medianGapMinutes?: number;
+  /** EMA a 7 giorni degli item/giorno, aggiornata una volta al giorno. */
+  emaItemsPerDay?: number;
+}
+
+/**
+ * Una riga di `GET /admin/news-sources/seed`: le cinque fonti del censimento.
+ *
+ * ⚠️ **Non semina niente**: serve a *precompilare* il form. Non porta `id` né
+ * `enabled` (una sorgente nasce spenta per default dello schema), e gli
+ * hostname **non sono stati verificati** contro i siti veri — la conferma è
+ * dell'owner, prima di accendere.
+ */
+export interface NewsSourceSeed {
+  name: string;
+  slug: string;
+  strategy: NewsStrategy;
+  parserKey: NewsParserKey;
+  endpointUrl: string;
+  excludeCategoryIds: number[];
+  lingua: NewsSourceLanguage;
+  pollMinutes: number;
+  baselineItemsPerDay: number;
+  /** Ragione della cadenza o trappola nota: **testo da mostrare**. */
+  note: string;
+}
+
+/**
+ * Corpo di `POST /admin/news-sources` — i **soli dieci** campi scrivibili.
+ *
+ * ⚠️ `enabled` è omesso di proposito dal form: si nasce spenti e si accende dal
+ * cruscotto, una fonte per volta, con una conferma.
+ */
+export interface NewsSourcePayload {
+  name: string;
+  slug: string;
+  strategy: NewsStrategy;
+  parserKey: NewsParserKey;
+  endpointUrl: string;
+  excludeCategoryIds?: number[];
+  lingua?: NewsSourceLanguage;
+  pollMinutes?: number;
+  baselineItemsPerDay?: number;
+  note?: string;
+  enabled?: boolean;
+}
+
+/** Corpo di `PATCH /admin/news-sources/:id`: tutti i campi opzionali. */
+export type NewsSourceUpdatePayload = Partial<NewsSourcePayload>;
+
+/**
+ * Esito di `DELETE`. ⚠️ I grezzi già ingeriti **non** si cancellano a cascata:
+ * scadono sul loro TTL di 45 giorni.
+ */
+export interface NewsSourceRemoved {
+  eliminata: true;
+  slug: string;
+}
+
+/**
+ * `GET /health` (pubblico): l'unico modo dal frontend di sapere che cosa sta
+ * davvero leggendo il codice in produzione.
+ *
+ * ⚠️ `newsIngest` e `newsPipeline` sono **due interruttori diversi**: il primo
+ * ferma la **raccolta** (il polling delle fonti), il secondo la **generazione**
+ * delle bozze. Con il primo su `off` accendere una fonte non produce nulla.
+ */
+export interface HealthStatus {
+  status: string;
+  db: string;
+  sentry: string;
+  deployHook: string;
+  affiliations: string;
+  /** `'on' | 'off'` — interruttore `NEWS_INGEST_ENABLED`. */
+  newsIngest: string;
+  /** `'on' | 'paused'` — modalità assenza della redazione. */
+  newsPipeline: string;
+  uptime: number;
+}
