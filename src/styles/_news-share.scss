@@ -1,0 +1,80 @@
+// Condivisione in fondo all'articolo (`/news/<slug>/`)
+//
+// ⚠️ QUESTE REGOLE SONO GLOBALI, E NON PER COMODITÀ: SONO GLOBALI PERCHÉ IL
+// BLOCCO ESISTE IN DUE RESE.
+// La pagina di un articolo ha due stesure che si **sostituiscono**: la prima la
+// compone `functions/lib/render-news.mjs` all'edge, la seconda il componente
+// Angular al montaggio. Un foglio di componente viene compilato con
+// l'incapsulamento (`.news-share__btn[_ngcontent-…]`), e quell'attributo l'HTML
+// dell'edge non ce l'ha: messe lì, queste regole non toccherebbero **mai** la
+// stesura dell'edge.
+//
+// Per copertina e note di rettifica quella differenza è accettata (la prima
+// stesura è leggibile, non arredata). Qui no, e la ragione è precisa: i tre
+// collegamenti stanno all'edge proprio perché sono l'unica metà che funziona
+// **senza JavaScript** — per chi ha il JS disattivato quella resa è
+// **definitiva**, non un istante prima dell'idratazione. Lasciare lì bersagli da
+// ~38px vorrebbe dire mancare il minimo tattile della casa esattamente dove i
+// tre collegamenti contano di più, e per sempre.
+//
+// Il precedente è in questa stessa pagina: `_prose.scss` è globale proprio
+// perché il corpo composto all'edge sia impaginato.
+// ⚠️ Chi sposta queste regole dentro il componente le disattiva per metà del
+// pubblico senza rompere niente a vista. A dirlo è un caso di
+// `scripts/lib/news-render.test.mjs`, che rilegge i due sorgenti.
+
+.news-share {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+// Stesso registro tipografico della data e della firma (mono, maiuscoletto
+// spaziato): un'etichetta, non un titolo.
+//
+// ⚠️ MA NON LO STESSO COLORE, e la divergenza da `.news-detail__date` è
+// deliberata. Il rame su fondo chiaro sta a 2,3:1 (Ghiaccio) e 2,6:1
+// (Tramonto) — sotto il 4,5:1 che l'AA chiede a un testo da 12px. Sulla data è
+// un timbro che si scorre; questa invece è **l'unica istruzione del blocco**, e
+// dev'essere leggibile nei tre temi. `--text` sta a 14,5:1 · 12:1 · 14,8:1.
+// Un caso di `news-detail.component.spec.ts` legge il colore calcolato e
+// fallisce se torna il rame.
+.news-share__label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.news-share__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+// ⚠️ I 44px SONO DICHIARATI, non ereditati: un `.btn--sm` nudo sta sui 38px
+// (0,45rem di padding sopra e sotto, più una riga di 0,85rem a interlinea 1,6,
+// più il bordo), quindi il minimo tattile della casa è aritmeticamente
+// irraggiungibile senza scriverlo qui.
+.news-share__btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+// ⚠️ Fuori schermo e NON `display: none`: un campo non renderizzato non si può
+// selezionare, e il ripiego di `copiaLink()` non partirebbe. Idioma di
+// `.aff__copy-fallback`. Lo rende solo Angular (all'edge il «Copia link» non
+// c'è apposta), ma la regola sta qui col resto del blocco: mezzo blocco di qua e
+// mezzo di là sarebbe una seconda fonte di verità per lo stesso pezzo di pagina.
+.news-share__fallback {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

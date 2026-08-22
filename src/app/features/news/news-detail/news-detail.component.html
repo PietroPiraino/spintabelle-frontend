@@ -69,7 +69,100 @@
           <!-- prettier-ignore -->
           <p class="news-detail__ia">{{ ia.apertura }}<a [routerLink]="rottaPolicy">{{ ia.ancora }}</a>{{ ia.chiusura }}</p>
         }
+
+        <!--
+          CONDIVISIONE — ultimo figlio dell'<article>, come nella resa all'edge
+          (`functions/lib/render-news.mjs`): si offre a chi ha finito di leggere.
+          ⚠️ Dentro l'articolo e non fuori, perché `max-width` e `gap` della
+          colonna di lettura vivono su `.news-detail__article`: un blocco fuori
+          vorrebbe dire un secondo contenitore con le stesse misure, cioè una
+          seconda fonte di verità per la larghezza del testo.
+
+          ⚠️ ASIMMETRIA VOLUTA, E PINNATA NEI DUE VERSI. I tre collegamenti
+          stanno anche all'edge (sono `<a href>`: funzionano senza JavaScript,
+          quindi valgono per chi legge la prima stesura e per un motore); il
+          «Copia link» **solo qui**, perché là sarebbe un bottone morto. Un test
+          verifica che l'edge non emetta il controllo di copia, un altro che
+          questo template lo contenga: senza il primo qualcuno "allineerebbe" le
+          rese aggiungendo il bottone morto, senza il secondo lo toglierebbe per
+          simmetria.
+
+          ⚠️ COSTO ACCETTATO: essendo il quarto controllo presente solo qui,
+          compare all'idratazione — uno spostamento di layout di al massimo una
+          riga, in fondo alla pagina e dopo tutto il contenuto. È limitato ed è
+          scritto qui invece di essere scoperto in un report CLS. (Gli stili del
+          blocco sono GLOBALI — `src/styles/_news-share.scss` — quindi le due
+          rese misurano uguale: a spostarsi è solo l'ingombro del quarto
+          pulsante, non l'intero blocco che nasce senza regole.)
+
+          ⚠️ OGNI `aria-label` CONTIENE IL TESTO VISIBILE del suo controllo
+          (WCAG 2.5.3 «Label in Name»): chi comanda a voce legge l'etichetta
+          scritta e dice «clicca Copia link» — se il nome accessibile non la
+          contiene, il comando non aggancia niente. Da qui «Copia link
+          dell'articolo» e non «Copia IL link dell'articolo». Una spec lo
+          verifica su tutti e quattro.
+        -->
+        <footer class="news-share">
+          <p class="news-share__label">Condividi l'articolo</p>
+          <div class="news-share__row">
+            <a
+              class="news-share__btn btn btn--ghost btn--sm"
+              [href]="condivisione().whatsapp"
+              target="_blank"
+              rel="noopener"
+              aria-label="Condividi su WhatsApp"
+            >
+              <app-icon name="whatsapp" [size]="18" />
+              <span>WhatsApp</span>
+            </a>
+            <a
+              class="news-share__btn btn btn--ghost btn--sm"
+              [href]="condivisione().telegram"
+              target="_blank"
+              rel="noopener"
+              aria-label="Condividi su Telegram"
+            >
+              <app-icon name="telegram" [size]="18" />
+              <span>Telegram</span>
+            </a>
+            <a
+              class="news-share__btn btn btn--ghost btn--sm"
+              [href]="condivisione().facebook"
+              target="_blank"
+              rel="noopener"
+              aria-label="Condividi su Facebook"
+            >
+              <app-icon name="facebook" [size]="18" />
+              <span>Facebook</span>
+            </a>
+            <button
+              type="button"
+              class="news-share__btn news-share__copy btn btn--ghost btn--sm"
+              aria-label="Copia link dell'articolo"
+              (click)="copiaLink()"
+            >
+              <app-icon name="copy" [size]="18" />
+              <span>Copia link</span>
+            </button>
+          </div>
+        </footer>
       </article>
     }
   </div>
 </section>
+
+<!--
+  Campo d'appoggio della copia: serve solo quando `navigator.clipboard` non
+  esiste (contesto non sicuro). ⚠️ Fuori schermo, MAI `display: none` — un campo
+  non renderizzato non si può selezionare, e il ripiego non partirebbe.
+  ⚠️ Sta fuori dall'<article> di proposito: dentro sarebbe lui l'ultimo figlio,
+  al posto del blocco di condivisione.
+-->
+<input
+  #copyFallback
+  class="news-share__fallback"
+  type="text"
+  tabindex="-1"
+  aria-hidden="true"
+  readonly
+/>

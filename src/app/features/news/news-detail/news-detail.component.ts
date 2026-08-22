@@ -3,18 +3,31 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   computed,
   effect,
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { News } from '../../../core/models/api.models';
 import { AI_DISCLOSURE } from '../../../core/news.constants';
 import { NewsService } from '../../../core/services/news.service';
 import { SeoService } from '../../../core/services/seo.service';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.component';
+import { ToastService } from '../../../shared/ui/toast/toast.service';
+
+/**
+ * Il dominio, scritto qui come in `guide-detail.component.ts`. ⚠️ **Mai
+ * `location.href`** per gli indirizzi di condivisione: da un'anteprima di ramo
+ * porterebbe l'host `*.pages.dev`, e in generale si porta dietro query string e
+ * frammento — cioè si diffonderebbero link permanenti verso una copia o verso
+ * uno stato di navigazione, non verso l'articolo.
+ */
+const SITE = 'https://bestfishforever.it';
 
 /**
  * La pagina di un articolo DENTRO lo SPA. ⚠️ Non è la prima stesura di questa
@@ -63,7 +76,7 @@ import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.componen
  */
 @Component({
   selector: 'app-news-detail',
-  imports: [RouterLink, DatePipe, MarkdownComponent],
+  imports: [RouterLink, DatePipe, IconComponent, MarkdownComponent],
   templateUrl: './news-detail.component.html',
   styleUrl: './news-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -71,6 +84,17 @@ import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.componen
 export class NewsDetailComponent {
   private readonly newsApi = inject(NewsService);
   private readonly seo = inject(SeoService);
+  private readonly toast = inject(ToastService);
+
+  /**
+   * Campo d'appoggio per il ripiego della copia (idioma di
+   * `affiliations.component.ts`): fuori da un contesto sicuro
+   * `navigator.clipboard` è `undefined`. ⚠️ È renderizzato **fuori schermo, mai
+   * `display: none`** — un campo non renderizzato non si può selezionare, e il
+   * ripiego non partirebbe affatto.
+   */
+  private readonly copyFallback =
+    viewChild<ElementRef<HTMLInputElement>>('copyFallback');
 
   /** Param della rotta news/:id (component input binding) */
   readonly id = input.required<string>();
@@ -95,6 +119,54 @@ export class NewsDetailComponent {
 
   /** Le note di rettifica da stampare fra intestazione e corpo (§4.4). */
   protected readonly rettifiche = computed(() => this.news()?.rettifiche ?? []);
+
+  /**
+   * L'indirizzo da diffondere: **l'URL canonica dell'articolo, costruita sullo
+   * SLUG**. È l'unica fonte dei tre collegamenti *e* del «Copia link».
+   *
+   * ⚠️ SULLO SLUG E NON SUL PARAMETRO DI ROTTA, che è ciò che questa pagina
+   * riceve quando si arriva da un ObjectId o da uno slug storico. Lì la Function
+   * risponde 301 prima che l'app si monti, quindi la deriva del canonical
+   * (`applySeo` passa ancora `path: /news/${this.id()}`) è preesistente e
+   * innocua — ma **non va ereditata qui**: condividere `/news/65f0…aa/`
+   * significherebbe diffondere link permanenti verso un indirizzo che il sito
+   * stesso dichiara non canonico. Sistemare il canonical è un'altra cosa ed è
+   * fuori perimetro per scelta del piano.
+   *
+   * ⚠️ La forma è la stessa di `percorsoCanonico` in
+   * `functions/lib/render-news.mjs` — `/news/<encodeURIComponent(chiave)>/`,
+   * slash finale compreso: è quella servita a 200, quella che il canonical
+   * dichiara e quella che la sitemap pubblica.
+   */
+  protected readonly urlCondivisione = computed(() => {
+    const slug = (this.news()?.slug ?? '').trim();
+    return `${SITE}/news/${encodeURIComponent(slug || this.id())}/`;
+  });
+
+  /**
+   * I tre indirizzi di condivisione. ⚠️ Gemelli di `linkCondivisione` in
+   * `functions/lib/render-news.mjs`: le due rese della pagina si
+   * **sostituiscono**, quindi i tre collegamenti vanno scritti due volte e i due
+   * elenchi devono restare identici (a sorvegliarli è
+   * `scripts/lib/news-render.test.mjs`, che rilegge questo sorgente).
+   *
+   * Qui l'escape dell'attributo lo fa Angular con il binding `[href]`: la regola
+   * «`encodeURIComponent` prima, escape dopo» resta la stessa, ma il secondo
+   * passo non si scrive a mano come all'edge.
+   */
+  protected readonly condivisione = computed(() => {
+    const url = this.urlCondivisione();
+    const titolo = this.news()?.title ?? '';
+    const u = encodeURIComponent(url);
+    const t = encodeURIComponent(titolo);
+    return {
+      // WhatsApp non ha un campo separato per l'URL: titolo e indirizzo
+      // viaggiano in un unico testo, quindi si codificano insieme.
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(`${titolo} ${url}`)}`,
+      telegram: `https://t.me/share/url?url=${u}&text=${t}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${u}`,
+    };
+  });
 
   /**
    * L'etichetta IA, già spezzata nelle due metà attorno al collegamento —
@@ -210,6 +282,69 @@ export class NewsDetailComponent {
         },
       },
     });
+  }
+
+  // ── Copia del link ────────────────────────────────────────────────────────
+
+  /**
+   * Copia negli appunti l'indirizzo dell'articolo. Copia integrale dell'idioma
+   * di `affiliations.component.ts`: `navigator.clipboard` → ripiego su campo
+   * d'appoggio + `execCommand` → se fallisce anche quello, un toast che dice
+   * cosa fare. **Mai un bottone morto.**
+   *
+   * ⚠️ IL VALORE COPIATO È `urlCondivisione()`, LO STESSO DEI TRE COLLEGAMENTI —
+   * mai `location.href`, che porta con sé query string, frammento e, su
+   * un'anteprima di ramo, l'host `*.pages.dev`.
+   *
+   * ⚠️ Questo controllo esiste **solo qui**, e non nella resa all'edge: là
+   * nessun gestore lo ascolterebbe (il codice che lo fa funzionare arriva
+   * insieme all'app, che quell'HTML lo cancella), cioè sarebbe un bottone morto.
+   * L'asimmetria è pinnata nei due versi in `scripts/lib/news-render.test.mjs`.
+   */
+  protected copiaLink(): void {
+    const url = this.urlCondivisione();
+    const clip = navigator.clipboard;
+    if (clip?.writeText) {
+      void clip.writeText(url).then(
+        () => this.toast.success('Link copiato.'),
+        () => this.copiaConRipiego(url),
+      );
+      return;
+    }
+    this.copiaConRipiego(url);
+  }
+
+  private copiaConRipiego(url: string): void {
+    const input = this.copyFallback()?.nativeElement;
+    if (input) {
+      input.value = url;
+      input.select();
+      input.setSelectionRange(0, url.length);
+      let done = false;
+      try {
+        done = document.execCommand('copy');
+      } catch {
+        done = false;
+      }
+      input.blur();
+      if (done) {
+        this.toast.success('Link copiato.');
+        return;
+      }
+    }
+    // ⚠️ E QUI NON SI MANDA NESSUNO NELLA BARRA DEGLI INDIRIZZI. La prima
+    // stesura di questo messaggio diceva «oppure copia l'indirizzo dalla barra
+    // del browser», cioè indirizzava proprio a `location.href` — il valore che
+    // il docblock qui sopra e un caso di `news-render.test.mjs` vietano. Non è
+    // teoria: le card di `/news` e della home collegano per `_id`
+    // (`shared/ui/news-card`), quindi chi arriva da lì ha nella barra
+    // `/news/65f0…aa/`, cioè l'indirizzo che il sito stesso dichiara non
+    // canonico — e il fallimento della copia sarebbe l'unico momento in cui
+    // glielo consigliamo. I tre collegamenti, che portano l'URL buona, sono
+    // proprio lì accanto e funzionano anche senza appunti.
+    this.toast.error(
+      'Copia non riuscita: usa uno dei pulsanti di condivisione qui accanto.',
+    );
   }
 
   /** Estratto pulito dal Markdown del corpo (per description/og), ~155 caratteri. */

@@ -488,10 +488,25 @@ export interface News {
   coverImageUrl?: string;
   /**
    * Copertina **social** generata dal backend (la targa 1200×675 con occhiello
-   * e titolo). ⚠️ Non è l'immagine della pagina e non va mai renderizzata: è
-   * solo l'`og:image`, che vale `ogImageUrl ?? coverImageUrl ?? og.png` —
+   * e titolo). ⚠️ **Non è l'immagine della PAGINA dell'articolo**, e lì non va
+   * mai renderizzata: la targa stampa il titolo, che l'`<h1>` ripete due
+   * centimetri sotto. Si vede in due posti soli, e in due ordini diversi:
+   * l'`og:image`, che vale `ogImageUrl || coverImageUrl || og.png` —
    * la stessa catena, nello stesso ordine, in cui la costruisce la Pages
-   * Function (`functions/lib/render-news.mjs`). Assente sui pezzi pubblicati
+   * Function (`functions/lib/render-news.mjs`) — e l'immagine della **card**
+   * negli elenchi, che vale `coverImageUrl || ogImageUrl`, cioè l'ordine
+   * **opposto**. ⚠️ La divergenza è una decisione, spiegata per esteso in
+   * `shared/ui/news-card/news-card.component.ts`: in una chat vince la targa,
+   * che porta il titolo dentro l'immagine; in un elenco, dove il titolo è già
+   * scritto accanto, vince una foto vera.
+   * ⚠️ **`||` e non `??`, ed è la differenza che due spec sorvegliano** (una in
+   * `news-detail.component.spec.ts`, una in `scripts/lib/news-render.test.mjs`,
+   * intitolate proprio così). Lo schema ha `trim: true`, quindi una
+   * `ogImageUrl` può arrivare **stringa vuota**: con `??` quella stringa
+   * vincerebbe di qua e non di là, e lo stesso articolo mostrerebbe la foto allo
+   * scraper e l'`og.png` al browser. Scrivere `??` in questa riga è il modo più
+   * rapido per far reintrodurre il difetto a chi legge il tipo e si fida.
+   * Assente sui pezzi pubblicati
    * prima di questo lotto e su quelli in cui la generazione è fallita: è
    * **voluto** — nessuna URL di ripiego viene persistita, così la riga resta
    * fra quelle recuperabili col comando esplicito.

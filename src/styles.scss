@@ -8,4 +8,8 @@
 @use 'styles/cards';
 @use 'styles/forms';
 @use 'styles/auth';
+// ⚠️ Globale perché la pagina di un articolo ha DUE rese e la stesura
+// dell'edge non ha l'attributo dell'incapsulamento: vedi l'intestazione del
+// file.
+@use 'styles/news-share';
 @use 'styles/utilities';

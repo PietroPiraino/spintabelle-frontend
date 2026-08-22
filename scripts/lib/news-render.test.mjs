@@ -25,9 +25,11 @@ import { fileURLToPath } from 'node:url';
 import { hasNoindex, injectNoindex } from './csr-noindex.mjs';
 import {
   DESCRIZIONE_INDICE,
+  GLIFI_CONDIVISIONE,
   SITO,
   TITOLO_INDICE,
   estratto,
+  linkCondivisione,
   percorsoCanonico,
   redirezione,
   renderArticolo,
@@ -41,6 +43,13 @@ const INDEX = join(REPO, 'src/index.html');
 const ROTTE = join(REPO, 'src/app/app.routes.ts');
 const COMPONENTE = join(REPO, 'src/app/features/news/news-detail/news-detail.component.ts');
 const TEMPLATE = join(REPO, 'src/app/features/news/news-detail/news-detail.component.html');
+const ICONE = join(REPO, 'src/app/shared/ui/icon/icon.component.ts');
+const STILI_COMPONENTE = join(
+  REPO,
+  'src/app/features/news/news-detail/news-detail.component.scss',
+);
+const STILI_GLOBALI = join(REPO, 'src/styles/_news-share.scss');
+const FOGLIO_GLOBALE = join(REPO, 'src/styles.scss');
 
 const scheletro = injectNoindex(readFileSync(INDEX, 'utf8'));
 
@@ -451,6 +460,265 @@ test('deriva: il componente Angular usa la STESSA catena per l og:image', () => 
     /ogImageUrl/,
     'news-detail.component.html rende `ogImageUrl`: la targa e solo per le ' +
       'anteprime social, in pagina va `coverImageUrl`.',
+  );
+});
+
+// ---- La condivisione (B) ------------------------------------------------
+//
+// ⚠️ IL BLOCCO E' ASIMMETRICO DI PROPOSITO, e l'asimmetria va pinnata NEI DUE
+// VERSI. I tre collegamenti stanno in entrambe le rese (sono `<a href>`:
+// funzionano senza JavaScript, quindi valgono per chi legge questa prima stesura
+// e per un motore); il «Copia link» sta SOLO nel componente Angular, perche' qui
+// sarebbe un bottone morto — il codice che lo farebbe funzionare arriva insieme
+// all'app, che questo HTML lo cancella. Senza il caso che nega, qualcuno
+// "allineerebbe" le rese aggiungendo il bottone morto; senza quello che afferma,
+// lo toglierebbe per simmetria.
+
+/**
+ * Il sorgente senza i suoi commenti.
+ *
+ * ⚠️ SERVE PER LE ASSERZIONI CHE NEGANO. Un `doesNotMatch(/location\.href/)`
+ * sul file intero fallisce anche quando la stringa compare in un commento che
+ * SPIEGA perche' non si usa — cioe' il testo che documenta la regola fa cadere
+ * la regola. Si tolgono i blocchi `/* … *\/` e le righe che cominciano con `//`,
+ * non i `//` a meta' riga: quelli stanno dentro le URL (`https://…`).
+ */
+function codiceSenzaCommenti(sorgente) {
+  return sorgente.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+}
+
+/** Gli `href` dei tre canali dentro `<main>`, gia' riportati a testo. */
+function hrefCondivisione(html) {
+  const main = dentroMain(html);
+  const trovati = {};
+  for (const [nome, host] of [
+    ['whatsapp', 'wa\\.me'],
+    ['telegram', 't\\.me'],
+    ['facebook', 'facebook\\.com'],
+  ]) {
+    const m = main.match(new RegExp(`href="(https://[^"]*${host}[^"]*)"`, 'i'));
+    // ⚠️ Nell'attributo l'`&` viaggia come `&amp;` (lo scrive `escapeHtml`, ed e'
+    // corretto): qui si legge come lo leggerebbe un parser HTML, cioe' decodificando.
+    trovati[nome] = m ? m[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'") : null;
+  }
+  return trovati;
+}
+
+test('i tre canali ci sono nella resa all edge, ed e li che devono stare', () => {
+  // Sono `<a href>`: chi riceve questa stesura puo' condividerli senza che una
+  // riga di JavaScript sia mai arrivata.
+  const main = dentroMain(renderArticolo(scheletro, ARTICOLO, ARTICOLO.slug));
+  assert.match(main, /class="news-share"/);
+  assert.match(main, /https:\/\/wa\.me\/\?text=/);
+  assert.match(main, /https:\/\/t\.me\/share\/url\?url=/);
+  assert.match(main, /https:\/\/www\.facebook\.com\/sharer\/sharer\.php\?u=/);
+  // Convenzione della casa per ogni link che esce dal sito.
+  assert.equal((main.match(/target="_blank" rel="noopener"/g) || []).length, 3);
+  // ⚠️ Ogni `aria-label` contiene il testo visibile del suo collegamento (WCAG
+  // 2.5.3 «Label in Name»): chi comanda a voce legge l'etichetta scritta e dice
+  // «clicca WhatsApp». Vale anche qui, ed e' l'unica stesura che riceve chi non
+  // ha JavaScript. Il gemello sta in `news-detail.component.spec.ts`.
+  const voci = [...main.matchAll(/aria-label="([^"]+)"[^>]*>[\s\S]*?<span>([^<]+)<\/span>/g)];
+  assert.equal(voci.length, 3, 'i tre collegamenti con etichetta e testo visibile');
+  for (const [, nome, visibile] of voci)
+    assert.ok(nome.includes(visibile), `aria-label "${nome}" non contiene "${visibile}"`);
+});
+
+test('il blocco e l ULTIMO figlio dell articolo, non un intermezzo', () => {
+  // ⚠️ Dentro l'`<article>` e in fondo: la condivisione si offre a chi ha finito
+  // di leggere, e la colonna di lettura (max-width, gap) vive su
+  // `.news-detail__article` — un blocco fuori vorrebbe dire un secondo
+  // contenitore con le stesse misure.
+  const main = dentroMain(renderArticolo(scheletro, ARTICOLO, ARTICOLO.slug));
+  assert.ok(main.indexOf('class="prose"') < main.indexOf('class="news-share"'));
+  assert.match(main, /<\/footer>\s*<\/article>/);
+});
+
+test('⚠️ l edge NON emette il controllo di copia: sarebbe un bottone morto', () => {
+  // Qui non c'e' nessun gestore che possa ascoltarlo: il codice che lo fa
+  // funzionare arriva con l'app, e l'app questo HTML lo cancella. Un pulsante
+  // che non fa niente e' peggio di un pulsante che non c'e'.
+  const main = dentroMain(renderArticolo(scheletro, ARTICOLO, ARTICOLO.slug));
+  assert.doesNotMatch(main, /<button/i);
+  assert.doesNotMatch(main, /news-share__copy/);
+  assert.doesNotMatch(main, /Copia link/i);
+});
+
+test('⚠️ UN SOLO INDIRIZZO: il `u=` di Facebook decodificato E il canonical', () => {
+  // ⚠️ E' la forma piu' stretta in cui si puo' fissare «una sola fonte»: se
+  // l'indirizzo condiviso e quello che la pagina dichiara canonico divergessero,
+  // si diffonderebbero link permanenti verso un URL che il sito stesso dichiara
+  // non buono. Vale anche quando la richiesta e' arrivata con l'ObjectId: la
+  // condivisione si costruisce sullo SLUG, come il canonical.
+  for (const chiave of [ARTICOLO.slug, ARTICOLO._id, 'vecchio-slug-di-due-mesi-fa']) {
+    const html = renderArticolo(scheletro, ARTICOLO, chiave);
+    const canonical = html.match(/<link rel="canonical" href="([^"]+)">/)[1];
+    const u = hrefCondivisione(html).facebook.split('u=')[1];
+    assert.equal(decodeURIComponent(u), canonical, `chiave "${chiave}"`);
+    assert.equal(canonical, `${SITO}/news/come-si-gioca-il-bottone/`);
+  }
+});
+
+test('l URL condivisa e la stessa per tutti e tre i canali', () => {
+  const link = hrefCondivisione(renderArticolo(scheletro, ARTICOLO, ARTICOLO._id));
+  const attesa = urlCanonica(ARTICOLO.slug);
+  assert.ok(link.whatsapp.endsWith(encodeURIComponent(attesa)));
+  assert.equal(decodeURIComponent(link.telegram.split('url=')[1].split('&')[0]), attesa);
+  assert.equal(decodeURIComponent(link.facebook.split('u=')[1]), attesa);
+});
+
+test('⚠️ un titolo con &, virgolette e apostrofo non spezza l href', () => {
+  // Due passaggi in quest'ordine: `encodeURIComponent` PRIMA (il titolo finisce
+  // dentro un valore di query), `escapeHtml` DOPO (il valore finisce dentro un
+  // attributo). Invertendoli l'`&amp;` prodotto dall'escape verrebbe
+  // percent-encodato dentro il testo, e Telegram riceverebbe UN PARAMETRO SOLO —
+  // con il titolo appiccicato all'indirizzo da condividere.
+  const titolo = 'Bottone & "fold": l\'errore';
+  const html = renderArticolo(scheletro, { ...ARTICOLO, title: titolo }, ARTICOLO.slug);
+  const link = hrefCondivisione(html);
+  // Nessun href e' stato troncato: tutti e tre ci sono e arrivano interi.
+  for (const nome of ['whatsapp', 'telegram', 'facebook'])
+    assert.ok(link[nome], `href di ${nome} spezzato o assente`);
+  // Telegram ha DUE parametri, e il titolo sta tutto dentro `text=`.
+  const [, query] = link.telegram.split('?');
+  const p = new URLSearchParams(query);
+  assert.equal(p.get('url'), urlCanonica(ARTICOLO.slug));
+  assert.equal(p.get('text'), titolo);
+  // WhatsApp porta titolo e indirizzo in un testo solo.
+  assert.equal(
+    decodeURIComponent(link.whatsapp.split('text=')[1]),
+    `${titolo} ${urlCanonica(ARTICOLO.slug)}`,
+  );
+  // ⚠️ E l'`&` del titolo non e' rimasto crudo nell'attributo: sarebbe un
+  // attributo valido per sbaglio, e domani un `&text` nel titolo diventerebbe un
+  // parametro vero.
+  assert.doesNotMatch(dentroMain(html), /href="[^"]*&(?!amp;|#39;)/);
+});
+
+test('⚠️ nessun <img> dentro <main>, blocco di condivisione compreso', () => {
+  // La trappola gia' armata sul caso senza copertina vale anche adesso che in
+  // fondo alla pagina ci sono tre icone: sono `<svg>` inline, non immagini.
+  const { coverImageUrl, ...senzaCopertina } = ARTICOLO;
+  const main = dentroMain(renderArticolo(scheletro, senzaCopertina, senzaCopertina.slug));
+  assert.match(main, /class="news-share"/);
+  assert.doesNotMatch(main, /<img/);
+  assert.equal((main.match(/<svg/g) || []).length, 3);
+});
+
+test('deriva: i tre glifi sono la copia esatta di icon.component.ts', () => {
+  // ⚠️ La Function e l'app sono due build diverse e non possono importarsi a
+  // vicenda (stessa ragione di `functions/lib/markdown.mjs`), quindi i tracciati
+  // sono duplicati. A tenerli allineati c'e' solo questo caso: senza, i due
+  // renderer possono finire per disegnare due marchi diversi sulla stessa pagina.
+  const sorgente = readFileSync(ICONE, 'utf8');
+  for (const [nome, d] of Object.entries(GLIFI_CONDIVISIONE)) {
+    const i = sorgente.indexOf(`@case ('${nome}')`);
+    assert.ok(i > -1, `icon.component.ts non ha piu' il ramo @case '${nome}'`);
+    const m = /d="([^"]+)"/.exec(sorgente.slice(i));
+    assert.ok(m, `il ramo '${nome}' di icon.component.ts non ha piu' un <path d="…">`);
+    assert.equal(
+      m[1],
+      d,
+      `il glifo '${nome}' e' diverso fra icon.component.ts e ` +
+        'functions/lib/render-news.mjs: le due rese disegnerebbero due marchi diversi.',
+    );
+  }
+});
+
+test('linkCondivisione regge titolo e url assenti senza produrre `undefined`', () => {
+  // Un articolo senza titolo non deve diffondere la parola "undefined" in una
+  // chat: meglio un testo povero che una condivisione sbagliata.
+  const link = linkCondivisione(undefined, undefined);
+  for (const href of Object.values(link)) assert.doesNotMatch(href, /undefined/);
+});
+
+test('deriva: il componente Angular ha i tre canali E il controllo di copia', () => {
+  // ⚠️ Il verso che AFFERMA. Senza, il giorno che qualcuno "allinea" le due rese
+  // il «Copia link» sparirebbe per simmetria — e sparirebbe dalla resa in cui e'
+  // l'unico che puo' funzionare.
+  const template = readFileSync(TEMPLATE, 'utf8');
+  for (const canale of ['whatsapp', 'telegram', 'facebook'])
+    assert.match(
+      template,
+      new RegExp(`condivisione\\(\\)\\.${canale}`),
+      `news-detail.component.html non porta piu' il collegamento ${canale}: ` +
+        'i tre canali stanno in ENTRAMBE le rese.',
+    );
+  assert.match(
+    template,
+    /\(click\)="copiaLink\(\)"/,
+    "news-detail.component.html non porta piu' il «Copia link»: e' l'unica resa " +
+      'in cui puo' + " funzionare, e all'edge non c'e' apposta.",
+  );
+  // ⚠️ Il campo d'appoggio deve essere RENDERIZZATO (fuori schermo), altrimenti
+  // il ripiego di `copiaLink()` non ha niente da selezionare.
+  assert.match(template, /#copyFallback/);
+});
+
+test('⚠️ gli stili del blocco sono GLOBALI: l edge non ha l incapsulamento', () => {
+  // ⚠️ E' LA META' DEL BLOCCO CHE UNA SPEC ANGULAR NON PUO' VEDERE. In Karma i
+  // fogli globali e quelli del componente sono caricati tutti e due, quindi un
+  // controllo sul colore o sull'altezza calcolata passa in entrambi i casi: dove
+  // quelle regole VIVONO si puo' misurare solo leggendo i sorgenti, ed e' qui.
+  //
+  // La ragione, in una riga: un foglio di componente e' compilato con
+  // l'incapsulamento (`.news-share__btn[_ngcontent-…]`) e questo HTML
+  // quell'attributo non ce l'ha. Messe li', quelle regole non toccherebbero MAI
+  // la stesura dell'edge — che per chi ha il JavaScript disattivato non e' un
+  // istante prima dell'idratazione, e' la pagina definitiva. I tre collegamenti
+  // stanno all'edge proprio perche' sono l'unica meta' che funziona senza JS:
+  // lasciarli con bersagli da ~38px vorrebbe dire mancare il minimo tattile
+  // della casa esattamente dove contano di piu'. Il precedente e' `.prose`,
+  // globale per lo stesso motivo.
+  const globale = readFileSync(STILI_GLOBALI, 'utf8');
+  assert.match(
+    globale,
+    /\.news-share\b/,
+    'src/styles/_news-share.scss non definisce piu il blocco.',
+  );
+  assert.match(
+    globale,
+    /\.news-share__btn\s*\{[^}]*min-height:\s*44px/,
+    'i 44px del bersaglio tattile non sono piu dichiarati nel foglio globale: un ' +
+      '`.btn--sm` nudo sta sui 38px, e all edge non c e nient altro che li alzi.',
+  );
+  assert.match(
+    readFileSync(FOGLIO_GLOBALE, 'utf8'),
+    /@use 'styles\/news-share'/,
+    'src/styles.scss non importa piu styles/news-share: il foglio esiste e non ' +
+      'viene servito a nessuna delle due rese.',
+  );
+  // E il verso opposto: nel foglio del COMPONENTE non deve tornarci nulla.
+  // ⚠️ Si legge SENZA i commenti (stesso aiutante del caso su `location.href`,
+  // e le due sintassi di commento coincidono): la nota che spiega perche' quelle
+  // regole non stanno li' nomina le classi, e sul file intero farebbe fallire
+  // proprio il caso che quella nota difende.
+  assert.doesNotMatch(
+    codiceSenzaCommenti(readFileSync(STILI_COMPONENTE, 'utf8')),
+    /\.news-share/,
+    'news-detail.component.scss e tornato a stilare `.news-share*`: con ' +
+      "l'incapsulamento quelle regole valgono solo per la resa Angular, e la " +
+      'stesura che riceve chi non ha JavaScript resterebbe senza.',
+  );
+});
+
+test('deriva: la condivisione si costruisce sullo SLUG, mai su location.href', () => {
+  // ⚠️ `location.href` porterebbe query string, frammento e — su un'anteprima di
+  // ramo — l'host `*.pages.dev`. E il parametro di rotta non basta: chi arriva da
+  // un ObjectId condividerebbe un indirizzo che il sito dichiara non canonico.
+  const sorgente = codiceSenzaCommenti(readFileSync(COMPONENTE, 'utf8'));
+  assert.match(
+    sorgente,
+    /news\(\)\?\.slug/,
+    "news-detail.component.ts non costruisce piu' l'indirizzo di condivisione " +
+      'sullo slug: allinea `urlCondivisione` a `percorsoCanonico` in ' +
+      'functions/lib/render-news.mjs.',
+  );
+  assert.doesNotMatch(
+    sorgente,
+    /location\.href/,
+    'news-detail.component.ts usa `location.href`: la condivisione va costruita ' +
+      "sull'URL canonica, non sull'indirizzo della finestra.",
   );
 });
 

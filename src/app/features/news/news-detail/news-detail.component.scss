@@ -88,3 +88,19 @@
 // Il corpo è renderizzato da <app-markdown> con la classe globale `.prose`
 // (vedi styles/_prose.scss): titoli, grassetti, elenchi, link, immagini, ecc.
 // La larghezza è già limitata dall'articolo (max-width: 760px).
+
+// ── Condivisione, in fondo all'articolo ──────────────────────────────────────
+//
+// ⚠️ GLI STILI DEL BLOCCO `.news-share*` NON STANNO QUI, E NON È UNA
+// DIMENTICANZA: stanno in `src/styles/_news-share.scss`, cioè fra i fogli
+// GLOBALI. Un foglio di componente viene compilato con l'incapsulamento
+// (`.news-share__btn[_ngcontent-…]`) e quell'attributo l'HTML composto all'edge
+// (`functions/lib/render-news.mjs`) non ce l'ha — quindi qui non toccherebbero
+// mai la stesura che riceve chi non ha JavaScript, e i tre collegamenti stanno
+// lì proprio perché sono l'unica metà che funziona senza. La ragione per esteso
+// è nell'intestazione di quel file; a sorvegliare la divisione è un caso di
+// `scripts/lib/news-render.test.mjs`.
+//
+// Copertina e note di rettifica restano invece stilate qui sopra, e la
+// differenza è voluta: sono decorazione della resa Angular, non un bersaglio da
+// toccare col dito.

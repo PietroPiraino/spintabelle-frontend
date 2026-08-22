@@ -10,6 +10,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { AI_DISCLOSURE } from '../../../core/news.constants';
+import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { NewsDetailComponent } from './news-detail.component';
 
 const API = environment.API_URL;
@@ -113,6 +114,17 @@ describe('NewsDetailComponent', () => {
     f.detectChanges();
 
     expect((f.nativeElement as HTMLElement).textContent).toContain('News non trovata');
+    // ⚠️ E NIENTE CONDIVISIONE SU UNA PAGINA CHE NON C'È. Oggi è vero per
+    // costruzione — il `<footer class="news-share">` sta dentro il ramo `@else`
+    // — ma nulla diventerebbe rosso se domani il blocco finisse fuori dalla
+    // catena `@if/@else if/@else`: è la mossa naturale per dargli una fascia a
+    // tutta larghezza, o per allinearlo al campo d'appoggio, che è GIÀ fuori dal
+    // ramo e infatti si rende anche qui. L'esito sarebbe «News non trovata:
+    // forse è stata rimossa» seguito da «Condividi l'articolo» con tre link a
+    // un 404 — un invito a diffondere una pagina che non esiste.
+    expect((f.nativeElement as HTMLElement).querySelector('.news-share'))
+      .withContext('il blocco di condivisione è finito fuori dal ramo dell\'articolo')
+      .toBeNull();
   });
 
   it('mostra titolo e corpo quando l\'articolo esiste', () => {
@@ -348,5 +360,267 @@ describe('NewsDetailComponent', () => {
     // descrivono il pezzo, e l'immagine del pezzo è quella che il lettore vede.
     monta({ ogImageUrl: TARGA, coverImageUrl: FOTO });
     expect(jsonLd()['image']).toEqual([FOTO]);
+  });
+
+  // ---- Condivisione (B) --------------------------------------------------
+
+  /**
+   * ⚠️ QUESTA È METÀ DEL BLOCCO, e la metà va detta. I tre collegamenti social
+   * esistono anche nella resa all'edge (`functions/lib/render-news.mjs`): sono
+   * `<a href>`, funzionano senza JavaScript, e quella è la stesura che leggono
+   * lo scraper e il motore. Il **«Copia link» invece esiste solo qui**, perché
+   * all'edge nessun gestore potrebbe ascoltarlo — sarebbe un bottone morto.
+   *
+   * L'asimmetria è pinnata **nei due versi**, e non tutti e due in questo file:
+   * `scripts/lib/news-render.test.mjs` verifica che l'edge NON emetta il
+   * controllo di copia *e* che questo template lo contenga. Senza il primo caso
+   * qualcuno «allineerebbe» le rese aggiungendo il bottone morto; senza il
+   * secondo lo toglierebbe per simmetria.
+   */
+  const SITO = 'https://bestfishforever.it';
+
+  /** I tre collegamenti, letti dal DOM come li leggerebbe un browser. */
+  function canali(f: ComponentFixture<NewsDetailComponent>) {
+    const root = f.nativeElement as HTMLElement;
+    const q = (host: string) =>
+      root.querySelector<HTMLAnchorElement>(`.news-share__row a[href*="${host}"]`);
+    return { whatsapp: q('wa.me'), telegram: q('t.me'), facebook: q('facebook.com') };
+  }
+
+  /** L'href del canonical, dove `SeoService` lo scrive davvero. */
+  const canonical = (): string | null =>
+    document
+      .querySelector<HTMLLinkElement>('link[rel="canonical"]')
+      ?.getAttribute('href') ?? null;
+
+  it('offre i tre canali in fondo all\'articolo, ognuno con target e rel', () => {
+    const c = canali(monta());
+    expect(c.whatsapp).withContext('manca WhatsApp').not.toBeNull();
+    expect(c.telegram).withContext('manca Telegram').not.toBeNull();
+    expect(c.facebook).withContext('manca Facebook').not.toBeNull();
+    // Convenzione della casa per ogni link che esce dal sito.
+    for (const a of Object.values(c)) {
+      expect(a!.getAttribute('target')).toBe('_blank');
+      expect(a!.getAttribute('rel')).toBe('noopener');
+    }
+  });
+
+  it('⚠️ il blocco è l\'ULTIMO figlio dell\'<article>, come nella resa all\'edge', () => {
+    // Dentro l'articolo e in fondo: la colonna di lettura (max-width, gap) vive
+    // su `.news-detail__article`, quindi un blocco fuori vorrebbe dire un
+    // secondo contenitore con le stesse misure — una seconda fonte di verità
+    // per la larghezza del testo.
+    const article = (monta().nativeElement as HTMLElement).querySelector(
+      'article.news-detail__article',
+    )!;
+    expect(article.lastElementChild?.classList).toContain('news-share');
+  });
+
+  it('⚠️ il «Copia link» c\'è: è la resa in cui può funzionare', () => {
+    const copia = (monta().nativeElement as HTMLElement).querySelector(
+      'button.news-share__copy',
+    );
+    expect(copia).not.toBeNull();
+    // ⚠️ Il campo d'appoggio dev'essere RENDERIZZATO (fuori schermo, mai
+    // `display: none`): un campo non renderizzato non si può selezionare.
+    expect(
+      (monta().nativeElement as HTMLElement).querySelector('input.news-share__fallback'),
+    ).not.toBeNull();
+  });
+
+  it('⚠️ ogni `aria-label` contiene il testo visibile del suo controllo', () => {
+    // WCAG 2.5.3 «Label in Name», livello A. L'`aria-label` **sostituisce** il
+    // contenuto, quindi chi comanda a voce (Voice Control, Riconoscimento
+    // vocale) legge l'etichetta scritta sul pulsante e dice «clicca Copia
+    // link»: se il nome accessibile non la contiene, il comando non aggancia
+    // niente. È il difetto per cui questo caso esiste — «Copia il link
+    // dell'articolo» non contiene «Copia link», mentre «Condividi su WhatsApp»
+    // contiene «WhatsApp».
+    const controlli = (monta().nativeElement as HTMLElement).querySelectorAll<HTMLElement>(
+      '.news-share__btn',
+    );
+    expect(controlli.length).withContext('i quattro controlli').toBe(4);
+    for (const el of Array.from(controlli)) {
+      const nomeAccessibile = el.getAttribute('aria-label') ?? '';
+      const visibile = (el.querySelector('span')?.textContent ?? '').trim();
+      expect(visibile).withContext('un controllo senza testo visibile').not.toBe('');
+      expect(nomeAccessibile)
+        .withContext(`aria-label "${nomeAccessibile}" non contiene "${visibile}"`)
+        .toContain(visibile);
+    }
+  });
+
+  /**
+   * Il colore che un token risolve **nel tema corrente del documento di prova**:
+   * si legge da una sonda usa-e-getta invece di scrivere un `rgb(…)` a mano, così
+   * il caso non si rompe se il valore del token cambia né se un'altra spec ha
+   * lasciato un `data-theme` addosso a `<html>`.
+   */
+  function coloreToken(nome: string): string {
+    const sonda = document.createElement('span');
+    sonda.style.color = `var(${nome})`;
+    document.body.appendChild(sonda);
+    const c = getComputedStyle(sonda).color;
+    sonda.remove();
+    return c;
+  }
+
+  it('⚠️ gli stili del blocco sono in vigore: 44px di bersaglio, etichetta leggibile', () => {
+    // ⚠️ QUESTO CASO GUARDA IL COLORE E L'ALTEZZA CALCOLATI, non il sorgente, ed
+    // è metà di una coppia: dove quelle regole devono VIVERE (nei fogli globali,
+    // perché la stesura composta all'edge non ha l'attributo
+    // dell'incapsulamento) lo pinna `scripts/lib/news-render.test.mjs`.
+    const root = monta().nativeElement as HTMLElement;
+
+    // Bersaglio tattile: un `.btn--sm` nudo sta sui 38px, i 44 sono dichiarati.
+    const btn = root.querySelector<HTMLElement>('.news-share__btn')!;
+    expect(getComputedStyle(btn).minHeight).toBe('44px');
+    expect(getComputedStyle(btn).minWidth).toBe('44px');
+
+    // ⚠️ L'etichetta NON è color rame. Sui due temi chiari `--copper-400` sta a
+    // 2,3:1 e 2,6:1 contro il fondo pagina — sotto il 4,5:1 che l'AA chiede a un
+    // testo da 12px — e questa è l'unica istruzione del blocco, non un timbro da
+    // scorrere come la data qui sopra (che quel colore ce l'ha, ed è coerente
+    // che ce l'abbia).
+    const label = root.querySelector<HTMLElement>('.news-share__label')!;
+    expect(getComputedStyle(label).color).toBe(coloreToken('--text'));
+    expect(getComputedStyle(label).color).not.toBe(coloreToken('--copper-400'));
+  });
+
+  it('il `u=` di Facebook decodificato è il canonical, quando la rotta È lo slug', () => {
+    // Se l'indirizzo condiviso e quello che la pagina dichiara canonico
+    // divergessero, si diffonderebbero link permanenti verso un URL che il sito
+    // stesso dichiara non buono.
+    //
+    // ⚠️ MA IL NOME DI QUESTO CASO DICE «QUANDO LA ROTTA È LO SLUG», E LA
+    // CONDIZIONE È PORTANTE — la prima stesura si chiamava «UN SOLO INDIRIZZO» e
+    // prometteva una garanzia che questa resa non dà. Qui il canonical lo scrive
+    // `applySeo` con `path: /news/${this.id()}`, cioè sul **parametro di rotta**,
+    // mentre `urlCondivisione` lo costruisce sullo **slug**: è la deriva
+    // preesistente che il piano dichiara fuori perimetro. Le due coincidono nel
+    // caso normale in produzione (la Function fa 301 su `/news/<slug>/` prima
+    // che l'app si monti, quindi la rotta È lo slug) e divergono per chi arriva
+    // in-SPA da una card, che collega per `_id` (`shared/ui/news-card`).
+    // Il verso che conta davvero — la condivisione segue lo slug e NON il
+    // parametro di rotta — è il caso qui sotto, e all'edge (dove il canonical è
+    // già sullo slug) l'uguaglianza è pinnata su tre chiavi diverse in
+    // `news-render.test.mjs`. Il giorno in cui la deriva del canonical si
+    // sistema, questo caso vale su qualunque chiave e la condizione nel nome può
+    // cadere.
+    const c = canali(monta({ slug: 'articolo-vero' }));
+    const u = c.facebook!.getAttribute('href')!.split('u=')[1];
+    expect(decodeURIComponent(u)).toBe(canonical()!);
+    expect(canonical()).toBe(`${SITO}/news/articolo-vero/`);
+  });
+
+  it('⚠️ l\'indirizzo si costruisce sullo SLUG, non sul parametro di rotta', () => {
+    // È il caso di chi arriva da un ObjectId o da uno slug storico: la Function
+    // risponde 301 prima che l'app si monti, ma se questa resa ereditasse il
+    // parametro di rotta il lettore condividerebbe l'indirizzo vecchio.
+    const c = canali(monta({ slug: 'come-si-gioca-il-bottone' }));
+    const atteso = `${SITO}/news/come-si-gioca-il-bottone/`;
+    expect(decodeURIComponent(c.facebook!.getAttribute('href')!.split('u=')[1])).toBe(atteso);
+    expect(c.telegram!.getAttribute('href')).toContain(encodeURIComponent(atteso));
+    expect(c.whatsapp!.getAttribute('href')).toContain(encodeURIComponent(atteso));
+    // E non l'indirizzo con cui la pagina è stata chiesta.
+    expect(c.facebook!.getAttribute('href')).not.toContain('articolo-vero');
+  });
+
+  it('⚠️ un titolo con &, virgolette e apostrofo non spezza gli href', () => {
+    // `encodeURIComponent` prima, escape dell'attributo dopo (qui lo fa Angular
+    // con `[href]`). Invertendoli, Telegram riceverebbe UN PARAMETRO SOLO, con
+    // il titolo appiccicato dentro l'indirizzo da condividere.
+    const titolo = 'Bottone & "fold": l\'errore';
+    const c = canali(monta({ title: titolo, slug: 'articolo-vero' }));
+    const url = `${SITO}/news/articolo-vero/`;
+    const p = new URLSearchParams(c.telegram!.getAttribute('href')!.split('?')[1]);
+    expect(p.get('url')).toBe(url);
+    expect(p.get('text')).toBe(titolo);
+    expect(decodeURIComponent(c.whatsapp!.getAttribute('href')!.split('text=')[1])).toBe(
+      `${titolo} ${url}`,
+    );
+  });
+
+  it('⚠️ copia l\'URL canonica, MAI location.href', () => {
+    // `location.href` sotto Karma è l'indirizzo del runner, e in produzione
+    // porterebbe query string, frammento e — su un'anteprima di ramo — l'host
+    // `*.pages.dev`: si diffonderebbero link permanenti verso una copia.
+    const writeText = jasmine.createSpy('writeText').and.resolveTo();
+    const own = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      get: () => ({ writeText }),
+    });
+    try {
+      const f = monta({ slug: 'come-si-gioca-il-bottone' });
+      (f.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('button.news-share__copy')!
+        .click();
+      expect(writeText).toHaveBeenCalledWith(`${SITO}/news/come-si-gioca-il-bottone/`);
+      expect(writeText.calls.mostRecent().args[0]).not.toContain(location.host);
+    } finally {
+      if (own) Object.defineProperty(navigator, 'clipboard', own);
+      else delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+
+  it('senza `navigator.clipboard` parte il ripiego sul campo fuori schermo', async () => {
+    // Fuori da un contesto sicuro l'API non esiste proprio: si ripiega su un
+    // campo renderizzato (non `display: none`, o non si potrebbe selezionare) e
+    // su `execCommand`. Mai un bottone morto.
+    const own = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, get: () => undefined });
+    const exec = spyOn(document, 'execCommand').and.returnValue(true);
+    try {
+      const f = monta({ slug: 'articolo-vero' });
+      (f.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('button.news-share__copy')!
+        .click();
+      await f.whenStable();
+
+      expect(exec).toHaveBeenCalledWith('copy');
+      const campo = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+        'input.news-share__fallback',
+      )!;
+      expect(campo.value).toBe(`${SITO}/news/articolo-vero/`);
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .map((t) => t.text),
+      ).toContain('Link copiato.');
+    } finally {
+      if (own) Object.defineProperty(navigator, 'clipboard', own);
+      else delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+
+  it('se fallisce anche il ripiego lo dice, invece di restare muto', async () => {
+    const own = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, get: () => undefined });
+    spyOn(document, 'execCommand').and.returnValue(false);
+    try {
+      const f = monta();
+      (f.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('button.news-share__copy')!
+        .click();
+      await f.whenStable();
+
+      const toasts = TestBed.inject(ToastService).toasts();
+      expect(toasts.map((t) => t.kind)).toContain('error');
+      const testo = toasts.map((t) => t.text).join(' ');
+      expect(testo).toContain('Copia non riuscita');
+      // ⚠️ E NON MANDA NELLA BARRA DEGLI INDIRIZZI. La prima stesura del
+      // messaggio suggeriva «copia l'indirizzo dalla barra del browser», cioè
+      // proprio `location.href`: le card di /news e della home collegano per
+      // `_id`, quindi lì c'è spesso l'indirizzo che il sito dichiara NON
+      // canonico — e il fallimento della copia sarebbe l'unico momento in cui
+      // glielo consigliamo. Si rimanda ai tre collegamenti, che portano l'URL
+      // buona e non hanno bisogno degli appunti.
+      expect(testo).not.toMatch(/barra|indirizzi|url/i);
+      expect(testo).toContain('condivisione');
+    } finally {
+      if (own) Object.defineProperty(navigator, 'clipboard', own);
+      else delete (navigator as { clipboard?: unknown }).clipboard;
+    }
   });
 });

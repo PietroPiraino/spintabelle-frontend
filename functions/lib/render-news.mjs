@@ -330,6 +330,131 @@ function rettificheHtml(note) {
   return voci.length ? `<div class="news-detail__rettifiche">\n${voci.join('\n')}\n</div>` : '';
 }
 
+// ---- Condivisione (in fondo all'articolo) -------------------------------
+//
+// ⚠️ QUESTO BLOCCO ESISTE IN ENTRAMBE LE RESE, E NON PER INTERO. Le due stesure
+// della pagina si SOSTITUISCONO (Angular svuota il proprio host montandosi), non
+// si fondono: quello che deve esserci in tutte e due va scritto due volte. Qui
+// stanno **solo i tre collegamenti**, che sono `<a href>` e funzionano senza una
+// riga di JavaScript — quindi valgono anche per chi legge questa prima stesura e
+// per un motore. Il quarto controllo, «Copia link», sta **solo** nel componente
+// Angular: all'edge sarebbe un bottone morto (nessun gestore lo ascolterebbe mai,
+// perche' il codice che lo farebbe funzionare arriva insieme all'app che
+// cancella questo HTML). L'asimmetria e' una decisione, ed e' pinnata NEI DUE
+// VERSI da `scripts/lib/news-render.test.mjs`: un caso verifica che qui il
+// controllo di copia NON ci sia, un altro che nel template Angular ci sia.
+// Senza il primo qualcuno "allineerebbe" le rese aggiungendo il bottone morto;
+// senza il secondo lo toglierebbe per simmetria.
+
+/**
+ * I tre glifi, in forma piena, da **Simple Icons (CC0 1.0)** — non dai brand
+ * center dei tre servizi, che hanno termini d'uso propri.
+ *
+ * ⚠️ SONO LA COPIA ESATTA dei rami `@case` di
+ * `src/app/shared/ui/icon/icon.component.ts`: la Function e l'app sono due
+ * build diverse e non possono importarsi a vicenda (stessa ragione per cui
+ * `functions/lib/markdown.mjs` duplica il renderer del Markdown). A tenere le
+ * due copie allineate e' un test che rilegge quel sorgente e confronta le
+ * stringhe carattere per carattere.
+ *
+ * ⚠️ SVG INLINE, MAI UN `<img>`: `news-render.test.mjs` asserisce che dentro
+ * `<main>` non ci sia alcun `<img>` quando l'articolo non ha copertina — e quella
+ * trappola vale anche con questo blocco in pagina. Un'icona servita come
+ * immagine sarebbe una richiesta di rete in piu' e, soprattutto, un `<img>` di
+ * troppo dove la spec ne conta zero.
+ */
+export const GLIFI_CONDIVISIONE = {
+  whatsapp: 'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z',
+  telegram: 'M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0Zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212-.07-.062-.174-.041-.249-.024-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635Z',
+  facebook: 'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z',
+};
+
+/**
+ * ⚠️ Qui il root `<svg>` porta gia' `fill="currentColor"`, mentre nel componente
+ * Angular il root e' `fill="none" stroke-width="2"` (e' condiviso con le icone a
+ * tratto) e l'override sta su ogni `<path>`. Il disegno che ne esce e' lo stesso:
+ * a divergere sarebbe solo il `d`, ed e' quello che il test sorveglia.
+ */
+function iconaCondivisione(nome) {
+  return (
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" ' +
+    `aria-hidden="true" focusable="false"><path d="${GLIFI_CONDIVISIONE[nome]}"/></svg>`
+  );
+}
+
+/**
+ * I tre indirizzi di condivisione, da **una sola fonte**: `url`, che e' la
+ * STESSA stringa del canonical della pagina (`urlCanonica(slug)`).
+ *
+ * ⚠️ COSTRUITA SULLO SLUG, MAI SULLA CHIAVE CHIESTA. Chi arriva da un ObjectId o
+ * da uno slug storico riceve un 301 verso lo slug corrente, ma lo scraper legge
+ * comunque questa pagina: condividere `/news/65f0…aa/` vorrebbe dire diffondere
+ * link permanenti su un indirizzo che il sito stesso dichiara non canonico. Un
+ * test lo fissa nella forma piu' stretta possibile — il parametro `u=` di
+ * Facebook, decodificato, e' **identico** all'href del canonical della stessa
+ * pagina.
+ *
+ * ⚠️ `encodeURIComponent` PRIMA, `escapeHtml` DOPO (l'escape lo fa chi scrive
+ * l'attributo, qui sotto). Invertendoli, l'`&amp;` prodotto dall'escape verrebbe
+ * percent-encodato dentro il valore e Telegram riceverebbe **un parametro solo**:
+ * il titolo finirebbe dentro l'URL da condividere.
+ */
+export function linkCondivisione(url, titolo) {
+  const u = encodeURIComponent(String(url ?? ''));
+  const t = encodeURIComponent(String(titolo ?? ''));
+  return {
+    // WhatsApp non ha un campo separato per l'URL: titolo e indirizzo viaggiano
+    // in un unico testo, quindi si codificano insieme.
+    whatsapp: `https://wa.me/?text=${encodeURIComponent(`${String(titolo ?? '')} ${String(url ?? '')}`)}`,
+    telegram: `https://t.me/share/url?url=${u}&text=${t}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${u}`,
+  };
+}
+
+/** Le tre etichette, in un posto solo: sono anche gli `aria-label`. */
+const CANALI_CONDIVISIONE = [
+  ['whatsapp', 'WhatsApp'],
+  ['telegram', 'Telegram'],
+  ['facebook', 'Facebook'],
+];
+
+/**
+ * Il blocco di condivisione, ultimo figlio dell'`<article>`.
+ *
+ * ⚠️ DENTRO L'ARTICOLO E NON FUORI: `max-width` e `gap` della colonna di lettura
+ * vivono su `.news-detail__article`, quindi un blocco fuori vorrebbe dire un
+ * secondo contenitore con le stesse misure — cioe' una seconda fonte di verita'
+ * per la larghezza del testo.
+ *
+ * ⚠️ `target="_blank" rel="noopener"`: convenzione della casa per ogni link che
+ * esce dal sito (17 occorrenze nel repo).
+ *
+ * ⚠️ LE CLASSI QUI SOTTO SONO SERVITE DAVVERO, e per una ragione che va detta:
+ * gli stili di `.news-share*` stanno in `src/styles/_news-share.scss`, cioè fra
+ * i fogli GLOBALI (come `.prose` e `.btn`), NON nel foglio del componente. Un
+ * foglio di componente e' compilato con l'incapsulamento
+ * (`.news-share__btn[_ngcontent-…]`) e questo HTML quell'attributo non ce l'ha:
+ * lì dentro le regole non toccherebbero mai questa stesura, che per chi ha il
+ * JavaScript disattivato e' **definitiva**. E' anche cio' che tiene i bersagli
+ * tattili a 44px qui e non solo di la'. Chi sposta quelle regole dentro il
+ * componente spegne meta' del lavoro senza rompere niente a vista.
+ */
+function condivisioneHtml(url, titolo) {
+  const link = linkCondivisione(url, titolo);
+  const voci = CANALI_CONDIVISIONE.map(
+    ([nome, etichetta]) =>
+      `<a class="news-share__btn btn btn--ghost btn--sm" href="${escapeHtml(link[nome])}"` +
+      ` target="_blank" rel="noopener" aria-label="Condividi su ${escapeHtml(etichetta)}">` +
+      `${iconaCondivisione(nome)}<span>${escapeHtml(etichetta)}</span></a>`,
+  );
+  return [
+    '<footer class="news-share">',
+    '<p class="news-share__label">Condividi l\'articolo</p>',
+    `<div class="news-share__row">\n${voci.join('\n')}\n</div>`,
+    '</footer>',
+  ].join('\n');
+}
+
 /**
  * Un articolo. `chiave` e' quella chiesta nell'URL (slug o ObjectId): serve solo
  * come ripiego per il canonical, perche' la forma buona e' lo `slug`
@@ -404,6 +529,12 @@ export function renderArticolo(scheletro, articolo, chiave) {
     // configurazione di `markdown.mjs`, che SCARTA l'HTML grezzo del Markdown —
     // fuori da Angular non c'e' nessun sanitizer di `[innerHTML]`.
     `<div class="prose">${renderMarkdown(dati.body)}</div>`,
+    // ⚠️ ULTIMO figlio dell'`<article>`, come nel componente Angular: la
+    // condivisione si offre a chi ha finito di leggere, non a chi deve ancora
+    // cominciare. I tre collegamenti stanno anche qui perche' sono `<a href>` e
+    // non hanno bisogno di JavaScript; il «Copia link» no — vedi l'intestazione
+    // di `condivisioneHtml`.
+    condivisioneHtml(url, titolo),
     '</article>',
     '</div></section>',
     '</main>',

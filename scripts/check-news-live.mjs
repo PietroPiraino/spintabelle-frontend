@@ -44,7 +44,15 @@
 //   5. Un id inventato -> 404 VERO, e **non** un 301: un indirizzo che non
 //      esiste non e' un indirizzo traslocato. Il soft-404 (200 con l'HTML della
 //      home) e' il difetto che `public/404.html` ha chiuso il 16/08/2026.
-//   6. `/negozio` porta ancora `X-Robots-Tag`. Sembra fuori tema e non lo e':
+//   6. IL BLOCCO DI CONDIVISIONE, coi suoi tre collegamenti. ⚠️ E' la seconda
+//      superficie SOLO-EDGE (la prima e' l'anteprima social), e ha la stessa
+//      cecita': i tre `<a href>` sono la meta' che funziona senza JavaScript,
+//      quindi valgono per lo scraper, per il motore e per chi il JS non ce l'ha
+//      — e nessun'altra guardia li vede. `news-render.test.mjs` rilegge i
+//      SORGENTI del repo, quindi resta verde anche se in produzione gira una
+//      Function piu' vecchia. Si controlla anche il verso che NEGA: qui il
+//      «Copia link» non deve esserci, sarebbe un pulsante morto.
+//   7. `/negozio` porta ancora `X-Robots-Tag`. Sembra fuori tema e non lo e':
 //      quell'header viene da `public/_headers`, che in advanced mode
 //      (`_worker.js`) smetterebbe di applicarsi. E' la prova, da fuori, che
 //      siamo ancora in directory mode.
@@ -327,6 +335,97 @@ async function sonda() {
               'di build se ne accorge.'
             : ' (ogImageUrl se c e, altrimenti coverImageUrl, altrimenti og.png).'),
       );
+
+    // ---- La condivisione (lotto B) ---------------------------------------
+    //
+    // ⚠️ SECONDA SUPERFICIE SOLO-EDGE, STESSA CECITA' DELL'ANTEPRIMA SOCIAL. I
+    // tre collegamenti stanno nel blocco composto dalla Function perche' sono
+    // `<a href>` e funzionano senza JavaScript: sono la meta' che vale per lo
+    // scraper, per il motore e per chi ha il JS disattivato. E nessuno li
+    // guarda: `check-prerender-content.mjs` misura `dist/` e questa pagina in
+    // `dist/` non c'e'; `news-render.test.mjs` rilegge i SORGENTI del repo,
+    // quindi resta verde anche se in produzione gira una Function piu' vecchia.
+    // Committare la meta' Angular e dimenticare `functions/lib/render-news.mjs`
+    // compila verde, passa `npm run test:scripts` verde, si deploya verde — ed
+    // e' esattamente quello che e' successo il 19/08/2026 con la firma (19 file
+    // committati, 2 lasciati fuori). Nessun umano se ne accorge: i pulsanti
+    // compaiono lo stesso all'idratazione.
+    //
+    // ⚠️ Gli attesi si calcolano dal record dell'API e dal canonical della
+    // pagina, mai da costanti scritte qui.
+    const blocco = (dentroMain(html).match(/<footer class="news-share">([\s\S]*?)<\/footer>/i) ||
+      [])[1] ?? null;
+    if (blocco === null)
+      nota(
+        `${urlArticolo} — manca il blocco di condivisione (<footer class="news-share">). ` +
+          'I tre collegamenti sono la meta che funziona senza JavaScript, quindi sono ' +
+          "l'unica che vale per uno scraper e per chi ha il JS disattivato. Se il resto " +
+          "della pagina e' giusto, il sospetto e' che la Function all'edge sia piu' " +
+          'VECCHIA del repo: functions/ sta fuori da dist/, nessuna guardia di build se ' +
+          'ne accorge.',
+      );
+    else {
+      // ⚠️ Nell'attributo l'`&` viaggia come `&amp;` (lo scrive `escapeHtml`, ed
+      // e' corretto): si legge come lo leggerebbe un parser HTML, decodificando.
+      const href = (host) => {
+        const m = blocco.match(new RegExp(`href="(https://[^"]*${host}[^"]*)"`, 'i'));
+        return m ? m[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'") : null;
+      };
+      const canali = {
+        WhatsApp: href('wa\\.me'),
+        Telegram: href('t\\.me'),
+        Facebook: href('facebook\\.com'),
+      };
+      for (const [nome, url] of Object.entries(canali))
+        if (!url) nota(`${urlArticolo} — nel blocco di condivisione manca il canale ${nome}.`);
+
+      // ⚠️ UN SOLO INDIRIZZO. E' l'invariante piu' stretta del lotto, ed e' anche
+      // l'unica sondabile da fuori: cio' che si diffonde dev'essere l'indirizzo
+      // che la pagina stessa dichiara canonico. Se divergessero, ogni
+      // condivisione seminerebbe link permanenti verso un URL che il sito
+      // dichiara non buono — e a quel punto il 301 non serve piu' a niente.
+      if (canali.Facebook && canonical) {
+        const condivisa = decodeURIComponent(canali.Facebook.split('u=')[1] ?? '');
+        if (condivisa !== canonical)
+          nota(
+            `${urlArticolo} — il link di condivisione porta "${condivisa}", mentre il ` +
+              `canonical dichiara "${canonical}". Va costruito sullo SLUG, come il ` +
+              'canonical: altrimenti si diffondono link permanenti verso un indirizzo ' +
+              'che il sito stesso dichiara non canonico.',
+          );
+      }
+
+      // Il titolo dell'API dev'essere quello che viaggia nel messaggio: se qui
+      // comparisse "undefined" o il titolo di un altro pezzo, la condivisione
+      // sarebbe sbagliata proprio nella parte che si legge in chat.
+      const titoloApi = String(rec.title ?? '').trim();
+      if (canali.Telegram && titoloApi) {
+        const testo = new URLSearchParams(canali.Telegram.split('?')[1] ?? '').get('text');
+        if (testo !== titoloApi)
+          nota(
+            `${urlArticolo} — Telegram condivide il testo "${testo}", atteso il titolo ` +
+              `dell'API "${titoloApi}". Se il parametro manca del tutto, l'ordine dei due ` +
+              "passaggi si e' invertito (encodeURIComponent PRIMA, escapeHtml DOPO): " +
+              "l'`&amp;` percent-encodato lascia a Telegram un parametro solo.",
+          );
+      }
+
+      // ⚠️ E IL VERSO CHE NEGA. Il «Copia link» esiste SOLO nel componente
+      // Angular: qui nessun gestore potrebbe ascoltarlo — il codice che lo fa
+      // funzionare arriva con l'app, che questo HTML lo cancella — quindi
+      // sarebbe un pulsante morto, e senza JavaScript morto per sempre.
+      // L'asimmetria e' una decisione, ed e' pinnata nei due versi anche nei
+      // test dei sorgenti: questo e' il controllo che la verifica sulla pagina
+      // vera.
+      if (/<button|news-share__copy/i.test(blocco))
+        nota(
+          `${urlArticolo} — la resa all'edge emette un controllo di copia: qui nessun ` +
+            "gestore puo' ascoltarlo (il codice che lo farebbe funzionare arriva con " +
+            "l'app, che questo HTML lo cancella), quindi e' un pulsante morto — e per chi " +
+            'ha il JavaScript disattivato lo resta. Il «Copia link» va solo nel ' +
+            'componente Angular.',
+        );
+    }
 
     // Le due date dei dati strutturati. ⚠️ `dateModified` NON e' `updatedAt`
     // (D45): con `updatedAt` qualunque salvataggio dell'admin — un refuso, un
