@@ -198,6 +198,23 @@ export class NewsService {
     return this.http.post<NewsAdmin>(`${API}/admin/news/${id}/copertina`, {});
   }
 
+  /**
+   * La **storia Instagram** (1080×1920) di un articolo pubblicato, come PNG.
+   *
+   * ⚠️ **`responseType: 'blob'`, e la GET passa comunque dall'interceptor**:
+   * è quello ad attaccare il Bearer, che vive **solo in memoria** e non può
+   * cavalcare una navigazione. Un `<a href>` diretto a questa rotta prenderebbe
+   * un 401 — stesso vincolo, e stessa soluzione, dei download dei documenti.
+   *
+   * ⚠️ Non torna la riga: **questa chiamata non cambia niente**. Non c'è nulla
+   * da ricaricare dopo, e premerla due volte produce due file identici.
+   */
+  storiaIg(id: string): Observable<Blob> {
+    return this.http.get(`${API}/admin/news/${id}/storia-ig`, {
+      responseType: 'blob',
+    });
+  }
+
   /** Casa canonica delle modifiche: qui il corpo si riscrive davvero. */
   adminUpdate(id: string, payload: Partial<NewsPayload>): Observable<NewsAdmin> {
     return this.http.patch<NewsAdmin>(`${API}/admin/news/${id}`, payload);

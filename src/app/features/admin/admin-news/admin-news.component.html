@@ -374,6 +374,20 @@
                       : etichettaCopertina(news)
                   }}</button>
                 }
+                <!-- ⚠️ Stessa condizione della copertina (`PUBBLICATO`): la
+                     storia si posta con il link all'articolo, e fuori da quello
+                     stato non c'è una pagina da collegare — il server risponde
+                     409. Un pulsante che finisce in 409 è una bugia. -->
+                @if (mostraCopertina(news)) {
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm admin-news__storia"
+                    [disabled]="inVolo()"
+                    (click)="scaricaStoria(news)"
+                  >{{
+                    inVoloSu(news._id, 'storia') ? 'Disegno…' : 'Storia IG'
+                  }}</button>
+                }
                 <button
                   type="button"
                   class="btn btn--ghost btn--sm"

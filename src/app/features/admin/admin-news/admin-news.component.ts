@@ -37,7 +37,7 @@ type AzioneRitorno = 'riapri' | 'in-revisione' | 'ritira';
  * Tutto ciò che può essere in volo su una riga: il ritorno, la copertina
  * social e la cancellazione.
  */
-type AzioneRiga = AzioneRitorno | 'copertina' | 'elimina';
+type AzioneRiga = AzioneRitorno | 'copertina' | 'storia' | 'elimina';
 
 /** La singola via di ritorno offerta da uno stato, già in italiano. */
 interface Ritorno {
@@ -567,6 +567,46 @@ export class AdminNewsComponent {
         : 'Copertina generata: da ora le condivisioni mostrano la targa dell’articolo.',
       false,
     );
+  }
+
+  /**
+   * Scarica la **storia Instagram** dell'articolo e la consegna al browser.
+   *
+   * ⚠️ **Non passa da [[esegui]], ed è il punto**: quel runner ricarica l'elenco
+   * a ogni successo, perché ogni altra azione di questa schermata **cambia** la
+   * riga. Questa no — disegna un file e lo consegna. Ricaricare venticinque
+   * righe per un download sarebbe lavoro inutile a ogni pressione, e farebbe
+   * anche saltare la posizione di scorrimento a chi sta lavorando.
+   *
+   * ⚠️ Il blob si prende via XHR e **non** con un `<a href>` verso la rotta:
+   * l'access token sta in memoria e lo attacca l'interceptor, quindi una
+   * navigazione diretta prenderebbe 401 (idioma dei documenti).
+   *
+   * ⚠️ `revokeObjectURL` non è igiene facoltativa: senza, ogni pressione
+   * lascia in vita ~330 KB per tutta la sessione della scheda, e questo pannello
+   * è aperto per ore.
+   */
+  protected scaricaStoria(news: NewsAdmin): void {
+    if (this.inVolo()) return;
+    this.azione.set({ id: news._id, quale: 'storia' });
+    this.newsApi.storiaIg(news._id).subscribe({
+      next: (blob) => {
+        this.azione.set(null);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `storia-${news.slug || news._id}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.toast.success(
+          'Storia scaricata. Caricala su Instagram e aggiungi lo sticker del link: quello va messo a mano, l’API di Meta non lo prevede.',
+        );
+      },
+      error: (err: unknown) => {
+        this.azione.set(null);
+        this.toast.error(apiErrorMessage(err, 'Storia non generata.'));
+      },
+    });
   }
 
   /**

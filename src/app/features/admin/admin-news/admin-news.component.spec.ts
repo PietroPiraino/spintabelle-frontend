@@ -736,6 +736,102 @@ describe('AdminNewsComponent', () => {
     );
   });
 
+  // ── 9. La storia Instagram: un download, non una mutazione ───────────────
+
+  /**
+   * Evita che il browser tenti davvero un salvataggio e permette di asserire la
+   * pulizia dell'URL temporaneo. ⚠️ Senza lo spy su `click`, ChromeHeadless
+   * apre un download vero a ogni esecuzione della suite.
+   */
+  function intercettaDownload(): { creati: string[]; revocati: string[] } {
+    const creati: string[] = [];
+    const revocati: string[] = [];
+    spyOn(URL, 'createObjectURL').and.callFake(() => {
+      const u = `blob:finto/${creati.length}`;
+      creati.push(u);
+      return u;
+    });
+    spyOn(URL, 'revokeObjectURL').and.callFake((u: string) => {
+      revocati.push(u);
+    });
+    spyOn(HTMLAnchorElement.prototype, 'click');
+    return { creati, revocati };
+  }
+
+  it('il comando «Storia IG» c’è sui pubblicati e NON sulle bozze', async () => {
+    // ⚠️ Stessa condizione della copertina: fuori da `PUBBLICATO` il server
+    // risponde 409, e un pulsante che finisce in 409 è una bugia.
+    await rispondi([
+      newsOf('pub', 'PUBBLICATO'),
+      newsOf('boz', 'BOZZA'),
+    ]);
+
+    expect(uno('.admin-news__storia', riga('Titolo pub'))).not.toBeNull();
+    expect(uno('.admin-news__storia', riga('Titolo boz'))).toBeNull();
+  });
+
+  it('scarica il PNG dalla rotta della storia e ripulisce l’URL temporaneo', async () => {
+    const spie = intercettaDownload();
+    await rispondi([newsOf('s', 'PUBBLICATO')]);
+
+    await clicca(
+      uno<HTMLButtonElement>('.admin-news__storia', riga('Titolo s'))!,
+    );
+    const req = http.expectOne(`${API}/admin/news/s/storia-ig`);
+    expect(req.request.method).toBe('GET');
+    // ⚠️ Deve chiedere un blob: col default (`json`) Angular prova a fare il
+    // parse del PNG e la chiamata fallisce con un errore che parla di JSON,
+    // mandando a cercare il guasto sul server.
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' }));
+    await stabilizza();
+
+    expect(spie.creati.length).toBe(1);
+    expect(spie.revocati).toEqual(spie.creati);
+  });
+
+  /**
+   * ⚠️ **La spec portante di questa sezione.** Ogni altra azione del pannello
+   * passa da `esegui()`, che al successo ricarica l'elenco perché la riga è
+   * cambiata. Questa non cambia niente: ricaricare venticinque righe a ogni
+   * download sarebbe lavoro inutile e farebbe saltare la posizione di
+   * scorrimento a chi sta lavorando. Il difetto è invisibile a occhio — il
+   * pannello funziona lo stesso — quindi lo tiene solo questa asserzione.
+   */
+  it('⚠️ NON ricarica l’elenco: non è una mutazione', async () => {
+    intercettaDownload();
+    await rispondi([newsOf('s', 'PUBBLICATO')]);
+
+    await clicca(
+      uno<HTMLButtonElement>('.admin-news__storia', riga('Titolo s'))!,
+    );
+    http
+      .expectOne(`${API}/admin/news/s/storia-ig`)
+      .flush(new Blob([new Uint8Array([1])], { type: 'image/png' }));
+    await stabilizza();
+
+    http.expectNone((r) => r.url.endsWith('/admin/news'));
+  });
+
+  it('l’esito dice che lo sticker del link va messo a mano', async () => {
+    // ⚠️ Non è cortesia: l'API di Meta non sa aggiungere sticker interattivi,
+    // quindi una storia caricata e basta è **muta**. Se il messaggio non lo
+    // dice, il link non ci finisce mai e il comando non serve a niente.
+    const toast = spyOn(TestBed.inject(ToastService), 'success');
+    intercettaDownload();
+    await rispondi([newsOf('s', 'PUBBLICATO')]);
+
+    await clicca(
+      uno<HTMLButtonElement>('.admin-news__storia', riga('Titolo s'))!,
+    );
+    http
+      .expectOne(`${API}/admin/news/s/storia-ig`)
+      .flush(new Blob([new Uint8Array([1])], { type: 'image/png' }));
+    await stabilizza();
+
+    expect(String(toast.calls.mostRecent().args[0])).toContain('sticker');
+  });
+
   // ── 8. La copertina social: marcatore e comando ──────────────────────────
 
   it('il marcatore «Senza copertina» c’è dove la targa manca e NON dove c’è', async () => {
