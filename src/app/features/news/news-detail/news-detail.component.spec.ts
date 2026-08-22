@@ -256,4 +256,97 @@ describe('NewsDetailComponent', () => {
     monta({ autore: undefined });
     expect(jsonLd()['author']).toBeUndefined();
   });
+
+  // ---- Copertina social: due campi, due mestieri (A2) --------------------
+
+  /**
+   * ⚠️ DUE campi e non uno, ed è il cuore della deviazione dalla specifica
+   * §4.8: `coverImageUrl` è l'immagine **visibile** nell'articolo (le foto
+   * vere, scelte a mano — i tre articoli storici hanno quelle), `ogImageUrl` è
+   * la targa 1200×675 generata dal backend, che esiste **solo** per le
+   * anteprime social e in pagina non si vede mai.
+   *
+   * La catena è `ogImageUrl || coverImageUrl || og.png`, ed è scritta DUE volte
+   * perché le due rese di questa pagina si **sostituiscono** invece di fondersi:
+   * l'HTML iniziale lo compone `functions/lib/render-news.mjs` (lo legge lo
+   * scraper), questo componente lo riscrive all'idratazione (lo legge il
+   * browser). Aggiornarne una sola vorrebbe dire un'anteprima che cambia a
+   * seconda di chi guarda. La gemella di questi casi sta in
+   * `scripts/lib/news-render.test.mjs`.
+   */
+  const TARGA = 'https://cdn.bestfishforever.it/news/titolo-di-prova/cover.png';
+  const FOTO = 'https://cdn.bestfishforever.it/news/foto-vera.jpg';
+
+  /** Il contenuto di un meta del <head>, dove `SeoService` lo scrive davvero. */
+  const meta = (property: string): string | null =>
+    document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`)
+      ?.content ?? null;
+
+  it('og:image è la targa generata quando c\'è', () => {
+    monta({ ogImageUrl: TARGA, coverImageUrl: FOTO });
+    expect(meta('og:image')).toBe(TARGA);
+  });
+
+  it('senza targa l\'og:image ricade sulla copertina', () => {
+    monta({ coverImageUrl: FOTO });
+    expect(meta('og:image')).toBe(FOTO);
+  });
+
+  it('⚠️ una targa VUOTA non scavalca la foto: `||`, mai `??`', () => {
+    // ⚠️ L'unico valore su cui i due operatori divergono, e la resa all'edge usa
+    // `||` (`ogImage || copertina || OG_PREDEFINITA`). Con `??` qui la stringa
+    // vuota vincerebbe, `SeoService.applyMeta` la trasformerebbe nell'`og.png`
+    // predefinito, e lo stesso articolo mostrerebbe la FOTO allo scraper e
+    // l'og.png a chi apre il link nel browser — l'anteprima che cambia a seconda
+    // di chi guarda, cioè il difetto che questa coppia di rese deve escludere.
+    // Il valore è raggiungibile: lo schema del backend ha `trim: true`, quindi
+    // uno spazio salvato per sbaglio arriva qui come `''`.
+    monta({ ogImageUrl: '', coverImageUrl: FOTO });
+    expect(meta('og:image')).toBe(FOTO);
+  });
+
+  it('senza nessuna delle due resta l\'immagine predefinita del sito', () => {
+    // È il punto di partenza che questo lotto sta correggendo: ogni articolo
+    // condiviso mostrava la stessa identica figura.
+    //
+    // ⚠️ Il segnaposto non è decorativo. I meta vivono nel `<head>` del
+    // documento, che TUTTE le spec condividono, e Jasmine gira in ordine
+    // casuale: senza avvelenare il campo prima, un `og.png` lasciato lì da
+    // un'altra pagina — che usa la stessa immagine predefinita — farebbe
+    // passare questo caso anche con il componente che non scrive più niente.
+    document
+      .querySelector<HTMLMetaElement>('meta[property="og:image"]')
+      ?.setAttribute('content', 'https://esempio.invalido/segnaposto.png');
+
+    monta();
+    expect(meta('og:image')).toBe('https://bestfishforever.it/og.png');
+  });
+
+  it('⚠️ la targa NON entra in pagina: l\'<img> resta la foto vera', () => {
+    // Se il template rendesse `ogImageUrl`, l'articolo mostrerebbe in cima una
+    // figura che ripete il titolo stampato due centimetri sotto — che è la
+    // ragione per cui la copertina generata vive solo nell'`og:image`.
+    const f = monta({ ogImageUrl: TARGA, coverImageUrl: FOTO });
+    const img = (f.nativeElement as HTMLElement).querySelector<HTMLImageElement>(
+      'img.news-detail__cover',
+    );
+    expect(img).withContext('la foto vera deve restare in pagina').toBeTruthy();
+    expect(img!.getAttribute('src')).toBe(FOTO);
+  });
+
+  it('⚠️ con la SOLA targa la pagina non mostra alcuna immagine', () => {
+    // È il caso di **ogni** pezzo scritto dalla redazione automatica: nessuna
+    // foto scelta a mano, solo la targa. La pagina resta senza `<img>`, e
+    // l'anteprima social ce l'ha lo stesso.
+    const f = monta({ ogImageUrl: TARGA });
+    expect((f.nativeElement as HTMLElement).querySelector('img')).toBeNull();
+    expect(meta('og:image')).toBe(TARGA);
+  });
+
+  it('⚠️ i dati strutturati descrivono l\'articolo, non l\'insegna', () => {
+    // `image` del NewsArticle resta `coverImageUrl`: i dati strutturati
+    // descrivono il pezzo, e l'immagine del pezzo è quella che il lettore vede.
+    monta({ ogImageUrl: TARGA, coverImageUrl: FOTO });
+    expect(jsonLd()['image']).toEqual([FOTO]);
+  });
 });

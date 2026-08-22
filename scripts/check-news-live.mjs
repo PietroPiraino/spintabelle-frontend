@@ -296,6 +296,38 @@ async function sonda() {
         );
     }
 
+    // L'anteprima social. ⚠️ E' l'UNICA cosa che il lotto A2 aggiunge alla
+    // pagina, e senza questo blocco resterebbe scoperta esattamente come lo era
+    // la firma: `functions/` sta fuori da `dist/`, quindi un push che spedisce
+    // la meta' Angular e dimentica quella dell'edge compila verde, si deploya
+    // verde, passa `npm run test:scripts` (che legge i SORGENTI del repo, non la
+    // produzione) — e ogni articolo condiviso continua a mostrare la stessa
+    // identica figura, cioe' il problema che il lotto doveva chiudere. E' il
+    // sintomo piu' muto di tutti: la pagina e' perfetta, manca solo l'anteprima.
+    //
+    // ⚠️ L'atteso e' la catena, non il campo: `ogImageUrl || coverImageUrl ||
+    // og.png`, la stessa in entrambe le rese — con `||`, perche' e' il valore
+    // vuoto a distinguerla da `??`. Cosi' il controllo vale anche sui tre
+    // articoli storici, che una targa non ce l'hanno e non devono averla.
+    const attesaOg =
+      String(rec.ogImageUrl ?? '').trim() ||
+      String(rec.coverImageUrl ?? '').trim() ||
+      `${PRODUZIONE}/og.png`;
+    const ogImage =
+      (html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']*)["']/i) ||
+        [])[1] ?? null;
+    if (ogImage === null) nota(`${urlArticolo} — manca og:image.`);
+    else if (ogImage !== attesaOg)
+      nota(
+        `${urlArticolo} — og:image "${ogImage}", atteso "${attesaOg}"` +
+          (rec.ogImageUrl && ogImage.endsWith('/og.png')
+            ? ": l'API dichiara una targa (ogImageUrl) e la pagina serve comunque " +
+              "l'immagine predefinita del sito. Il sospetto e' che la Function all'edge " +
+              'sia piu VECCHIA del repo — functions/ sta fuori da dist/, nessuna guardia ' +
+              'di build se ne accorge.'
+            : ' (ogImageUrl se c e, altrimenti coverImageUrl, altrimenti og.png).'),
+      );
+
     // Le due date dei dati strutturati. ⚠️ `dateModified` NON e' `updatedAt`
     // (D45): con `updatedAt` qualunque salvataggio dell'admin — un refuso, un
     // tag — dichiarava la pagina aggiornata senza esserlo. Solo una rettifica

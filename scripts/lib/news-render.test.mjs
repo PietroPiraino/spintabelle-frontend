@@ -67,6 +67,12 @@ const ARTICOLO = {
   updatedAt: '2026-08-19T11:00:00.000Z',
 };
 
+// ⚠️ DIVERSA da `coverImageUrl` di proposito, e su un percorso riconoscibile:
+// e' la targa social generata dal backend (`news/<slug>/cover.png` sulla zona
+// pubblica). Con due URL uguali i test qui sotto passerebbero anche leggendo il
+// campo sbagliato.
+const TARGA = 'https://cdn.bestfishforever.it/news/come-si-gioca-il-bottone/cover.png';
+
 /** Il pezzo che conta per un motore: quello dentro `<main>`. */
 function dentroMain(html) {
   const m = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
@@ -358,6 +364,94 @@ test('l autore dei dati strutturati e una Person, e punta a /redazione', () => {
 test('senza autore il JSON-LD non dichiara un author vuoto', () => {
   const { autore, ...anonimo } = ARTICOLO;
   assert.equal(jsonLd(renderArticolo(scheletro, anonimo, ARTICOLO.slug)).author, undefined);
+});
+
+// ---- La copertina social (A2) -------------------------------------------
+//
+// ⚠️ DUE campi e non uno: `ogImageUrl` e' la targa 1200x675 generata dal
+// backend alla pubblicazione, e serve SOLO alle anteprime social;
+// `coverImageUrl` resta l'immagine VISIBILE. La catena e'
+// `ogImageUrl ?? coverImageUrl ?? og.png`, ed e' scritta due volte — qui e in
+// `news-detail.component.ts` — perche' le due rese si SOSTITUISCONO. Aggiornarne
+// una sola vorrebbe dire un'anteprima diversa a seconda di chi guarda.
+
+test('og:image e la targa generata quando c e, e la pagina mostra comunque la foto', () => {
+  const html = renderArticolo(
+    scheletro,
+    { ...ARTICOLO, ogImageUrl: TARGA },
+    ARTICOLO.slug,
+  );
+  assert.equal(contenutoMeta(html, 'property', 'og:image'), TARGA);
+  assert.equal(contenutoMeta(html, 'name', 'twitter:image'), TARGA);
+  // ⚠️ La targa NON entra in pagina: l'`<img>` resta la copertina vera, e i tre
+  // articoli storici devono continuare a mostrare le loro foto.
+  const main = dentroMain(html);
+  assert.match(main, new RegExp(`<img class="news-detail__cover" src="${ARTICOLO.coverImageUrl}"`));
+  assert.doesNotMatch(main, new RegExp(TARGA));
+});
+
+test('senza targa l og:image ricade sulla copertina, poi sul predefinito', () => {
+  // I due gradini della catena, uno per riga.
+  const conFoto = renderArticolo(scheletro, ARTICOLO, ARTICOLO.slug);
+  assert.equal(contenutoMeta(conFoto, 'property', 'og:image'), ARTICOLO.coverImageUrl);
+
+  const { coverImageUrl, ...nudo } = ARTICOLO;
+  const senzaNiente = renderArticolo(scheletro, nudo, nudo.slug);
+  assert.equal(contenutoMeta(senzaNiente, 'property', 'og:image'), `${SITO}/og.png`);
+});
+
+test('la targa da sola basta: nessuna copertina in pagina, ma l anteprima c e', () => {
+  // ⚠️ E' il caso NORMALE di un articolo generato dalla redazione automatica:
+  // nessuna foto scelta a mano, solo la targa. La pagina resta senza `<img>` —
+  // la trappola di `news-render.test.mjs` sul caso senza copertina resta armata.
+  const { coverImageUrl, ...senzaFoto } = ARTICOLO;
+  const html = renderArticolo(scheletro, { ...senzaFoto, ogImageUrl: TARGA }, senzaFoto.slug);
+  assert.equal(contenutoMeta(html, 'property', 'og:image'), TARGA);
+  assert.doesNotMatch(dentroMain(html), /<img/);
+});
+
+test('una targa VUOTA non scavalca la foto: la catena usa `||`, non `??`', () => {
+  // ⚠️ Il caso su cui i due operatori divergono, ed e' l'unico che distingue le
+  // due rese: con `??` la stringa vuota vincerebbe e l og:image sarebbe `''`,
+  // che nel componente Angular diventa poi l og.png predefinito. Stesso
+  // articolo, due anteprime diverse a seconda di chi guarda. Lo schema del
+  // backend ha `trim: true`, quindi `'  '` arriva qui come `''`.
+  const html = renderArticolo(scheletro, { ...ARTICOLO, ogImageUrl: '' }, ARTICOLO.slug);
+  assert.equal(contenutoMeta(html, 'property', 'og:image'), ARTICOLO.coverImageUrl);
+});
+
+test('i dati strutturati descrivono l articolo: `image` resta la foto, non la targa', () => {
+  // La targa e' un'insegna per le chat, non un'illustrazione del pezzo.
+  const dati = jsonLd(renderArticolo(scheletro, { ...ARTICOLO, ogImageUrl: TARGA }, ARTICOLO.slug));
+  assert.deepEqual(dati.image, [ARTICOLO.coverImageUrl]);
+});
+
+test('deriva: il componente Angular usa la STESSA catena per l og:image', () => {
+  // ⚠️ Il controllo che smaschera la meta' dimenticata: le due rese si
+  // sostituiscono, quindi una catena aggiornata solo qui darebbe la targa allo
+  // scraper e la foto (o il predefinito) a chi apre il link nel browser.
+  const sorgente = readFileSync(COMPONENTE, 'utf8');
+  // ⚠️ `||`, NON `??`: e' lo stesso operatore che usa `renderArticolo` qui
+  // sopra (`ogImage || copertina || OG_PREDEFINITA`), e i due si comportano in
+  // modo diverso su un valore che il campo puo' davvero avere — la stringa
+  // vuota. Con `??` di la' vincerebbe la foto e di qua l og.png predefinito:
+  // stesso articolo, due anteprime. Il test PRIMA fissava `??`, cioe' cementava
+  // la divergenza invece di intercettarla.
+  assert.match(
+    sorgente,
+    /image:\s*news\.ogImageUrl \|\| news\.coverImageUrl/,
+    "news-detail.component.ts non compone piu' l'og:image come " +
+      '`ogImageUrl || coverImageUrl`: allinea `renderArticolo` in ' +
+      'functions/lib/render-news.mjs, o l anteprima cambia a seconda di chi guarda.',
+  );
+  // E il verso opposto: la targa non deve finire nell'`<img>` del template.
+  const template = readFileSync(TEMPLATE, 'utf8');
+  assert.doesNotMatch(
+    template,
+    /ogImageUrl/,
+    'news-detail.component.html rende `ogImageUrl`: la targa e solo per le ' +
+      'anteprime social, in pagina va `coverImageUrl`.',
+  );
 });
 
 // ---- L'indice -----------------------------------------------------------

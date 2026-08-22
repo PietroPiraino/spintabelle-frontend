@@ -355,6 +355,15 @@ export function renderArticolo(scheletro, articolo, chiave) {
   const titoloPagina = `${titolo || 'News'}${SUFFISSO}`;
   const descrizione = estratto(dati.body);
   const copertina = typeof dati.coverImageUrl === 'string' ? dati.coverImageUrl : '';
+  // ⚠️ DUE campi, e non uno. `ogImageUrl` e' la targa 1200x675 generata da noi:
+  // esiste SOLO per le anteprime social (WhatsApp, Telegram, Facebook), e in
+  // pagina non si vede mai — l'`<img>` qui sotto resta `coverImageUrl`, cioe' la
+  // foto vera, che i tre articoli storici hanno e un pezzo generato no.
+  // Sono separati perche' `coverImageUrl` pilotava DUE cose insieme (anteprima e
+  // immagine in pagina), e riconoscere la targa sniffando l'URL sarebbe
+  // un'euristica che si rompe in silenzio al primo rinomino. La stessa catena,
+  // nello stesso ordine, sta in `news-detail.component.ts#applySeo`.
+  const ogImage = typeof dati.ogImageUrl === 'string' ? dati.ogImageUrl : '';
   const url = urlCanonica(typeof dati.slug === 'string' && dati.slug ? dati.slug : chiave);
   const iso = String(dati.publishedAt ?? dati.createdAt ?? '');
   const quando = dataLeggibile(iso);
@@ -406,7 +415,7 @@ export function renderArticolo(scheletro, articolo, chiave) {
     titolo: titoloPagina,
     descrizione,
     url,
-    immagine: copertina || OG_PREDEFINITA,
+    immagine: ogImage || copertina || OG_PREDEFINITA,
     tipoOg: 'article',
   });
   // Stessa forma di `news-detail.component.ts#applySeo`: quando l'app si monta
@@ -416,6 +425,10 @@ export function renderArticolo(scheletro, articolo, chiave) {
     '@type': 'NewsArticle',
     headline: titolo,
     description: descrizione,
+    // ⚠️ Qui resta `coverImageUrl` e NON la targa: i dati strutturati descrivono
+    // l'articolo, e l'immagine dell'articolo e' quella che il lettore vede in
+    // pagina. La targa e' un'insegna per le chat, non un'illustrazione del
+    // pezzo. Il gemello Angular fa lo stesso (`news-detail.component.ts`).
     ...(copertina ? { image: [copertina] } : {}),
     datePublished: iso,
     // ⚠️ `ultimaRettificaAt`, MAI `updatedAt` (D45, ed e' un cambio del

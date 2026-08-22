@@ -153,7 +153,23 @@ export class NewsDetailComponent {
     this.seo.setSeo({
       title: news.title,
       description,
-      image: news.coverImageUrl,
+      // ⚠️ DUE campi, e non uno — e la stessa catena, nello stesso ordine, sta
+      // in `functions/lib/render-news.mjs`: le due rese si **sostituiscono**,
+      // non si fondono, quindi aggiornarne una sola vorrebbe dire un'anteprima
+      // che cambia a seconda di chi guarda (lo scraper legge la prima, il
+      // browser la seconda).
+      // `ogImageUrl` è la targa 1200×675 generata da noi, e serve SOLO alle
+      // anteprime social: in pagina non si vede mai — l'`<img>` del template
+      // resta `coverImageUrl`, cioè la foto vera (i tre articoli storici hanno
+      // quella, un pezzo generato non ne ha nessuna).
+      // ⚠️ **`||` e non `??`, ed è la differenza che conta.** All'edge la catena
+      // è `ogImage || copertina || OG_PREDEFINITA`: con `??` qui, una
+      // `ogImageUrl` **stringa vuota** vincerebbe di là no e di qua sì, e lo
+      // stesso articolo mostrerebbe la foto allo scraper e l'`og.png` al
+      // browser. Cioè proprio l'anteprima-che-cambia-a-seconda-di-chi-guarda che
+      // questo commento dichiara inaccettabile due righe più sopra. Lo schema ha
+      // `trim: true`, quindi `'  '` diventa `''` e il caso non è di fantasia.
+      image: news.ogImageUrl || news.coverImageUrl,
       path: `/news/${this.id()}`,
     });
     this.seo.setJsonLd('ld-news-article', {
@@ -161,6 +177,10 @@ export class NewsDetailComponent {
       '@type': 'NewsArticle',
       headline: news.title,
       description,
+      // ⚠️ Qui resta `coverImageUrl` e NON la targa: i dati strutturati
+      // descrivono l'articolo, e l'immagine dell'articolo è quella che il
+      // lettore vede in pagina. La targa è un'insegna per le chat, non
+      // un'illustrazione del pezzo. Il gemello all'edge fa lo stesso.
       ...(news.coverImageUrl ? { image: [news.coverImageUrl] } : {}),
       datePublished: pubblicato,
       // ⚠️ `ultimaRettificaAt`, MAI `updatedAt` (D45). Con `updatedAt` qualunque

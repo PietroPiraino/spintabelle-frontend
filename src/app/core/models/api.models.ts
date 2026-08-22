@@ -486,6 +486,17 @@ export interface News {
   title: string;
   body: string;
   coverImageUrl?: string;
+  /**
+   * Copertina **social** generata dal backend (la targa 1200×675 con occhiello
+   * e titolo). ⚠️ Non è l'immagine della pagina e non va mai renderizzata: è
+   * solo l'`og:image`, che vale `ogImageUrl ?? coverImageUrl ?? og.png` —
+   * la stessa catena, nello stesso ordine, in cui la costruisce la Pages
+   * Function (`functions/lib/render-news.mjs`). Assente sui pezzi pubblicati
+   * prima di questo lotto e su quelli in cui la generazione è fallita: è
+   * **voluto** — nessuna URL di ripiego viene persistita, così la riga resta
+   * fra quelle recuperabili col comando esplicito.
+   */
+  ogImageUrl?: string;
   /** Slug pubblico dell'articolo: è la forma buona del suo indirizzo (§4.5). */
   slug?: string;
   /**
