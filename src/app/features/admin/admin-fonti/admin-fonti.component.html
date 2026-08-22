@@ -275,10 +275,30 @@
             <p class="field-error">{{ e }}</p>
           }
         </div>
+        <div class="field">
+          <label class="row admin-panel__check" style="gap: 0.4rem">
+            <input
+              type="checkbox"
+              [checked]="fEscludiContenuto()"
+              (change)="onEscludiContenuto($event)"
+            />
+            <span>Non scaricare il corpo degli articoli</span>
+          </label>
+          <p class="fnt__hint">
+            Da spuntare quando la testata incorpora le immagini dentro
+            all'articolo: la risposta diventa enorme, il download si interrompe
+            a metà e la fonte non consegna più niente — pur risultando
+            raggiungibile. Su PokerItaliaWeb sono <strong>23,6 MB</strong>
+            contro un tetto di 5; senza il corpo, 16 KB. In cambio si usa il
+            sommario invece del testo intero, quindi va spuntata solo dove
+            serve davvero.
+          </p>
+        </div>
       } @else {
         <p class="fnt__hint fnt__hint--nota">
-          Le categorie da escludere esistono solo sulle fonti WordPress: sono id
-          di WordPress, altrove non filtrerebbero niente.
+          Le categorie da escludere e la scelta sul corpo dell'articolo esistono
+          solo sulle fonti WordPress: sono impostazioni di WordPress, altrove
+          non avrebbero niente su cui agire.
         </p>
       }
 

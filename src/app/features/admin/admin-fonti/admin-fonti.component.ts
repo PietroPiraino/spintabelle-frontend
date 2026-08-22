@@ -430,6 +430,13 @@ export class AdminFontiComponent {
   protected readonly fStrategy = signal<NewsStrategy>('WP_REST');
   protected readonly fEndpoint = signal('');
   protected readonly fCategorie = signal('');
+  /**
+   * ⚠️ Il signal conserva il valore **anche quando il campo è nascosto**
+   * (strategia non WP REST): il payload lo manda sempre, quindi azzerarlo alla
+   * sparizione significherebbe spegnere in silenzio la spunta di chi passa a
+   * RSS2 e torna indietro.
+   */
+  protected readonly fEscludiContenuto = signal(false);
   protected readonly fLingua = signal<NewsSourceLanguage>('it');
   protected readonly fPoll = signal('60');
   protected readonly fBaseline = signal('');
@@ -1186,6 +1193,10 @@ export class AdminFontiComponent {
       prima.strategy !== this.fStrategy() ||
       prima.endpointUrl !== this.fEndpoint().trim() ||
       prima.parserKey !== this.parserDerivato() ||
+      // ⚠️ La spunta sul corpo cambia `_fields`, cioè cambia la domanda: il
+      // server azzera i validatori anche per lei, e l'avviso qui sopra deve
+      // dirlo **prima** del salvataggio, non dopo.
+      (prima.escludiContenuto ?? false) !== this.fEscludiContenuto() ||
       !stesseCategorie
     );
   });
@@ -1248,6 +1259,7 @@ export class AdminFontiComponent {
     this.fStrategy.set(f.strategy);
     this.fEndpoint.set(f.endpointUrl);
     this.fCategorie.set(f.excludeCategoryIds.join(', '));
+    this.fEscludiContenuto.set(f.escludiContenuto ?? false);
     this.fLingua.set(f.lingua);
     this.fPoll.set(String(f.pollMinutes));
     this.fBaseline.set(
@@ -1268,6 +1280,7 @@ export class AdminFontiComponent {
     this.fStrategy.set(s.strategy);
     this.fEndpoint.set(s.endpointUrl);
     this.fCategorie.set(s.excludeCategoryIds.join(', '));
+    this.fEscludiContenuto.set(s.escludiContenuto ?? false);
     this.fLingua.set(s.lingua);
     this.fPoll.set(String(s.pollMinutes));
     this.fBaseline.set(String(s.baselineItemsPerDay));
@@ -1292,6 +1305,7 @@ export class AdminFontiComponent {
     this.fStrategy.set('WP_REST');
     this.fEndpoint.set('');
     this.fCategorie.set('');
+    this.fEscludiContenuto.set(false);
     this.fLingua.set('it');
     this.fPoll.set('60');
     this.fBaseline.set('');
@@ -1317,6 +1331,9 @@ export class AdminFontiComponent {
   }
   protected onCategorie(e: Event): void {
     this.fCategorie.set((e.target as HTMLInputElement).value);
+  }
+  protected onEscludiContenuto(e: Event): void {
+    this.fEscludiContenuto.set((e.target as HTMLInputElement).checked);
   }
   protected onLingua(e: Event): void {
     this.fLingua.set(
@@ -1363,6 +1380,7 @@ export class AdminFontiComponent {
       parserKey: parser,
       endpointUrl: this.fEndpoint().trim(),
       excludeCategoryIds: categorie,
+      escludiContenuto: this.fEscludiContenuto(),
       lingua: this.fLingua(),
       pollMinutes: Number(this.fPoll().trim()),
       note: this.fNote().trim(),

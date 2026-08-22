@@ -1759,6 +1759,15 @@ export interface NewsSource {
   parserKey: NewsParserKey;
   endpointUrl: string;
   excludeCategoryIds: number[];
+  /**
+   * Non chiedere il **corpo** dell'articolo (WP REST: `content`).
+   *
+   * ⚠️ Serve dove la testata incorpora le immagini in base64 dentro al corpo
+   * renderizzato: PokerItaliaWeb risponde **23,6 MB** contro un tetto di 5 e
+   * non consegna mai niente, mentre Assopoker sta a 578 KB e Italiapokerclub a
+   * 249 KB. Inerte fuori da WP REST.
+   */
+  escludiContenuto: boolean;
   lingua: NewsSourceLanguage;
   pollMinutes: number;
   /** ⚠️ Assente ⇒ il rilevatore di volume è **inerte** (nessun allarme). */
@@ -1810,6 +1819,7 @@ export interface NewsSourceSeed {
   parserKey: NewsParserKey;
   endpointUrl: string;
   excludeCategoryIds: number[];
+  escludiContenuto?: boolean;
   lingua: NewsSourceLanguage;
   pollMinutes: number;
   baselineItemsPerDay: number;
@@ -1830,6 +1840,7 @@ export interface NewsSourcePayload {
   parserKey: NewsParserKey;
   endpointUrl: string;
   excludeCategoryIds?: number[];
+  escludiContenuto?: boolean;
   lingua?: NewsSourceLanguage;
   pollMinutes?: number;
   baselineItemsPerDay?: number;

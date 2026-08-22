@@ -35,6 +35,7 @@ const fonteOf = (over: Partial<NewsSource> = {}): NewsSource => ({
   parserKey: 'WP_REST_GENERICO',
   endpointUrl: 'https://www.assopoker.com/wp-json/wp/v2/posts',
   excludeCategoryIds: [16586],
+  escludiContenuto: false,
   lingua: 'it',
   pollMinutes: 30,
   enabled: false,
@@ -565,6 +566,42 @@ describe('AdminFontiComponent', () => {
     post.flush(fonteOf({ id: 'n', slug: 'italiapokerclub' }));
     http.expectOne(LISTA).flush([fonteOf({ id: 'n', slug: 'italiapokerclub' })]);
     await stabile();
+  });
+
+  it('⚠️ la spunta sul corpo viaggia nel payload: senza, si accende e non arriva mai', async () => {
+    // Il difetto che questo previene è il silenzio. Se il campo non entrasse
+    // nel corpo della richiesta, il pannello mostrerebbe una spunta che si
+    // accende, si salva senza errori e **non raggiunge il server**: una fonte
+    // che continua a scaricare 23,6 MB mentre l'interfaccia dichiara che non
+    // dovrebbe. Nel pannello si leggerebbe come "l'ho già sistemata".
+    await avvia([fonteOf({ id: 'x', strategy: 'WP_REST' })]);
+    await clic('#dettaglio-toggle-x');
+    await clic('.fnt-row__modifica');
+    await clic('.admin-panel__check input');
+    await clic('.fnt__form .btn--primary');
+
+    const patch = http.expectOne(LISTA + '/x');
+    expect(patch.request.method).toBe('PATCH');
+    const body = patch.request.body as Record<string, unknown>;
+    expect(body['escludiContenuto']).toBeTrue();
+    patch.flush(fonteOf({ id: 'x', escludiContenuto: true }));
+    http.expectOne(LISTA).flush([fonteOf({ id: 'x', escludiContenuto: true })]);
+    await stabile();
+  });
+
+  /**
+   * ⚠️ La spunta cambia `_fields`, cioè cambia la **domanda** fatta alla
+   * sorgente: salvando, il server azzera i validatori del GET condizionale. Il
+   * pannello deve dirlo **prima**, come già fa per strategia, indirizzo e
+   * categorie — un contatore che torna a zero da solo sembra un guasto.
+   */
+  it('spuntando il corpo compare l’avviso «cambia la richiesta»', async () => {
+    await avvia([fonteOf({ id: 'x', strategy: 'WP_REST' })]);
+    await clic('#dettaglio-toggle-x');
+    await clic('.fnt-row__modifica');
+    expect(q('.fnt__form-effetto')).toBeNull();
+    await clic('.admin-panel__check input');
+    expect(q('.fnt__form-effetto')).not.toBeNull();
   });
 
   /**
