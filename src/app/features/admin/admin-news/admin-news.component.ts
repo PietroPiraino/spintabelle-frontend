@@ -507,8 +507,6 @@ export class AdminNewsComponent {
    * titolo corretto con «Modifica» dopo la pubblicazione lascia in giro la
    * targa vecchia — che stampa proprio il titolo — e questa è l'unica strada
    * che la riscrive. Nasconderlo lì chiuderebbe a chiave l'unica via d'uscita.
-   * Rigenerare non costa nulla e non lascia rifiuti: il file sta su un percorso
-   * chiavato sull'`_id`, quindi si sovrascrive e l'URL non cambia.
    *
    * ⚠️ Fuori dal `PUBBLICATO` il pulsante non c'è, perché il server risponde
    * 409: è l'unico stato con lo slug congelato, cioè con una pagina vera da
@@ -545,17 +543,25 @@ export class AdminNewsComponent {
    * mancano, e `esegui()` lo mostra verbatim invece di un «Operazione non
    * riuscita» che manderebbe a cercare nel posto sbagliato.
    *
-   * ⚠️ **Due messaggi, perché sono due fatti diversi.** Alla prima generazione
-   * l'indirizzo dell'immagine è nuovo, quindi le anteprime nuove la vedono
-   * subito. Alla **rigenerazione** no: il percorso è chiavato sull'`_id`, quindi
-   * la PUT sovrascrive lo stesso file e **l'URL salvato non cambia mai** — e
-   * WhatsApp, Facebook e la CDN tengono l'immagine in cache *per indirizzo*.
-   * Promettere anche lì che «si aggiorna entro un minuto» farebbe leggere come
-   * comando rotto un comando che ha funzionato: chi controlla incollando l'URL
-   * nel debugger di condivisione di Facebook vedrebbe ancora la targa vecchia.
-   * ⚠️ E la via facile per rendere vera la promessa — appendere un `?v=` all'URL
-   * salvato — è **fuori discussione**: che l'URL non cambi è una decisione
-   * dell'owner, ed è ciò che rende la rigenerazione gratuita e senza orfani.
+   * ⚠️ **Due messaggi, perché sono due fatti diversi — ma NON i due fatti che
+   * questo commento dichiarava fino al 22/08/2026.** Diceva che rigenerando
+   * «l'URL salvato non cambia mai», e concludeva che promettere un aggiornamento
+   * sarebbe stato una bugia. Era vero col nome di file fisso; da quando il nome
+   * porta una versione **ogni pressione conia un indirizzo nuovo**, e la frase
+   * era rimasta indietro rispetto al backend. Il danno non era teorico: diceva
+   * all'owner che ricontrollare col debugger di condivisione di Facebook era
+   * inutile, mentre adesso mostrerebbe la targa nuova.
+   *
+   * I due fatti veri sono questi:
+   *  - le **nuove** condivisioni prendono la targa aggiornata, perché l'`og:image`
+   *    dichiarato dalla pagina è un indirizzo diverso che il bordo non ha in
+   *    cache. ⚠️ **Entro un minuto, non subito**: la pagina dell'articolo la
+   *    compone la Pages Function con `s-maxage=60`, quindi per quella finestra
+   *    il bordo può ancora dichiarare la targa precedente — che nel frattempo è
+   *    stata cancellata. È un compromesso scelto e scritto anche lato server;
+   *  - le anteprime **già inviate** non cambiano, e non è per la cache: un
+   *    messaggio spedito porta con sé l'immagine di allora. Nessuna
+   *    rigenerazione può raggiungerlo, e prometterlo sarebbe la bugia vera.
    */
   protected generaCopertina(news: NewsAdmin): void {
     this.esegui(
@@ -563,8 +569,8 @@ export class AdminNewsComponent {
       news._id,
       this.newsApi.generaCopertina(news._id),
       news.ogImageUrl
-        ? 'Copertina rigenerata. Le anteprime già condivise non cambiano: l’indirizzo dell’immagine resta lo stesso, e le piattaforme la tengono in cache per indirizzo.'
-        : 'Copertina generata: da ora le condivisioni mostrano la targa dell’articolo.',
+        ? 'Copertina rigenerata: le nuove condivisioni mostrano la targa aggiornata entro un minuto. Le anteprime già inviate restano com’erano — un messaggio spedito porta con sé l’immagine di allora.'
+        : 'Copertina generata: entro un minuto le condivisioni mostrano la targa dell’articolo.',
       false,
     );
   }

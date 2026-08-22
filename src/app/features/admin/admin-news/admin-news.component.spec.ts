@@ -28,13 +28,14 @@ const renderer: MarkdownRenderer = { render: (md) => `<p>${md}</p>` };
 const ORA = Date.now();
 
 /**
- * Una targa social qualsiasi. ⚠️ Il percorso è chiavato sull'`_id` e non
- * sullo slug: è ciò che rende la rigenerazione gratuita (la PUT sovrascrive
- * lo stesso file, l'URL salvato non cambia), cioè la premessa di tutto ciò
- * che questa sezione asserisce sul pulsante che NON si nasconde.
+ * Una targa social qualsiasi. ⚠️ La **cartella** è chiavata sull'`_id` e non
+ * sullo slug (uno slug conteso faceva sovrascrivere la copertina viva di un
+ * altro articolo), e il **nome porta una versione**, perché il pull zone teneva
+ * il percorso in cache trenta giorni. Da qui la forma `cover-<versione>.png`: è
+ * quella che il backend scrive, e ogni rigenerazione ne conia una nuova.
  */
 const URL_TARGA =
-  'https://cdn.bestfishforever.it/news/652f00000000000000000001/cover.png';
+  'https://cdn.bestfishforever.it/news/652f00000000000000000001/cover-a1b2c3d4.png';
 
 /**
  * La foto **vera** di un articolo: `coverImageUrl`, cioè l'immagine che si vede
@@ -923,15 +924,20 @@ describe('AdminNewsComponent', () => {
   });
 
   /**
-   * ⚠️ **Il messaggio di esito dice due cose diverse perché sono due fatti
-   * diversi.** Il percorso della targa è chiavato sull'`_id`: rigenerando, la
-   * PUT sovrascrive lo stesso file e **l'URL non cambia**, mentre WhatsApp,
-   * Facebook e la CDN tengono l'immagine in cache *per indirizzo*. Promettere
-   * anche lì che «si aggiorna entro un minuto» farebbe leggere come rotto un
-   * comando che ha funzionato, proprio a chi va a controllare con il debugger
-   * di condivisione.
+   * ⚠️ **Questa spec asseriva l'OPPOSTO fino al 22/08/2026, e pinnava un
+   * messaggio diventato falso.** Diceva che rigenerando «l'URL non cambia»,
+   * quindi che promettere un aggiornamento sarebbe stato una bugia: vero col
+   * nome di file fisso, falso da quando il nome porta una versione. Una spec che
+   * congela una frase sbagliata è peggio di nessuna spec — la rende la
+   * definizione di corretto, e chi legge il codice si ferma lì.
+   *
+   * ⚠️ Le due direzioni che il messaggio deve tenere, e sono **entrambe**
+   * necessarie: le condivisioni **nuove** si aggiornano (e vanno promesse, o
+   * l'owner non ricontrolla un comando che ha funzionato), quelle **già
+   * inviate** no (e non vanno promesse, perché nessuna rigenerazione può
+   * raggiungere un messaggio già spedito).
    */
-  it('⚠️ rigenerando, l’esito NON promette un aggiornamento che non può avvenire', async () => {
+  it('⚠️ rigenerando, l’esito distingue le condivisioni nuove da quelle già inviate', async () => {
     const toast = spyOn(TestBed.inject(ToastService), 'success');
     await rispondi([newsOf('v', 'PUBBLICATO', { ogImageUrl: URL_TARGA })]);
 
@@ -945,12 +951,20 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('v', 'PUBBLICATO', { ogImageUrl: URL_TARGA })]);
 
     const messaggio = String(toast.calls.mostRecent().args[0]);
-    expect(messaggio).toContain('già condivise non cambiano');
-    // ⚠️ La direzione che conta: mai la promessa del minuto su una rigenerazione.
-    expect(messaggio).not.toContain('entro un minuto');
+    // Le nuove si aggiornano: va detto, altrimenti nessuno va a ricontrollare.
+    expect(messaggio).toContain('entro un minuto');
+    // ⚠️ E le già inviate no: è l'unica cosa che una rigenerazione NON può fare.
+    expect(messaggio).toContain('già inviate');
   });
 
-  it('alla PRIMA generazione, invece, l’esito dice che da ora si vede la targa', async () => {
+  /**
+   * ⚠️ La finestra di un minuto vale per **entrambi** i messaggi, ed è la
+   * ragione per cui questa asserzione è cambiata insieme all'altra: la pagina
+   * dell'articolo la compone la Pages Function con `s-maxage=60`, quindi anche
+   * alla prima generazione il bordo può dichiarare per un minuto l'`og:image`
+   * precedente. Il «da ora» che stava qui prometteva un istante che non esiste.
+   */
+  it('alla PRIMA generazione l’esito promette la targa, senza parlare di già inviate', async () => {
     const toast = spyOn(TestBed.inject(ToastService), 'success');
     await rispondi([newsOf('n', 'PUBBLICATO')]);
 
@@ -964,8 +978,10 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('n', 'PUBBLICATO', { ogImageUrl: URL_TARGA })]);
 
     const messaggio = String(toast.calls.mostRecent().args[0]);
-    expect(messaggio).toContain('da ora');
-    expect(messaggio).not.toContain('già condivise');
+    expect(messaggio).toContain('entro un minuto');
+    // ⚠️ Alla prima generazione non c'è nessuna anteprima precedente da
+    // distinguere: nominare le «già inviate» qui confonderebbe e basta.
+    expect(messaggio).not.toContain('già inviate');
   });
 
   it('⚠️ il comando c’è ANCHE dove la targa esiste già: etichetta «Rigenera»', async () => {

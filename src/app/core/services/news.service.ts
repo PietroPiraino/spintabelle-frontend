@@ -188,9 +188,16 @@ export class NewsService {
    * ⚠️ È **incondizionatamente rigenerante**: si chiama anche — soprattutto —
    * su una riga che la targa ce l'ha già, perché un titolo corretto con
    * «Modifica» dopo la pubblicazione lascia in giro la copertina vecchia e
-   * questa è l'unica strada che la riscrive. Non costa nulla e non lascia
-   * rifiuti: il file sta su un percorso chiavato sull'`_id`, quindi la PUT
-   * sovrascrive lo stesso file e l'URL salvato non cambia mai.
+   * questa è l'unica strada che la riscrive.
+   *
+   * ⚠️ **Fino al 22/08/2026 qui c'era scritto che rigenerare «non costa nulla e
+   * non lascia rifiuti: la PUT sovrascrive lo stesso file e l'URL salvato non
+   * cambia mai». Era vero, ed era esattamente il difetto**: il pull zone di
+   * Bunny serviva quel percorso dal bordo per **trenta giorni**, quindi la
+   * sovrascrittura non arrivava a nessuno e il comando rispondeva 200 senza
+   * cambiare niente per chi legge. Da allora il nome del file porta una
+   * versione: **ogni pressione conia un indirizzo nuovo**, la targa precedente
+   * si cancella dopo la scrittura riuscita e quella nuova dopo una fallita.
    *
    * Torna la riga intera ricaricata, come `approve`/`ritira`/`rettifica`.
    */
