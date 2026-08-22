@@ -24,8 +24,20 @@ function troncaAlleParole(testo: string, max: number): string {
   imports: [RouterLink, DatePipe],
   template: `
     <article class="card card--hover news-card">
-      @if (news().coverImageUrl; as cover) {
-        <img class="news-card__cover" [src]="cover" alt="" loading="lazy" />
+      @if (immagine(); as img) {
+        <!--
+          ⚠️ Attributo alt vuoto di proposito: sia la foto sia la targa sono
+          decorative in un elenco — la targa STAMPA il titolo, che l'h3 qui
+          sotto ripete in testo. Un alt col titolo lo farebbe leggere due volte
+          di fila a uno screen reader.
+        -->
+        <img
+          class="news-card__cover"
+          [class.news-card__cover--targa]="!news().coverImageUrl"
+          [src]="img"
+          alt=""
+          loading="lazy"
+        />
       }
       <div class="news-card__body">
         <time class="news-card__date" [attr.datetime]="news().createdAt">
@@ -52,6 +64,23 @@ function troncaAlleParole(testo: string, max: number): string {
       aspect-ratio: 21 / 9;
       object-fit: cover;
       border-bottom: 1px solid var(--line);
+    }
+
+    /*
+      ⚠️ La targa ha una scatola SUA, e non è una rifinitura: è 16:9 (1200×675)
+      mentre quella delle foto è 21:9, quindi object-fit: cover la
+      ritaglierebbe di 81px sopra e 80px sotto — MISURATO simulando il ritaglio
+      sul file vero, non stimato — e la prima cosa che sparisce è la scritta
+      «BEST FISH FOREVER» in cima. Qui la scatola combacia con l'immagine e non
+      si taglia niente.
+
+      Il prezzo, accettato: in un elenco misto una card con la targa è un filo
+      più alta di una con la foto. Le foto sono i tre articoli storici, la targa
+      è tutto ciò che si pubblica da qui in avanti — quindi la disuniformità è
+      transitoria, mentre un marchio decapitato non lo sarebbe.
+    */
+    .news-card__cover--targa {
+      aspect-ratio: 16 / 9;
     }
 
     .news-card__body {
@@ -100,6 +129,25 @@ function troncaAlleParole(testo: string, max: number): string {
 })
 export class NewsCardComponent {
   readonly news = input.required<News>();
+
+  /**
+   * L'immagine della card: la FOTO se c'è, altrimenti la targa social.
+   *
+   * ⚠️ **L'ordine è l'OPPOSTO di quello dell'`og:image`** (`ogImageUrl ||
+   * coverImageUrl`, vedi `News.ogImageUrl`), e la divergenza è una decisione,
+   * non una svista. In un'anteprima di chat la targa vince perché stampa il
+   * titolo *dentro* l'immagine, che è l'unica cosa che si vede scorrendo una
+   * conversazione; in un elenco il titolo è già scritto due centimetri sotto,
+   * quindi una foto vera dice qualcosa che la targa non può dire.
+   *
+   * ⚠️ `||` e non `??`, per la stessa ragione scritta su `News.ogImageUrl`: lo
+   * schema ha `trim: true`, quindi entrambi i campi possono arrivare **stringa
+   * vuota**, e con `??` una stringa vuota vincerebbe — cioè una card con un
+   * `<img>` senza sorgente al posto della targa che c'è.
+   */
+  protected readonly immagine = computed(
+    () => this.news().coverImageUrl || this.news().ogImageUrl || '',
+  );
 
   /**
    * Anteprima in chiaro e TRONCATA.
