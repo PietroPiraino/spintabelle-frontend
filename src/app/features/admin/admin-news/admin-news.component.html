@@ -204,6 +204,18 @@
                 @if (news.status === 'SCADUTO' && news.scadutoAt) {
                   <span>· finestra chiusa il {{ news.scadutoAt | date: 'dd MMM yyyy' }}</span>
                 }
+                <!-- ⚠️ Il marcatore sta su OGNI riga la cui anteprima social
+                     ricadrebbe sull'immagine predefinita del sito — cioè senza
+                     targa E senza foto: l'`og:image` è una catena, e una riga
+                     con `coverImageUrl` un'anteprima propria ce l'ha già (sono
+                     i tre articoli storici). Sta anche dove il pulsante non
+                     c'è: è ciò che rende il problema trovabile. Legato a
+                     `PUBBLICATO` sarebbe co-estensivo al pulsante, cioè non
+                     direbbe niente che non si veda già. Vedi
+                     `senzaCopertina()`. -->
+                @if (senzaCopertina(news)) {
+                  <span class="admin-news__senza-copertina">· Senza copertina</span>
+                }
               </span>
               @if (news.status === 'SCARTATO' && news.decisionNote) {
                 <span class="admin-news__motivo">Motivo: {{ news.decisionNote }}</span>
@@ -227,7 +239,9 @@
             <div
               class="row admin-news__azioni"
               [class.is-confirming]="
-                isConfirming('ritira:' + news._id) || isConfirming('elimina:' + news._id)
+                isConfirming('ritira:' + news._id) ||
+                isConfirming('elimina:' + news._id) ||
+                isConfirming('copertina:' + news._id)
               "
             >
               @if (isConfirming('ritira:' + news._id)) {
@@ -297,6 +311,37 @@
                     >Annulla</button>
                   </div>
                 </div>
+              } @else if (isConfirming('copertina:' + news._id)) {
+                <!-- ⚠️ Inline-confirm della SOSTITUZIONE: questa riga ha una
+                     foto vera, che oggi è la sua anteprima social. Generare la
+                     targa la copre, e da nessuna schermata si torna indietro
+                     (nessun DTO accetta `ogImageUrl`). Vedi `sostituisceFoto()`. -->
+                <div class="admin-news__conferma">
+                  <p class="admin-news__motivo">
+                    «{{ news.title }}» ha già una sua immagine, ed è quella che
+                    si vede oggi condividendolo. La targa generata la
+                    sostituisce nell'anteprima — e non c'è modo di tornare
+                    indietro da qui. L'immagine dentro l'articolo non cambia.
+                  </p>
+                  <div class="row admin-news__azioni">
+                    <button
+                      type="button"
+                      class="btn btn--danger-solid btn--sm"
+                      [disabled]="inVolo()"
+                      (click)="generaCopertina(news)"
+                    >{{
+                      inVoloSu(news._id, 'copertina')
+                        ? 'Genero…'
+                        : 'Sostituisci l’anteprima'
+                    }}</button>
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      [disabled]="inVolo()"
+                      (click)="cancelConfirm()"
+                    >Annulla</button>
+                  </div>
+                </div>
               } @else {
                 @if (news.status === 'IN_REVISIONE') {
                   <!-- ⚠️ Nessuna decisione qui: si decide in Redazione, e basta. -->
@@ -310,6 +355,24 @@
                     [disabled]="inVolo()"
                     (click)="ritornoClick(news)"
                   >{{ inVoloSu(news._id, r.azione) ? r.inCorso : r.etichetta }}</button>
+                }
+                <!-- ⚠️ Presente su OGNI riga pubblicata, targa o non targa: il
+                     comando è incondizionatamente rigenerante, ed è l'unica
+                     strada per rimettere in pari la copertina dopo che
+                     «Modifica» ha corretto il titolo (la targa lo stampa).
+                     Nasconderlo su chi ce l'ha già chiuderebbe a chiave
+                     l'unica via d'uscita. -->
+                @if (mostraCopertina(news)) {
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm admin-news__copertina"
+                    [disabled]="inVolo()"
+                    (click)="copertinaClick(news)"
+                  >{{
+                    inVoloSu(news._id, 'copertina')
+                      ? 'Genero…'
+                      : etichettaCopertina(news)
+                  }}</button>
                 }
                 <button
                   type="button"

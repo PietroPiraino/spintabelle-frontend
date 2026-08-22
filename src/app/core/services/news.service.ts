@@ -172,6 +172,32 @@ export class NewsService {
     );
   }
 
+  /**
+   * «Genera copertina»: rifà la **targa social** (`ogImageUrl`) di un articolo
+   * già pubblicato. ⚠️ Senza corpo — la rotta non dichiara alcun DTO, e una
+   * chiave qualsiasi sarebbe un 400 del `ValidationPipe` (idioma di `snooze`).
+   *
+   * ⚠️ **NON è best-effort, al contrario dei due agganci automatici** (`approve`
+   * e la creazione che pubblica): là la copertina è l'effetto collaterale di
+   * un'operazione che ha un altro scopo e un fallimento si assorbe, qui è
+   * l'unico scopo — quindi un disegno o un caricamento fallito risponde **500**
+   * con il motivo in chiaro, e non un 200 silenzioso. Quel messaggio va
+   * mostrato così com'è (`apiErrorMessage`): nomina la libreria grafica o le
+   * env Bunny che mancano, cioè l'unica cosa utile a chi guarda.
+   *
+   * ⚠️ È **incondizionatamente rigenerante**: si chiama anche — soprattutto —
+   * su una riga che la targa ce l'ha già, perché un titolo corretto con
+   * «Modifica» dopo la pubblicazione lascia in giro la copertina vecchia e
+   * questa è l'unica strada che la riscrive. Non costa nulla e non lascia
+   * rifiuti: il file sta su un percorso chiavato sull'`_id`, quindi la PUT
+   * sovrascrive lo stesso file e l'URL salvato non cambia mai.
+   *
+   * Torna la riga intera ricaricata, come `approve`/`ritira`/`rettifica`.
+   */
+  generaCopertina(id: string): Observable<NewsAdmin> {
+    return this.http.post<NewsAdmin>(`${API}/admin/news/${id}/copertina`, {});
+  }
+
   /** Casa canonica delle modifiche: qui il corpo si riscrive davvero. */
   adminUpdate(id: string, payload: Partial<NewsPayload>): Observable<NewsAdmin> {
     return this.http.patch<NewsAdmin>(`${API}/admin/news/${id}`, payload);

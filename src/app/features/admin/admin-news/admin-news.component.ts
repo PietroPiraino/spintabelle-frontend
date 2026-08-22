@@ -33,8 +33,11 @@ const PAGE_SIZE = 25;
 /** Le tre transizioni di ritorno raggiungibili da questa schermata. */
 type AzioneRitorno = 'riapri' | 'in-revisione' | 'ritira';
 
-/** Tutto ciò che può essere in volo su una riga (il ritorno più la cancellazione). */
-type AzioneRiga = AzioneRitorno | 'elimina';
+/**
+ * Tutto ciò che può essere in volo su una riga: il ritorno, la copertina
+ * social e la cancellazione.
+ */
+type AzioneRiga = AzioneRitorno | 'copertina' | 'elimina';
 
 /** La singola via di ritorno offerta da uno stato, già in italiano. */
 interface Ritorno {
@@ -439,6 +442,131 @@ export class AdminNewsComponent {
         break;
       }
     }
+  }
+
+  // ── Copertina social (A3) ──────────────────────────────────────────────────
+
+  /**
+   * Il marcatore: condivisa, questa riga **mostrerebbe l'immagine predefinita
+   * del sito**, identica a quella di ogni altro articolo.
+   *
+   * ⚠️ **Due campi e non uno, perché l'`og:image` è una CATENA**:
+   * `ogImageUrl || coverImageUrl || og.png`, la stessa in entrambe le rese
+   * (`functions/lib/render-news.mjs` e `news-detail.component.ts`). Calcolando
+   * il marcatore sul solo `ogImageUrl` la frase qui sopra era **falsa proprio
+   * sui tre articoli storici**, che una foto vera ce l'hanno: la loro anteprima
+   * è già quella foto, e il pannello li segnalava come «senza copertina»
+   * invitando a un clic che li **peggiora** (la targa vince la catena, quindi
+   * l'anteprima passa dalla foto reale a una targa di testo — e nessun DTO
+   * accetta `ogImageUrl`, quindi da nessuna schermata si torna indietro).
+   * Il marcatore descrive la catena, non un campo.
+   *
+   * ⚠️ Sta su **ogni** riga che non ce l'ha, non solo su quelle da cui il
+   * comando parte — ed è la ragione per cui esiste. Legandolo a `PUBBLICATO`
+   * diventerebbe esattamente co-estensivo al pulsante, cioè un'informazione
+   * che non aggiunge nulla a ciò che già si vede: il marcatore è un **fatto**
+   * sulla riga, il pulsante è un'**azione** possibile. Un pulsante senza
+   * marcatore si preme solo se si sa già che serve, e chi apre questo pannello
+   * non lo sa: è venuto per un'altra ragione, e il problema deve saltargli
+   * all'occhio da solo.
+   *
+   * ⚠️ Su una bozza il marcatore è vero e non è un allarme: la targa si conia
+   * alla pubblicazione (`approve`), quindi lì significa «non ancora», non
+   * «manca». Dirlo comunque costa una riga muta e evita l'unica alternativa
+   * peggiore, cioè una regola con eccezioni da tenere allineata a mano.
+   */
+  protected senzaCopertina(news: NewsAdmin): boolean {
+    return !news.ogImageUrl && !news.coverImageUrl;
+  }
+
+  /**
+   * ⚠️ **Il caso in cui generare TOGLIE qualcosa**: la riga non ha targa ma ha
+   * una **foto vera** in `coverImageUrl`, quindi la sua anteprima social oggi è
+   * quella foto. Generare scrive `ogImageUrl`, che vince la catena: l'anteprima
+   * diventa la targa navy di testo, uguale a quella di ogni altro articolo. E
+   * la cosa è **a senso unico** — nessun DTO dichiara `ogImageUrl` (né
+   * `CreateNewsDto` né `UpdateNewsDto`), `update()` non lo tocca e non esiste
+   * alcun comando che lo svuoti: si torna indietro solo scrivendo a mano su
+   * Mongo. Sono esattamente i tre articoli storici con la foto licenziata.
+   *
+   * Quindi due tocchi, con la conseguenza scritta — idioma «Ritira»/«Elimina»
+   * di questa stessa schermata, che è la regola di casa per un'azione che
+   * sottrae. Dove una targa c'è già la conferma **non** serve: lì si sta solo
+   * riscrivendo una targa con una targa, cioè l'operazione per cui il comando
+   * esiste (correggere il titolo dopo la pubblicazione).
+   */
+  protected sostituisceFoto(news: NewsAdmin): boolean {
+    return !news.ogImageUrl && !!news.coverImageUrl;
+  }
+
+  /**
+   * Il comando c'è su ogni riga **pubblicata**, targa o non targa.
+   *
+   * ⚠️ Non si nasconde su chi la copertina ce l'ha già, e non è una svista: il
+   * backend è **incondizionatamente rigenerante** di proposito, perché un
+   * titolo corretto con «Modifica» dopo la pubblicazione lascia in giro la
+   * targa vecchia — che stampa proprio il titolo — e questa è l'unica strada
+   * che la riscrive. Nasconderlo lì chiuderebbe a chiave l'unica via d'uscita.
+   * Rigenerare non costa nulla e non lascia rifiuti: il file sta su un percorso
+   * chiavato sull'`_id`, quindi si sovrascrive e l'URL non cambia.
+   *
+   * ⚠️ Fuori dal `PUBBLICATO` il pulsante non c'è, perché il server risponde
+   * 409: è l'unico stato con lo slug congelato, cioè con una pagina vera da
+   * condividere. Un pulsante che finisce in 409 è una bugia (stessa regola di
+   * `ritorno()`), e il marcatore qui sopra resta comunque a dire come stanno
+   * le cose.
+   */
+  protected mostraCopertina(news: NewsAdmin): boolean {
+    return news.status === 'PUBBLICATO';
+  }
+
+  /** L'etichetta dice quale delle due cose sta per succedere. */
+  protected etichettaCopertina(news: NewsAdmin): string {
+    return news.ogImageUrl ? 'Rigenera copertina' : 'Genera copertina';
+  }
+
+  /** Click sul comando: apre la conferma quando c'è una foto da sostituire. */
+  protected copertinaClick(news: NewsAdmin): void {
+    if (this.inVolo()) return;
+    if (this.sostituisceFoto(news)) {
+      this.askConfirm(`copertina:${news._id}`);
+      return;
+    }
+    this.generaCopertina(news);
+  }
+
+  /**
+   * ⚠️ `toccaLaCoda: false`: lo stato dell'articolo non cambia, quindi il badge
+   * «Redazione» della sidebar non ha nulla da rileggere — forzarlo sarebbe una
+   * chiamata in più a ogni pressione.
+   *
+   * ⚠️ Un fallimento qui arriva come **500** e non come 4xx, ed è voluto lato
+   * server: il messaggio nomina la libreria grafica o le tre env Bunny che
+   * mancano, e `esegui()` lo mostra verbatim invece di un «Operazione non
+   * riuscita» che manderebbe a cercare nel posto sbagliato.
+   *
+   * ⚠️ **Due messaggi, perché sono due fatti diversi.** Alla prima generazione
+   * l'indirizzo dell'immagine è nuovo, quindi le anteprime nuove la vedono
+   * subito. Alla **rigenerazione** no: il percorso è chiavato sull'`_id`, quindi
+   * la PUT sovrascrive lo stesso file e **l'URL salvato non cambia mai** — e
+   * WhatsApp, Facebook e la CDN tengono l'immagine in cache *per indirizzo*.
+   * Promettere anche lì che «si aggiorna entro un minuto» farebbe leggere come
+   * comando rotto un comando che ha funzionato: chi controlla incollando l'URL
+   * nel debugger di condivisione di Facebook vedrebbe ancora la targa vecchia.
+   * ⚠️ E la via facile per rendere vera la promessa — appendere un `?v=` all'URL
+   * salvato — è **fuori discussione**: che l'URL non cambi è una decisione
+   * dell'owner, ed è ciò che rende la rigenerazione gratuita e senza orfani.
+   */
+  protected generaCopertina(news: NewsAdmin): void {
+    this.esegui(
+      'copertina',
+      news._id,
+      this.newsApi.generaCopertina(news._id),
+      news.ogImageUrl
+        ? 'Copertina rigenerata. Le anteprime già condivise non cambiano: l’indirizzo dell’immagine resta lo stesso, e le piattaforme la tengono in cache per indirizzo.'
+        : 'Copertina generata: da ora le condivisioni mostrano la targa dell’articolo.',
+      false,
+    );
   }
 
   /**

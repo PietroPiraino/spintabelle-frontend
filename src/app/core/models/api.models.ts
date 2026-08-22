@@ -667,6 +667,23 @@ export interface NewsAdmin {
   body: string;
   coverImageUrl?: string;
   /**
+   * La targa **social** generata dal backend (vedi `News.ogImageUrl`): non è
+   * l'immagine della pagina e non si rende mai qui dentro.
+   *
+   * ⚠️ Serve al pannello per una cosa sola, e non è cosmetica: il marcatore
+   * «Senza copertina» dell'archivio si calcola su questo campo. `listAdmin`
+   * non proietta in nessuno dei due rami — il ramo non-coda fa
+   * `.find(filtro).sort(…).lean()`, quello di coda un aggregate che fa
+   * `$unset` dei soli due campi temporanei — quindi il campo arriva già
+   * intero, senza toccare il backend.
+   *
+   * ⚠️ Assente è un valore REALE e frequente: i pezzi pubblicati prima di
+   * questo lotto non ne hanno, e su quelli in cui il disegno è fallito non si
+   * persiste alcuna URL di ripiego, apposta — è ciò che li lascia
+   * nell'elenco recuperabile col comando «Genera copertina».
+   */
+  ogImageUrl?: string;
+  /**
    * ⚠️ **Opzionale, e non per prudenza.** `GET /admin/news?status=TUTTI` filtra
    * con `{}` e **non** con un `$in` sui cinque stati, di proposito: così una
    * riga priva di `status` (gli articoli storici, se `migraArticoliLegacy` è

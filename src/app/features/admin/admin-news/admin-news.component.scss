@@ -107,6 +107,18 @@
   flex-wrap: wrap;
 }
 
+// Marcatore «Senza copertina»: quell'articolo, condiviso, mostra l'immagine
+// predefinita del sito invece della propria targa.
+//
+// ⚠️ L'unica riga di stile nuova del lotto, e serve: il marcatore ha un solo
+// mestiere — farsi notare in mezzo a date che si somigliano tutte — e in grigio
+// muto (`.admin-item__meta`, che eredita già) non lo farebbe. `--copper-600` è
+// l'accento di testo del tema, quindi vive in tutti e tre, ed è distinto
+// dall'oro del chip «Pubblicato» che gli sta accanto sulla stessa riga.
+.admin-news__senza-copertina {
+  color: var(--copper-600);
+}
+
 // Motivo dello scarto e testi di conferma: leggibili, non monospace.
 .admin-news__motivo {
   font-size: 0.78rem;

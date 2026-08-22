@@ -43,6 +43,11 @@ export const ACTION_LABELS: Record<string, string> = {
   'create-news': 'Articolo creato',
   'update-news': 'Articolo modificato',
   'delete-news': 'Articolo eliminato',
+  // Redazione — la targa social. ⚠️ È un'azione a sé e non un `update-news`:
+  // nel log si legge «ho rifatto la copertina» invece di «ho modificato
+  // l'articolo», che è l'unica domanda che si fa a quel registro quando
+  // un'anteprima condivisa mostra ancora il titolo vecchio.
+  'cover-news': 'Copertina social generata',
   // Redazione — modalità assenza (§3.5). ⚠️ Sono due azioni e non una con un
   // flag: nel log si legge a colpo d'occhio quando la generazione si è fermata
   // e quando è ripartita, che è l'unica domanda che si fa a quel registro.

@@ -27,6 +27,23 @@ const renderer: MarkdownRenderer = { render: (md) => `<p>${md}</p>` };
 
 const ORA = Date.now();
 
+/**
+ * Una targa social qualsiasi. ⚠️ Il percorso è chiavato sull'`_id` e non
+ * sullo slug: è ciò che rende la rigenerazione gratuita (la PUT sovrascrive
+ * lo stesso file, l'URL salvato non cambia), cioè la premessa di tutto ciò
+ * che questa sezione asserisce sul pulsante che NON si nasconde.
+ */
+const URL_TARGA =
+  'https://cdn.bestfishforever.it/news/652f00000000000000000001/cover.png';
+
+/**
+ * La foto **vera** di un articolo: `coverImageUrl`, cioè l'immagine che si vede
+ * dentro la pagina. ⚠️ È anche l'anteprima social finché non c'è una targa —
+ * l'`og:image` è la catena `ogImageUrl || coverImageUrl || og.png` — e sono
+ * esattamente i tre articoli storici a stare in quel mezzo.
+ */
+const URL_FOTO = 'https://cdn.bestfishforever.it/news/foto-licenziata.jpg';
+
 const newsOf = (
   id: string,
   status: NewsStatus,
@@ -717,5 +734,236 @@ describe('AdminNewsComponent', () => {
     expect(testo(uno('.admin-news__conteggio'))).toBe(
       '0 articoli · filtro: Scaduto',
     );
+  });
+
+  // ── 8. La copertina social: marcatore e comando ──────────────────────────
+
+  it('il marcatore «Senza copertina» c’è dove la targa manca e NON dove c’è', async () => {
+    await rispondi([
+      newsOf('nuda', 'PUBBLICATO'),
+      newsOf('vestita', 'PUBBLICATO', { ogImageUrl: URL_TARGA }),
+      // ⚠️ Terza riga di proposito: da una BOZZA il comando non parte. Il
+      // marcatore è un FATTO sulla riga («condivisa mostrerebbe l'immagine
+      // predefinita»), non lo stato di un pulsante — legarlo a `PUBBLICATO` lo
+      // renderebbe co-estensivo al pulsante, cioè inutile: chi apre questo
+      // pannello è entrato per un'altra ragione, e il problema deve saltargli
+      // all'occhio da solo.
+      newsOf('bozza', 'BOZZA'),
+    ]);
+
+    expect(uno('.admin-news__senza-copertina', riga('Titolo nuda'))).not.toBeNull();
+    expect(uno('.admin-news__senza-copertina', riga('Titolo bozza'))).not.toBeNull();
+    // ⚠️ La direzione che conta davvero: su una riga che la targa ce l'ha, il
+    // marcatore è una bugia — e manderebbe a rigenerare copertine sane.
+    expect(uno('.admin-news__senza-copertina', riga('Titolo vestita'))).toBeNull();
+
+    // Scritto in italiano sulla riga, non nascosto in una classe.
+    expect(testo(riga('Titolo nuda'))).toContain('Senza copertina');
+    expect(testo(riga('Titolo vestita'))).not.toContain('Senza copertina');
+  });
+
+  /**
+   * ⚠️ **La riga che ha una FOTO vera non è «senza copertina».** L'`og:image` è
+   * una catena — `ogImageUrl || coverImageUrl || og.png` — e i tre articoli
+   * storici stanno nel mezzo: `coverImageUrl` valorizzato, `ogImageUrl` assente.
+   * La loro anteprima social **è già la loro foto**, quindi il marcatore (che
+   * promette «condivisa mostrerebbe l'immagine predefinita del sito») su quelle
+   * righe era una bugia, e per giunta una bugia che invita a un clic che
+   * peggiora le cose.
+   */
+  it('⚠️ riga con una FOTO vera: niente marcatore, la sua anteprima è già la foto', async () => {
+    await rispondi([
+      newsOf('storico', 'PUBBLICATO', { coverImageUrl: URL_FOTO }),
+      newsOf('nuda', 'PUBBLICATO'),
+    ]);
+
+    expect(uno('.admin-news__senza-copertina', riga('Titolo storico'))).toBeNull();
+    expect(testo(riga('Titolo storico'))).not.toContain('Senza copertina');
+    // Il controllo in negativo: la riga davvero nuda il marcatore ce l'ha.
+    expect(uno('.admin-news__senza-copertina', riga('Titolo nuda'))).not.toBeNull();
+  });
+
+  /**
+   * ⚠️ **Generare su una riga con la foto SOTTRAE**, e da nessuna schermata si
+   * torna indietro: `ogImageUrl` vince la catena, nessun DTO lo dichiara
+   * (`update()` non lo tocca) e non esiste un comando che lo svuoti. Quindi due
+   * tocchi con la conseguenza scritta, idioma «Ritira»/«Elimina» di questa
+   * stessa schermata — e la prima pressione **non deve chiamare niente**.
+   */
+  it('⚠️ dove c’è una foto, il comando chiede conferma e dice cosa toglie', async () => {
+    await rispondi([newsOf('storico', 'PUBBLICATO', { coverImageUrl: URL_FOTO })]);
+
+    await clicca(
+      uno<HTMLButtonElement>('.admin-news__copertina', riga('Titolo storico'))!,
+    );
+
+    // Nessuna chiamata alla prima pressione: si è aperta la conferma.
+    http.expectNone((r) => r.url.endsWith('/copertina'));
+    const conferma = uno('.admin-news__conferma', riga('Titolo storico'));
+    expect(conferma).not.toBeNull();
+    expect(testo(conferma)).toContain('sostituisce');
+    expect(testo(conferma)).toContain('tornare indietro');
+
+    // Il secondo tocco parte davvero.
+    const vai = tutti<HTMLButtonElement>(
+      '.btn--danger-solid',
+      riga('Titolo storico'),
+    )[0];
+    await clicca(vai);
+    const req = http.expectOne(`${API}/admin/news/storico/copertina`);
+    req.flush(
+      newsOf('storico', 'PUBBLICATO', {
+        coverImageUrl: URL_FOTO,
+        ogImageUrl: URL_TARGA,
+      }),
+    );
+    await stabilizza();
+    await rispondi([
+      newsOf('storico', 'PUBBLICATO', {
+        coverImageUrl: URL_FOTO,
+        ogImageUrl: URL_TARGA,
+      }),
+    ]);
+  });
+
+  /**
+   * ⚠️ **Il messaggio di esito dice due cose diverse perché sono due fatti
+   * diversi.** Il percorso della targa è chiavato sull'`_id`: rigenerando, la
+   * PUT sovrascrive lo stesso file e **l'URL non cambia**, mentre WhatsApp,
+   * Facebook e la CDN tengono l'immagine in cache *per indirizzo*. Promettere
+   * anche lì che «si aggiorna entro un minuto» farebbe leggere come rotto un
+   * comando che ha funzionato, proprio a chi va a controllare con il debugger
+   * di condivisione.
+   */
+  it('⚠️ rigenerando, l’esito NON promette un aggiornamento che non può avvenire', async () => {
+    const toast = spyOn(TestBed.inject(ToastService), 'success');
+    await rispondi([newsOf('v', 'PUBBLICATO', { ogImageUrl: URL_TARGA })]);
+
+    await clicca(
+      uno<HTMLButtonElement>('.admin-news__copertina', riga('Titolo v'))!,
+    );
+    http
+      .expectOne(`${API}/admin/news/v/copertina`)
+      .flush(newsOf('v', 'PUBBLICATO', { ogImageUrl: URL_TARGA }));
+    await stabilizza();
+    await rispondi([newsOf('v', 'PUBBLICATO', { ogImageUrl: URL_TARGA })]);
+
+    const messaggio = String(toast.calls.mostRecent().args[0]);
+    expect(messaggio).toContain('già condivise non cambiano');
+    // ⚠️ La direzione che conta: mai la promessa del minuto su una rigenerazione.
+    expect(messaggio).not.toContain('entro un minuto');
+  });
+
+  it('alla PRIMA generazione, invece, l’esito dice che da ora si vede la targa', async () => {
+    const toast = spyOn(TestBed.inject(ToastService), 'success');
+    await rispondi([newsOf('n', 'PUBBLICATO')]);
+
+    await clicca(
+      uno<HTMLButtonElement>('.admin-news__copertina', riga('Titolo n'))!,
+    );
+    http
+      .expectOne(`${API}/admin/news/n/copertina`)
+      .flush(newsOf('n', 'PUBBLICATO', { ogImageUrl: URL_TARGA }));
+    await stabilizza();
+    await rispondi([newsOf('n', 'PUBBLICATO', { ogImageUrl: URL_TARGA })]);
+
+    const messaggio = String(toast.calls.mostRecent().args[0]);
+    expect(messaggio).toContain('da ora');
+    expect(messaggio).not.toContain('già condivise');
+  });
+
+  it('⚠️ il comando c’è ANCHE dove la targa esiste già: etichetta «Rigenera»', async () => {
+    await rispondi([
+      newsOf('nuda', 'PUBBLICATO'),
+      newsOf('vestita', 'PUBBLICATO', { ogImageUrl: URL_TARGA }),
+    ]);
+
+    // ⚠️ La riga che una copertina ce l'ha già è ESATTAMENTE quella per cui il
+    // comando esiste: «Modifica» corregge il titolo dopo la pubblicazione, la
+    // targa quel titolo lo stampa, e questa è l'unica strada che la riscrive
+    // (nessun DTO accetta `ogImageUrl`). Nasconderlo lì chiuderebbe a chiave
+    // l'unica via d'uscita — ed è la deviazione voluta dal piano, non una
+    // dimenticanza da «correggere».
+    const rigenera = uno<HTMLButtonElement>(
+      '.admin-news__copertina',
+      riga('Titolo vestita'),
+    );
+    expect(rigenera).not.toBeNull();
+    expect(testo(rigenera)).toBe('Rigenera copertina');
+
+    // Dove manca, l'etichetta dice l'altra delle due cose che possono succedere.
+    expect(testo(uno('.admin-news__copertina', riga('Titolo nuda')))).toBe(
+      'Genera copertina',
+    );
+  });
+
+  it('riga non pubblicata: nessun comando copertina (finirebbe in 409), ma il marcatore resta', async () => {
+    await rispondi([
+      newsOf('b', 'BOZZA'),
+      newsOf('r', 'IN_REVISIONE'),
+      newsOf('s', 'SCARTATO'),
+      newsOf('x', 'SCADUTO'),
+      senzaStato(),
+    ]);
+
+    for (const t of [
+      'Titolo b',
+      'Titolo r',
+      'Titolo s',
+      'Titolo x',
+      'Titolo legacy',
+    ]) {
+      // ⚠️ `PUBBLICATO` è l'unico stato con lo slug congelato, cioè con una
+      // pagina vera da condividere: altrove il server risponde 409, e un
+      // pulsante che finisce in 409 è una bugia (stessa regola di `ritorno()`).
+      expect(uno('.admin-news__copertina', riga(t))).withContext(t).toBeNull();
+      // …e il marcatore resta comunque: è ciò che rende il problema trovabile
+      // anche dove il comando non arriva.
+      expect(uno('.admin-news__senza-copertina', riga(t)))
+        .withContext(t)
+        .not.toBeNull();
+    }
+
+    // Nessuna chiamata parte da righe che il comando non può servire.
+    http.expectNone((r) => r.url.endsWith('/copertina'));
+  });
+
+  it('il comando POSTa senza corpo, lo dice mentre gira e poi RICARICA l’elenco', async () => {
+    const toast = spyOn(TestBed.inject(ToastService), 'success');
+    await rispondi([newsOf('p', 'PUBBLICATO')]);
+
+    await clicca(
+      uno<HTMLButtonElement>('.admin-news__copertina', riga('Titolo p'))!,
+    );
+
+    const req = http.expectOne(`${API}/admin/news/p/copertina`);
+    expect(req.request.method).toBe('POST');
+    // ⚠️ Corpo vuoto: la rotta non dichiara alcun DTO, e `forbidNonWhitelisted`
+    // farebbe 400 sull'INTERA chiamata al primo campo di troppo (idioma di
+    // `snooze`).
+    expect(req.request.body).toEqual({});
+
+    // Disegno + caricamento non sono istantanei: il pulsante lo dice.
+    expect(testo(uno('.admin-news__copertina', riga('Titolo p')))).toBe(
+      'Genero…',
+    );
+
+    req.flush(newsOf('p', 'PUBBLICATO', { ogImageUrl: URL_TARGA }));
+    await stabilizza();
+
+    // ⚠️ Ricarica e non modifica in posto, come ogni azione di questa
+    // schermata: la risposta porta la riga intera, ma `total`/`totalPages` e il
+    // filtro attivo li conosce solo l'elenco.
+    await rispondi([newsOf('p', 'PUBBLICATO', { ogImageUrl: URL_TARGA })]);
+
+    expect(toast).toHaveBeenCalled();
+    // Il marcatore sparisce, il pulsante resta e cambia mestiere.
+    expect(uno('.admin-news__senza-copertina', riga('Titolo p'))).toBeNull();
+    expect(testo(uno('.admin-news__copertina', riga('Titolo p')))).toBe(
+      'Rigenera copertina',
+    );
+    // ⚠️ Lo stato dell'articolo non cambia: il badge «Redazione» della sidebar
+    // non ha nulla da rileggere, e forzarlo sarebbe una chiamata a ogni tocco.
+    expect(pending.refresh).not.toHaveBeenCalled();
   });
 });
