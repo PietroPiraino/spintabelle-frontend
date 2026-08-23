@@ -62,7 +62,10 @@
   }
 
   // ── Link ───────────────────────────────────────────────────────────────────
-  a {
+  // ⚠️ `a:not(.btn)`: stessa trappola di `.seo-block` in _utilities.scss —
+  // `.prose a` (0-1-1) batte `.btn--primary` (0-1-0) e ricolorerebbe un
+  // pulsante di rame sul suo gradiente rame→oro, sottolineandolo per giunta.
+  a:not(.btn) {
     color: var(--copper-600);
     text-decoration: underline;
     text-underline-offset: 2px;

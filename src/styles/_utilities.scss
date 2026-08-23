@@ -264,7 +264,15 @@
     color: var(--cream-100);
   }
 
-  a {
+  // ⚠️ `a:not(.btn)` e NON `a`: questo file e' importato DOPO
+  // `_buttons.scss`, e `.seo-block a` (0-1-1) batte `.btn--primary` (0-1-0).
+  // Un pulsante dentro un blocco editoriale si ritrovava quindi
+  // `color: var(--copper-600)` SOPRA il gradiente rame→oro, cioe' ~1,2:1 di
+  // contrasto in tema Notte (illeggibile), piu' una sottolineatura che un
+  // pulsante non deve avere. Succedeva sulle CTA "Registrati gratis" di
+  // /lezioni, /docs e /live; /tabelle era salva solo perche' la sua CTA sta
+  // fuori da .seo-block. I link editoriali veri restano sottolineati.
+  a:not(.btn) {
     color: var(--copper-600);
     text-decoration: underline;
     text-underline-offset: 2px;
@@ -273,6 +281,55 @@
       color: var(--copper-500);
     }
   }
+}
+
+// ------------------------------------------------------------
+// Gate di conversione (teaser delle pagine gated)
+// ------------------------------------------------------------
+// Il blocco "serve un account" di /lezioni, /docs e /live.
+// ⚠️ NON usare `.seo-block` per questo: fino al 23/08/2026 era proprio cosi',
+// e il gate ereditava colonna da 74ch + filetto superiore, cioe' si leggeva
+// come UN ALTRO paragrafo di SEO. Stava anche in fondo alla pagina, dopo tutto
+// l'evergreen e le FAQ: sopra la piega non c'era un solo pulsante. Ora e' una
+// card, e sta subito sotto l'h1.
+.gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  max-width: 62ch;
+  margin: 0 auto;
+  padding: clamp(1.4rem, 3vw, 2.2rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(420px 200px at 50% -20%, rgba(255, 181, 71, 0.12), transparent 70%),
+    var(--surface-1);
+
+  h2 {
+    font-size: clamp(1.3rem, 2.6vw, 1.7rem);
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+    max-width: 52ch;
+    color: var(--text-muted);
+    line-height: 1.65;
+  }
+
+  .row {
+    justify-content: center;
+  }
+}
+
+// Hint, non gate: compare mentre il ripristino di sessione e' in volo.
+.gate__hint {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-faint);
+  margin: 0;
 }
 
 // Richiamo con link interni: è il punto in cui una pagina passa autorevolezza
@@ -293,6 +350,15 @@
   max-width: 75ch;
 }
 
+// ⚠️ `.faq__item` e' un <details> NATIVO, e la scelta e' portante.
+// Le risposte erano tutte aperte: 8 card sulla home, 5 su /lezioni — un muro
+// che l'utente attraversava prima di arrivare alla CTA. Comprimerle con un
+// `@if` di Angular le avrebbe TOLTE dall'HTML prerenderizzato, facendo cadere
+// insieme la SEO e la guardia `check-prerender-content.mjs` (la home ha 1.177
+// parole statiche contro un pavimento di 900, di cui ~420 sono le FAQ).
+// Con <details> il testo resta nel DOM anche a fisarmonica chiusa: la guardia
+// conta le parole con un estrattore regex, che di "chiuso" non sa niente.
+// In piu' e' accessibile e apribile da tastiera senza una riga di JavaScript.
 .faq__item {
   padding: 1rem 1.1rem;
   border: 1px solid var(--line);
@@ -300,13 +366,63 @@
   background: var(--surface-1);
 }
 
+// La riga cliccabile. `list-style: none` + `::-webkit-details-marker` tolgono
+// il triangolino di sistema (due meccanismi diversi, servono entrambi).
+.faq__sum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  list-style: none;
+  // area di tocco: una domanda su una riga sola sta sotto i 44px
+  min-height: 24px;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  // chevron in CSS puro: niente <app-icon> qui dentro, perche' questo blocco
+  // e' condiviso da template che non importano il componente icona.
+  &::after {
+    content: '';
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-right: 0.2rem;
+    border-right: 2px solid var(--copper-600);
+    border-bottom: 2px solid var(--copper-600);
+    transform: rotate(45deg);
+    transform-origin: center;
+    transition: transform var(--t-fast);
+  }
+
+  &:hover::after {
+    border-color: var(--copper-500);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--copper-500);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+.faq__item[open] > .faq__sum::after {
+  transform: rotate(225deg);
+}
+
 .faq__q {
   font-size: 1rem;
-  margin-bottom: 0.4rem;
+  // ⚠️ 0 e non 0.4rem: dentro <summary> il margine separerebbe la domanda dal
+  // chevron con cui e' allineata, non dalla risposta (che a fisarmonica chiusa
+  // non c'e').
+  margin-bottom: 0;
 }
 
 .faq__a {
   margin-bottom: 0;
+  margin-top: 0.6rem;
   color: var(--text-muted);
   line-height: 1.7;
 }

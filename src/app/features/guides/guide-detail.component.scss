@@ -33,7 +33,12 @@
     line-height: 1.7;
   }
 
-  a {
+  // ⚠️ `a:not(.btn)`: stessa trappola di `.seo-block`/`.prose` — la regola di
+  // colonna (0-1-1) batte `.btn--primary` (0-1-0) e renderebbe illeggibile un
+  // pulsante messo dentro una guida. Oggi non ce ne sono: la guardia serve
+  // perche' il giorno che se ne aggiunge uno il difetto e' invisibile a chi lo
+  // scrive.
+  a:not(.btn) {
     color: var(--copper-600);
     text-decoration: underline;
     text-underline-offset: 2px;

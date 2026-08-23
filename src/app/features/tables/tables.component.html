@@ -118,10 +118,10 @@
         <h2>Domande frequenti sulle tabelle preflop</h2>
         <div class="faq">
           @for (item of faq; track item.q) {
-            <div class="faq__item">
-              <h3 class="faq__q">{{ item.q }}</h3>
+            <details class="faq__item">
+              <summary class="faq__sum"><h3 class="faq__q">{{ item.q }}</h3></summary>
               <p class="faq__a">{{ item.a }}</p>
-            </div>
+            </details>
           }
         </div>
       </section>
