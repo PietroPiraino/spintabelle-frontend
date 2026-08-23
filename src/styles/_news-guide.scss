@@ -1,0 +1,65 @@
+// «Per approfondire» in coda all'articolo (`/news/<slug>/`)
+//
+// ⚠️ GLOBALI, E NON PER COMODITÀ: come `_news-share.scss` e `_prose.scss`, per
+// la stessa ragione precisa. La pagina di un articolo ha due stesure che si
+// **sostituiscono**: la prima la compone `functions/lib/render-news.mjs`
+// all'edge, la seconda il componente Angular al montaggio. Un foglio di
+// componente viene compilato con l'incapsulamento
+// (`.news-guide__list[_ngcontent-…]`) e quell'attributo l'HTML dell'edge non ce
+// l'ha: messe lì, queste regole non toccherebbero **mai** la stesura che
+// ricevono chi non esegue il JavaScript e ogni crawler.
+//
+// ⚠️ E qui il costo sarebbe peggiore che altrove: questo blocco esiste
+// **apposta** per la stesura dell'edge — è il collegamento con cui l'articolo
+// passa autorevolezza interna alle guide. Lasciarlo senza regole vorrebbe dire
+// arredare solo la metà che non è la ragione del blocco.
+
+.news-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+// Stesso registro tipografico di `.news-share__label` (mono, maiuscoletto
+// spaziato): un'etichetta, non un titolo — e per la stessa ragione **`--text` e
+// non il rame**, che sotto i 14px non arriva al 4,5:1 dell'AA in Ghiaccio e
+// Tramonto.
+.news-guide__label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.news-guide__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+// ⚠️ I 44px SONO DICHIARATI, non ereditati (stessa regola dei pulsanti di
+// condivisione e delle FAQ): un collegamento di testo su una riga sta sui 26px,
+// e qui sono i **due controlli che il blocco esiste per far premere**. `flex`
+// più `min-height` invece del solo padding, così il bersaglio è alto 44px anche
+// quando il titolo sta su una riga sola.
+.news-guide__list a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.25rem 0;
+  color: var(--copper-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  transition: color var(--t-fast);
+
+  &:hover {
+    color: var(--copper-500);
+  }
+}

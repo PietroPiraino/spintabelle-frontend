@@ -37,6 +37,7 @@
 // divergere c'e' un ⚠️ sulla riga, e i punti numerici (il taglio dell'estratto,
 // le stringhe dell'indice) sono fissati dal test.
 
+import { guideCorrelate } from './guide-links.mjs';
 import { renderMarkdown } from './markdown.mjs';
 
 /** Dominio canonico. ⚠️ Sempre questo, anche servendo da un'anteprima di ramo:
@@ -419,6 +420,49 @@ const CANALI_CONDIVISIONE = [
 ];
 
 /**
+ * «Per approfondire»: da un articolo alle guide evergreen.
+ *
+ * ⚠️ NON E' CONTENUTO DELL'ARTICOLO, ED E' PER QUESTO CHE STA QUI E NON NEL
+ * `body`. Il disclaimer di §4.9 lo appende lo stadio 6 dentro il corpo, perche'
+ * il cancello deve asserire sulla stessa stringa che il lettore vedra'. Questo e'
+ * navigazione, come la condivisione: composto a valle, compare anche sugli
+ * articoli gia' pubblicati e una guida nuova entra pure nei pezzi vecchi. Le
+ * ragioni per esteso stanno nel modulo canonico.
+ *
+ * ⚠️ HREF CON LA BARRA FINALE, e nel componente Angular no: e' la stessa
+ * asimmetria della firma verso `/redazione/` qui sopra. Qui l'indirizzo lo segue
+ * un crawler, e `/guide/<slug>/` e' la forma servita a 200 dall'SSG (quella
+ * senza barra prende un 308); di la' e' un `routerLink`, e con la barra il
+ * serializer produce un segmento vuoto che la rotta non consuma — la navigazione
+ * cadrebbe sul wildcard 404. Allinearle "per coerenza" rompe una delle due.
+ *
+ * ⚠️ NIENTE ICONE QUI DENTRO. `news-render.test.mjs` conta gli `<svg>` dentro
+ * `<main>` (tre: i tre canali di condivisione) e asserisce zero `<img>`: un
+ * ornamento in questo blocco farebbe fallire una trappola armata per un'altra
+ * ragione, e la ragione e' buona.
+ */
+function approfondimentiHtml(articolo) {
+  const guide = guideCorrelate({
+    titolo: articolo?.title,
+    corpo: articolo?.body,
+    categoria: articolo?.categoria,
+  });
+  if (!guide.length) return '';
+  const voci = guide.map(
+    (g) =>
+      `<li><a href="/guide/${escapeHtml(g.slug)}/">${escapeHtml(g.titolo)}</a></li>`,
+  );
+  return [
+    '<aside class="news-guide">',
+    '<p class="news-guide__label">Per approfondire</p>',
+    '<ul class="news-guide__list">',
+    ...voci,
+    '</ul>',
+    '</aside>',
+  ].join('\n');
+}
+
+/**
  * Il blocco di condivisione, ultimo figlio dell'`<article>`.
  *
  * ⚠️ DENTRO L'ARTICOLO E NON FUORI: `max-width` e `gap` della colonna di lettura
@@ -529,6 +573,11 @@ export function renderArticolo(scheletro, articolo, chiave) {
     // configurazione di `markdown.mjs`, che SCARTA l'HTML grezzo del Markdown —
     // fuori da Angular non c'e' nessun sanitizer di `[innerHTML]`.
     `<div class="prose">${renderMarkdown(dati.body)}</div>`,
+    // ⚠️ FRA IL CORPO E LA CONDIVISIONE, e l'ordine e' quello del componente
+    // Angular: prima si finisce di leggere, poi il passo successivo, poi
+    // l'invito a condividere. Sopra il corpo sarebbe un'uscita offerta a chi non
+    // ha ancora letto niente.
+    approfondimentiHtml(dati),
     // ⚠️ ULTIMO figlio dell'`<article>`, come nel componente Angular: la
     // condivisione si offre a chi ha finito di leggere, non a chi deve ancora
     // cominciare. I tre collegamenti stanno anche qui perche' sono `<a href>` e

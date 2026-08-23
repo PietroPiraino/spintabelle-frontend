@@ -71,6 +71,40 @@
         }
 
         <!--
+          PER APPROFONDIRE — fra il corpo e la condivisione, nello stesso punto
+          della resa all'edge (`functions/lib/render-news.mjs`): prima si finisce
+          di leggere, poi il passo successivo, poi l'invito a condividere.
+
+          ⚠️ IL BLOCCO STA IN ENTRAMBE LE RESE, e per una ragione asimmetrica
+          rispetto al «Copia link» qui sotto: quello è inutile all'edge perché
+          senza JavaScript non copierebbe niente, questo è **l'unico** dei due che
+          serve a un motore di ricerca — è il collegamento con cui un articolo
+          passa scansione e autorevolezza interna alle guide. Esistesse solo qui,
+          per un crawler non esisterebbe affatto.
+
+          ⚠️ `[routerLink]` SENZA la barra finale, mentre all'edge l'href ce l'ha:
+          non è una svista, è la stessa asimmetria della firma verso /redazione.
+          Con la barra, `DefaultUrlSerializer` produce un segmento vuoto che la
+          rotta `guide/:slug` non consuma e la navigazione cade sul wildcard 404;
+          là invece l'indirizzo lo segue un crawler, e la forma senza barra si
+          prende un 308.
+
+          ⚠️ Gli stili sono GLOBALI (`src/styles/_news-guide.scss`) per la stessa
+          ragione della condivisione: un foglio di componente è compilato con
+          l'incapsulamento, e l'HTML dell'edge quell'attributo non ce l'ha.
+        -->
+        @if (approfondimenti().length) {
+          <aside class="news-guide">
+            <p class="news-guide__label">Per approfondire</p>
+            <ul class="news-guide__list">
+              @for (g of approfondimenti(); track g.slug) {
+                <li><a [routerLink]="['/guide', g.slug]">{{ g.titolo }}</a></li>
+              }
+            </ul>
+          </aside>
+        }
+
+        <!--
           CONDIVISIONE — ultimo figlio dell'<article>, come nella resa all'edge
           (`functions/lib/render-news.mjs`): si offre a chi ha finito di leggere.
           ⚠️ Dentro l'articolo e non fuori, perché `max-width` e `gap` della

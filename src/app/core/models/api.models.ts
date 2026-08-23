@@ -515,6 +515,19 @@ export interface News {
   /** Slug pubblico dell'articolo: è la forma buona del suo indirizzo (§4.5). */
   slug?: string;
   /**
+   * Categoria dell'articolo. È in `CAMPI_PUBBLICI` fin dall'inizio — la
+   * risposta la porta — ma qui mancava: la dichiara il 23/08/2026 il blocco
+   * «Per approfondire», che la usa come ripiego quando nessuna parola del pezzo
+   * aggancia una guida (`features/guides/guide-links.ts`).
+   *
+   * ⚠️ **Opzionale**, per la stessa ragione di `status` su `NewsAdmin`: il
+   * backend legge in `.lean()`, che **non** applica i default di schema, quindi
+   * una riga anteriore al campo arriva davvero senza. Dichiararla obbligatoria
+   * non darebbe alcun errore utile — è solo un tipo — ma farebbe scrivere codice
+   * che si fida.
+   */
+  categoria?: NewsCategory;
+  /**
    * Prima pubblicazione. ⚠️ È questa la data che il lettore vede e che finisce
    * nei dati strutturati, **non** `createdAt`: fra la bozza e la pubblicazione
    * possono passare giorni.

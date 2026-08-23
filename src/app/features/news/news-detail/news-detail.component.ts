@@ -18,6 +18,7 @@ import { NewsService } from '../../../core/services/news.service';
 import { SeoService } from '../../../core/services/seo.service';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.component';
+import { guideCorrelate } from '../../guides/guide-links';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 
 /**
@@ -119,6 +120,25 @@ export class NewsDetailComponent {
 
   /** Le note di rettifica da stampare fra intestazione e corpo (§4.4). */
   protected readonly rettifiche = computed(() => this.news()?.rettifiche ?? []);
+
+  /**
+   * «Per approfondire»: una o due guide, scelte dal testo dell'articolo.
+   *
+   * ⚠️ LO STESSO BLOCCO LO COMPONE `functions/lib/render-news.mjs`, e le due
+   * copie della scelta devono restare d'accordo: qui subentra al montaggio,
+   * quindi guide diverse vorrebbero dire un blocco che cambia sotto gli occhi di
+   * chi ha appena aperto la pagina. La funzione è deterministica apposta e i due
+   * letterali sono confrontati da `scripts/lib/guide-links.test.mjs`.
+   *
+   * ⚠️ E il blocco deve stare in ENTRAMBE: solo qui non esisterebbe per nessun
+   * crawler — cioè verrebbe meno la ragione per cui è stato scritto.
+   */
+  protected readonly approfondimenti = computed(() => {
+    const n = this.news();
+    return n
+      ? guideCorrelate({ titolo: n.title, corpo: n.body, categoria: n.categoria })
+      : [];
+  });
 
   /**
    * L'indirizzo da diffondere: **l'URL canonica dell'articolo, costruita sullo

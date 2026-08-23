@@ -52,6 +52,15 @@
 //      SORGENTI del repo, quindi resta verde anche se in produzione gira una
 //      Function piu' vecchia. Si controlla anche il verso che NEGA: qui il
 //      «Copia link» non deve esserci, sarebbe un pulsante morto.
+//   8. IL BLOCCO «PER APPROFONDIRE», cioe' i collegamenti alle guide. Terza
+//      superficie solo-edge, stessa cecita' delle altre due — con un'aggravante:
+//      questo blocco esiste PROPRIO per il crawler (e' con questi link che un
+//      articolo passa scansione e autorevolezza interna alle guide), quindi una
+//      Function vecchia lo farebbe sparire esattamente per l'unico pubblico per
+//      cui e' stato scritto, mentre all'idratazione ricomparirebbe e a occhio
+//      sembrerebbe tutto a posto. Gli slug attesi si calcolano dal record
+//      dell'API con la stessa funzione della Function, mai da una lista scritta
+//      qui.
 //   7. `/negozio` porta ancora `X-Robots-Tag`. Sembra fuori tema e non lo e':
 //      quell'header viene da `public/_headers`, che in advanced mode
 //      (`_worker.js`) smetterebbe di applicarsi. E' la prova, da fuori, che
@@ -65,6 +74,7 @@
 // Esiti: 0 tutto verde · 1 deriva trovata · 0 + avviso se il controllo non e'
 // eseguibile (API muta, nessun articolo): stessa filosofia delle altre guardie.
 
+import { guideCorrelate } from '../functions/lib/guide-links.mjs';
 import { hasNoindex } from './lib/csr-noindex.mjs';
 
 const argv = process.argv.slice(2);
@@ -425,6 +435,55 @@ async function sonda() {
             'ha il JavaScript disattivato lo resta. Il «Copia link» va solo nel ' +
             'componente Angular.',
         );
+    }
+
+    // ---- «Per approfondire»: i collegamenti alle guide -------------------
+    //
+    // ⚠️ TERZA SUPERFICIE SOLO-EDGE, e la piu' facile da perdere senza
+    // accorgersene: questi link esistono per il crawler. Se la Function in
+    // produzione e' piu' vecchia del repo il blocco non c'e', ma il componente
+    // Angular lo disegna comunque all'idratazione — quindi a occhio la pagina
+    // sembra giusta mentre per un motore il collegamento non esiste, cioe' viene
+    // meno la sola ragione per cui il blocco e' stato scritto.
+    //
+    // ⚠️ Gli attesi si calcolano dal record dell'API con la STESSA funzione che
+    // usa la Function, mai da una lista scritta qui: una lista di guide scritta
+    // in questa sonda invecchierebbe per conto suo e comincerebbe a segnalare
+    // guasti inesistenti — il modo piu' rapido per far spegnere una guardia.
+    const guideAttese = guideCorrelate({
+      titolo: rec.title,
+      corpo: rec.body,
+      categoria: rec.categoria,
+    });
+    const bloccoGuide =
+      (dentroMain(html).match(/<aside class="news-guide">([\s\S]*?)<\/aside>/i) || [])[1] ?? null;
+    if (bloccoGuide === null) {
+      nota(
+        `${urlArticolo} — manca il blocco «Per approfondire» (<aside class="news-guide">). ` +
+          "Il sospetto e' che la Function all'edge sia piu VECCHIA del repo: functions/ sta " +
+          'fuori da dist/, nessuna guardia di build se ne accorge, e il componente Angular ' +
+          "disegna il blocco lo stesso all'idratazione — quindi a occhio non si vede nulla.",
+      );
+    } else {
+      const href = [...bloccoGuide.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+      const atteseHref = guideAttese.map((g) => `/guide/${g.slug}/`);
+      if (href.join(' ') !== atteseHref.join(' '))
+        nota(
+          `${urlArticolo} — «Per approfondire» rimanda a [${href.join(', ')}], ` +
+            `mentre dal testo dell'articolo ci si aspetta [${atteseHref.join(', ')}]. ` +
+            'Le due copie della scelta (src/app/features/guides/guide-links.ts e ' +
+            'functions/lib/guide-links.mjs) sono divergenti, oppure in produzione gira ' +
+            "una Function piu' vecchia.",
+        );
+      // ⚠️ La barra finale: senza, ogni collegamento interno e' un 308, cioe'
+      // un salto in piu' a ogni scansione. Di la' (routerLink) la barra NON ci
+      // va, e le due forme non vanno allineate.
+      for (const h of href)
+        if (!h.endsWith('/'))
+          nota(
+            `${urlArticolo} — il collegamento "${h}" non ha la barra finale: la forma ` +
+              'servita a 200 e /guide/<slug>/, quella nuda si prende un 308.',
+          );
     }
 
     // Le due date dei dati strutturati. ⚠️ `dateModified` NON e' `updatedAt`
