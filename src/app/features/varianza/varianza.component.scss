@@ -448,14 +448,60 @@ input[type='number']:focus-visible {
   color: var(--text);
 }
 
+// Blocco richiudibile dei risultati (nota EV/mediana, tabella percentili).
+// La riga cliccabile riusa il linguaggio del chevron di `.vz__faq-sum`.
+.vz__more {
+  margin-top: 1.25rem;
+}
+.vz__more-sum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+.vz__more-sum::-webkit-details-marker {
+  display: none;
+}
+.vz__more-sum::after {
+  content: '';
+  flex: none;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid var(--copper-600);
+  border-bottom: 2px solid var(--copper-600);
+  transform: rotate(45deg);
+  transition: transform var(--t-fast);
+}
+.vz__more[open] > .vz__more-sum::after {
+  transform: rotate(225deg);
+}
+.vz__more-sum:hover {
+  color: var(--text);
+}
+.vz__more-sum:focus-visible {
+  outline: 2px solid var(--copper-500);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 .vz__dist {
   margin-top: 1.25rem;
 }
 .vz__dist-title {
   font-family: var(--font-display);
   font-size: 1.05rem;
-  margin: 0 0 0.6rem;
+  // ⚠️ 0.6rem solo da APERTA: e' un <summary>, e a fisarmonica chiusa il
+  // margine inferiore lascerebbe un vuoto sotto una riga sola.
+  margin: 0;
   color: var(--text);
+}
+.vz__dist[open] > .vz__dist-title {
+  margin-bottom: 0.6rem;
 }
 .vz__dist-scroll {
   overflow-x: auto;
@@ -675,14 +721,50 @@ input[type='number']:focus-visible {
   border-bottom: 0;
   padding-bottom: 0;
 }
+// Riga cliccabile del <details>. Il pattern e' quello di `.faq__sum` in
+// styles/_utilities.scss, riscritto qui con i nomi locali: questa pagina e'
+// l'originale da cui il blocco condiviso e' stato promosso e tiene le sue
+// classi apposta (lista con separatore, non card).
+.vz__faq-sum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  list-style: none;
+}
+.vz__faq-sum::-webkit-details-marker {
+  display: none;
+}
+.vz__faq-sum::after {
+  content: '';
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.2rem;
+  border-right: 2px solid var(--copper-600);
+  border-bottom: 2px solid var(--copper-600);
+  transform: rotate(45deg);
+  transition: transform var(--t-fast);
+}
+.vz__faq-item[open] > .vz__faq-sum::after {
+  transform: rotate(225deg);
+}
+.vz__faq-sum:focus-visible {
+  outline: 2px solid var(--copper-500);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
 .vz__faq-q {
   font-family: var(--font-display);
   font-size: 1.02rem;
   color: var(--text);
-  margin: 0 0 0.35rem;
+  // ⚠️ 0: dentro <summary> il margine inferiore separerebbe la domanda dal
+  // chevron con cui e' allineata, non dalla risposta.
+  margin: 0;
 }
 .vz__faq-a {
-  margin: 0;
+  margin: 0.6rem 0 0;
   color: var(--text-muted);
   line-height: 1.6;
 }

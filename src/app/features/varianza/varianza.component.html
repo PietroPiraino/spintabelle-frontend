@@ -245,22 +245,37 @@
             </div>
           </div>
 
-          @if (mode() === 'money') {
-            <p class="vz__note">
-              <strong>EV atteso</strong> = media a lungo termine (dove tende il bankroll su volume
-              enorme). <strong>Mediana</strong> = risultato tipico (metà sopra, metà sotto). Nei lottery
-              la media è più alta perché i rari jackpot la tirano su → la mediana descrive "cosa vivrai
-              di solito", l'EV "quanto vali davvero". Nessuna delle due è sbagliata.
-            </p>
-          } @else {
-            <p class="vz__note">
-              In EV Chip la distribuzione è simmetrica: <strong>media e mediana coincidono</strong>
-              (piccole differenze = rumore Monte Carlo, si riducono aumentando le simulazioni).
-            </p>
-          }
+          <!--
+            Spiegazione richiudibile: serve la prima volta, ingombra dalla
+            seconda in poi. <details> e non @if: il testo resta comunque nel
+            DOM (e le risposte di questa pagina sono contenuto indicizzabile).
+          -->
+          <details class="vz__more">
+            <summary class="vz__more-sum">Differenza fra EV e mediana</summary>
+            @if (mode() === 'money') {
+              <p class="vz__note">
+                <strong>EV atteso</strong> = media a lungo termine (dove tende il bankroll su volume
+                enorme). <strong>Mediana</strong> = risultato tipico (metà sopra, metà sotto). Nei lottery
+                la media è più alta perché i rari jackpot la tirano su → la mediana descrive "cosa vivrai
+                di solito", l'EV "quanto vali davvero". Nessuna delle due è sbagliata.
+              </p>
+            } @else {
+              <p class="vz__note">
+                In EV Chip la distribuzione è simmetrica: <strong>media e mediana coincidono</strong>
+                (piccole differenze = rumore Monte Carlo, si riducono aumentando le simulazioni).
+              </p>
+            }
+          </details>
 
-          <div class="vz__dist">
-            <h3 class="vz__dist-title">Distribuzione dei risultati su {{ fmtBuyins(r.numGames) }} partite</h3>
+          <!--
+            La tabella e' il DETTAGLIO, non il messaggio: il fan chart qui
+            sopra mostra gia' la stessa distribuzione in forma grafica. Undici
+            righe sempre aperte erano il blocco piu' alto della pagina.
+          -->
+          <details class="vz__dist vz__more">
+            <summary class="vz__more-sum vz__dist-title">
+              Distribuzione dei risultati su {{ fmtBuyins(r.numGames) }} partite
+            </summary>
             <div class="vz__dist-scroll">
               <table class="vz__disttable">
                 <thead>
@@ -289,7 +304,7 @@
                 </tbody>
               </table>
             </div>
-          </div>
+          </details>
           @if (mode() === 'chip') {
             <p class="vz__hint">Valori in <strong>chip EV puri</strong> (senza rake né montepremi): è l'abilità grezza. Stack medio: ~{{ fmtBuyins(avgStack()) }} chip = 1 buy-in.</p>
           }
@@ -368,10 +383,10 @@
     <h2 class="vz__seo-title">Domande frequenti sulla varianza</h2>
     <div class="vz__faq">
       @for (item of faq; track item.q) {
-        <div class="vz__faq-item">
-          <h3 class="vz__faq-q">{{ item.q }}</h3>
+        <details class="vz__faq-item">
+          <summary class="vz__faq-sum"><h3 class="vz__faq-q">{{ item.q }}</h3></summary>
           <p class="vz__faq-a">{{ item.a }}</p>
-        </div>
+        </details>
       }
     </div>
   </section>
