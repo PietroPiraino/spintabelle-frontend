@@ -95,6 +95,11 @@
 
   .btn {
     margin-top: auto;
+    // ⚠️ 44px DICHIARATI: un `.btn--sm` nudo sta sui 38px e i 44 sono
+    // aritmeticamente irraggiungibili senza scriverli — stesso precedente dei
+    // controlli di condivisione in styles/_news-share.scss. Qui pesa piu' che
+    // altrove: queste sei card sono la navigazione principale della home.
+    min-height: 44px;
   }
 }
 

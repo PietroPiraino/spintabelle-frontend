@@ -151,11 +151,12 @@
   Il blocco sta FUORI da ogni @if: e' identico per chi e' loggato e per Google.
   ⚠️ Dal 23/08/2026 sta IN FONDO, sotto la CTA Community: da qui in giu' e'
   materiale per chi vuole approfondire (e per un crawler), non il percorso
-  principale. La prosa resta pero' INTEGRALE e visibile — non va nascosta in
-  un <details> come le FAQ: (1) la guardia check-prerender-content.mjs pretende
-  900 parole su questa rotta e senza questa prosa non ci si arriva; (2) l'ultimo
-  paragrafo e' quello sul rischio economico reale, che non si mette dietro un
-  clic.
+  principale. La prosa e' RICHIUDIBILE (`.seo-more`): restano aperti solo il
+  paragrafo che apre e quello sul rischio economico.
+  ⚠️ Il pavimento di 900 parole NON e' un argomento per tenerla aperta: la
+  guardia conta anche il testo dentro un <details> chiuso, ed e' stato
+  misurato. Quel che si perde nascondendo del testo e' schermo occupato, non
+  parole indicizzate.
   ⚠️ Le FAQ hanno UNA sola sorgente, `faq` in landing.component.ts, condivisa
   col JSON-LD FAQPage: testo visibile e dati strutturati che divergono sono una
   segnalazione di spam.
@@ -174,6 +175,13 @@
         varianti: è un percorso di studio costruito attorno a un formato preciso,
         tenuto da coach che quel formato lo giocano.
       </p>
+      <!--
+        ⚠️ Da qui in giu' e' richiudibile: restano visibili il paragrafo
+        d'apertura (sopra) e quello sul rischio economico (sotto), che e' la
+        riga che qualifica il sito e non va nascosta dietro un clic.
+      -->
+      <details class="seo-more">
+        <summary class="seo-more__sum">Continua a leggere</summary>
       <p>
         La specializzazione non è un vezzo. In un torneo che parte da 25 big
         blind e sale di livello ogni pochi minuti, le decisioni che contano sono
@@ -239,6 +247,8 @@
         molti arrivano qui: il materiale serio su questo formato è quasi tutto
         in inglese.
       </p>
+      </details>
+
       <p>
         <strong>Non è</strong> un posto dove si promettono guadagni. Il poker è
         un gioco con vincite in denaro e comporta un rischio economico reale:

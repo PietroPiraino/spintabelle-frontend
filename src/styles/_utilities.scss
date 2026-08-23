@@ -332,6 +332,74 @@
   margin: 0;
 }
 
+// ------------------------------------------------------------
+// Prosa evergreen richiudibile
+// ------------------------------------------------------------
+// ⚠️ Il testo SEO delle pagine pubbliche stava tutto aperto e in alcune (home,
+// /lezioni) era il blocco piu' alto della pagina: contenuto scritto per i
+// motori che occupava lo schermo di chi legge. Qui dentro finisce tutto
+// tranne il paragrafo d'apertura, che resta visibile perche' una pagina non
+// puo' presentarsi con un solo pulsante "continua a leggere".
+// ⚠️ Come per `.faq__item`: <details> nativo, MAI un `@if`. Il testo resta
+// nell'HTML prerenderizzato — la guardia check-prerender-content.mjs lo conta
+// comunque (estrae con una regex sui tag e di "chiuso" non sa niente), quindi
+// i pavimenti per rotta non si muovono di una parola. Misurato.
+.seo-more {
+  margin: 0.4rem 0 1.6rem;
+}
+
+.seo-more__sum {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--copper-600);
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::after {
+    content: '';
+    width: 0.45rem;
+    height: 0.45rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform var(--t-fast);
+  }
+
+  &:hover {
+    color: var(--copper-500);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--copper-500);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+.seo-more[open] > .seo-more__sum {
+  margin-bottom: 0.6rem;
+
+  &::after {
+    transform: rotate(225deg);
+  }
+}
+
+// ⚠️ Il primo h2 DENTRO la fisarmonica non azzera il margine come farebbe in
+// cima al blocco (`.seo-block h2:first-child`): li' e' il primo figlio del
+// <details>, non del `.seo-block`.
+.seo-more > h2:first-of-type {
+  margin-top: 0;
+}
+
 // Richiamo con link interni: è il punto in cui una pagina passa autorevolezza
 // alle altre. Bordo oro a sinistra, come su /simulatore-varianza.
 .seo-block__cta {
@@ -359,8 +427,12 @@
 // Con <details> il testo resta nel DOM anche a fisarmonica chiusa: la guardia
 // conta le parole con un estrattore regex, che di "chiuso" non sa niente.
 // In piu' e' accessibile e apribile da tastiera senza una riga di JavaScript.
+// ⚠️ NIENTE `padding` qui: il padding deve stare sul <summary>, non sul
+// <details>. Con la spaziatura sul contenitore la card e' alta ~69px ma solo i
+// ~35px della riga di testo aprono: intorno a ogni domanda resta una fascia
+// morta di 16px che SEMBRA cliccabile (e' dentro il bordo della card) e non lo
+// e'. Misurato su viewport 390px, non dedotto.
 .faq__item {
-  padding: 1rem 1.1rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface-1);
@@ -375,8 +447,12 @@
   gap: 0.75rem;
   cursor: pointer;
   list-style: none;
-  // area di tocco: una domanda su una riga sola sta sotto i 44px
-  min-height: 24px;
+  // Il padding della card vive QUI: cosi' tutta l'area che si vede coincide
+  // con quella che apre. ⚠️ `min-height` dichiarato: una domanda su una riga
+  // sola sta sui 35px, e i 44 non si raggiungono per conto loro — stesso
+  // precedente dei controlli di condivisione in styles/_news-share.scss.
+  min-height: 44px;
+  padding: 1rem 1.1rem;
 
   &::-webkit-details-marker {
     display: none;
@@ -421,8 +497,10 @@
 }
 
 .faq__a {
-  margin-bottom: 0;
-  margin-top: 0.6rem;
+  // il padding orizzontale ripete quello del summary, cosi' la risposta resta
+  // allineata alla domanda ora che la card non ha piu' spaziatura propria
+  margin: 0;
+  padding: 0 1.1rem 1rem;
   color: var(--text-muted);
   line-height: 1.7;
 }
