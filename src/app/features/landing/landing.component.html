@@ -63,26 +63,32 @@
   <app-suit-divider-live class="landing__divider" />
 </div>
 
-<!-- OFFERTA -->
+<!-- VETRINA: una card per sezione del sito -->
 <section class="section offer">
-  <div class="container grid grid--2">
-    <div class="card card--pad offer__card offer__card--tables">
-      <span class="eyebrow">Disponibile</span>
-      <h2>Le Tabelle</h2>
-      <p class="text-muted">
-        Range GTO preflop per Spin &amp; Go e Heads-Up a ogni profondità di
-        stack: frequenze ed EV di ogni mano, gratis per tutti gli iscritti.
-      </p>
-      <a routerLink="/tabelle" class="btn btn--primary">Consulta le tabelle</a>
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">La scuola</span>
+      <!--
+        ⚠️ Questo <h2> non e' decorativo: prima le card erano <h2> senza un
+        titolo di sezione sopra, quindi sei prodotti si presentavano come sei
+        argomenti di pari livello. Ora la sezione ha il suo <h2> e le card
+        scendono a <h3>. L'unico <h1> della pagina resta quello dell'hero
+        (la guardia check-prerender-content.mjs ne pretende esattamente uno).
+      -->
+      <h2>Cosa trovi dentro</h2>
     </div>
-    <div class="card card--pad offer__card offer__card--lessons">
-      <span class="eyebrow">Disponibile</span>
-      <h2>Le Lezioni</h2>
-      <p class="text-muted">
-        Video lezioni dei coach con tag e ricerca: contenuti base per tutti gli
-        iscritti e percorsi premium per gli abbonati.
-      </p>
-      <a routerLink="/lezioni" class="btn btn--primary">Entra in aula</a>
+    <div class="grid grid--3">
+      @for (p of prodotti; track p.link; let i = $index) {
+        <div
+          class="card card--pad card--hover offer__card rise"
+          [style.animation-delay.ms]="i * 80"
+          [style.--offer-tint]="p.tint"
+        >
+          <h3>{{ p.title }}</h3>
+          <p class="text-muted">{{ p.text }}</p>
+          <a [routerLink]="p.link" class="btn btn--ghost btn--sm">{{ p.cta }}</a>
+        </div>
+      }
     </div>
   </div>
 </section>
@@ -109,6 +115,33 @@
   </section>
 }
 
+<!-- CTA COMMUNITY -->
+<section class="section">
+  <div class="container">
+    <div class="card card--pad community">
+      <div class="community__copy">
+        <span class="eyebrow">Community</span>
+        <h2>Il poker si studia meglio in branco</h2>
+        <p class="text-muted">
+          Unisciti al Discord della scuola e segui il canale YouTube: review,
+          live e contenuti gratuiti ogni settimana.
+        </p>
+      </div>
+      <div class="row">
+        <a [href]="social.discord" target="_blank" rel="noopener" class="btn btn--primary">
+          Entra nel Discord
+        </a>
+        <a [href]="social.youtube" target="_blank" rel="noopener" class="btn btn--ghost">
+          ▶ YouTube
+        </a>
+        <a [href]="social.instagram" target="_blank" rel="noopener" class="btn btn--ghost">
+          ◎ Instagram
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!--
   CONTENUTO EVERGREEN (SEO)
   Questa e' la pagina che deve vincere le query "scuola spin and go" / "scuola
@@ -116,6 +149,13 @@
   card da tre righe. Il resto del conteggio erano estratti delle news e chrome —
   contenuto che cambia sotto i piedi e che non parla della scuola.
   Il blocco sta FUORI da ogni @if: e' identico per chi e' loggato e per Google.
+  ⚠️ Dal 23/08/2026 sta IN FONDO, sotto la CTA Community: da qui in giu' e'
+  materiale per chi vuole approfondire (e per un crawler), non il percorso
+  principale. La prosa resta pero' INTEGRALE e visibile — non va nascosta in
+  un <details> come le FAQ: (1) la guardia check-prerender-content.mjs pretende
+  900 parole su questa rotta e senza questa prosa non ci si arriva; (2) l'ultimo
+  paragrafo e' quello sul rischio economico reale, che non si mette dietro un
+  clic.
   ⚠️ Le FAQ hanno UNA sola sorgente, `faq` in landing.component.ts, condivisa
   col JSON-LD FAQPage: testo visibile e dati strutturati che divergono sono una
   segnalazione di spam.
@@ -178,7 +218,8 @@
         decide la maggior parte dell'EV: range di apertura, difesa dai bui,
         push/fold quando lo stack si accorcia, e come cambia tutto quando c'è
         l'ante o quando uno dei giocatori parte più corto. Da lì si sale verso
-        gli spot postflop ricorrenti e verso le decisioni ICM di fine torneo.
+        gli spot postflop ricorrenti e verso l'heads-up finale, la fase che
+        chiude il torneo.
       </p>
       <p>
         Accanto alla strategia c'è la parte che quasi nessuno insegna e che fa
@@ -217,39 +258,13 @@
       <h2>Domande frequenti sulla scuola</h2>
       <div class="faq">
         @for (item of faq; track item.q) {
-          <div class="faq__item">
-            <h3 class="faq__q">{{ item.q }}</h3>
+          <details class="faq__item">
+            <summary class="faq__sum"><h3 class="faq__q">{{ item.q }}</h3></summary>
             <p class="faq__a">{{ item.a }}</p>
-          </div>
+          </details>
         }
       </div>
     </section>
   </div>
 </section>
 
-<!-- CTA COMMUNITY -->
-<section class="section">
-  <div class="container">
-    <div class="card card--pad community">
-      <div class="community__copy">
-        <span class="eyebrow">Community</span>
-        <h2>Il poker si studia meglio in branco</h2>
-        <p class="text-muted">
-          Unisciti al Discord della scuola e segui il canale YouTube: review,
-          live e contenuti gratuiti ogni settimana.
-        </p>
-      </div>
-      <div class="row">
-        <a [href]="social.discord" target="_blank" rel="noopener" class="btn btn--primary">
-          Entra nel Discord
-        </a>
-        <a [href]="social.youtube" target="_blank" rel="noopener" class="btn btn--ghost">
-          ▶ YouTube
-        </a>
-        <a [href]="social.instagram" target="_blank" rel="noopener" class="btn btn--ghost">
-          ◎ Instagram
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
