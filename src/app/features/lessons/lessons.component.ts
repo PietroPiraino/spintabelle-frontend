@@ -53,7 +53,7 @@ export class LessonsComponent {
   protected readonly faq: readonly { q: string; a: string }[] = [
     {
       q: 'Le lezioni sono adatte a chi inizia adesso?',
-      a: "Sì, purché tu conosca le regole del Texas Hold'em. Il percorso parte dalle decisioni preflop, che nel 3-max hyper turbo sono la maggior parte del gioco, e sale gradualmente verso postflop e ICM. Chi gioca già da tempo di solito salta la parte iniziale e usa i tag per andare sull'argomento che gli manca.",
+      a: "Sì, purché tu conosca le regole del Texas Hold'em. Il percorso parte dalle decisioni preflop, che nel 3-max hyper turbo sono la maggior parte del gioco, e sale gradualmente verso postflop e heads-up finale. Chi gioca già da tempo di solito salta la parte iniziale e usa i tag per andare sull'argomento che gli manca.",
     },
     {
       q: 'In che lingua sono?',

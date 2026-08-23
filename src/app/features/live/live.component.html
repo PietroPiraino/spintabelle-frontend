@@ -20,6 +20,32 @@
         </p>
       </div>
 
+      <!--
+        ⚠️ Il gate sta QUI, subito sotto l'h1, e non in fondo alla pagina come
+        fino al 23/08/2026: era l'ultimo blocco dopo tutto l'evergreen e le FAQ,
+        quindi sopra la piega non c'era nessun pulsante. E non porta piu'
+        `.seo-block`, che lo faceva leggere come un altro paragrafo di SEO.
+      -->
+      <section class="gate" aria-labelledby="live-gate">
+        <h2 id="live-gate">Il calendario è riservato agli iscritti</h2>
+        <p>
+          Per vedere le sessioni in programma serve un account. La registrazione
+          è gratuita.
+        </p>
+        <div class="row">
+          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
+          <a
+            class="btn btn--ghost"
+            [routerLink]="['/login']"
+            [queryParams]="{ redirect: '/live' }"
+            >Accedi</a
+          >
+        </div>
+        @if (!auth.ready()) {
+          <p class="gate__hint">Stiamo verificando la tua sessione…</p>
+        }
+      </section>
+
       <section class="seo-block" aria-labelledby="live-seo-title">
         <h2 id="live-seo-title">Com'è fatta una sessione dal vivo</h2>
         <p>
@@ -57,33 +83,14 @@
         <h2>Domande frequenti sulle live</h2>
         <div class="faq">
           @for (item of faq; track item.q) {
-            <div class="faq__item">
-              <h3 class="faq__q">{{ item.q }}</h3>
+            <details class="faq__item">
+              <summary class="faq__sum"><h3 class="faq__q">{{ item.q }}</h3></summary>
               <p class="faq__a">{{ item.a }}</p>
-            </div>
+            </details>
           }
         </div>
       </section>
 
-      <section class="seo-block" aria-labelledby="live-gate">
-        <h2 id="live-gate">Il calendario è riservato agli iscritti</h2>
-        <p>
-          Per vedere le sessioni in programma serve un account. La registrazione
-          è gratuita.
-        </p>
-        <div class="row">
-          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
-          <a
-            class="btn btn--ghost"
-            [routerLink]="['/login']"
-            [queryParams]="{ redirect: '/live' }"
-            >Accedi</a
-          >
-        </div>
-        @if (!auth.ready()) {
-          <p class="text-muted">Stiamo verificando la tua sessione…</p>
-        }
-      </section>
     </div>
   </section>
 } @else {

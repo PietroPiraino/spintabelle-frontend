@@ -20,9 +20,35 @@
         <p class="lead">
           Il percorso video della scuola: dalle decisioni preflop che decidono
           la maggior parte dei tornei 3-max hyper turbo fino agli spot postflop
-          e all'ICM di fine torneo. In italiano, spiegate dai coach.
+          e all'heads-up finale. In italiano, spiegate dai coach.
         </p>
       </div>
+
+      <!--
+        ⚠️ Il gate sta QUI, subito sotto l'h1, e non in fondo alla pagina come
+        fino al 23/08/2026: era l'ultimo blocco dopo tutto l'evergreen e le FAQ,
+        quindi sopra la piega non c'era nessun pulsante. E non porta piu'
+        `.seo-block`, che lo faceva leggere come un altro paragrafo di SEO.
+      -->
+      <section class="gate" aria-labelledby="lez-gate">
+        <h2 id="lez-gate">Il catalogo è riservato agli iscritti</h2>
+        <p>
+          Per sfogliare le lezioni serve un account: la registrazione è gratuita
+          e dà subito accesso alle lezioni aperte, alle tabelle e agli esercizi.
+        </p>
+        <div class="row">
+          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
+          <a
+            class="btn btn--ghost"
+            [routerLink]="['/login']"
+            [queryParams]="{ redirect: '/lezioni' }"
+            >Accedi</a
+          >
+        </div>
+        @if (!auth.ready()) {
+          <p class="gate__hint">Stiamo verificando la tua sessione…</p>
+        }
+      </section>
 
       <section class="seo-block" aria-labelledby="lez-seo-title">
         <h2 id="lez-seo-title">Cosa contiene il percorso</h2>
@@ -30,8 +56,8 @@
           Le lezioni sono organizzate per argomento e per livello, non come una
           playlist da guardare dall'inizio alla fine: si cerca il tema che
           serve, lo si studia, si torna al tavolo. Ogni lezione è taggata, così
-          «push/fold», «difesa dal big blind» o «ICM» sono un filtro e non una
-          caccia al minuto giusto dentro un video da un'ora.
+          «push/fold», «difesa dal big blind» o «heads-up» sono un filtro e non
+          una caccia al minuto giusto dentro un video da un'ora.
         </p>
         <ul>
           <li>
@@ -44,8 +70,8 @@
             formato dove lo stack è basso e le strade sono poche.
           </li>
           <li>
-            <strong>ICM e fine torneo</strong>: quando il valore delle fiches
-            smette di essere lineare e le decisioni cambiano.
+            <strong>Heads-up finale</strong>: come cambia il gioco quando
+            restate in due e lo stack è corto — la fase che decide il torneo.
           </li>
           <li>
             <strong>Review di sessione</strong>: mani vere commentate, che è il
@@ -74,33 +100,14 @@
         <h2>Domande frequenti sulle lezioni</h2>
         <div class="faq">
           @for (item of faq; track item.q) {
-            <div class="faq__item">
-              <h3 class="faq__q">{{ item.q }}</h3>
+            <details class="faq__item">
+              <summary class="faq__sum"><h3 class="faq__q">{{ item.q }}</h3></summary>
               <p class="faq__a">{{ item.a }}</p>
-            </div>
+            </details>
           }
         </div>
       </section>
 
-      <section class="seo-block" aria-labelledby="lez-gate">
-        <h2 id="lez-gate">Il catalogo è riservato agli iscritti</h2>
-        <p>
-          Per sfogliare le lezioni serve un account: la registrazione è gratuita
-          e dà subito accesso alle lezioni aperte, alle tabelle e agli esercizi.
-        </p>
-        <div class="row">
-          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
-          <a
-            class="btn btn--ghost"
-            [routerLink]="['/login']"
-            [queryParams]="{ redirect: '/lezioni' }"
-            >Accedi</a
-          >
-        </div>
-        @if (!auth.ready()) {
-          <p class="text-muted">Stiamo verificando la tua sessione…</p>
-        }
-      </section>
     </div>
   </section>
 } @else {
