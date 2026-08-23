@@ -14,7 +14,7 @@
 
   @if (metaError()) {
     <div class="empty-state">
-      <div class="empty-state__suit">♠</div>
+      <div class="empty-state__suit" aria-hidden="true"></div>
       <p>Non riusciamo a caricare i formati disponibili.</p>
       <button class="btn btn--ghost" (click)="retry()">Riprova</button>
     </div>

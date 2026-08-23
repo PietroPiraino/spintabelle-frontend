@@ -253,15 +253,16 @@
 }
 
 // ---- Chiusura ----
-.about__divider {
+// ⚠️ Il margine stava su `.about__divider`, che qui non c'è più (il divisore di
+// chiusura è del footer, e ne mostrava un secondo a un pollice dal suo). Lo
+// stacco prima della CTA serve ancora, quindi si è spostato — toglierlo insieme
+// all'elemento avrebbe incollato la card alla sezione precedente.
+.about__cta-wrap {
+  position: relative;
   margin-top: clamp(3rem, 7vw, 5rem);
 }
 
-.about__cta-wrap {
-  position: relative;
-}
-
-// il club si forma sopra la CTA, attorno al divisore coi semi
+// il club si forma sopra la CTA
 .about__cta-emblem {
   position: absolute;
   left: 50%;

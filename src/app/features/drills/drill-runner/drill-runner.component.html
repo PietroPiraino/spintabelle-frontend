@@ -1,7 +1,7 @@
 <section class="container dr">
   @if (drill.errorMsg() && drill.phase() === 'idle') {
     <div class="dr__error empty-state">
-      <div class="empty-state__suit">♠</div>
+      <div class="empty-state__suit" aria-hidden="true"></div>
       <p>{{ drill.errorMsg() }}</p>
       <button class="btn btn--ghost" (click)="backToConfig()">
         Torna alla configurazione

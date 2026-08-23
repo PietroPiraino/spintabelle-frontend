@@ -124,14 +124,14 @@
       }
       @case ('denied') {
         <div class="empty-state">
-          <div class="empty-state__suit" aria-hidden="true">🔒</div>
+          <app-icon class="empty-state__icona" name="lock" [size]="32" />
           <p>Questa sala è riservata agli abbonati.</p>
           <a routerLink="/abbonati" class="btn btn--primary">Abbonati</a>
         </div>
       }
       @case ('error') {
         <div class="empty-state">
-          <div class="empty-state__suit" aria-hidden="true">⚠️</div>
+          <app-icon class="empty-state__icona" name="alert-triangle" [size]="32" />
           <p>{{ error() ?? 'La sala live non è disponibile.' }}</p>
           <button type="button" class="btn btn--ghost" (click)="leave()">
             Torna alle live
@@ -140,14 +140,14 @@
       }
       @case ('ended') {
         <div class="empty-state">
-          <div class="empty-state__suit" aria-hidden="true">👋</div>
+          <app-icon class="empty-state__icona" name="hand" [size]="32" />
           <p>La live è terminata. Grazie per aver partecipato!</p>
           <a routerLink="/live" class="btn btn--primary">Torna alle live</a>
         </div>
       }
       @case ('consent') {
         <div class="empty-state live-room__consent">
-          <div class="empty-state__suit" aria-hidden="true">🔴</div>
+          <app-icon class="empty-state__icona" name="record" [size]="32" />
           <p><strong>Questa sessione live può essere registrata.</strong></p>
           <p>{{ consentText() }}</p>
           <div class="live-room__consent-actions">

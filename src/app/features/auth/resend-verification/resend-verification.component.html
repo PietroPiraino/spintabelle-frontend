@@ -1,7 +1,7 @@
 <div class="auth-page container">
   <div class="card card--pad auth-card rise">
     @if (sent()) {
-      <div class="auth-card__suit" aria-hidden="true">♥</div>
+      <div class="auth-card__suit" aria-hidden="true"></div>
       <h1>Fatto!</h1>
       <p class="auth-card__sub">
         Se esiste un account non verificato con questa email, riceverai un nuovo
@@ -9,7 +9,7 @@
       </p>
       <a routerLink="/login" class="btn btn--primary">Torna all'accesso</a>
     } @else {
-      <div class="auth-card__suit" aria-hidden="true">♦</div>
+      <div class="auth-card__suit" aria-hidden="true"></div>
       <h1>Reinvia la verifica</h1>
       <p class="auth-card__sub">
         Inserisci l'email con cui ti sei registrato: ti rimandiamo il link.

@@ -55,6 +55,12 @@ export const ICON_NAMES = [
   'whatsapp',
   'telegram',
   'facebook',
+  'lock',
+  // i quattro semi delle carte: divisori, stati vuoti, card di accesso
+  'spade',
+  'heart',
+  'diamond',
+  'club',
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];
@@ -76,6 +82,20 @@ export type IconName = (typeof ICON_NAMES)[number];
  * Stesso precedente dei rami `record` e `square`. I glifi vengono da **Simple
  * Icons (CC0 1.0)**, già disegnati sulla griglia 24×24 di questo viewBox — e
  * *non* dai brand center dei tre servizi, che hanno termini d'uso propri.
+ *
+ * ⚠️ **E lo stesso vale per i quattro semi** (`spade`/`heart`/`diamond`/`club`),
+ * che sono sagome piene e non contorni. Sono qui per una ragione precisa e non
+ * per gusto: fino al 23/08/2026 i semi del sito erano **caratteri Unicode nudi**
+ * (`♠ ♥ ♦ ♣`) e su iOS `♥` (U+2665) e `♦` (U+2666) prendono la **presentazione
+ * emoji** di default — un emoji si porta dentro i propri colori, quindi
+ * `color: var(--text-faint)` e `var(--copper-600)` venivano semplicemente
+ * **ignorati**. Su mobile nessuno vedeva il progetto: tre intenzioni diverse
+ * (divisore tenue, ornamento tenue, divisore a tema) collassavano sullo stesso
+ * glifo squillante. Il ripiego da una riga esisteva — il selettore di variazione
+ * testo U+FE0E — ma corregge il *colore* e non la *forma*, che resterebbe quella
+ * del font di sistema, cioè diversa su ogni piattaforma. Qui la forma è nostra.
+ * ⚠️ Non reintrodurre semi come testo in un template: lo vieta la guardia
+ * `scripts/lib/semi-nudi.test.mjs`.
  */
 @Component({
   selector: 'app-icon',
@@ -302,6 +322,34 @@ export type IconName = (typeof ICON_NAMES)[number];
           fill="currentColor"
           stroke="none"
           d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z"
+        />
+      }
+      @case ('lock') {
+        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      }
+      @case ('spade') {
+        <path
+          fill="currentColor"
+          stroke="none"
+          d="M12 2.5c-1.1 1.8-3.4 3.8-5.1 5.4C5 9.6 3.6 11.1 3.6 13.3c0 2.6 2 4.6 4.5 4.6 1.3 0 2.5-.6 3.3-1.6-.2 2.1-1 3.6-2.4 4.4-.5.3-.3.9.2.9h5.6c.5 0 .7-.6.2-.9-1.4-.8-2.2-2.3-2.4-4.4.8 1 2 1.6 3.3 1.6 2.5 0 4.5-2 4.5-4.6 0-2.2-1.4-3.7-3.3-5.4-1.7-1.6-4-3.6-5.1-5.4z"
+        />
+      }
+      @case ('heart') {
+        <path
+          fill="currentColor"
+          stroke="none"
+          d="M12 21.6c-.6-1-9-7.2-9-12.4C3 6.3 5.3 4 8.1 4c1.7 0 3.1.9 3.9 2.2C12.8 4.9 14.2 4 15.9 4 18.7 4 21 6.3 21 9.2c0 5.2-8.4 11.4-9 12.4z"
+        />
+      }
+      @case ('diamond') {
+        <path fill="currentColor" stroke="none" d="M12 2.4 19.4 12 12 21.6 4.6 12z" />
+      }
+      @case ('club') {
+        <path
+          fill="currentColor"
+          stroke="none"
+          d="M12 2.4c-2.1 0-3.8 1.7-3.8 3.8 0 .8.2 1.5.6 2.1-.5-.2-1-.3-1.6-.3-2.1 0-3.8 1.7-3.8 3.8s1.7 3.8 3.8 3.8c1.4 0 2.6-.7 3.3-1.8-.2 2.1-1 3.6-2.4 4.4-.5.3-.3.9.2.9h5.6c.5 0 .7-.6.2-.9-1.4-.8-2.2-2.3-2.4-4.4.7 1.1 1.9 1.8 3.3 1.8 2.1 0 3.8-1.7 3.8-3.8s-1.7-3.8-3.8-3.8c-.6 0-1.1.1-1.6.3.4-.6.6-1.3.6-2.1 0-2.1-1.7-3.8-3.8-3.8z"
         />
       }
     }

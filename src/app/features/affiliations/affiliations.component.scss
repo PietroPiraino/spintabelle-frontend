@@ -328,10 +328,17 @@
 // piastrella sembrerebbe vuota), smorzato dall'opacità perché resta un
 // segnaposto e non deve pesare quanto un logo vero.
 .aff-tile__empty {
-  font-size: 1.6rem;
   line-height: 1;
-  color: var(--navy-700);
   opacity: 0.38;
+  /* ⚠️ Maschera e non carattere: come testo, su iOS il seme prende la
+     presentazione emoji e questo colore non arriva a schermo. Il tracciato vive
+     in `--mask-picche` (_tokens.scss), uno solo per tutto il CSS. L'elemento va
+     lasciato VUOTO nel template: lo sorveglia `scripts/lib/semi-nudi.test.mjs`. */
+  background: var(--navy-700);
+  mask: var(--mask-picche) center / contain no-repeat;
+  -webkit-mask: var(--mask-picche) center / contain no-repeat;
+  width: 1.6rem;
+  height: 1.6rem;
 }
 
 .aff-row__id {

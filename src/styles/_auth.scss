@@ -11,10 +11,16 @@
   width: min(440px, 100%);
   padding: 2.4rem 2.2rem;
 
+  // ⚠️ Maschera e non testo, per la ragione scritta su `.empty-state__suit`:
+  // come carattere nudo questo `--copper-400` su iOS non arrivava a schermo.
+  // L'elemento va lasciato VUOTO nel template.
   .auth-card__suit {
-    font-size: 1.6rem;
-    color: var(--copper-400);
-    margin-bottom: 0.6rem;
+    width: 1.4rem;
+    height: 1.4rem;
+    margin: 0 auto 0.6rem;
+    background: var(--copper-400);
+    mask: var(--mask-picche) center / contain no-repeat;
+    -webkit-mask: var(--mask-picche) center / contain no-repeat;
   }
 
   h1 {

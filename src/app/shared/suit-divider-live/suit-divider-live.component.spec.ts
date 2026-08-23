@@ -37,12 +37,34 @@ describe('SuitDividerLiveComponent', () => {
     expect((fixture.nativeElement as HTMLElement).classList.contains('is-on')).toBeFalse();
   });
 
-  it('senza WebGL non carica three e restano i glifi nitidi ♠ ♥ ♦ ♣', async () => {
+  it('senza WebGL non carica three e restano i quattro semi nitidi', async () => {
+    // ⚠️ I semi sono ICONE dal 23/08/2026, non più i caratteri `♠♥♦♣`: come
+    // testo, su iOS ♥ e ♦ prendevano la presentazione emoji e la bicromia
+    // ♠♣/♥♦ — che è l'identità di questo divisore — non arrivava a schermo.
+    // Questo caso resta quello di prima nella sostanza: senza WebGL il canvas
+    // non parte e i quattro semi devono esserci lo stesso, nell'ordine.
     const { fixture, loader } = setup({ hasWebGL: () => false });
     await fixture.whenStable();
     expect(loader).not.toHaveBeenCalled();
-    const glyphs = (fixture.nativeElement as HTMLElement).querySelectorAll('.sdl__glyph');
-    expect(Array.from(glyphs, (g) => g.textContent?.trim())).toEqual(['♠', '♥', '♦', '♣']);
+    const icone = (fixture.nativeElement as HTMLElement).querySelectorAll('.sdl__glyph app-icon');
+    expect(Array.from(icone, (i) => i.getAttribute('name'))).toEqual([
+      'spade',
+      'heart',
+      'diamond',
+      'club',
+    ]);
+  });
+
+  it('⚠️ ogni seme disegna davvero qualcosa: un nome senza ramo `@case` è un <svg> VUOTO', async () => {
+    // Il modo di fallire di `app-icon` è muto (vedi ICON_NAMES): il nome
+    // compila, il componente rende, e in pagina non si vede niente. Qui i
+    // quattro nomi sono nuovi, quindi il caso va chiuso sul posto invece di
+    // fidarsi che qualcuno guardi la home.
+    const { fixture } = setup({});
+    await fixture.whenStable();
+    const path = (fixture.nativeElement as HTMLElement).querySelectorAll('.sdl__glyph svg path');
+    expect(path.length).toBe(4);
+    path.forEach((p) => expect(p.getAttribute('d')?.length).toBeGreaterThan(20));
   });
 
   it('con prefers-reduced-motion non inizializza nulla', async () => {

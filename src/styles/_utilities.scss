@@ -90,8 +90,27 @@
   padding: 3.5rem 1.5rem;
   color: var(--text-muted);
 
+  // ⚠️ UN SOLO SEME, E NON PIÙ UN CARATTERE. Fino al 23/08/2026 qui dentro
+  // stavano `♠ ♥ ♣ ♦` come testo, e su iOS `♥` e `♦` prendono la presentazione
+  // **emoji**: colori propri, `color` ignorato, quindi questo `--text-faint`
+  // non è mai arrivato a schermo su mobile — si vedevano quattro emoji
+  // squillanti dove il progetto diceva "ornamento tenue". Ora è una maschera:
+  // la sagoma è nostra e il colore lo decide questa riga, su ogni piattaforma.
+  // ⚠️ L'elemento va lasciato VUOTO nel template. Un seme scritto lì dentro
+  // tornerebbe a essere testo: lo vieta `scripts/lib/semi-nudi.test.mjs`.
   .empty-state__suit {
-    font-size: 2rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin: 0 auto 0.8rem;
+    background: var(--text-faint);
+    mask: var(--mask-picche) center / contain no-repeat;
+    -webkit-mask: var(--mask-picche) center / contain no-repeat;
+  }
+
+  // Stati che portano un'icona PROPRIA e significativa (la sala live: lucchetto,
+  // avviso, saluto, registrazione). Lì il seme non è un ornamento da aggiungere:
+  // sarebbe un secondo simbolo accanto a quello che dice la cosa.
+  .empty-state__icona {
     color: var(--text-faint);
     margin-bottom: 0.8rem;
   }

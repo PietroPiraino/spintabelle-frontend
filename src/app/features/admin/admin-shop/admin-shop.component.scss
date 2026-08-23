@@ -15,8 +15,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
-  color: var(--text-faint);
+  /* ⚠️ Il seme è uno PSEUDO-ELEMENTO e non l'elemento stesso: la classe sta
+     sulla piastrella, e mascherare quella cancellerebbe il suo sfondo e il suo
+     bordo insieme al resto (la maschera si applica a tutto l'elemento). Ed è una
+     maschera e non un carattere perché su iOS il seme come testo prende la
+     presentazione emoji e il colore qui sotto non arriverebbe a schermo. Il
+     tracciato vive in `--mask-picche` (_tokens.scss), uno solo per tutto il CSS.
+     L'elemento va lasciato VUOTO nel template: lo sorveglia
+     `scripts/lib/semi-nudi.test.mjs`. */
+  &::before {
+    content: '';
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--text-faint);
+    mask: var(--mask-picche) center / contain no-repeat;
+    -webkit-mask: var(--mask-picche) center / contain no-repeat;
+  }
 }
 
 .shop-actions {

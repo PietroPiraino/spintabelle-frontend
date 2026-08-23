@@ -39,6 +39,15 @@
   --glass-strong: rgba(255, 255, 255, 0.96); // menu mobile
   --btn-ghost-bg: rgba(255, 255, 255, 0.7);
   --gold-text: #b06f00; // oro leggibile come testo
+
+  // ⚠️ SAGOMA (non un colore), identica nei tre temi come `--logo-plate`: è la
+  // maschera del seme di picche usata da `.empty-state__suit` e
+  // `.auth-card__suit`. Sta qui perché il tracciato esista in UN posto solo per
+  // tutto il CSS; il colore lo mette chi la usa, con `background`.
+  // ⚠️ È lo STESSO `d` del ramo `spade` di `app-icon`, e a tenerli allineati c'è
+  // `scripts/lib/semi-nudi.test.mjs`: due sagome diverse per lo stesso seme
+  // nella stessa pagina sono esattamente il difetto che questo lotto ha chiuso.
+  --mask-picche: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5c-1.1 1.8-3.4 3.8-5.1 5.4C5 9.6 3.6 11.1 3.6 13.3c0 2.6 2 4.6 4.5 4.6 1.3 0 2.5-.6 3.3-1.6-.2 2.1-1 3.6-2.4 4.4-.5.3-.3.9.2.9h5.6c.5 0 .7-.6.2-.9-1.4-.8-2.2-2.3-2.4-4.4.8 1 2 1.6 3.3 1.6 2.5 0 4.5-2 4.5-4.6 0-2.2-1.4-3.7-3.3-5.4-1.7-1.6-4-3.6-5.1-5.4z'/%3E%3C/svg%3E");
   --halo: rgba(247, 245, 240, 0.95); // alone di protezione testo hero
 
   // ⚠️ Substrato dei loghi di terzi (piastrella delle sale in /affiliazioni).

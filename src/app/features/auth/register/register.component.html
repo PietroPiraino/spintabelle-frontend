@@ -1,7 +1,7 @@
 <div class="auth-page container">
   @if (sentTo(); as email) {
     <div class="card card--pad auth-card rise" role="status">
-      <div class="auth-card__suit" aria-hidden="true">♥</div>
+      <div class="auth-card__suit" aria-hidden="true"></div>
       <h1>Controlla la posta</h1>
       <p class="auth-card__sub">
         Ti abbiamo inviato un link di verifica a <strong>{{ email }}</strong>.
@@ -14,7 +14,7 @@
     </div>
   } @else {
     <div class="card card--pad auth-card rise">
-      <div class="auth-card__suit" aria-hidden="true">♣</div>
+      <div class="auth-card__suit" aria-hidden="true"></div>
       <h1>Unisciti al banco</h1>
       <p class="auth-card__sub">Crea l'account per accedere alle lezioni della scuola.</p>
 

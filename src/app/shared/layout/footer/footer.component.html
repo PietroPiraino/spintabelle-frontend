@@ -1,6 +1,20 @@
 <footer class="footer">
   <div class="container">
-    <div class="suit-divider" aria-hidden="true">♠ ♥ ♣ ♦</div>
+    <!--
+      Divisore di chiusura. ⚠️ È l'UNICO del sito che chiude una pagina, e il
+      footer lo mostra su tutte: nessuna pagina deve emetterne uno prima della
+      fine, o se ne vedono due a un pollice di distanza (era il caso di
+      /chi-siamo fino al 23/08/2026).
+      ⚠️ Icone e non caratteri: come testo, su iOS ♥ e ♦ prendono la
+      presentazione emoji e questi colori non arrivano a schermo. Ordine
+      canonico ♠ ♥ ♦ ♣, lo stesso di `app-suit-divider-live`.
+    -->
+    <div class="suit-divider" aria-hidden="true">
+      <app-icon name="spade" [size]="15" />
+      <app-icon name="heart" [size]="15" class="suit-divider__caldo" />
+      <app-icon name="diamond" [size]="15" class="suit-divider__caldo" />
+      <app-icon name="club" [size]="15" />
+    </div>
 
     <div class="footer__grid">
       <div class="footer__brand">

@@ -12,13 +12,17 @@ import { THREE_LOADER } from '../three/three-loader';
 import { SceneResources } from '../three/disposable-scene';
 import { seededRandom } from '../three/seeded-random';
 import { bindSuitPalette, createSuitPoints } from '../three/suit-points';
+import { IconComponent } from '../ui/icon/icon.component';
 
 /**
  * Il divisore '♠ ♥ ♦ ♣' del design system, ma VIVO — variante "semi nitidi +
  * alone".
  *
- * I quattro semi sono GLIFI tipografici veri (contenuto HTML reale, sempre
- * leggibili a colpo d'occhio, theme-aware via token CSS). Dietro, un canvas
+ * I quattro semi sono ICONE SVG (`app-icon`) — contenuto reale, sempre
+ * leggibili a colpo d'occhio, theme-aware via token CSS. ⚠️ Erano glifi
+ * tipografici fino al 23/08/2026, e la bicromia ♠♣/♥♦ che è l'identità di
+ * questo divisore su iOS **non si vedeva**: `♥` e `♦` prendono la presentazione
+ * emoji, che si porta dentro i propri colori. Dietro, un canvas
  * disegna per ciascun seme un piccolo ALONE di micro-semi che orbitano lenti
  * e respirano: il divisore "vibra" senza mai chiedere di indovinare una forma.
  *
@@ -30,14 +34,14 @@ import { bindSuitPalette, createSuitPoints } from '../three/suit-points';
  */
 @Component({
   selector: 'app-suit-divider-live',
-  imports: [],
+  imports: [IconComponent],
   template: `
     <canvas #canvas class="sdl__canvas" aria-hidden="true"></canvas>
     <div class="sdl__row" aria-hidden="true">
-      <span class="sdl__glyph" data-suit="0">♠</span>
-      <span class="sdl__glyph sdl__glyph--warm" data-suit="1">♥</span>
-      <span class="sdl__glyph sdl__glyph--warm" data-suit="2">♦</span>
-      <span class="sdl__glyph" data-suit="3">♣</span>
+      <span class="sdl__glyph" data-suit="0"><app-icon name="spade" /></span>
+      <span class="sdl__glyph sdl__glyph--warm" data-suit="1"><app-icon name="heart" /></span>
+      <span class="sdl__glyph sdl__glyph--warm" data-suit="2"><app-icon name="diamond" /></span>
+      <span class="sdl__glyph" data-suit="3"><app-icon name="club" /></span>
     </div>
   `,
   styleUrl: './suit-divider-live.component.scss',

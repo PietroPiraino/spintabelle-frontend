@@ -98,13 +98,18 @@
 }
 
 // Separatore con semi di carte
+//
+// ⚠️ I semi sono ICONE (`app-icon`), non più i caratteri `♠ ♥ ♣ ♦`: come testo,
+// su iOS ♥ (U+2665) e ♦ (U+2666) prendono la presentazione **emoji**, che si
+// porta dentro i propri colori — quindi il `color` di questa regola non arrivava
+// a schermo su mobile. La bicromia qui sotto è la stessa di
+// `app-suit-divider-live`, così le due file di semi della home sono la stessa
+// cosa in due misure invece che due disegni diversi.
 .suit-divider {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  color: var(--text-faint);
-  font-size: 0.8rem;
-  letter-spacing: 0.8em;
+  gap: 1.5rem;
+  color: var(--text);
   justify-content: center;
   margin: 0 auto;
 
@@ -120,4 +125,9 @@
   &::after {
     background: linear-gradient(90deg, var(--line-strong), transparent);
   }
+}
+
+// ♥ e ♦ nel caldo del brand, come nel divisore vivo.
+.suit-divider__caldo {
+  color: var(--copper-600);
 }

@@ -129,7 +129,7 @@
     <div class="spinner" role="status" aria-label="Caricamento della coda"></div>
   } @else if (coda() && articoli().length === 0) {
     <div class="empty-state">
-      <p class="empty-state__suit">♠</p>
+      <p class="empty-state__suit" aria-hidden="true"></p>
       <p>Nessun articolo in coda.</p>
       <p class="admin-item__meta">
         Quando la redazione ne propone uno, compare qui.

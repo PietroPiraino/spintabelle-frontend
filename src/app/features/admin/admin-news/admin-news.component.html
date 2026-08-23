@@ -169,7 +169,7 @@
         <!-- ⚠️ Il vuoto NOMINA sempre il filtro attivo: un elenco vuoto muto si
              legge come "ho perso gli articoli". -->
         <div class="empty-state">
-          <p class="empty-state__suit">♠</p>
+          <p class="empty-state__suit" aria-hidden="true"></p>
           <p>{{ vuotoTesto() }}</p>
           @if (filtroCaricato() !== TUTTI) {
             <p class="admin-item__meta">
