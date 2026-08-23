@@ -216,6 +216,12 @@
                 @if (senzaCopertina(news)) {
                   <span class="admin-news__senza-copertina">· Senza copertina</span>
                 }
+                <!-- ⚠️ Dice quello che nessun'altra schermata diceva: il
+                     23/08/2026 il canale Forum ha rifiutato ogni annuncio e
+                     l'unico segno era un warning nei log di Render. -->
+                @if (nonAnnunciato(news)) {
+                  <span class="admin-news__non-annunciato">· Non annunciato</span>
+                }
               </span>
               @if (news.status === 'SCARTATO' && news.decisionNote) {
                 <span class="admin-news__motivo">Motivo: {{ news.decisionNote }}</span>
@@ -378,6 +384,19 @@
                      storia si posta con il link all'articolo, e fuori da quello
                      stato non c'è una pagina da collegare — il server risponde
                      409. Un pulsante che finisce in 409 è una bugia. -->
+                <!-- ⚠️ Solo dove serve davvero: su un articolo già nel canale
+                     il server risponde 409, perché un secondo post non si
+                     ritira. Qui il pulsante segue il marcatore, non lo stato. -->
+                @if (nonAnnunciato(news)) {
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm admin-news__discord"
+                    [disabled]="inVolo()"
+                    (click)="annunciaSuDiscord(news)"
+                  >{{
+                    inVoloSu(news._id, 'discord') ? 'Annuncio…' : 'Annuncia su Discord'
+                  }}</button>
+                }
                 @if (mostraCopertina(news)) {
                   <button
                     type="button"

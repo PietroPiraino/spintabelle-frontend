@@ -698,6 +698,19 @@ export interface NewsAdmin {
    * nell'elenco recuperabile col comando «Genera copertina».
    */
   ogImageUrl?: string;
+
+  /**
+   * Quando l'articolo è stato annunciato nel canale Discord delle news.
+   *
+   * ⚠️ **Assente copre DUE casi** e non sono distinguibili a posteriori: «mai
+   * annunciato» e «tentato, rifiutato da Discord, marcatore rilasciato» — il
+   * rilascio usa `$unset`, che cancella il campo. Per il pannello la differenza
+   * non conta: in entrambi l'articolo **non è nel canale** e il comando serve.
+   * Conta invece che la cosa sia **visibile**, perché il rifiuto del 23/08/2026
+   * (canale Forum senza `thread_name`) non lasciava alcun segno fuori dai log
+   * di Render.
+   */
+  discordPostedAt?: string;
   /**
    * ⚠️ **Opzionale, e non per prudenza.** `GET /admin/news?status=TUTTI` filtra
    * con `{}` e **non** con un `$in` sui cinque stati, di proposito: così una

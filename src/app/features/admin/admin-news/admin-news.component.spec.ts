@@ -737,6 +737,92 @@ describe('AdminNewsComponent', () => {
     );
   });
 
+  // ── 10. L'annuncio su Discord: il marcatore e il comando ─────────────────
+
+  it('«Non annunciato» c’è dove l’annuncio manca e NON dove c’è', async () => {
+    await rispondi([
+      newsOf('muto', 'PUBBLICATO'),
+      newsOf('detto', 'PUBBLICATO', {
+        discordPostedAt: new Date(ORA).toISOString(),
+      }),
+      newsOf('boz', 'BOZZA'),
+    ]);
+
+    expect(uno('.admin-news__non-annunciato', riga('Titolo muto'))).not.toBeNull();
+    expect(uno('.admin-news__non-annunciato', riga('Titolo detto'))).toBeNull();
+    // Fuori da PUBBLICATO non c'è niente da annunciare: il server fa 409.
+    expect(uno('.admin-news__non-annunciato', riga('Titolo boz'))).toBeNull();
+  });
+
+  it('il comando segue il marcatore: c’è sui muti, non su chi è già uscito', async () => {
+    await rispondi([
+      newsOf('muto', 'PUBBLICATO'),
+      newsOf('detto', 'PUBBLICATO', {
+        discordPostedAt: new Date(ORA).toISOString(),
+      }),
+    ]);
+
+    expect(uno('.admin-news__discord', riga('Titolo muto'))).not.toBeNull();
+    // ⚠️ Su chi è già nel canale il pulsante NON c'è: il server risponde 409
+    // perché un secondo post non si ritira, e un pulsante che finisce in 409 è
+    // una bugia (stessa regola della copertina fuori da PUBBLICATO).
+    expect(uno('.admin-news__discord', riga('Titolo detto'))).toBeNull();
+  });
+
+  it('annuncia: chiama la rotta e ricarica l’elenco', async () => {
+    await rispondi([newsOf('muto', 'PUBBLICATO')]);
+
+    await clicca(
+      uno<HTMLButtonElement>('.admin-news__discord', riga('Titolo muto'))!,
+    );
+    const req = http.expectOne(`${API}/admin/news/muto/discord`);
+    expect(req.request.method).toBe('POST');
+    req.flush(
+      newsOf('muto', 'PUBBLICATO', {
+        discordPostedAt: new Date(ORA).toISOString(),
+      }),
+    );
+    await stabilizza();
+    // ⚠️ Qui la ricarica ci vuole (a differenza della storia): la riga è
+    // cambiata, e il marcatore deve sparire.
+    await rispondi([
+      newsOf('muto', 'PUBBLICATO', {
+        discordPostedAt: new Date(ORA).toISOString(),
+      }),
+    ]);
+    expect(uno('.admin-news__non-annunciato', riga('Titolo muto'))).toBeNull();
+  });
+
+  /**
+   * ⚠️ **La spec portante di questa sezione, e il motivo per cui il comando
+   * esiste.** Il gancio automatico assorbe i rifiuti — deve, perché una
+   * pubblicazione non può fallire per un annuncio — e per questo il difetto del
+   * canale Forum è rimasto invisibile un giorno intero: l'unico segnale era un
+   * warning nei log di Render. Qui il rifiuto di Discord deve arrivare
+   * **verbatim** sotto gli occhi di chi ha premuto, non riassunto in
+   * «Operazione non riuscita».
+   */
+  it('⚠️ un rifiuto di Discord si legge PAROLA PER PAROLA nel toast', async () => {
+    const toast = spyOn(TestBed.inject(ToastService), 'error');
+    await rispondi([newsOf('muto', 'PUBBLICATO')]);
+
+    await clicca(
+      uno<HTMLButtonElement>('.admin-news__discord', riga('Titolo muto'))!,
+    );
+    http.expectOne(`${API}/admin/news/muto/discord`).flush(
+      {
+        message:
+          'Discord ha rifiutato l’annuncio: HTTP 400 {"message":"Webhooks posted to forum channels must have a thread_name or thread_id","code":220001}',
+      },
+      { status: 500, statusText: 'Internal Server Error' },
+    );
+    await stabilizza();
+
+    const messaggio = String(toast.calls.mostRecent().args[0]);
+    expect(messaggio).toContain('thread_name');
+    expect(messaggio).not.toBe('Operazione non riuscita.');
+  });
+
   // ── 9. La storia Instagram: un download, non una mutazione ───────────────
 
   /**

@@ -206,6 +206,25 @@ export class NewsService {
   }
 
   /**
+   * «Annuncia su Discord»: manda nel canale news un articolo pubblicato che
+   * l'annuncio non ce l'ha. ⚠️ Senza corpo (idioma di `snooze`).
+   *
+   * ⚠️ **NON è best-effort, al contrario del gancio automatico** in
+   * `approve()`: là un rifiuto si assorbe perché la pubblicazione non deve
+   * fallire, qui l'annuncio è l'unico scopo → un rifiuto di Discord risponde
+   * **500 con dentro la sua frase**, e va mostrata verbatim
+   * (`apiErrorMessage`). È la superficie che mancava: il difetto del canale
+   * Forum è rimasto invisibile un giorno intero perché l'unico segnale era un
+   * warning nei log di Render.
+   *
+   * ⚠️ **409 se l'articolo è già annunciato**: un secondo post nel canale non si
+   * può ritirare, quindi la guardia qui non si allenta come sulla copertina.
+   */
+  annunciaSuDiscord(id: string): Observable<NewsAdmin> {
+    return this.http.post<NewsAdmin>(`${API}/admin/news/${id}/discord`, {});
+  }
+
+  /**
    * La **storia Instagram** (1080×1920) di un articolo pubblicato, come PNG.
    *
    * ⚠️ **`responseType: 'blob'`, e la GET passa comunque dall'interceptor**:

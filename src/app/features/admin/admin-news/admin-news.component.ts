@@ -37,7 +37,12 @@ type AzioneRitorno = 'riapri' | 'in-revisione' | 'ritira';
  * Tutto ciò che può essere in volo su una riga: il ritorno, la copertina
  * social e la cancellazione.
  */
-type AzioneRiga = AzioneRitorno | 'copertina' | 'storia' | 'elimina';
+type AzioneRiga =
+  | AzioneRitorno
+  | 'copertina'
+  | 'storia'
+  | 'discord'
+  | 'elimina';
 
 /** La singola via di ritorno offerta da uno stato, già in italiano. */
 interface Ritorno {
@@ -475,6 +480,43 @@ export class AdminNewsComponent {
    * «manca». Dirlo comunque costa una riga muta e evita l'unica alternativa
    * peggiore, cioè una regola con eccezioni da tenere allineata a mano.
    */
+  /**
+   * L'articolo è pubblicato ma **non è nel canale Discord**.
+   *
+   * ⚠️ Copre sia «mai annunciato» sia «rifiutato e rilasciato»: il rilascio usa
+   * `$unset`, quindi i due casi sono indistinguibili — e per chi guarda il
+   * pannello sono la stessa cosa, perché in entrambi l'articolo nel canale non
+   * c'è. ⚠️ Legato a `PUBBLICATO` perché fuori di lì non c'è niente da
+   * annunciare e il server risponde 409.
+   *
+   * ⚠️ Comparirà anche sugli articoli **anteriori** al gancio (che nel canale
+   * non sono mai stati, ed è vero): l'alternativa era una data di taglio
+   * arbitraria scritta nel codice. Meglio un marcatore onesto e ignorabile che
+   * una regola inventata.
+   */
+  protected nonAnnunciato(news: NewsAdmin): boolean {
+    return news.status === 'PUBBLICATO' && !news.discordPostedAt;
+  }
+
+  /**
+   * ⚠️ Un fallimento qui arriva come **500 con la frase di Discord dentro**, e
+   * `esegui()` lo mostra verbatim: è precisamente ciò che mancava il
+   * 23/08/2026, quando il canale Forum rifiutava ogni annuncio
+   * (`thread_name` mancante) e l'unico segnale era un log su Render.
+   *
+   * ⚠️ `toccaLaCoda: false`: lo stato non cambia, la coda non ha nulla da
+   * rileggere.
+   */
+  protected annunciaSuDiscord(news: NewsAdmin): void {
+    this.esegui(
+      'discord',
+      news._id,
+      this.newsApi.annunciaSuDiscord(news._id),
+      'Articolo annunciato nel canale Discord.',
+      false,
+    );
+  }
+
   protected senzaCopertina(news: NewsAdmin): boolean {
     return !news.ogImageUrl && !news.coverImageUrl;
   }

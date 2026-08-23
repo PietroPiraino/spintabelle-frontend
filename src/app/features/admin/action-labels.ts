@@ -35,6 +35,7 @@ export const ACTION_LABELS: Record<string, string> = {
   // Panoramica stampano lo slug grezzo ("approve-news") su ogni decisione
   // presa finora.
   'approve-news': 'Articolo pubblicato',
+  'discord-news': 'Articolo annunciato su Discord',
   'reject-news': 'Articolo scartato',
   'postpone-news': 'Articolo riportato in bozza',
   'snooze-news': 'Articolo rimandato',

@@ -115,7 +115,12 @@
 // muto (`.admin-item__meta`, che eredita già) non lo farebbe. `--copper-600` è
 // l'accento di testo del tema, quindi vive in tutti e tre, ed è distinto
 // dall'oro del chip «Pubblicato» che gli sta accanto sulla stessa riga.
-.admin-news__senza-copertina {
+// ⚠️ Due marcatori, due classi, **stesso colore**: condividere la classe li
+// rendeva indistinguibili nel DOM, e tre spec che asserivano l'assenza di
+// «Senza copertina» trovavano invece «Non annunciato». Un selettore che risponde
+// per un altro marcatore è un test che non misura più ciò che dice.
+.admin-news__senza-copertina,
+.admin-news__non-annunciato {
   color: var(--copper-600);
 }
 
