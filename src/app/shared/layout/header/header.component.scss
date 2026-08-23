@@ -436,6 +436,13 @@
     align-items: stretch;
     gap: 0.3rem;
     padding: 1.2rem 1.4rem 1.6rem;
+    // ⚠️ Senza contenitore di scroll il pannello cresce e basta: con una
+    // tendina aperta su viewport corto (o telefono in orizzontale) i pulsanti
+    // di accesso in fondo diventano irraggiungibili. Il 59px e' l'altezza
+    // dell'header, la stessa dell'`inset` qui sopra: vanno cambiati insieme.
+    max-height: calc(100dvh - 59px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background: var(--glass-strong);
     backdrop-filter: blur(18px);
     border-bottom: 1px solid var(--line);

@@ -19,14 +19,6 @@
     </button>
 
     <nav id="nav-principale" class="header__nav" [class.is-open]="menuOpen()" aria-label="Navigazione principale">
-      <!-- voce diretta: prodotto-core -->
-      <a
-        [routerLink]="tabelle.path"
-        routerLinkActive="is-active"
-        (click)="closeMenu()"
-        class="header__link"
-      >{{ tabelle.label }}</a>
-
       <!-- gruppi a tendina: hover/focus su desktop, accordion (tap) su mobile -->
       @for (group of groups; track group.id) {
         <div class="header__has-menu header__group" [class.is-open]="openDropdown() === group.id">
@@ -59,13 +51,15 @@
         </div>
       }
 
-      <!-- voce diretta: conversione -->
-      <a
-        [routerLink]="abbonati.path"
-        routerLinkActive="is-active"
-        (click)="closeMenu()"
-        class="header__link"
-      >{{ abbonati.label }}</a>
+      <!-- voci dirette: News, Live e la conversione -->
+      @for (link of dirette; track link.path) {
+        <a
+          [routerLink]="link.path"
+          routerLinkActive="is-active"
+          (click)="closeMenu()"
+          class="header__link"
+        >{{ link.label }}</a>
+      }
 
       @if (auth.isAdmin()) {
         <a routerLink="/admin" routerLinkActive="is-active" (click)="closeMenu()" class="header__link header__link--admin">

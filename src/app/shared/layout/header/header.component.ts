@@ -44,43 +44,54 @@ export class HeaderComponent {
    */
   protected readonly openDropdown = signal<string | null>(null);
 
-  /** Voci dirette ai lati delle tendine: prodotto-core e conversione. */
-  protected readonly tabelle: NavLink = { path: '/tabelle', label: 'Tabelle' };
-  protected readonly abbonati: NavLink = { path: '/abbonati', label: 'Abbonati' };
-
-  /** Le altre destinazioni, raggruppate per ridurre le voci di primo livello. */
+  /**
+   * Le destinazioni raggruppate. Due tendine sole: `Studia` = tutto cio' che si
+   * studia, `Scuola` = tutto il resto del perimetro.
+   * ⚠️ Le voci di primo livello restano CINQUE (2 tendine + 3 link diretti),
+   * come prima del 23/08/2026: `Tabelle` e' scesa in `Studia`, `News` e `Live`
+   * sono salite. Le etichette nuove sono piu' corte e i caret passano da 3 a 2,
+   * quindi la barra si e' ristretta e il breakpoint burger (1024/1025px, la
+   * sola coppia di media query del file) NON va toccato. Aggiungendo altre voci
+   * dirette va invece rimisurata: a 1025px la barra deve stare su una riga.
+   */
   protected readonly groups: NavGroup[] = [
     {
       id: 'studia',
       label: 'Studia',
       children: [
-        // ⚠️ Le guide stanno in cima e sono pubbliche: sono la porta d'ingresso
-        // per chi arriva da una ricerca e non ci conosce. Il link dalla nav di
-        // ogni pagina e' anche cio' che le fa scoprire a un crawler.
-        { path: '/guide', label: 'Guide', isNew: true },
-        { path: '/allenamento', label: 'Allenamento' },
-        { path: '/simulatore-varianza', label: 'Simulatore varianza' },
         { path: '/lezioni', label: 'Lezioni' },
-        { path: '/live', label: 'Live' },
+        { path: '/docs', label: 'Docs' },
+        { path: '/simulatore-varianza', label: 'Simulatore varianza' },
+        { path: '/tabelle', label: 'Tabelle' },
+        { path: '/allenamento', label: 'Allenamento' },
       ],
     },
     {
       id: 'scuola',
       label: 'Scuola',
       children: [
-        { path: '/news', label: 'News' },
+        { path: '/affiliazioni', label: 'Affiliazioni' },
+        // ⚠️ `isNew` e' un flag che si sposta A MANO: oggi solo il Negozio.
+        // Le guide ce l'hanno avuto e non sono piu' una novita'.
+        { path: '/negozio', label: 'Negozio', isNew: true },
+        { path: '/guide', label: 'Guide' },
         { path: '/chi-siamo', label: 'Chi siamo' },
       ],
     },
-    {
-      id: 'risorse',
-      label: 'Risorse',
-      children: [
-        { path: '/negozio', label: 'Negozio', isNew: true },
-        { path: '/docs', label: 'Docs' },
-        { path: '/affiliazioni', label: 'Affiliazioni' },
-      ],
-    },
+  ];
+
+  /**
+   * Voci dirette, dopo le tendine: le due sezioni che si aggiornano da sole
+   * (e vanno raggiunte in un clic) e la conversione.
+   * ⚠️ Il micro-badge `isNew` NON funziona qui: e' posizionato con
+   * `margin-left: auto` e vive del `display: flex` di `.header__menu-link`,
+   * che `.header__link` non ha. Per un "Nuovo" su una voce diretta servono
+   * markup e CSS nuovi.
+   */
+  protected readonly dirette: NavLink[] = [
+    { path: '/news', label: 'News' },
+    { path: '/live', label: 'Live' },
+    { path: '/abbonati', label: 'Abbonati' },
   ];
 
   /** Punti BFF col separatore migliaia italiano (150000 → "150.000"). */
