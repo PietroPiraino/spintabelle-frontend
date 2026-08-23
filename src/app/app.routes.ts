@@ -105,7 +105,7 @@ export const routes: Routes = [
     title: 'Lezioni di poker per Spin & Go e Twister — Best Fish Forever',
     data: {
       description:
-        'Le lezioni video della scuola, in italiano: preflop, postflop e ICM per Spin & Go e Twister. Una parte è aperta a tutti gli iscritti, la registrazione è gratis.',
+        'Le lezioni video della scuola, in italiano: preflop, postflop e heads-up finale per Spin & Go e Twister. Una parte è aperta a tutti gli iscritti, la registrazione è gratis.',
     },
   },
   {
