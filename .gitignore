@@ -55,3 +55,28 @@ inspect-glb.mjs
 # della shell, non file di progetto. Ne era finito uno in src/, dove un
 # `git add .` distratto se lo sarebbe portato dentro.
 *.stackdump
+
+# ── Artefatti degli strumenti locali (rigenerabili) ───────────────────
+# ⚠️ Sono OUTPUT, non sorgenti: 160 MB accumulati fra giugno e agosto 2026
+# che sporcavano `git status` a ogni giro e nascondevano le modifiche vere.
+# Gli SCRIPT che li producono restano versionati (deck-*.mjs, video-*.mjs…):
+# ignorare lo strumento e non il suo prodotto è il verso giusto.
+shots/
+shots-legal/
+tmp-shot/
+tmp-audit-shots/
+tmp-audit-*.json
+tmp-audit-*.err
+
+# Screenshot di lavoro nominati con il publicId di una mano del replayer.
+*-passo[0-9]*.png
+*-ultimo.png
+
+# ⚠️ Cartella creata da uno script che ha costruito un percorso da una
+# variabile non definita (`undefined/carica.png`): è il sintomo di un difetto,
+# non un file di progetto. Ignorata perché non torni; se ricompare, il difetto
+# è ancora lì.
+undefined/
+
+# Stato locale di wrangler/miniflare (cache delle Pages Functions in sviluppo).
+.wrangler/

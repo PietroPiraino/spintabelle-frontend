@@ -1,0 +1,357 @@
+<style>
+@font-face{font-family:'Bricolage';font-weight:200 800;font-display:swap;src:url('__DISP__') format('woff2')}
+@font-face{font-family:'Instrument';font-weight:400 700;font-display:swap;src:url('__BODY__') format('woff2')}
+@font-face{font-family:'SplineMono';font-weight:400 600;font-display:swap;src:url('__MONO__') format('woff2')}
+
+/* ---- tokens: Notte (default) + Ghiaccio ---- */
+:root{
+  --bg:#070b18; --bg2:#0b1124; --surface:#101a33; --surface2:#16223f;
+  --text:#ede4cd; --muted:rgba(237,228,205,.70); --faint:rgba(237,228,205,.44);
+  --line:rgba(237,228,205,.12); --line2:rgba(237,228,205,.22);
+  --ember:#ff6a1f; --gold:#ffb547; --goldink:#ffb547; --cyan:#2ee6e6; --felt:#2fce96; --live:#ff3b52;
+  --shadow:0 24px 60px rgba(2,5,12,.6);
+  --disp:'Bricolage','Segoe UI',sans-serif; --body:'Instrument','Segoe UI',sans-serif; --mono:'SplineMono','Consolas',monospace;
+}
+@media (prefers-color-scheme:light){
+  :root{
+    --bg:#eeeae0; --bg2:#f5f2ea; --surface:#ffffff; --surface2:#fbfaf6;
+    --text:#16223f; --muted:rgba(22,34,63,.66); --faint:rgba(22,34,63,.42);
+    --line:rgba(22,34,63,.10); --line2:rgba(22,34,63,.18);
+    --ember:#e25510; --gold:#c98600; --goldink:#a86a00; --cyan:#0b8a99; --felt:#00875a; --live:#d9273c;
+    --shadow:0 20px 48px rgba(22,34,63,.14);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#070b18; --bg2:#0b1124; --surface:#101a33; --surface2:#16223f;
+  --text:#ede4cd; --muted:rgba(237,228,205,.70); --faint:rgba(237,228,205,.44);
+  --line:rgba(237,228,205,.12); --line2:rgba(237,228,205,.22);
+  --ember:#ff6a1f; --gold:#ffb547; --goldink:#ffb547; --cyan:#2ee6e6; --felt:#2fce96; --live:#ff3b52;
+  --shadow:0 24px 60px rgba(2,5,12,.6);
+}
+:root[data-theme="light"]{
+  --bg:#eeeae0; --bg2:#f5f2ea; --surface:#ffffff; --surface2:#fbfaf6;
+  --text:#16223f; --muted:rgba(22,34,63,.66); --faint:rgba(22,34,63,.42);
+  --line:rgba(22,34,63,.10); --line2:rgba(22,34,63,.18);
+  --ember:#e25510; --gold:#c98600; --goldink:#a86a00; --cyan:#0b8a99; --felt:#00875a; --live:#d9273c;
+  --shadow:0 20px 48px rgba(22,34,63,.14);
+}
+
+*{box-sizing:border-box}
+.wrap{margin:0;background:
+  radial-gradient(1200px 720px at 88% -8%, color-mix(in srgb, var(--ember) 16%, transparent), transparent 60%),
+  radial-gradient(1000px 680px at -10% 108%, color-mix(in srgb, var(--cyan) 12%, transparent), transparent 58%),
+  linear-gradient(168deg,var(--bg),var(--bg2));
+  color:var(--text);font-family:var(--body);line-height:1.6;
+  font-feature-settings:"ss01";-webkit-font-smoothing:antialiased;min-height:100vh}
+.shell{max-width:1120px;margin:0 auto;padding:clamp(28px,5vw,64px) clamp(18px,4vw,40px) 80px}
+
+/* header */
+.top{display:flex;align-items:center;gap:14px;margin-bottom:clamp(28px,5vw,52px)}
+.top img{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.4))}
+.top .wm{font-family:var(--disp);font-weight:800;font-size:22px;letter-spacing:.13em;text-transform:uppercase}
+.top .wm b{color:var(--gold)}
+.top .kk{margin-left:auto;font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--faint);border:1px solid var(--line2);border-radius:999px;padding:8px 15px}
+
+/* hero */
+.eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:600;font-size:13px;
+  letter-spacing:.26em;text-transform:uppercase;color:var(--ember);margin-bottom:18px}
+.eyebrow .d{width:9px;height:9px;border-radius:50%;background:var(--live);box-shadow:0 0 12px var(--live)}
+h1{font-family:var(--disp);font-weight:800;letter-spacing:-.02em;line-height:1.02;text-wrap:balance;
+  font-size:clamp(34px,6vw,60px);margin:0 0 16px}
+h1 .g{color:var(--gold)}
+.lede{font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:60ch;margin:0}
+
+/* preview figure */
+.figure{margin:clamp(28px,5vw,44px) 0 0;border-radius:18px;overflow:hidden;border:1px solid var(--line2);
+  box-shadow:var(--shadow);background:var(--surface)}
+.figure img{display:block;width:100%;height:auto}
+.figure figcaption{font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;color:var(--faint);
+  padding:12px 18px;border-top:1px solid var(--line);background:var(--surface2)}
+.figure figcaption b{color:var(--muted);font-weight:600}
+
+/* sections */
+section{margin-top:clamp(46px,7vw,84px)}
+.h2{font-family:var(--disp);font-weight:800;font-size:clamp(24px,3.4vw,34px);letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance}
+.h2 .num{font-family:var(--mono);font-weight:600;font-size:.5em;letter-spacing:.1em;color:var(--ember);vertical-align:middle;margin-right:12px}
+.sub{color:var(--muted);margin:0 0 26px;max-width:64ch}
+
+/* zone cards */
+.zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.zone{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:22px 22px 22px 26px;overflow:hidden}
+.zone::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--zc)}
+.zone .zt{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:800;font-size:19px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.zone .zt .chip{width:11px;height:11px;border-radius:50%;background:var(--zc);box-shadow:0 0 10px color-mix(in srgb,var(--zc) 70%,transparent)}
+.zone p{margin:0;color:var(--muted);font-size:15px}
+.zone .fmt{margin-top:14px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--faint);text-transform:uppercase}
+.z-screen{--zc:var(--ember)} .z-cam{--zc:var(--gold)} .z-chat{--zc:var(--cyan)}
+
+/* coords table */
+.tablecard{margin-top:22px;border:1px solid var(--line2);border-radius:15px;overflow:hidden;box-shadow:var(--shadow)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px;font-family:var(--mono);font-size:14px}
+caption{caption-side:top;text-align:left;font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--faint);padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--line)}
+th,td{padding:14px 18px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);background:var(--surface2)}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;color:var(--goldink)}
+.zk{display:inline-flex;align-items:center;gap:9px;font-family:var(--disp);font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.zk .chip{width:10px;height:10px;border-radius:50%;background:var(--zc)}
+td .sc{color:var(--muted);font-family:var(--body)}
+.note{margin-top:14px;font-size:13.5px;color:var(--faint)}
+.note code{font-family:var(--mono);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:.92em}
+
+/* steps */
+.steps{display:flex;flex-direction:column;gap:14px;counter-reset:s}
+.step{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.step::before{counter-increment:s;content:counter(s,decimal-leading-zero);
+  font-family:var(--mono);font-weight:600;font-size:15px;color:var(--ember);
+  border:1px solid color-mix(in srgb,var(--ember) 45%,var(--line2));border-radius:9px;
+  min-width:44px;height:44px;display:grid;place-items:center;background:color-mix(in srgb,var(--ember) 10%,transparent)}
+.step .sb{min-width:0}
+.step .st{font-family:var(--disp);font-weight:700;font-size:17px;margin:2px 0 4px}
+.step p{margin:0;color:var(--muted);font-size:15px}
+.step code,.inline{font-family:var(--mono);font-size:.9em;color:var(--goldink);background:color-mix(in srgb,var(--gold) 12%,transparent);
+  border:1px solid color-mix(in srgb,var(--gold) 30%,var(--line));border-radius:6px;padding:1px 7px;white-space:nowrap}
+.step .k{font-family:var(--mono);font-size:.85em;background:var(--surface2);border:1px solid var(--line2);border-bottom-width:2px;border-radius:6px;padding:2px 7px;color:var(--text)}
+
+/* two-col info */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
+.card h3{font-family:var(--disp);font-weight:800;font-size:18px;margin:0 0 8px}
+.card p{margin:0 0 10px;color:var(--muted);font-size:15px}
+.card p:last-child{margin-bottom:0}
+.card ul{margin:0;padding-left:18px;color:var(--muted);font-size:15px}
+.card li{margin:6px 0}
+
+/* frame demo */
+.frame-demo{display:grid;grid-template-columns:1.3fr .9fr;gap:22px;align-items:center}
+@media (max-width:720px){.frame-demo{grid-template-columns:1fr}}
+.frame-demo .fimg{border-radius:14px;overflow:hidden;border:1px solid var(--line2);box-shadow:var(--shadow);
+  background:
+    repeating-conic-gradient(color-mix(in srgb,var(--text) 7%,transparent) 0% 25%, transparent 0% 50%) 0 0/22px 22px,
+    var(--surface2)}
+.frame-demo .fimg img{display:block;width:100%;height:auto}
+
+/* callout */
+.callout{margin-top:26px;display:flex;gap:14px;align-items:flex-start;
+  background:color-mix(in srgb,var(--felt) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--felt) 34%,var(--line));
+  border-radius:13px;padding:18px 20px}
+.callout .ic{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--felt);color:#04120c;font-weight:800;font-family:var(--disp)}
+.callout p{margin:0;font-size:14.5px;color:var(--muted)}
+.callout b{color:var(--text)}
+
+footer{margin-top:60px;padding-top:26px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+  font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;color:var(--faint)}
+footer .suits{color:var(--gold);letter-spacing:.3em}
+footer .sp{margin-left:auto}
+
+/* varianti */
+.variants{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:720px){.variants{grid-template-columns:1fr}}
+.vcard{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:15px;overflow:hidden;box-shadow:var(--shadow)}
+.vimg{background:var(--surface2);border-bottom:1px solid var(--line)}
+.vimg img{display:block;width:100%;height:auto}
+.vcard figcaption{padding:20px 22px}
+.vcard h3{font-family:var(--disp);font-weight:800;font-size:20px;margin:0 0 8px}
+.vcard p{margin:0 0 10px;color:var(--muted);font-size:14.5px}
+.vcard .vfile{font-family:var(--mono);font-size:13px;color:var(--goldink);margin:0}
+
+@media (prefers-reduced-motion:no-preference){
+  .figure,.zone,.step,.card{animation:rise .6s var(--e,cubic-bezier(.16,1,.3,1)) both}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+}
+</style>
+
+<div class="wrap"><div class="shell">
+
+  <div class="top">
+    <img src="__LOGO__" alt="Logo Best Fish Forever">
+    <span class="wm">Best Fish <b>Forever</b></span>
+    <span class="kk">Overlay Live</span>
+  </div>
+
+  <div class="eyebrow"><span class="d"></span> Streamlabs · OBS · 1920×1080</div>
+  <h1>Il tuo <span class="g">studio in diretta</span>, già brandizzato.</h1>
+  <p class="lede">Un overlay pronto all'uso: campo navy Best Fish Forever con tre finestre trasparenti — <b>schermo condiviso</b>, <b>webcam dello streamer</b> e <b>chat live</b> — più insegna "IN DIRETTA" e una barra con gli inviti a seguirci sui canali. Tu ci metti dietro le sorgenti, al resto pensa la grafica.</p>
+
+  <figure class="figure">
+    <img src="__PREVIEW__" alt="Anteprima dell'overlay live con schermo, webcam e chat">
+    <figcaption>Anteprima con contenuti d'esempio dietro le tre finestre · file consegnato: <b>bff-live-overlay.html</b></figcaption>
+  </figure>
+
+  <section>
+    <h2 class="h2"><span class="num">01</span>Le tre finestre</h2>
+    <p class="sub">Ogni finestra è un foro trasparente con la sua cornice a monitor e la sua targhetta. Sono codificate a colore: ti bastano per capire al volo dove va cosa.</p>
+    <div class="zones">
+      <div class="zone z-screen">
+        <div class="zt"><span class="chip"></span>Schermo</div>
+        <p>La finestra più grande. Ci metti dietro la <b>condivisione schermo</b>: tabelle GTO, tavolo, analisi.</p>
+        <div class="fmt">Bordo ember · ampio</div>
+      </div>
+      <div class="zone z-cam">
+        <div class="zt"><span class="chip"></span>Mihawk</div>
+        <p>Il riquadro del <b>volto dello streamer</b>. Ci va la sua <b>webcam</b> (la targhetta col nick è modificabile).</p>
+        <div class="fmt">Bordo oro · 16:9</div>
+      </div>
+      <div class="zone z-chat">
+        <div class="zt"><span class="chip"></span>Chat live</div>
+        <p>La colonna dei messaggi. Ci va il <b>widget chat</b> di Streamlabs o della tua piattaforma.</p>
+        <div class="fmt">Bordo cyan · verticale</div>
+      </div>
+    </div>
+
+    <div class="tablecard">
+      <div class="scroll">
+        <table>
+          <caption>Coordinate esatte da impostare in Streamlabs / OBS (Modifica trasformazione)</caption>
+          <thead><tr><th>Finestra</th><th>Sorgente da mettere dietro</th><th>X</th><th>Y</th><th>Largh.</th><th>Alt.</th></tr></thead>
+          <tbody>
+            <tr><td><span class="zk z-screen"><span class="chip"></span>Schermo</span></td><td class="sc">Cattura schermo / finestra</td><td class="num">30</td><td class="num">108</td><td class="num">1398</td><td class="num">832</td></tr>
+            <tr><td><span class="zk z-cam"><span class="chip"></span>Mihawk</span></td><td class="sc">Dispositivo video (webcam)</td><td class="num">1476</td><td class="num">108</td><td class="num">418</td><td class="num">235</td></tr>
+            <tr><td><span class="zk z-chat"><span class="chip"></span>Chat live</span></td><td class="sc">Widget Chat Box</td><td class="num">1476</td><td class="num">380</td><td class="num">418</td><td class="num">560</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="note">Imposta la <b>Tela / risoluzione base</b> a <code>1920×1080</code>. Se una sorgente sborda fuori dalla cornice, rifinisci con le frecce della tastiera.</p>
+  </section>
+
+  <section>
+    <h2 class="h2"><span class="num">02</span>Come funziona</h2>
+    <div class="frame-demo">
+      <div class="fimg"><img src="__FRAME__" alt="La grafica overlay isolata: campo navy con tre fori trasparenti"></div>
+      <div>
+        <p class="sub" style="margin-bottom:14px">Tutto ciò che non è una delle tre finestre è il <b>campo navy del brand</b>: non devi disegnare niente lì. La grafica sta <b>sopra</b> a tutto; le tue sorgenti stanno <b>sotto</b> e si vedono solo attraverso i fori trasparenti (lo scacchiere qui rappresenta la trasparenza).</p>
+        <div class="callout" style="margin-top:0">
+          <span class="ic">✓</span>
+          <p><b>Ordine dei livelli:</b> la sorgente browser dell'overlay va in <b>cima</b> alla lista sorgenti; schermo, webcam e chat sotto di essa.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h2"><span class="num">03</span>Installazione in Streamlabs</h2>
+    <p class="sub">Streamlabs Desktop. In OBS Studio i passi sono identici, cambiano solo i nomi (vedi sotto).</p>
+    <div class="steps">
+      <div class="step"><div class="sb"><div class="st">Aggiungi l'overlay come Sorgente browser</div>
+        <p>Sorgenti → <span class="inline">+</span> → <b>Sorgente browser</b>. Spunta <b>File locale</b> e scegli <code>bff-live-overlay.html</code>. Larghezza <b>1920</b>, Altezza <b>1080</b>.</p></div></div>
+      <div class="step"><div class="sb"><div class="st">Portalo in cima</div>
+        <p>Trascina la sorgente browser <b>in cima</b> alla lista: deve stare sopra tutte le altre.</p></div></div>
+      <div class="step"><div class="sb"><div class="st">Aggiungi le tre sorgenti, sotto l'overlay</div>
+        <p><b>Schermo:</b> <span class="inline">+</span> → Cattura schermo (o Cattura finestra per condividere solo il browser delle tabelle). &nbsp;<b>Webcam (Mihawk):</b> <span class="inline">+</span> → Dispositivo di acquisizione video. &nbsp;<b>Chat:</b> aggiungi il widget <b>Chat Box</b>.</p></div></div>
+      <div class="step"><div class="sb"><div class="st">Incastra ogni sorgente nel suo foro</div>
+        <p>Click destro sulla sorgente → <b>Trasforma → Modifica trasformazione</b> (<span class="k">Ctrl</span>+<span class="k">E</span>). Imposta <b>Posizione X/Y</b> e le <b>dimensioni</b> dalla tabella qui sopra (Tipo riquadro: <i>Adatta ai bordi interni</i>). Ripeti per le tre finestre.</p></div></div>
+      <div class="step"><div class="sb"><div class="st">Vai in diretta</div>
+        <p>Le targhette, l'insegna "IN DIRETTA" e gli inviti social sono già lì. Buona live! 🎣</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h2"><span class="num">04</span>Personalizza &amp; note</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Cambiare il nick sulla webcam</h3>
+        <p>Apri <code style="font-family:var(--mono);font-size:13px;color:var(--muted)">bff-live-overlay.html</code> con un editor di testo, cerca la targhetta <span class="inline">Mihawk</span> e sostituisci il nome. Salva.</p>
+        <p>In Streamlabs/OBS poi: click destro sulla sorgente browser → <b>Aggiorna cache</b> (o rimuovi e riaggiungi).</p>
+      </div>
+      <div class="card">
+        <h3>Cosa puoi ritoccare nello stesso file</h3>
+        <ul>
+          <li>I tre contatti nella barra in basso: <b>YouTube</b>, <b>Instagram</b>, <b>sito</b>.</li>
+          <li>Il nick sulla webcam e la scritta <b>IN DIRETTA</b>.</li>
+          <li>Colori, font e logo sono già quelli del brand — nessun ritocco necessario.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>OBS Studio</h3>
+        <p>Stessi passi. Nomi: <b>Browser</b>, <b>Cattura schermo/finestra</b>, <b>Dispositivo di acquisizione video</b>. Chat via widget o docking. Trasformazione: <span class="k">Ctrl</span>+<span class="k">E</span>.</p>
+      </div>
+      <div class="card">
+        <h3>Contenuti in regola</h3>
+        <p>Taglio <b>educativo</b> (GTO, range, +EV, strategia). Niente nomi di poker room o promesse di vincita — 18+, gioco responsabile.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h2"><span class="num">05</span>Varianti incluse</h2>
+    <p class="sub">Due scene extra pronte, stesso stile. Aggiungile come sorgenti/scene separate e passa a quella che ti serve.</p>
+    <div class="variants">
+      <figure class="vcard">
+        <div class="vimg"><img src="__NOCHAT__" alt="Overlay senza chat: schermo grande e webcam"></div>
+        <figcaption>
+          <h3>Senza chat</h3>
+          <p>Per quando Mihawk condivide <b>solo il tavolo</b>: schermo 16:9 più grande, webcam in alto a destra, card brand sotto. Coordinate: Schermo <span class="inline">30·108·1479·832</span>, Mihawk <span class="inline">1530·108·360·202</span>.</p>
+          <p class="vfile">bff-live-overlay-nochat.html</p>
+        </figcaption>
+      </figure>
+      <figure class="vcard">
+        <div class="vimg"><img src="__BRB__" alt="Schermata di pausa Torniamo subito"></div>
+        <figcaption>
+          <h3>Pausa / BRB</h3>
+          <p>Schermata intera <b>"Torniamo subito"</b> da mostrare durante le pause: è una scena a sé, <b>senza sorgenti dietro</b>. Con gli inviti a seguirci in basso.</p>
+          <p class="vfile">bff-live-overlay-brb.html</p>
+        </figcaption>
+      </figure>
+      <figure class="vcard">
+        <div class="vimg"><img src="__STARTING__" alt="Schermata di inizio: lo stream inizia a breve"></div>
+        <figcaption>
+          <h3>Inizio stream + countdown</h3>
+          <p>Schermata d'attesa per l'apertura. Versione <b>fissa</b> (immagine) oppure con <b>conto alla rovescia live</b> (Sorgente browser; durata modificabile, es. <code>?min=5</code>).</p>
+          <p class="vfile">bff-live-overlay-starting.html · bff-starting-countdown.html</p>
+        </figcaption>
+      </figure>
+      <figure class="vcard">
+        <div class="vimg"><img src="__NAGATO__" alt="Overlay sidebar con il nick NagatoUzumaki"></div>
+        <figcaption>
+          <h3>Versione NagatoUzumaki</h3>
+          <p>Le stesse grafiche <b>con il tuo nick</b> sulla webcam, per le tue dirette. Sidebar e senza-chat.</p>
+          <p class="vfile">bff-live-overlay-nagato.html · bff-live-overlay-nochat-nagato.html</p>
+        </figcaption>
+      </figure>
+      <figure class="vcard">
+        <div class="vimg"><img src="__FACECAM__" alt="Face-cam: primo piano webcam a schermo intero"></div>
+        <figcaption>
+          <h3>Face-cam / Primo piano</h3>
+          <p>Solo la <b>webcam a schermo intero</b> con brand minimo ai bordi (insegna, nome, social). Per intro, commento o "just chatting". Metti la webcam <b>a tutto schermo</b> (<span class="inline">0·0·1920·1080</span>) dietro l'overlay.</p>
+          <p class="vfile">bff-live-overlay-facecam.html</p>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h2"><span class="num">06</span>Transizione (Stinger)</h2>
+    <p class="sub">Un'animazione brandizzata che copre il passaggio tra due scene: tendina navy con il filo oro→ember, il seme ♣ e il flash del logo. File con trasparenza, pronto per lo Stinger.</p>
+    <figure class="figure">
+      <img src="__STINGER__" alt="Sequenza dello stinger: scena, tendina, logo, apertura, scena">
+      <figcaption>5 istanti della transizione (~1,4s, con pausa centrale sul logo) sopra una scena reale · file: <b>stinger-bff-audio.mov</b> (ProRes 4444, alpha + whoosh)</figcaption>
+    </figure>
+    <div class="grid2" style="margin-top:20px">
+      <div class="card">
+        <h3>Come impostarlo in Streamlabs</h3>
+        <p>Impostazioni <b>transizione scene</b> → <b>Aggiungi</b> → tipo <b>Stinger</b> → seleziona <code style="font-family:var(--mono);font-size:13px;color:var(--muted)">stinger-bff-audio.mov</code> (col suono; senza audio c'è <code style="font-family:var(--mono);font-size:13px;color:var(--muted)">stinger-bff.mov</code>).</p>
+        <p><b>Punto di transizione: ~650 ms</b> — cade nella pausa centrale a schermo coperto (dove il logo resta visibile), così lo scambio è nascosto. Durata totale ~1,4s.</p>
+      </div>
+      <div class="card">
+        <h3>Note</h3>
+        <ul>
+          <li>Ha lo <b>sfondo trasparente</b>: durante entrata/uscita si vede la scena sotto.</li>
+          <li>Il <b>whoosh</b> è già incluso nel file audio (o <code style="font-family:var(--mono);font-size:12px">whoosh.wav</code> a parte per regolarne il volume).</li>
+          <li>Formato <b>.mov ProRes 4444</b> (il webm con alpha non era producibile con gli strumenti locali).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span class="suits">♠ ♥ ♦ ♣</span>
+    <span>Best Fish Forever — scuola di poker</span>
+    <span class="sp">bestfishforever.it · @best_fish_forever</span>
+  </footer>
+
+</div></div>
