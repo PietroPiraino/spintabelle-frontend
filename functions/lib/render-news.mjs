@@ -755,11 +755,26 @@ export function renderIndice(scheletro, articoli) {
     // vetrine (styles/_utilities.scss): questa resa e quella Angular devono
     // impaginare allo stesso modo, o la pagina si riscrive all'idratazione.
     '<header class="page-hero page-hero--center">',
+    // Le carte del modello /tabelle: STESSO markup che `app-hero-cards`
+    // renderizza in Angular (qui come span nudi — la Function non puo'
+    // importare un componente, gli stili sono globali apposta).
+    '<div class="page-hero__ornament">',
+    '<span class="hero-cards" aria-hidden="true">',
+    '<span class="hero-cards__card hero-cards__card--1">A\u2663</span>',
+    '<span class="hero-cards__card hero-cards__card--2">7\u2663</span>',
+    '<span class="hero-cards__card hero-cards__card--3">4\u2663</span>',
+    '</span>',
+    '</div>',
     `<span class="eyebrow">${escapeHtml(OCCHIELLO_INDICE)}</span>`,
     // ⚠️ Un solo `<h1>` in tutta la pagina, e i titoli degli articoli sono
     // `<h2>`: e' la stessa regola che `check-prerender-content.mjs` impone alle
     // pagine statiche e che la sonda dal vivo verifica su queste.
-    `<h1>${escapeHtml(H1_INDICE)}</h1>`,
+    //
+    // ⚠️ L'h1 porta il gradiente del modello /tabelle su «poker». Il testo
+    // resta `H1_INDICE` (pura, usata anche dal <title>): qui si sostituisce la
+    // SOLA parola con lo span, così il test di deriva — che confronta il testo
+    // a tag strippati — continua a vedere la stessa stringa nelle due rese.
+    `<h1>${escapeHtml(H1_INDICE).replace(/poker$/, '<span class="text-gradient">poker</span>')}</h1>`,
     // ⚠️ DENTRO la testata e con la classe `.lead`: prima era un `<p>` nudo
     // fuori dal blocco, quindi non lo toccava nessuna regola.
     `<p class="lead">${escapeHtml(LEAD_INDICE)}</p>`,

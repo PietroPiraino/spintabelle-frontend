@@ -20,6 +20,7 @@ import { SeoService } from '../../core/services/seo.service';
 import { IconComponent } from '../../shared/ui/icon/icon.component';
 import { ToastService } from '../../shared/ui/toast/toast.service';
 import { PlayingCardComponent } from './hand-replay/playing-card.component';
+import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 
 /** Le estensioni che si possono trascinare. Il `.zip` si apre nel browser. */
 const ESTENSIONI = ['.txt', '.xml', '.log', '.zip'];
@@ -67,7 +68,7 @@ interface FileInCoda {
  */
 @Component({
   selector: 'app-replayer',
-  imports: [DatePipe, FormsModule, IconComponent, PlayingCardComponent, RouterLink],
+  imports: [DatePipe, FormsModule, IconComponent, PlayingCardComponent, RouterLink, HeroCardsComponent],
   templateUrl: './replayer.component.html',
   styleUrl: './replayer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

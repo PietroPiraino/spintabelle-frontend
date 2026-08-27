@@ -17,8 +17,14 @@
 // «Come funziona» usciva del 62% piu' grande di «Cosa c'e' nella libreria» su
 // /docs, che ha lo stesso ruolo — e su /docs quel titolo passa da
 // `.seo-block h2`. Questa e' la stessa scala.
+// ⚠️ TUTTI E TRE, non due. La prima stesura di questa correzione aveva alzato
+// `.aff__how` e `.aff__points` lasciando `.aff__terms` alla sua clamp locale:
+// misurato in produzione il 27/08/2026, 26px contro 22px sulla stessa pagina —
+// la divergenza era stata ridotta da tre valori a due, non chiusa. La scala è
+// quella condivisa di `_utilities.scss` (`.legal h2, .seo-block h2, .faq h2`).
 .aff__how h2,
-.aff__points h2 {
+.aff__points h2,
+.aff__terms h2 {
   font-size: clamp(1.25rem, 2.4vw, 1.6rem);
 }
 
@@ -87,8 +93,12 @@
   color: var(--text-muted);
   font-size: 0.92rem;
 
+  // ⚠️ Niente `font-size` qui: la dà il gruppo in testa al file (la scala
+  // condivisa dei titoli di blocco). Questa regola annidata ha la stessa
+  // specificità e viene DOPO nel sorgente: una clamp scritta qui vincerebbe
+  // in silenzio, ed è esattamente com'è sopravvissuto il 22px misurato in
+  // produzione il 27/08/2026.
   h2 {
-    font-size: clamp(1.15rem, 2vw, 1.4rem);
     margin-bottom: 0.9rem;
   }
 

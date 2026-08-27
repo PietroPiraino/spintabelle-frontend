@@ -7,10 +7,11 @@ import {
 } from '../../../core/models/api.models';
 import { NewsService } from '../../../core/services/news.service';
 import { NewsCardComponent } from '../../../shared/ui/news-card/news-card.component';
+import { HeroCardsComponent } from '../../../shared/ui/hero-cards/hero-cards.component';
 
 @Component({
   selector: 'app-news-list',
-  imports: [NewsCardComponent],
+  imports: [NewsCardComponent, HeroCardsComponent],
   templateUrl: './news-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

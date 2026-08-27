@@ -2,21 +2,25 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SeoService } from '../../core/services/seo.service';
 import { GUIDE } from './guides.data';
+import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 
 @Component({
   selector: 'app-guides-list',
-  imports: [RouterLink],
+  imports: [RouterLink, HeroCardsComponent],
   template: `
     <section class="section">
       <div class="container">
-        <div class="section-head">
+        <header class="page-hero page-hero--center">
+          <div class="page-hero__ornament">
+            <app-hero-cards />
+          </div>
           <span class="eyebrow">Guide</span>
-          <h1>Guide di strategia per Spin &amp; Go e Twister</h1>
+          <h1>Guide di <span class="text-gradient">strategia</span> per Spin &amp; Go e Twister</h1>
           <p class="lead">
             Le basi del formato spiegate per intero e in italiano: preflop,
             bankroll, varianza e ICM. Sono gratuite e non serve un account.
           </p>
-        </div>
+        </header>
 
         <ul class="guide-index">
           @for (g of guide; track g.slug) {

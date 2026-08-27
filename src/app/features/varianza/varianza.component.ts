@@ -36,6 +36,7 @@ import {
 } from './engine/presets';
 import { DEFAULT_BANDS, DEFAULT_BANKROLLS } from './engine/sim-engine';
 import type { PercentileRow, SimConfig, SimResult, SimMode } from './engine/types';
+import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 
 const MAX_SIMS = 5000;
 const MAX_GAMES = 1_000_000;
@@ -49,6 +50,7 @@ const MAX_GAMES = 1_000_000;
     VarianzaBustChartComponent,
     SubscribeModelComponent,
     RouterLink,
+    HeroCardsComponent,
   ],
   providers: [VarianzaRunner],
   templateUrl: './varianza.component.html',

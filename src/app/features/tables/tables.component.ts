@@ -36,6 +36,7 @@ import {
   parseCombo,
   parseFormat,
 } from './preflop-display';
+import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 import { RangeGridComponent } from './range-grid/range-grid.component';
 
 /**
@@ -75,7 +76,7 @@ const DEFAULT_DEPTH = 25; // stack di partenza di uno Spin & Go
 
 @Component({
   selector: 'app-tables',
-  imports: [RouterLink, RangeGridComponent],
+  imports: [RouterLink, RangeGridComponent, HeroCardsComponent],
   templateUrl: './tables.component.html',
   styleUrl: './tables.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

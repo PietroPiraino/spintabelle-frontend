@@ -29,6 +29,7 @@ import { SOCIAL_LINKS } from '../../core/social-links';
 import { apiErrorMessage } from '../../core/utils/http-error';
 import { IconComponent } from '../../shared/ui/icon/icon.component';
 import { ToastService } from '../../shared/ui/toast/toast.service';
+import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 
 /** Percorso della pagina: finisce nel `redirect` della CTA di accesso. */
 const PAGE_PATH = '/affiliazioni';
@@ -128,7 +129,7 @@ interface RiepilogoVoce {
  */
 @Component({
   selector: 'app-affiliations',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, IconComponent],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe, IconComponent, HeroCardsComponent],
   templateUrl: './affiliations.component.html',
   styleUrl: './affiliations.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

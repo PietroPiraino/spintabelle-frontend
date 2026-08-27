@@ -1,7 +1,14 @@
 <section class="section vz">
   <div class="container">
-    <header class="page-hero">
-      <h1>Simulatore di Varianza per Spin&nbsp;&amp;&nbsp;Go e Twister</h1>
+    <!-- ⚠️ `--center` per decisione owner del 28/08/2026: il modello e'
+         /tabelle per TUTTE le sezioni, strumenti compresi. Ribalta la scelta
+         del giorno prima («strumenti a sinistra»): non ri-litigarla. -->
+    <header class="page-hero page-hero--center">
+      <div class="page-hero__ornament">
+        <app-hero-cards />
+      </div>
+      <span class="eyebrow">Strumenti</span>
+      <h1>Simulatore di <span class="text-gradient">Varianza</span> per Spin&nbsp;&amp;&nbsp;Go e Twister</h1>
       <p class="lead">
         Quanto conta la fortuna nel breve periodo? Simula migliaia di percorsi possibili
         per il tuo volume di gioco negli Spin&nbsp;&amp;&nbsp;Go / Twister lottery e scopri
@@ -382,11 +389,18 @@
       </div>
 
       <h2 class="vz__seo-title">Domande frequenti sulla varianza</h2>
-      <div class="vz__faq">
+      <!--
+        ⚠️ Dal 28/08/2026 le FAQ usano il blocco CONDIVISO (.faq__item, le card
+        con chevron di /tabelle), non piu' la copia locale a lista con
+        separatori. La copia era deliberata — questa pagina e' l'originale da
+        cui il pattern e' stato promosso — ma l'owner ha fissato il modello:
+        stesso identico stile di dropdown su tutte le sezioni.
+      -->
+      <div class="faq">
         @for (item of faq; track item.q) {
-          <details class="vz__faq-item">
-            <summary class="vz__faq-sum"><h3 class="vz__faq-q">{{ item.q }}</h3></summary>
-            <p class="vz__faq-a">{{ item.a }}</p>
+          <details class="faq__item">
+            <summary class="faq__sum"><h3 class="faq__q">{{ item.q }}</h3></summary>
+            <p class="faq__a">{{ item.a }}</p>
           </details>
         }
       </div>

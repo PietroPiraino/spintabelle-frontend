@@ -17,6 +17,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { LessonsService } from '../../core/services/lessons.service';
 import { SeoService } from '../../core/services/seo.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
+import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 import {
   BunnyPlayerComponent,
   type BunnyProgress,
@@ -30,7 +31,7 @@ const PAGE_SIZE = 24;
 
 @Component({
   selector: 'app-lessons',
-  imports: [BunnyPlayerComponent, DatePipe, RouterLink],
+  imports: [BunnyPlayerComponent, DatePipe, RouterLink, HeroCardsComponent],
   templateUrl: './lessons.component.html',
   styleUrl: './lessons.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

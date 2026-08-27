@@ -6,7 +6,11 @@
 .rv {
   margin: 2rem 0;
 
+  // ⚠️ La scala condivisa dei titoli di blocco (`_utilities.scss`). Senza,
+  // «Mani dalla community» ereditava l'h2 globale e usciva a 42px contro i 27
+  // del gate immediatamente sopra — misurato in produzione il 27/08/2026.
   h2 {
+    font-size: clamp(1.25rem, 2.4vw, 1.6rem);
     margin: 0 0 0.35rem;
   }
 }

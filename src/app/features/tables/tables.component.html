@@ -15,10 +15,10 @@
     @if (!auth.isAuthenticated()) {
       <!-- Visitatori: la consultazione è riservata agli iscritti -->
       <header class="page-hero page-hero--center pf__teaser">
-        <div class="page-hero__ornament pf__teaser-cards" aria-hidden="true">
-          <span class="pf__card pf__card--1">A♣</span>
-          <span class="pf__card pf__card--2">7♣</span>
-          <span class="pf__card pf__card--3">4♣</span>
+        <!-- L'ornamento del modello: componente condiviso dal 28/08/2026,
+             questa pagina ne e' l'originale. -->
+        <div class="page-hero__ornament">
+          <app-hero-cards />
         </div>
         <span class="eyebrow rise">Tabelle preflop</span>
         <h1 class="rise" style="animation-delay: 80ms">

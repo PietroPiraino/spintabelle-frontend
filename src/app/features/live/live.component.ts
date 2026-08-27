@@ -16,6 +16,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { LiveService } from '../../core/services/live.service';
 import { SeoService } from '../../core/services/seo.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
+import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 
 /**
  * Con quanto anticipo la stanza si considera aperta.
@@ -29,7 +30,7 @@ const ANTICIPO_APERTURA_MIN = 60;
 
 @Component({
   selector: 'app-live',
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, HeroCardsComponent],
   templateUrl: './live.component.html',
   styleUrl: './live.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

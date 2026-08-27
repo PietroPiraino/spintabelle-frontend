@@ -40,10 +40,14 @@
   margin-bottom: clamp(1.8rem, 4vw, 3rem);
 }
 
-// Vetrine: la pagina si presenta. Sugli STRUMENTI (/simulatore-varianza,
-// /lezioni loggato, /account, /admin) la testata resta a sinistra, cioè
-// `.page-hero` nudo — un titolo centrato sopra un pannello di controllo a due
-// colonne si legge come scollegato dal lavoro che sta sotto.
+// ⚠️ `--center` su TUTTE le pagine pubbliche, senza distinzione
+// vetrina/strumento — decisione owner del 28/08/2026: il modello è /tabelle
+// per ogni sezione (centrato + gradiente nel titolo + le carte + FAQ a card).
+// La distinzione originaria («strumenti a sinistra», 27/08) è durata un
+// giorno ed è stata ribaltata guardando la produzione: non ri-litigarla.
+// `.page-hero` NUDO resta per le testate del ramo loggato che portano una
+// `.spread` col campo di ricerca (/lezioni, /docs, /live da autenticati) e
+// per le aree operative (/account, /admin).
 .page-hero--center {
   align-items: center;
   text-align: center;
@@ -79,6 +83,78 @@
 .page-hero--center > .page-hero__ornament,
 .page-hero--center > .page-hero__meta {
   justify-content: center;
+}
+
+// ── Le carte che saltellano ──────────────────────────────────────────────────
+//
+// L'ornamento del modello /tabelle, promosso qui il 28/08/2026 quando l'owner
+// ha deciso che quel modello vale per tutte le sezioni (decisione: ovunque
+// TRANNE /abbonati, che ha le mascotte 3D, e /chi-siamo, che ha il banco di
+// particelle). Il markup lo emette `app-hero-cards`
+// (shared/ui/hero-cards/hero-cards.component.ts) — e, per la sola /news,
+// `functions/lib/render-news.mjs` con gli stessi `<span>`: gli stili DEVONO
+// stare qui e non nel componente, o la resa dell'edge resterebbe nuda
+// (l'incapsulamento Angular lega le regole a un attributo che quell'HTML
+// non ha — la lezione di `_prose.scss`).
+//
+// ⚠️ Il fondo è `--logo-plate` e non un bianco scritto a mano: nelle copie
+// locali di /tabelle c'era `#ffffff`, che nei temi scuri era comunque giusto
+// (una carta da gioco È bianca) ma viveva fuori dai token — `--logo-plate` è
+// il bianco INTENZIONALE, identico nei tre temi per definizione.
+.hero-cards {
+  display: flex;
+}
+
+.hero-cards__card {
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 104px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.3rem;
+  background: var(--logo-plate);
+  color: var(--navy-700);
+  border: 1px solid rgba(27, 42, 74, 0.25);
+  box-shadow: var(--shadow-pop), 0 0 18px rgba(255, 106, 31, 0.12);
+  animation: hero-cards-shuffle 3.2s var(--ease-out) infinite;
+}
+
+.hero-cards__card--1 {
+  transform: rotate(-12deg) translateX(12px);
+}
+
+.hero-cards__card--2 {
+  transform: rotate(2deg) translateY(-10px);
+  color: var(--copper-600);
+  animation-delay: 0.25s;
+  z-index: 1;
+}
+
+.hero-cards__card--3 {
+  transform: rotate(14deg) translateX(-12px);
+  animation-delay: 0.5s;
+}
+
+@keyframes hero-cards-shuffle {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -12px;
+  }
+}
+
+// ⚠️ Il guard mancava anche nella copia originale di /tabelle: un'animazione
+// infinita senza `prefers-reduced-motion` su una pagina sola era una svista,
+// su undici è una regola violata.
+@media (prefers-reduced-motion: reduce) {
+  .hero-cards__card {
+    animation: none;
+  }
 }
 
 .grid {
@@ -204,8 +280,10 @@
     margin-top: 0.6rem;
   }
 
+  // La `font-size` viene dalla scala condivisa (vedi `.legal h2, .seo-block h2,
+  // .faq h2` più sotto): qui resta solo il ritmo verticale, che è proprio
+  // delle pagine legali.
   h2 {
-    font-size: clamp(1.25rem, 2.4vw, 1.6rem);
     margin-top: 2.6rem;
     margin-bottom: 0.7rem;
   }
@@ -314,8 +392,8 @@
   padding-top: 1.75rem;
   border-top: 1px solid var(--line);
 
+  // La `font-size` viene dalla scala condivisa: qui resta il ritmo verticale.
   h2 {
-    font-size: clamp(1.25rem, 2.4vw, 1.6rem);
     margin-top: 2.2rem;
     margin-bottom: 0.7rem;
 
@@ -509,10 +587,36 @@
   }
 }
 
+// ⚠️ UNA SOLA SCALA per i titoli di blocco, e questo selettore è la sua unica
+// sede. Erano quattro clamp quasi uguali sparsi fra utilities e fogli di
+// componente, e la deriva era già arrivata a schermo: il titolo delle FAQ su
+// /allenamento e /negozio usciva a **42px** contro i 26 di «Come funziona»
+// nella stessa pagina — due h2 di pari rango, uno grande il 62% più
+// dell'altro. Succedeva perché su quelle due pagine la sezione FAQ è un
+// blocco a sé (`<section class="faq">`) mentre altrove il suo titolo sta
+// DENTRO `.seo-block`, che una regola ce l'aveva: `.faq` no, quindi
+// ereditava l'h2 globale.
+//
+// ⚠️ Il difetto è muto per definizione — nessuna guardia guarda una
+// dimensione di carattere, e a occhio si nota solo mettendo due pagine
+// vicine. Aggiungendo un blocco editoriale nuovo, il titolo entra in questa
+// lista: non si riscrive la clamp.
+.legal h2,
+.seo-block h2,
+.faq h2 {
+  font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+}
+
 .faq {
   display: grid;
   gap: 0.9rem;
   max-width: 75ch;
+  // ⚠️ Centrata anche quando sta DA SOLA. Dentro `.seo-block` questa riga è
+  // inerte (75ch > la colonna da 74ch → piena larghezza), ma su /allenamento e
+  // /negozio la FAQ è una sezione a sé e restava ancorata a sinistra dentro un
+  // contenitore da 1180px — misurato in produzione il 27/08/2026, ed è uno dei
+  // «tanti difetti» visti dall'owner.
+  margin-inline: auto;
 }
 
 // ⚠️ `.faq__item` e' un <details> NATIVO, e la scelta e' portante.

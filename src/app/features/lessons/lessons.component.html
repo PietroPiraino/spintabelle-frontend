@@ -14,15 +14,18 @@
 @if (!auth.isAuthenticated()) {
   <section class="section">
     <div class="container">
-      <div class="section-head">
+      <header class="page-hero page-hero--center">
+        <div class="page-hero__ornament">
+          <app-hero-cards />
+        </div>
         <span class="eyebrow">Studio</span>
-        <h1>Lezioni di poker per Spin &amp; Go e Twister</h1>
+        <h1><span class="text-gradient">Lezioni</span> di poker per Spin &amp; Go e Twister</h1>
         <p class="lead">
           Il percorso video della scuola: dalle decisioni preflop che decidono
           la maggior parte dei tornei 3-max hyper turbo fino agli spot postflop
           e all'heads-up finale. In italiano, spiegate dai coach.
         </p>
-      </div>
+      </header>
 
       <!--
         ⚠️ Il gate sta QUI, subito sotto l'h1, e non in fondo alla pagina come

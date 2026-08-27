@@ -31,6 +31,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ShopService } from '../../core/services/shop.service';
 import { SubscriptionsService } from '../../core/services/subscriptions.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
+import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 
 /** Gadget per pagina: griglia → batch coerente con /docs e /lezioni. */
 const PAGE_SIZE = 24;
@@ -50,7 +51,7 @@ const TIER_RANK: Record<SubscriptionTier, number> = {
 
 @Component({
   selector: 'app-shop',
-  imports: [ReactiveFormsModule, IconComponent, RouterLink],
+  imports: [ReactiveFormsModule, IconComponent, RouterLink, HeroCardsComponent],
   templateUrl: './shop.component.html',
   styleUrl: './shop.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

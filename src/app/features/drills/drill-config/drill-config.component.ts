@@ -21,6 +21,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { DrillService } from '../../../core/services/drill.service';
 import { PreflopService } from '../../../core/services/preflop.service';
 import { anteOffset, depthDisplay } from '../../tables/preflop-display';
+import { HeroCardsComponent } from '../../../shared/ui/hero-cards/hero-cards.component';
 import {
   DIFFICULTY_HINTS,
   DIFFICULTY_LABELS,
@@ -39,7 +40,7 @@ interface DepthOption {
 
 @Component({
   selector: 'app-drill-config',
-  imports: [RouterLink],
+  imports: [RouterLink, HeroCardsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './drill-config.component.html',
   styleUrl: './drill-config.component.scss',

@@ -20,6 +20,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { DocumentsService } from '../../core/services/documents.service';
 import { SeoService } from '../../core/services/seo.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
+import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 
 /** Filtro categoria: tutte o una specifica. */
 type CategoryFilter = 'all' | DocumentCategory;
@@ -39,7 +40,7 @@ const CATEGORY_LABELS: Record<DocumentCategory, string> = {
 
 @Component({
   selector: 'app-docs',
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, HeroCardsComponent],
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

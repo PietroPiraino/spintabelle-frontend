@@ -895,8 +895,12 @@ test('deriva: occhiello, h1 e lead dell indice combaciano con la resa Angular', 
     ['LEAD_INDICE', LEAD_INDICE],
   ]) {
     // Il lead nel template Angular va a capo: si confronta a spazi normalizzati.
+    // ⚠️ E a TAG STRIPPATI (28/08/2026): l'h1 porta il gradiente del modello
+    // /tabelle (`<span class="text-gradient">poker</span>`) in ENTRAMBE le
+    // rese, quindi il confronto deve guardare il testo e non il markup — o
+    // fallirebbe proprio quando le due rese sono allineate.
     const atteso = valore.replace(/\s+/g, ' ').trim();
-    const reso = sorgente.replace(/\s+/g, ' ');
+    const reso = sorgente.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
     assert.ok(
       reso.includes(atteso),
       `news-list.component.html non contiene piu' ${nome}.\n  atteso: "${atteso}"\n` +

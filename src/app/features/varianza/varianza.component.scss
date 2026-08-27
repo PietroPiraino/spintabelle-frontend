@@ -11,9 +11,10 @@
 // (padding verticale 2.5rem contro i 6.5rem di `.section`).
 //
 // Ora il markup è `<section class="section vz"><div class="container">` e la
-// testata è `.page-hero` nudo — senza `--center`, ed è una scelta: questa è
-// una pagina STRUMENTO, e un titolo centrato sopra un pannello di controllo a
-// due colonne si legge come scollegato dal lavoro che sta sotto.
+// testata è `.page-hero--center` con le carte e il gradiente, come ogni altra
+// sezione. ⚠️ La prima stesura (27/08) l'aveva lasciata a sinistra («è uno
+// strumento»): l'owner ha ribaltato la scelta il 28/08 — il modello /tabelle
+// vale per TUTTE le sezioni. Non ri-litigarla.
 //
 // Di `.vz` resta solo ciò che il sistema non dà.
 .vz {
@@ -461,7 +462,8 @@ input[type='number']:focus-visible {
 }
 
 // Blocco richiudibile dei risultati (nota EV/mediana, tabella percentili).
-// La riga cliccabile riusa il linguaggio del chevron di `.vz__faq-sum`.
+// La riga cliccabile riusa il linguaggio del chevron di `.faq__sum`
+// (styles/_utilities.scss — la copia locale delle FAQ non esiste più).
 .vz__more {
   margin-top: 1.25rem;
 }
@@ -697,7 +699,10 @@ input[type='number']:focus-visible {
 }
 .vz__seo-title {
   font-family: var(--font-display);
-  font-size: clamp(1.3rem, 3vw, 1.7rem);
+  // La scala CONDIVISA dei titoli di blocco (vedi `.legal h2, .seo-block h2,
+  // .faq h2` in _utilities.scss): questa pagina usciva a 27px dove tutte le
+  // altre stanno a 26 — l’ultima divergenza rimasta dopo il giro del 27/08.
+  font-size: clamp(1.25rem, 2.4vw, 1.6rem);
   color: var(--text);
   margin: 1.75rem 0 0.75rem;
 }
@@ -733,68 +738,13 @@ input[type='number']:focus-visible {
   text-underline-offset: 2px;
   font-weight: 600;
 }
-.vz__faq {
-  display: grid;
-  gap: 0.9rem;
-  max-width: 75ch;
-}
-.vz__faq-item {
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--line);
-}
-.vz__faq-item:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-// Riga cliccabile del <details>. Il pattern e' quello di `.faq__sum` in
-// styles/_utilities.scss, riscritto qui con i nomi locali: questa pagina e'
-// l'originale da cui il blocco condiviso e' stato promosso e tiene le sue
-// classi apposta (lista con separatore, non card).
-.vz__faq-sum {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  cursor: pointer;
-  list-style: none;
-  // ⚠️ dichiarati: una domanda su una riga sta sui 35px (vedi .faq__sum)
-  min-height: 44px;
-}
-.vz__faq-sum::-webkit-details-marker {
-  display: none;
-}
-.vz__faq-sum::after {
-  content: '';
-  flex: none;
-  width: 0.5rem;
-  height: 0.5rem;
-  margin-right: 0.2rem;
-  border-right: 2px solid var(--copper-600);
-  border-bottom: 2px solid var(--copper-600);
-  transform: rotate(45deg);
-  transition: transform var(--t-fast);
-}
-.vz__faq-item[open] > .vz__faq-sum::after {
-  transform: rotate(225deg);
-}
-.vz__faq-sum:focus-visible {
-  outline: 2px solid var(--copper-500);
-  outline-offset: 3px;
-  border-radius: 4px;
-}
-.vz__faq-q {
-  font-family: var(--font-display);
-  font-size: 1.02rem;
-  color: var(--text);
-  // ⚠️ 0: dentro <summary> il margine inferiore separerebbe la domanda dal
-  // chevron con cui e' allineata, non dalla risposta.
-  margin: 0;
-}
-.vz__faq-a {
-  margin: 0.6rem 0 0;
-  color: var(--text-muted);
-  line-height: 1.6;
-}
+
+// ⚠️ Qui vivevano gli stili della copia locale delle FAQ (`.vz__faq*`, la
+// lista con separatori): dal 28/08/2026 la pagina usa il blocco condiviso
+// `.faq` di styles/_utilities.scss — le card con chevron, identiche a
+// /tabelle e a ogni altra sezione. La copia era una scelta (questa pagina
+// e’ l’originale da cui il pattern e’ stato promosso), ribaltata
+// dall’owner: un solo stile di dropdown su tutto il sito.
 
 .vz__credits {
   max-width: var(--container);
