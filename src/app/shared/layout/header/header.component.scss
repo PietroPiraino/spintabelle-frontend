@@ -572,3 +572,43 @@
     }
   }
 }
+
+// ── Bersagli di tocco della barra ───────────────────────────────────────────
+//
+// ⚠️ Misurati il 27/08/2026 con Playwright su tutte le pagine pubbliche, a
+// 390px: burger 32px, opzioni del tema 41px, «Registrati» 38px. Sono i comandi
+// PIÙ toccati del sito — la navigazione — e nessuno arrivava ai 44px. Erano
+// sfuggiti a ogni controllo perché stanno nell'header, che nessuna guardia e
+// nessun audit di pagina apre.
+//
+// ⚠️ Sotto i 1025px, e non ovunque, ed è una scelta: sopra quella soglia la
+// barra è quella misurata a mano perché stia su UNA riga (il commento in testa
+// a header.component.ts lo dice), e alzare i link a 44px la farebbe crescere
+// rimettendo in discussione quella misura. Sopra i 1024px si punta col mouse;
+// sotto, col pollice — ed è lì che i 44px sono una regola, non un vezzo.
+@media (max-width: 1024px) {
+  .header__burger {
+    // `padding: .5rem` su tre barrette da 2px dava 32px in tutto.
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .header__theme,
+  .header__theme-option,
+  .header__link,
+  .header__menu-link,
+  .header__group-toggle {
+    min-height: 44px;
+  }
+
+  .header__theme {
+    min-width: 44px;
+  }
+
+  // Le due CTA di accesso: `.btn--sm` nudo sta sui 38px.
+  .header__auth .btn {
+    min-height: 44px;
+  }
+}

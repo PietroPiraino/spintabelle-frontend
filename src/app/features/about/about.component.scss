@@ -11,23 +11,24 @@
 }
 
 // ---- Cover ----
+// ⚠️ Impaginazione e allineamento vengono da `.page-hero.page-hero--center`
+// (styles/_utilities.scss): erano riscritti qui, con `align-items: flex-start`,
+// ed è il motivo per cui questa testata era a sinistra mentre il resto della
+// pagina no. Restano le due sole cose davvero sue.
 .about__cover {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.9rem;
+  // Più aria sotto della testata standard: qui sotto comincia il manifesto,
+  // che è un blocco a due colonne e ha bisogno di staccarsi.
   margin-bottom: clamp(2.5rem, 6vw, 4.5rem);
 
+  // ⚠️ L'h1 più grande del globale (`clamp(2.4rem, 6vw, 4.4rem)`) è una scelta
+  // di questa pagina, non del primitivo: è la copertina della scuola. Sta qui e
+  // NON in `.page-hero`, che non deve dichiarare scale tipografiche.
   h1 {
     font-size: clamp(2.8rem, 7vw, 5.2rem);
   }
 }
 
-.about__cover-meta {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
+// `display`/`gap`/`flex-wrap` e il centraggio vengono da `.page-hero__meta`.
 
 // ---- Manifesto (storia) ----
 .about__story {

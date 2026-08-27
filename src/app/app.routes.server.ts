@@ -59,6 +59,12 @@ export const serverRoutes: ServerRoute[] = [
   // finisce nell'HTML statico e' il teaser anonimo; il catalogo vero resta
   // dietro il JWT, lato backend. ⚠️ Va tolta anche da public/_redirects.
   { path: 'lezioni', renderMode: RenderMode.Prerender },
+  // ⚠️ Solo i PADRI. I figli `allenamento/sessione` e `allenamento/risultati`
+  // restano guardati e cadono nel `**` Client in fondo a questo file: se
+  // finissero qui, il prerender non si stabilizzerebbe (il guard aspetta
+  // `ready$`, che in Node non emette mai) e il build fallirebbe.
+  { path: 'allenamento', renderMode: RenderMode.Prerender },
+  { path: 'negozio', renderMode: RenderMode.Prerender },
   { path: 'docs', renderMode: RenderMode.Prerender },
   { path: 'live', renderMode: RenderMode.Prerender },
   { path: 'guide', renderMode: RenderMode.Prerender },

@@ -1,13 +1,13 @@
 <section class="section">
   <div class="container">
-    <div class="section-head">
+    <header class="page-hero page-hero--center">
       <span class="eyebrow">Abbonamenti</span>
       <h1>Diventa Pesce Rosso o Squalo</h1>
       <p class="subscribe__intro">
         Scegli il piano, paga con PayPal o Skrill e invia la richiesta: la
         attiviamo a mano appena verificato l'incasso. Ti avvisiamo via email.
       </p>
-    </div>
+    </header>
 
     @if (!isAuth()) {
       <p class="subscribe__guest">
@@ -104,30 +104,61 @@
                   <li>{{ f }}</li>
                 }
               </ul>
+              <!--
+                ⚠️ Sulla card GIÀ scelta il bottone resta AZIONABILE e porta al
+                pannello. Prima diceva «Selezionato» ed era `disabled`: la
+                selezione la comunica già il telaio della card (`.is-selected`
+                → bordo e anello rame), quindi quel bottone spendeva l'unico
+                controllo della card per ripetere un'informazione e in cambio
+                toglieva l'unica azione. L'unica via di ritorno era «Annulla»,
+                in fondo al pannello — cioè esattamente dove chi ha toccato il
+                bottone non è mai arrivato (vedi `vaiAlPagamento`).
+                ⚠️ E NON è un toggle che deseleziona: `choose()` azzera i buoni
+                già validati (`clearDiscounts`) senza dirlo.
+              -->
               <button
                 type="button"
                 class="btn btn--primary"
-                (click)="choose(tier)"
-                [disabled]="selectedTier() === tier"
+                (click)="selectedTier() === tier ? vaiAlPagamento() : choose(tier)"
               >
-                {{ selectedTier() === tier ? 'Selezionato' : 'Scegli ' + labelFor(tier) }}
+                {{ selectedTier() === tier ? 'Vai al pagamento' : 'Scegli ' + labelFor(tier) }}
               </button>
             </article>
           }
         </div>
 
         @if (selectedTier()) {
+          <!--
+            ⚠️ Il pannello è a PIENA LARGHEZZA e su due colonne. Prima aveva
+            `max-width: 640px` senza `margin-inline: auto` ed era fratello della
+            griglia: il suo bordo destro cadeva a 640px, cioè 38,8px dentro la
+            seconda card, allineandosi a nulla. È il disallineamento che si
+            vedeva scegliendo un piano.
+            ⚠️ I due `.subscribe__pay-col` non sono decorativi: i campi erano
+            nove fratelli diretti, e in un grid a due colonne si sarebbero
+            distribuiti a zig-zag (buoni | metodo / destinatario | riferimento).
+          -->
           <div class="card card--pad subscribe__pay">
-            <h2>Completa la richiesta — {{ selectedLabel() }}</h2>
+            <h2 #testaPagamento tabindex="-1">Completa la richiesta — {{ selectedLabel() }}</h2>
+
+            <div class="subscribe__pay-col">
             <ol class="subscribe__steps">
-              <li>Scegli il metodo di pagamento.</li>
               @if (effectivePrice() === 0) {
+                <!--
+                  ⚠️ «Scegli il metodo di pagamento» sta QUI, nel ramo a
+                  pagamento, e non più stampato incondizionatamente: col buono
+                  al 100% la lista chiedeva un metodo che il pannello non
+                  mostra (i campi stanno dentro `@if (effectivePrice() !== 0)`).
+                -->
                 <li>
                   Con questi buoni l'abbonamento è
-                  <strong>in omaggio</strong>: nessun pagamento richiesto.
+                  <strong>in omaggio</strong>:
+                  <s class="subscribe__strike">€{{ selectedPrice() }}</s>
+                  <strong>€0</strong>, nessun pagamento richiesto.
                 </li>
                 <li>Invia la richiesta: la approveremo a breve.</li>
               } @else {
+                <li>Scegli il metodo di pagamento.</li>
                 <li>
                   Invia
                   @if (discounts()) {
@@ -143,6 +174,9 @@
               }
             </ol>
 
+            </div>
+
+            <div class="subscribe__pay-col">
             <div class="field">
               <label for="discount">Buoni sconto (se ne hai)</label>
 
@@ -179,9 +213,25 @@
                 }
               }
 
+              <!--
+                ⚠️ La «✕» non è un vezzo. Nel ramo d'errore di `revalidate()` il
+                codice appena aggiunto viene tolto: spariscono i badge, e con
+                essi le uniche «✕» che chiamano `removeCode()` — cioè l'unico
+                punto che azzerava questo errore. Restava un messaggio su un
+                codice non più applicato, e l'unica via d'uscita era «Annulla»,
+                che però azzera anche il piano scelto.
+              -->
               @if (discountError()) {
                 <div class="form-feedback is-error" role="alert">
                   {{ discountError() }}
+                  <button
+                    type="button"
+                    class="subscribe__error-close"
+                    (click)="chiudiErroreSconto()"
+                    aria-label="Chiudi l'avviso sul buono"
+                  >
+                    ✕
+                  </button>
                 </div>
               }
 
@@ -223,7 +273,9 @@
                 </button>
               </div>
             </div>
+            </div>
 
+            <div class="subscribe__pay-col">
             @if (effectivePrice() !== 0) {
               <div class="field">
                 <span class="subscribe__label">Metodo di pagamento</span>
@@ -256,6 +308,7 @@
                 />
               </div>
             }
+            </div>
 
             @if (submitError()) {
               <div class="form-feedback is-error" role="alert">{{ submitError() }}</div>
@@ -266,7 +319,7 @@
                 type="button"
                 class="btn btn--primary"
                 (click)="submit()"
-                [disabled]="submitting() || applying() || !!discountError()"
+                [disabled]="submitting() || applying() || (!!discountError() && appliedCodes().length > 0)"
               >
                 {{ submitting() ? 'Invio…' : 'Invia richiesta' }}
               </button>

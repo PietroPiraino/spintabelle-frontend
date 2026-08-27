@@ -55,6 +55,16 @@ const MIN_PAROLE = {
   // sta sotto per lasciare margine a una riscrittura, non a uno svuotamento.
   '/replayer': 700,
   '/docs': 300, // idem
+  // I due teaser nati il 27/08/2026, quando /allenamento e /negozio hanno
+  // perso l'authGuard. ⚠️ Soglia SOTTO il misurato (503 e 495 al primo build
+  // reale), non uguale: serve a intercettare uno svuotamento, non a impedire
+  // una riscrittura del copy. Senza queste due righe prenderebbero il default
+  // 120, che per una vetrina e' un pavimento anti-pagina-bianca, non una
+  // misura. ⚠️ E il conteggio NON puo' gonfiarsi da solo: entrambe le pagine
+  // hanno le fetch gated su auth.user(), quindi in prerender non chiamano
+  // l'API e il numero e' tutto copy statico.
+  '/allenamento': 350,
+  '/negozio': 350,
   '/live': 300, // idem: il calendario e' dietro il JWT
   '/abbonati': 100, // TODO fase 3: sale a 400 quando arriva il blocco editoriale
   '/chi-siamo': 300,

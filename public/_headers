@@ -44,9 +44,16 @@
   X-Robots-Tag: noindex, follow
 /admin/*
   X-Robots-Tag: noindex, follow
-/allenamento
-  X-Robots-Tag: noindex, follow
-/allenamento/*
+# ⚠️ SOLO i figli, e col PLACEHOLDER. /allenamento e' pubblica e
+# prerenderizzata dal 27/08/2026, e la sua forma canonica porta lo SLASH
+# FINALE (e' quella che canonical e sitemap dichiarano). Un pattern con lo
+# splat la catturerebbe e la manderebbe fuori dall'indice in silenzio, cioe'
+# annullerebbe la ragione per cui e' stata aperta al pubblico. Nessuna guardia
+# di build legge questo file: si verifica a mano, dopo il deploy, con
+#   curl -sI https://bestfishforever.it/allenamento/ | grep -i x-robots
+# che deve tornare VUOTO, e la stessa su /allenamento/sessione che deve invece
+# rispondere noindex.
+/allenamento/:sezione
   X-Robots-Tag: noindex, follow
 /live/:id/stanza
   X-Robots-Tag: noindex, follow
@@ -58,8 +65,6 @@
 /replayer/:publicId
   X-Robots-Tag: noindex, follow
 /mie-mani
-  X-Robots-Tag: noindex, follow
-/negozio
   X-Robots-Tag: noindex, follow
 /password-dimenticata
   X-Robots-Tag: noindex, follow

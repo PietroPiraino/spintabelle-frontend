@@ -299,8 +299,8 @@
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  font-size: 1.5rem;
-  line-height: 1;
+  // Il seme è un `<app-icon>`: la taglia la passa il template, qui resta il
+  // colore, che l'SVG eredita via `currentColor`.
   color: var(--accent);
   background: var(--accent-soft);
   border: 1px solid var(--accent-line);

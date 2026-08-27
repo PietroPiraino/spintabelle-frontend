@@ -1,15 +1,36 @@
 <section class="section">
   <div class="container">
-    <div class="section-head">
+    <!--
+      ⚠️ QUESTA PAGINA È PUBBLICA E INDICIZZABILE dal 27/08/2026: tutto ciò che
+      sta FUORI dal ramo autenticato finisce nell'HTML che legge Google.
+      Tre cose non devono comparire qui, e non è un'opinione (art. 9
+      DL 87/2018 — divieto di pubblicità del gioco):
+        1. COME si guadagnano i punti. La catena «gioca → punti → premio» è un
+           incentivo, ed è esattamente ciò che il perimetro approvato esclude.
+        2. Qualunque tasso di conversione punti↔euro — cioè i prezzi in punti
+           di buoni e abbonamenti. Pubblicati insieme al punto 1 darebbero il
+           valore economico del gioco.
+        3. Le card gadget: il titolo lo scrive un admin e nulla impedisce che
+           un giorno nomini una sala.
+      È la stessa linea già tenuta su /affiliazioni, dove il blocco punti vive
+      solo nel ramo autenticato.
+      ⚠️ E il saldo: «Hai 0 punti» stava QUI, dentro la testata, quindi l'HTML
+      statico l'avrebbe detto a chiunque, motori compresi.
+    -->
+    <header class="page-hero page-hero--center">
       <span class="eyebrow">Negozio</span>
-      <h1>Negozio</h1>
+      <h1>Il negozio dei punti BFF</h1>
+      <p class="lead">
+        I punti BFF sono il riconoscimento che la scuola dà a chi la frequenta.
+        Qui si vede che cosa diventano.
+      </p>
+    </header>
+
+    @if (auth.isAuthenticated()) {
       <p class="shop__balance">
         Hai <strong>{{ fmt(points()) }}</strong> punti
       </p>
-      <p class="lead">
-        Spendi i tuoi punti BFF in buoni sconto, abbonamenti e gadget.
-      </p>
-    </div>
+    }
 
     @if (successMsg()) {
       <div class="form-feedback is-success" role="status">{{ successMsg() }}</div>
@@ -18,6 +39,114 @@
       <div class="form-feedback is-error" role="alert">{{ purchaseError() }}</div>
     }
 
+    @if (!auth.isAuthenticated()) {
+      <section class="gate" aria-labelledby="shop-gate">
+        <h2 id="shop-gate">Il negozio è riservato agli iscritti</h2>
+        <p>
+          Per vedere che cosa c'è e per usare i tuoi punti serve un account. La
+          registrazione è gratuita.
+        </p>
+        <div class="row">
+          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
+          <a
+            class="btn btn--ghost"
+            [routerLink]="['/login']"
+            [queryParams]="{ redirect: '/negozio' }"
+            >Accedi</a
+          >
+        </div>
+        @if (!auth.ready()) {
+          <p class="gate__hint">Stiamo verificando la tua sessione…</p>
+        }
+      </section>
+
+      <section class="seo-block" aria-labelledby="shop-seo-title">
+        <h2 id="shop-seo-title">Che cos'è il negozio della scuola</h2>
+        <p>
+          Il negozio è il posto in cui i punti BFF smettono di essere un numero
+          nel profilo e diventano qualcosa. I punti li assegniamo noi, a mano,
+          agli iscritti della scuola: non si comprano, non si trasferiscono e
+          non hanno un cambio con l'euro.
+        </p>
+        <details class="seo-more">
+          <summary class="seo-more__sum">Continua a leggere</summary>
+          <p>
+            Quello che si trova qui dentro è di tre tipi. Ci sono i
+            <strong>buoni sconto</strong>, che si applicano al rinnovo
+            dell'abbonamento e valgono per chi li ha ricevuti, una volta sola.
+            Ci sono gli <strong>abbonamenti</strong>, che si possono attivare
+            direttamente coi punti invece che con un pagamento, e diventano
+            attivi subito. E ci sono i <strong>gadget</strong>: oggetti fisici
+            della scuola, spediti a casa, che si prendono coi punti oppure si
+            acquistano normalmente.
+          </p>
+          <p>
+            Non è un catalogo che cambia ogni giorno. È piuttosto un modo per
+            restituire qualcosa a chi la scuola la frequenta davvero: chi segue
+            le lezioni dal vivo, chi porta le proprie mani da rivedere, chi
+            resta nel tempo. Per questo l'assegnazione dei punti resta una
+            decisione nostra e non una formula automatica — una formula
+            premierebbe il volume, e il volume non è la cosa che vogliamo
+            premiare.
+          </p>
+          <p>
+            Il saldo, lo storico degli ordini e i buoni che possiedi stanno nel
+            tuo <strong>account</strong>. Da lì si vede anche a che punto è una
+            spedizione e quali buoni sono ancora validi.
+          </p>
+        </details>
+        <p class="seo-block__cta">
+          Registrarsi è gratis e apre subito le
+          <a routerLink="/tabelle">tabelle preflop</a> e il
+          <a routerLink="/simulatore-varianza">simulatore di varianza</a>. I
+          piani della scuola sono su <a routerLink="/abbonati">abbonamenti</a>.
+        </p>
+      </section>
+
+      <section class="faq" aria-labelledby="shop-faq-title">
+        <h2 id="shop-faq-title">Domande frequenti sul negozio</h2>
+        <details class="faq__item">
+          <summary class="faq__sum"><h3>Come si ottengono i punti BFF?</h3></summary>
+          <p>
+            Li assegniamo noi agli iscritti, guardando la partecipazione alla
+            vita della scuola. Non c'è un modo per comprarli e non c'è una
+            formula automatica: è una valutazione nostra, e i dettagli li trovi
+            nel tuo account una volta registrato.
+          </p>
+        </details>
+        <details class="faq__item">
+          <summary class="faq__sum"><h3>I punti scadono?</h3></summary>
+          <p>
+            I punti restano sul tuo account. Hanno invece una scadenza i buoni
+            sconto una volta ottenuti: la data è scritta sul buono stesso, nella
+            sezione «I miei buoni» del tuo account.
+          </p>
+        </details>
+        <details class="faq__item">
+          <summary class="faq__sum"><h3>Posso regalare o cedere un buono?</h3></summary>
+          <p>
+            No. Un buono è legato a chi lo ha ottenuto e vale una volta sola:
+            non è trasferibile ad altri account, nemmeno chiedendocelo.
+          </p>
+        </details>
+        <details class="faq__item">
+          <summary class="faq__sum"><h3>I gadget si possono prendere senza punti?</h3></summary>
+          <p>
+            Alcuni sì: dove è previsto, accanto al prezzo in punti compare anche
+            quello in euro e si sceglie come pagare. Altri esistono solo in
+            punti. La spedizione è in Italia e l'indirizzo si inserisce al
+            momento dell'ordine.
+          </p>
+        </details>
+        <details class="faq__item">
+          <summary class="faq__sum"><h3>Serve un abbonamento per usare il negozio?</h3></summary>
+          <p>
+            No, basta un account gratuito. L'abbonamento è una delle cose che si
+            possono prendere qui dentro, non un requisito per entrare.
+          </p>
+        </details>
+      </section>
+    } @else {
     <!-- ── Buoni sconto ── -->
     <section class="shop__section">
       <h2>Buoni sconto</h2>
@@ -107,9 +236,9 @@
               >
                 <span class="sub-card__strip" aria-hidden="true"></span>
                 <div class="sub-card__head">
-                  <span class="sub-card__emblem" aria-hidden="true">{{
-                    subEmblem(s.tier)
-                  }}</span>
+                  <span class="sub-card__emblem" aria-hidden="true">
+                    <app-icon [name]="subEmblem(s.tier)" [size]="26" />
+                  </span>
                   <div class="shop-card__body">
                     <h3>{{ s.label }}</h3>
                     <p class="shop-card__desc">
@@ -526,5 +655,6 @@
         }
       }
     </section>
+    }
   </div>
 </section>

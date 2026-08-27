@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -24,6 +25,8 @@ import {
   ShopVoucherType,
   SubscriptionTier,
 } from '../../core/models/api.models';
+import { RouterLink } from '@angular/router';
+import { IconComponent, IconName } from '../../shared/ui/icon/icon.component';
 import { AuthService } from '../../core/services/auth.service';
 import { ShopService } from '../../core/services/shop.service';
 import { SubscriptionsService } from '../../core/services/subscriptions.service';
@@ -47,7 +50,7 @@ const TIER_RANK: Record<SubscriptionTier, number> = {
 
 @Component({
   selector: 'app-shop',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, IconComponent, RouterLink],
   templateUrl: './shop.component.html',
   styleUrl: './shop.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -140,15 +143,42 @@ export class ShopComponent {
         this.reload();
       });
 
-    this.shop.catalog().subscribe({
-      next: (c) => this.catalog.set(c),
-      error: (err: unknown) =>
-        this.catalogError.set(
-          apiErrorMessage(err, 'Caricamento del catalogo non riuscito.'),
-        ),
+    // ⚠️ LE CHIAMATE API SONO GATED SU `auth.user()`, e non sono più nel
+    // costruttore. Finché la rotta aveva `authGuard` era innocuo; da quando
+    // /negozio è pubblica e PRERENDERIZZATA non lo è più: `GET /shop/catalog`
+    // e `GET /shop/gadgets` sono endpoint PUBBLICI, quindi in prerender non
+    // arriverebbe un 401 a salvare — il build del frontend chiamerebbe
+    // davvero l'API di produzione a ogni deploy, e con `/shop/gadgets`
+    // paginato è lo stesso accoppiamento che ha rischiato di far saltare il
+    // build delle news (429 dal ThrottlerGuard).
+    //
+    // ⚠️ Il modo di fallire peggiore non è il build rosso: è che la pagina
+    // esca col ramo d'errore o con lo spinner, il conteggio parole crolli e
+    // `check-prerender-content.mjs` faccia fallire il deploy di TUTTO il sito
+    // per un raffreddore dell'API.
+    //
+    // Idioma di `drill-config.component.ts` e `affiliations.component.ts`,
+    // guardia «già caricato per questo id» compresa: un refresh di sessione
+    // conia un nuovo oggetto `User` e senza quella si ricaricherebbe tutto.
+    effect(() => {
+      const utente = this.auth.user();
+      if (!utente) return;
+      if (this.caricatoPer === utente.id) return;
+      this.caricatoPer = utente.id;
+
+      this.shop.catalog().subscribe({
+        next: (c) => this.catalog.set(c),
+        error: (err: unknown) =>
+          this.catalogError.set(
+            apiErrorMessage(err, 'Caricamento del catalogo non riuscito.'),
+          ),
+      });
+      this.load();
     });
-    this.load();
   }
+
+  /** Id dell'utente per cui catalogo e gadget sono già stati caricati. */
+  private caricatoPer: string | null = null;
 
   // ── Formattazione ──
 
@@ -173,9 +203,19 @@ export class ShopComponent {
     return ROLE_RANK[role] > TIER_RANK[tier];
   }
 
-  /** Seme-emblema per tier (linguaggio carte del sito): Pesce Rosso ♦, Squalo ♠. */
-  protected subEmblem(tier: SubscriptionTier): string {
-    return tier === 'SQUALO' ? '♠' : '♦';
+  /**
+   * Seme-emblema per tier (linguaggio carte del sito): Pesce Rosso quadri,
+   * Squalo picche.
+   *
+   * ⚠️ Torna un NOME DI ICONA, non un carattere. Fino al 27/08/2026 tornava
+   * `'♠'`/`'♦'` e il template lo stampava come testo: su iOS `♦` prende la
+   * presentazione **emoji** e il `color: var(--accent)` di `.sub-card__emblem`
+   * — cioè l'accento per tier, tutto il punto di quell'emblema — veniva
+   * ignorato. Era sfuggito a ogni controllo perché il seme viveva nel
+   * TypeScript, e la guardia leggeva solo i template.
+   */
+  protected subEmblem(tier: SubscriptionTier): IconName {
+    return tier === 'SQUALO' ? 'spade' : 'diamond';
   }
 
   // ── Lista gadget (pattern /docs) ──

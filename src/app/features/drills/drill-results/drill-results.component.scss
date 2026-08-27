@@ -235,6 +235,8 @@
 }
 
 .dres__select {
+  // 44px: vedi `.dc__chip`. Un `<select>` a `.45rem` di padding sta sui ~33px.
+  min-height: 44px;
   padding: 0.45rem 0.8rem;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
@@ -246,6 +248,10 @@
 }
 
 .dres__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 0.45rem 1rem;
   border-radius: 999px;
   border: 1px solid var(--line-strong);

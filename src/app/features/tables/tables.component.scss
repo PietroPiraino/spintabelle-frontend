@@ -30,32 +30,30 @@
 
 // ---------- teaser per i visitatori non registrati ----------
 
+// ⚠️ Resta SOLO ciò che è proprio di questa pagina. Impaginazione,
+// allineamento, centraggio di `.lead` e `.row` vengono ora da
+// `.page-hero.page-hero--center` (styles/_utilities.scss): erano riscritti qui
+// riga per riga, ed è la biforcazione che il primitivo è nato per chiudere.
+// Il `gap` più largo e la spaziatura verticale sono l'eccezione motivata —
+// questa è la testata più cerimoniale del sito, quella con le carte.
 .pf__teaser {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
   gap: 1.3rem;
-  min-height: calc(100dvh - 280px);
-  justify-content: center;
 
-  .lead {
-    margin-inline: auto;
-  }
-
-  .row {
-    justify-content: center;
-  }
+  // ⚠️ Qui c'erano `min-height: calc(100dvh - 280px)` e `justify-content:
+  // center`. Su un desktop da 1080px l'altezza minima valeva 800px contro ~450
+  // di contenuto reale: `center` divideva i ~350px di surplus in parti uguali
+  // SOPRA e SOTTO, e i ~175 di sotto si sommavano ai 68px di `margin-top` +
+  // `padding-top` di `.seo-block`. Da lì il buco fra la CTA e il primo blocco
+  // editoriale: ~245px a 1080, ~420px a 1440. In orizzontale su telefono la
+  // `calc` diventava negativa e il difetto spariva per caso, non per progetto.
+  // L'altezza della pagina è già garantita da `.app-main { min-height: 100dvh }`
+  // (app.component.scss): questo blocco non deve riempire lo schermo da solo.
+  padding-block: clamp(2rem, 6vw, 4.5rem);
 }
 
-// Hint, non gate: compare mentre il ripristino sessione è in volo. Sostituisce
-// lo spinner a tutta pagina, che in prerender era l'UNICA cosa che usciva.
-.pf__teaser-hint {
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  color: var(--text-faint);
-  margin: 0;
-}
+// L'hint («Stiamo verificando la tua sessione…», mentre il ripristino è in
+// volo) è ora `.page-hero__hint`, che condivide il blocco con `.gate__hint` in
+// styles/_utilities.scss. Qui c'era una copia byte-per-byte di quel blocco.
 
 .pf__teaser-cards {
   display: flex;

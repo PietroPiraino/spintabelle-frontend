@@ -53,6 +53,20 @@
   gap: 0.5rem;
 }
 
+// ⚠️ Il bottone si stirava a TUTTA la larghezza della card: `.live-card__body`
+// è una colonna flex e `align-items` vale `stretch`, quindi un `.btn--sm` non
+// si ferma sul proprio contenuto. Un `.btn` largo 900px non si legge come un
+// pulsante: si legge come una barra.
+//
+// ⚠️ E la correzione NON è `align-items: flex-start` sul CONTENITORE: il primo
+// figlio è una `.spread` (titolo + badge del tier) che vive di
+// `justify-content: space-between` e deve restare larga quanto la colonna — con
+// un flex-start collasserebbe sul contenuto e il badge smetterebbe di andare a
+// destra. Si allinea il solo elemento che deve stringersi.
+.live-card__body > .btn {
+  align-self: flex-start;
+}
+
 .live-card__desc {
   color: var(--text-muted);
 }
@@ -81,5 +95,158 @@
     flex-direction: row;
     gap: 0.6rem;
     min-width: 0;
+  }
+}
+
+// ── La card in evidenza e le righe compatte ─────────────────────────────────
+//
+// ⚠️ Prima erano N card identiche con lo stesso pulsante pieno a tutta
+// larghezza, comprese le sessioni fra dieci giorni. Qui il peso visivo dice
+// qualcosa: una sola card grande (quella in diretta ora, o la prossima) e
+// sotto un elenco che si legge in verticale in un colpo d'occhio.
+
+.live-card--hero {
+  border-color: var(--line-strong);
+
+  h2 {
+    font-size: clamp(1.15rem, 2.4vw, 1.5rem);
+    margin: 0;
+  }
+}
+
+// La sessione in corso è l'unica cosa accesa della pagina.
+.live-card--hero[data-stato='ora'] {
+  border-color: var(--copper-500);
+  box-shadow: var(--glow-copper);
+}
+
+// «comincia fra 42 minuti» / «la stanza apre un'ora prima»: è
+// un'INFORMAZIONE, non un comando spento. Vedi il commento nel template.
+.live-card__conto,
+.live-riga__conto {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin: 0;
+}
+
+.live__prossime {
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  margin: 2.2rem 0 0.9rem;
+}
+
+.live__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.live-riga {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  // 44px dichiarati: è una riga con dentro un bersaglio di tocco.
+  min-height: 44px;
+
+  &:first-child {
+    border-top: 1px solid var(--line);
+  }
+
+  &.is-locked {
+    opacity: 0.72;
+  }
+}
+
+.live-riga__quando {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 4.2rem;
+  font-family: var(--font-mono);
+  line-height: 1.25;
+}
+
+.live-riga__data {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.live-riga__ora {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ember);
+}
+
+.live-riga__testo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.live-riga__titolo {
+  font-weight: 600;
+  // Il titolo porta dentro nickname del coach e argomento: su una riga sola
+  // verrebbe troncato a metà parola, su tre farebbe saltare il ritmo verticale.
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.live-riga__meta {
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+.live-riga__azione {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+// Sotto i 640px la riga si impila: data e badge sulla stessa linea, il titolo
+// sotto, l'azione a piena larghezza. Un elenco a quattro colonne su un
+// telefono diventa una colonna di parole troncate.
+@media (max-width: 640px) {
+  .live-riga {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'quando badge'
+      'testo  testo'
+      'azione azione';
+    gap: 0.5rem 0.8rem;
+    padding: 0.9rem 0.4rem;
+  }
+
+  .live-riga__quando {
+    grid-area: quando;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.45rem;
+  }
+
+  .live-riga > .badge {
+    grid-area: badge;
+    justify-self: end;
+  }
+
+  .live-riga__testo {
+    grid-area: testo;
+  }
+
+  .live-riga__azione {
+    grid-area: azione;
+    margin-left: 0;
   }
 }

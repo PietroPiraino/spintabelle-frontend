@@ -9,11 +9,76 @@
   padding-block: clamp(3.5rem, 8vw, 6.5rem);
 }
 
-.section-head {
+// ── Testate ─────────────────────────────────────────────────────────────────
+//
+// `.page-hero` è la testata di ROTTA (occhiello + h1 + lead + CTA);
+// `.section-head` resta il titolo di SEZIONE, che in 5 usi su 16 apre un `<h2>`
+// a metà pagina. Condividono le quattro dichiarazioni qui sotto e nient'altro.
+//
+// ⚠️ PERCHÉ IL PRIMITIVO ESISTE. Fino al 27/08/2026 non c'era: `.section-head`
+// non dichiara alcun allineamento, quindi ogni pagina che ne voleva uno se l'è
+// riscritta in casa — `.pf__teaser` (/tabelle), `.vz__hero`
+// (/simulatore-varianza), `.about__cover` (/chi-siamo), `.aff__gate`
+// (/affiliazioni). Quattro testate, quattro scale tipografiche, e la testata a
+// sinistra sopra un contenuto centrato nella stessa schermata.
+//
+// ⚠️ LA BASE NON DICHIARA `align-items`, e non è una dimenticanza: resta
+// `stretch`, che è ciò di cui vivono /lezioni, /docs e /live, dove dentro la
+// testata c'è una `.spread` col campo di ricerca. Un `flex-start` qui la
+// farebbe collassare sulla larghezza del placeholder — senza errori, senza
+// test rossi, e su mobile nel modo peggiore. L'allineamento lo dichiara SOLO
+// il modificatore.
+//
+// ⚠️ E non ci va nessuna regola su `h1`, `color` o scala tipografica: una
+// `.page-hero h1 { color }` (0-1-1) batterebbe `.text-gradient` (0-1-0) e
+// spegnerebbe la sfumatura su «GTO» e «Best Fish», in silenzio.
+.section-head,
+.page-hero {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
   margin-bottom: clamp(1.8rem, 4vw, 3rem);
+}
+
+// Vetrine: la pagina si presenta. Sugli STRUMENTI (/simulatore-varianza,
+// /lezioni loggato, /account, /admin) la testata resta a sinistra, cioè
+// `.page-hero` nudo — un titolo centrato sopra un pannello di controllo a due
+// colonne si legge come scollegato dal lavoro che sta sotto.
+.page-hero--center {
+  align-items: center;
+  text-align: center;
+
+  // (0,2,0) contro (0,1,0): vincono per specificità e non per ordine, e
+  // toccano solo proprietà che `.row` e `.lead` già dichiarano. Stesso idioma
+  // di `.gate .row`, più sotto in questo file.
+  > .row {
+    justify-content: center;
+  }
+
+  > .lead {
+    margin-inline: auto;
+  }
+}
+
+// Slot ornamento: il ritmo verticale è qui, il disegno resta della pagina.
+// ⚠️ Nessuna assunzione di POSIZIONE: le carte di /tabelle stanno prima
+// dell'occhiello, i badge di /chi-siamo dopo il lead. Lo colloca il markup.
+.page-hero__ornament {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.page-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.page-hero--center > .page-hero__ornament,
+.page-hero--center > .page-hero__meta {
+  justify-content: center;
 }
 
 .grid {
@@ -341,10 +406,23 @@
   .row {
     justify-content: center;
   }
+
+  // ⚠️ Sotto i 720px le due CTA si impilano a piena larghezza invece di restare
+  // affiancate e strette. La regola arriva da `.aff__gate-actions`: era l'unica
+  // cosa che la copia locale del gate su /affiliazioni avesse in piu' del
+  // primitivo, e sostituire quella copia senza portarla qui avrebbe PEGGIORATO
+  // il mobile di quella pagina. Ora vale per tutti i gate del sito.
+  @media (max-width: 720px) {
+    .row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
 }
 
 // Hint, non gate: compare mentre il ripristino di sessione e' in volo.
-.gate__hint {
+.gate__hint,
+.page-hero__hint {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--text-faint);

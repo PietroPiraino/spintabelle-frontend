@@ -11,6 +11,17 @@
 
 // ── Parte pubblica (finisce nell'HTML prerenderizzato) ────────────────────────
 
+// ⚠️ Gli h2 dei blocchi editoriali di questa pagina prendevano tre dimensioni
+// diverse: `.aff__how` e `.aff__points` ereditavano l'h2 globale
+// (`clamp(1.7rem, 3.6vw, 2.6rem)`), `.aff__terms` lo riportava a 1.4rem.
+// «Come funziona» usciva del 62% piu' grande di «Cosa c'e' nella libreria» su
+// /docs, che ha lo stesso ruolo — e su /docs quel titolo passa da
+// `.seo-block h2`. Questa e' la stessa scala.
+.aff__how h2,
+.aff__points h2 {
+  font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+}
+
 .aff__how {
   margin-bottom: 2.5rem;
 
@@ -112,38 +123,12 @@
   font-weight: 600;
 }
 
-// Riquadro per l'anonimo: spiega perché non vede le sale e dove andare.
-// ⚠️ Nessun marchio di operatore qui dentro — questa parte è indicizzabile.
-.aff__gate {
-  margin-top: 2rem;
-  padding: 1.25rem;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-
-  h2 {
-    font-size: clamp(1.2rem, 2.2vw, 1.5rem);
-    margin-bottom: 0.5rem;
-  }
-
-  p {
-    max-width: 65ch;
-    color: var(--text-muted);
-  }
-}
-
-.aff__gate-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-top: 0.9rem;
-}
-
-.aff__gate-hint {
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-  color: var(--text-faint);
-}
+// ⚠️ Qui c'era `.aff__gate`, una riscrittura locale di `.gate`
+// (styles/_utilities.scss): stesso ruolo, ma card allineata a sinistra invece
+// che centrata, un TERZO `clamp` per l'h2 e un `.aff__gate-hint` identico riga
+// per riga a `.gate__hint`. La sola cosa che aveva in più — impilare le due CTA
+// sotto i 720px — è stata promossa su `.gate .row`, dove serve a tutte e
+// quattro le pagine che hanno un gate.
 
 // ── Perché passare dalla scuola: i punti BFF ──────────────────────────────────
 // ⚠️ Volutamente QUIETO. In questa pagina il rame vuol dire "tocca a te" ed è
@@ -891,8 +876,7 @@
   }
 
   .aff-actions,
-  .aff-form__actions,
-  .aff__gate-actions {
+  .aff-form__actions {
     flex-direction: column;
     align-items: stretch;
   }

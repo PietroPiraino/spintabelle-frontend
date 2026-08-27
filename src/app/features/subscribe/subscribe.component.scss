@@ -1,6 +1,10 @@
 .subscribe__intro {
   max-width: 60ch;
   color: var(--text-muted);
+  // ⚠️ `margin-inline` esplicito: questo paragrafo NON porta `.lead`, quindi
+  // la regola `.page-hero--center > .lead` non lo vede e la sua colonna da
+  // 60ch resterebbe ancorata a sinistra dentro una testata centrata.
+  margin-inline: auto;
 }
 
 .subscribe__guest {
@@ -87,17 +91,76 @@
     position: relative;
     padding-left: 1.5rem;
 
+    // ⚠️ Maschera e non il carattere `♦`: su iOS U+2666 prende la
+    // presentazione emoji e `--copper-400` veniva ignorato. Qui pesava più che
+    // altrove — è l'elenco vantaggi della pagina commerciale, ripetuto sei
+    // volte (3 voci x 2 piani).
     &::before {
-      content: '♦';
+      content: '';
       position: absolute;
       left: 0;
-      color: var(--copper-400);
+      top: 0.52em;
+      width: 0.62em;
+      height: 0.62em;
+      background: var(--copper-400);
+      mask: var(--mask-quadri) center / contain no-repeat;
+      -webkit-mask: var(--mask-quadri) center / contain no-repeat;
     }
   }
 }
 
+// ⚠️ Piena larghezza e due colonne. Qui c'era `max-width: 640px` SENZA
+// `margin-inline: auto`, ed è fratello della griglia dei piani: il bordo destro
+// cadeva a 640px, cioè 38,8px dentro la seconda card — allineato a nulla, in
+// una pagina dove tutto il resto è a piena larghezza. È il disallineamento
+// che si vedeva scegliendo un piano.
+//
+// `auto-fit` e non `1fr 1fr`: sotto ~660px collassa a una colonna da solo,
+// senza una media query in più.
 .subscribe__pay {
-  max-width: 640px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 1.4rem 2rem;
+  align-items: start;
+}
+
+// Titolo, errore e riga dei bottoni attraversano tutte le colonne.
+.subscribe__pay > h2,
+.subscribe__pay > .form-feedback,
+.subscribe__pay > .row {
+  grid-column: 1 / -1;
+}
+
+// ⚠️ Il focus lo mettiamo noi (`vaiAlPagamento`), quindi l'anello di default
+// del browser comparirebbe su un titolo che l'utente non ha «toccato».
+.subscribe__pay > h2:focus {
+  outline: none;
+}
+
+// Colonna del pannello: i campi restano impilati dentro la loro metà invece
+// di distribuirsi a zig-zag fra le due.
+.subscribe__pay-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.subscribe__pay-col > :last-child {
+  margin-bottom: 0;
+}
+
+// La «✕» che chiude l'avviso su un buono rifiutato.
+.subscribe__error-close {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  // 44px dichiarati: un carattere nudo sta sui ~16px.
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .subscribe__steps {

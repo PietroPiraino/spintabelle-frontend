@@ -84,6 +84,23 @@
   }
 }
 
+// ⚠️ 44px DICHIARATI, e solo sui `<button>`. Un `.badge` eredita
+// `padding: .22rem .7rem` e `font-size: .68rem`: altezza reale ~26px, contro i
+// 44 richiesti da un bersaglio di tocco — ed è il controllo PIÙ toccato di
+// /docs e /lezioni, dove i filtri sono il modo principale di usare la pagina.
+// I 44px non arrivano mai da soli: è la stessa lezione già scritta in
+// `_utilities.scss` per `.faq__sum` e in `_news-share.scss`.
+//
+// ⚠️ Il selettore è `button.badge--tag` e non `.badge--tag`: nel progetto
+// l'elemento dice già il ruolo — `<button>` quando il badge filtra, `<span>`
+// quando è un'etichetta. Un'etichetta alta 44px sarebbe solo un buco.
+// Conseguenza voluta e visibile: i tag DENTRO le card lezione sono `<button>`
+// (sono filtri anche lì), quindi quelle card si alzano. È il prezzo giusto:
+// un bersaglio da 26px resta da 26px anche quando sta dentro una card.
+button.badge--tag {
+  min-height: 44px;
+}
+
 .badge--tag {
   cursor: pointer;
   transition: border-color var(--t-fast), color var(--t-fast), background-color var(--t-fast), box-shadow var(--t-fast);

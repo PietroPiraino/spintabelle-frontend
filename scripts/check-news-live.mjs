@@ -61,7 +61,7 @@
 //      sembrerebbe tutto a posto. Gli slug attesi si calcolano dal record
 //      dell'API con la stessa funzione della Function, mai da una lista scritta
 //      qui.
-//   7. `/negozio` porta ancora `X-Robots-Tag`. Sembra fuori tema e non lo e':
+//   7. `/account` porta ancora `X-Robots-Tag`. Sembra fuori tema e non lo e':
 //      quell'header viene da `public/_headers`, che in advanced mode
 //      (`_worker.js`) smetterebbe di applicarsi. E' la prova, da fuori, che
 //      siamo ancora in directory mode.
@@ -717,7 +717,11 @@ async function sonda() {
 
   // ---- 5. `_headers` e' ancora in vigore (= siamo in directory mode) ------
 
-  const urlGated = `${BASE}/negozio`;
+  // ⚠️ `/account` e non più `/negozio`: dal 27/08/2026 il Negozio è una pagina
+  // PUBBLICA e indicizzata, quindi non porta più `X-Robots-Tag` — usarlo come
+  // sentinella significherebbe un rosso permanente su una configurazione sana.
+  // La sentinella dev'essere una rotta che resta client+noindex per sempre.
+  const urlGated = `${BASE}/account`;
   try {
     const gated = await prendi(urlGated, { method: 'HEAD' });
     const xr = gated.headers.get('x-robots-tag');

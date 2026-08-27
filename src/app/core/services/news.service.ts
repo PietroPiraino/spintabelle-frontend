@@ -7,6 +7,7 @@ import {
   CodaRedazione,
   News,
   NewsAdmin,
+  NewsCategory,
   NewsApprovePayload,
   NewsPausaSettings,
   NewsPayload,
@@ -20,8 +21,15 @@ const API = environment.API_URL;
 export class NewsService {
   private readonly http = inject(HttpClient);
 
-  getNews(page = 1, limit = 10): Observable<Paginated<News>> {
-    const params = new HttpParams().set('page', page).set('limit', limit);
+  /**
+   * ⚠️ `categoria` richiede il backend deployato PRIMA: il `ValidationPipe`
+   * globale ha `forbidNonWhitelisted`, quindi contro un'API che non conosce il
+   * campo la risposta è 400 sull'INTERA lista — l'elenco si svuota, non
+   * ignora il filtro.
+   */
+  getNews(page = 1, limit = 10, categoria?: NewsCategory): Observable<Paginated<News>> {
+    let params = new HttpParams().set('page', page).set('limit', limit);
+    if (categoria) params = params.set('categoria', categoria);
     return this.http.get<Paginated<News>>(`${API}/news`, { params });
   }
 

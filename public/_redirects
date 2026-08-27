@@ -20,7 +20,8 @@
 #    a mano: e' verboso ed e' il punto.
 #
 # 3. LE PRERENDERIZZATE NON VANNO ELENCATE (`/`, /tabelle, /simulatore-varianza,
-#    /chi-siamo, /abbonati, /lezioni, /docs, /live, /guide, /guide/:slug,
+#    /chi-siamo, /abbonati, /lezioni, /docs, /live, /allenamento, /negozio,
+#    /guide, /guide/:slug,
 #    /affiliazioni, /privacy, /cookie-policy, /redazione, /policy-editoriale):
 #    hanno il proprio HTML statico e nessuna regola le tocca. Elencarle qui le
 #    romperebbe, servendo la shell vuota al posto dell'HTML con i meta -> addio
@@ -38,12 +39,10 @@
 /account                /index.csr  200
 /admin                  /index.csr  200
 /admin/*                /index.csr  200
-/allenamento            /index.csr  200
-/allenamento/*          /index.csr  200
+/allenamento/:sezione   /index.csr  200
 /live/:id/stanza        /index.csr  200
 /login                  /index.csr  200
 /mie-mani               /index.csr  200
-/negozio                /index.csr  200
 /password-dimenticata   /index.csr  200
 /recupera-verifica      /index.csr  200
 /registrazione          /index.csr  200

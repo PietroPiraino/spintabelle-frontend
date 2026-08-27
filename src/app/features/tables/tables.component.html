@@ -14,8 +14,8 @@
     -->
     @if (!auth.isAuthenticated()) {
       <!-- Visitatori: la consultazione è riservata agli iscritti -->
-      <div class="pf__teaser">
-        <div class="pf__teaser-cards" aria-hidden="true">
+      <header class="page-hero page-hero--center pf__teaser">
+        <div class="page-hero__ornament pf__teaser-cards" aria-hidden="true">
           <span class="pf__card pf__card--1">A♣</span>
           <span class="pf__card pf__card--2">7♣</span>
           <span class="pf__card pf__card--3">4♣</span>
@@ -34,9 +34,9 @@
           <a routerLink="/login" class="btn btn--ghost">Accedi</a>
         </div>
         @if (!auth.ready()) {
-          <p class="pf__teaser-hint">Stiamo verificando la tua sessione…</p>
+          <p class="page-hero__hint">Stiamo verificando la tua sessione…</p>
         }
-      </div>
+      </header>
 
       <!--
         Contenuto evergreen: sta nel ramo anonimo perché è quello che viene

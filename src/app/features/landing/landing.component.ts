@@ -14,11 +14,12 @@ import { SeoService } from '../../core/services/seo.service';
 import { NewsCardComponent } from '../../shared/ui/news-card/news-card.component';
 import { SuitDividerLiveComponent } from '../../shared/suit-divider-live/suit-divider-live.component';
 import { SOCIAL_LINKS } from '../../core/social-links';
+import { IconComponent, IconName } from '../../shared/ui/icon/icon.component';
 import { Hero3dComponent } from './hero-3d/hero-3d.component';
 
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink, Hero3dComponent, NewsCardComponent, SuitDividerLiveComponent],
+  imports: [RouterLink, Hero3dComponent, NewsCardComponent, SuitDividerLiveComponent, IconComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -160,19 +161,26 @@ export class LandingComponent {
     },
   ];
 
-  protected readonly valueProps = [
+  // ⚠️ `suit` è un NOME DI ICONA, non un carattere. Fino al 27/08/2026 qui
+  // c'erano `♠ ♦ ♣` come testo, stampati dal template in uno `<span>`: su iOS
+  // `♦` prende la presentazione **emoji**, si porta dentro i propri colori e il
+  // `color: var(--copper-500)` di `.value-prop__suit` non arrivava a schermo —
+  // due semi su tre nel rame del marchio, uno azzurro di sistema, sulla prima
+  // schermata della home. La guardia non lo vedeva perché leggeva solo gli
+  // `.html`; ora legge anche i `.ts`.
+  protected readonly valueProps: { suit: IconName; title: string; text: string }[] = [
     {
-      suit: '♠',
+      suit: 'spade',
       title: 'Studio guidato',
       text: 'Percorsi di lezioni video tenuti dai coach della scuola: dal preflop agli spot postflop più complessi, in italiano.',
     },
     {
-      suit: '♦',
+      suit: 'diamond',
       title: 'Tabelle di gioco',
       text: 'Le tabelle GTO per Spin & Go e Twister, consultabili ovunque: la teoria sempre in tasca, anche tra un game e l’altro.',
     },
     {
-      suit: '♣',
+      suit: 'club',
       title: 'Community vera',
       text: 'Discord attivo, review delle mani, sessioni condivise e il canale YouTube con contenuti gratuiti ogni settimana.',
     },

@@ -15,15 +15,20 @@
     radial-gradient(420px 360px at 90% 75%, rgba(0, 212, 212, 0.13), transparent 60%),
     radial-gradient(340px 280px at 62% 55%, rgba(255, 181, 71, 0.12), transparent 60%);
 
+  // ⚠️ Maschera e non il carattere `♣`: è il ripiego quando manca la WebGL,
+  // cioè proprio il caso in cui gira su un telefono modesto — dove il glifo
+  // veniva disegnato dal font di sistema e non da noi.
   &::after {
-    content: '♣';
+    content: '';
     position: absolute;
     right: clamp(-2rem, 6vw, 8rem);
     top: 50%;
     transform: translateY(-50%) rotate(14deg);
-    font-size: clamp(12rem, 28vw, 24rem);
-    line-height: 1;
-    color: rgba(22, 34, 63, 0.05);
+    width: clamp(12rem, 28vw, 24rem);
+    height: clamp(12rem, 28vw, 24rem);
+    background: rgba(22, 34, 63, 0.05);
+    mask: var(--mask-fiori) center / contain no-repeat;
+    -webkit-mask: var(--mask-fiori) center / contain no-repeat;
   }
 }
 

@@ -10,7 +10,7 @@
 @if (!auth.isAuthenticated()) {
   <section class="section">
     <div class="container">
-      <div class="section-head">
+      <header class="page-hero page-hero--center">
         <span class="eyebrow">Dal vivo</span>
         <h1>Lezioni di poker dal vivo per Spin &amp; Go e Twister</h1>
         <p class="lead">
@@ -18,7 +18,7 @@
           guarda, si fanno domande, e chi vuole condivide il proprio schermo per
           farsi rivedere una sessione.
         </p>
-      </div>
+      </header>
 
       <!--
         ⚠️ Il gate sta QUI, subito sotto l'h1, e non in fondo alla pagina come
@@ -134,71 +134,154 @@
         </div>
       }
     } @else {
-      <div class="live__list">
-        @for (s of sessions()!; track s.id) {
-          <article class="card card--pad live-card" [class.is-locked]="s.locked">
-            <div class="live-card__when">
-              <span class="live-card__date">{{ s.startsAt | date: 'dd MMM yyyy' }}</span>
-              <span class="live-card__time">{{ s.startsAt | date: 'HH:mm' }}</span>
+      <!--
+        ⚠️ Una card in EVIDENZA e poi righe compatte, non otto card uguali.
+        La domanda che un iscritto si fa aprendo questa pagina è una sola —
+        «quando è la prossima, e posso entrare adesso?» — e un elenco
+        cronologico in cui ogni riga ha lo stesso peso e lo stesso pulsante
+        pieno non le risponde. La card grande è quella in diretta ora; se non
+        c'è nessuna live in corso, la prima futura.
+      -->
+      @if (inEvidenza(); as p) {
+        <article
+          class="card card--pad live-card live-card--hero"
+          [class.is-locked]="p.locked"
+          [attr.data-stato]="stato(p)"
+        >
+          <div class="live-card__when">
+            <span class="live-card__date">{{ p.startsAt | date: 'dd MMM yyyy' }}</span>
+            <span class="live-card__time">{{ p.startsAt | date: 'HH:mm' }}</span>
+          </div>
+          <div class="live-card__body">
+            <div class="spread">
+              <h2>{{ p.title }}</h2>
+              @if (stato(p) === 'ora') {
+                <span class="badge badge--live">In diretta ora</span>
+              } @else if (p.stakes === 'HIGH') {
+                <span class="badge badge--premium">High stakes</span>
+              } @else {
+                <span class="badge badge--free">Low stakes</span>
+              }
             </div>
-            <div class="live-card__body">
-              <div class="spread">
-                <h3>{{ s.title }}</h3>
-                @if (isLiveNow(s)) {
-                  <span class="badge badge--live">🔴 In diretta ora</span>
-                } @else if (s.stakes === 'HIGH') {
-                  <span class="badge badge--premium">High stakes</span>
-                } @else {
-                  <span class="badge badge--free">Low stakes</span>
-                }
+            @if (p.description) {
+              <p class="live-card__desc">{{ p.description }}</p>
+            }
+            <p class="live-card__meta">
+              <!--
+                ⚠️ «Piattaforma» solo sulle EXTERNAL: su una sessione on-site
+                non significa niente, e compariva su entrambe.
+              -->
+              @if (p.platform && p.mode !== 'LIVEKIT') {
+                <span>{{ p.platform }}</span>
+                <span aria-hidden="true"> · </span>
+              }
+              @if (p.durationMin) {
+                <span>{{ p.durationMin }} min</span>
+              }
+              @if (p.recordingEnabled) {
+                <span aria-hidden="true"> · </span>
+                <span>viene registrata</span>
+              }
+            </p>
+
+            @if (p.locked) {
+              <div class="live-card__locked">
+                <span aria-hidden="true">&#128274;</span>
+                Riservata agli abbonati
+                {{ p.stakes === 'HIGH' ? 'Squalo' : 'Pesce Rosso o Squalo' }}.
+                <a routerLink="/abbonati" class="btn btn--primary btn--sm">Abbonati</a>
               </div>
-              @if (s.description) {
-                <p class="live-card__desc">{{ s.description }}</p>
-              }
-              <p class="live-card__meta">
-                @if (s.platform) {
-                  <span>{{ s.platform }}</span>
-                }
-                @if (s.platform && s.durationMin) {
-                  <span aria-hidden="true"> · </span>
-                }
-                @if (s.durationMin) {
-                  <span>{{ s.durationMin }} min</span>
-                }
-              </p>
-
-              @if (s.locked) {
-                <div class="live-card__locked">
-                  <span aria-hidden="true">🔒</span>
-                  Riservata agli abbonati
-                  {{ s.stakes === 'HIGH' ? 'Squalo' : 'Pesce Rosso o Squalo' }}.
-                  <a routerLink="/abbonati" class="btn btn--primary btn--sm">Abbonati</a>
+            } @else if (p.mode === 'LIVEKIT' && p.canJoinLive) {
+              <!--
+                ⚠️ Tre gradi, non un pulsante solo. Lo stato "programmata" NON
+                emette nulla di cliccabile, e nemmeno un bottone disabilitato:
+                quello prende opacity .45 e cursor not-allowed, cioè si legge
+                come un comando rotto invece che come un'informazione.
+              -->
+              @if (stato(p) === 'ora') {
+                <a [routerLink]="['/live', p.id, 'stanza']" class="btn btn--primary"
+                  >Entra nella stanza</a
+                >
+              } @else if (stato(p) === 'imminente') {
+                <div class="row">
+                  <a [routerLink]="['/live', p.id, 'stanza']" class="btn btn--ghost"
+                    >Entra nella stanza</a
+                  >
+                  <span class="live-card__conto">comincia {{ quandoManca(p) }}</span>
                 </div>
-              } @else if (s.mode === 'LIVEKIT' && s.canJoinLive) {
-                <a
-                  [routerLink]="['/live', s.id, 'stanza']"
-                  class="btn btn--primary btn--sm"
-                >Entra nella stanza</a>
-              } @else if (s.mode === 'LIVEKIT' && s.ended) {
-                <span class="badge">Live terminata</span>
-              } @else if (s.joinUrl) {
-                <a
-                  [href]="s.joinUrl"
-                  target="_blank"
-                  rel="noopener"
-                  class="btn btn--primary btn--sm"
-                >Entra nella live</a>
+              } @else {
+                <p class="live-card__conto">
+                  Comincia {{ quandoManca(p) }} · la stanza apre un'ora prima.
+                </p>
               }
+            } @else if (p.mode === 'LIVEKIT' && p.ended) {
+              <span class="badge">Live terminata</span>
+            } @else if (p.joinUrl) {
+              <a [href]="p.joinUrl" target="_blank" rel="noopener" class="btn btn--primary"
+                >Entra nella live</a
+              >
+            }
 
-              @if (s.recordingState === 'DONE' && s.recordedLessonId) {
-                <a routerLink="/lezioni" class="btn btn--ghost btn--sm">
-                  ▶ Rivedi la registrazione
-                </a>
+            @if (p.recordingState === 'DONE' && p.recordedLessonId) {
+              <a routerLink="/lezioni" class="btn btn--ghost btn--sm">
+                Rivedi la registrazione
+              </a>
+            }
+          </div>
+        </article>
+      }
+
+      @if (altre().length) {
+        <h2 class="live__prossime">Prossime sessioni</h2>
+        <ul class="live__list">
+          @for (s of altre(); track s.id) {
+            <li class="live-riga" [class.is-locked]="s.locked">
+              <span class="live-riga__quando">
+                <span class="live-riga__data">{{ s.startsAt | date: 'dd MMM' }}</span>
+                <span class="live-riga__ora">{{ s.startsAt | date: 'HH:mm' }}</span>
+              </span>
+              <span class="live-riga__testo">
+                <span class="live-riga__titolo">{{ s.title }}</span>
+                <span class="live-riga__meta">
+                  @if (s.durationMin) {
+                    {{ s.durationMin }} min
+                  }
+                  @if (s.durationMin && s.recordingEnabled) {
+                    <span aria-hidden="true"> · </span>
+                  }
+                  @if (s.recordingEnabled) {
+                    viene registrata
+                  }
+                </span>
+              </span>
+              @if (s.stakes === 'HIGH') {
+                <span class="badge badge--premium">High stakes</span>
+              } @else {
+                <span class="badge badge--free">Low stakes</span>
               }
-            </div>
-          </article>
-        }
-      </div>
+              <span class="live-riga__azione">
+                @if (s.locked) {
+                  <a routerLink="/abbonati" class="btn btn--ghost btn--sm">Abbonati</a>
+                } @else if (s.mode === 'LIVEKIT' && s.canJoinLive && stato(s) === 'ora') {
+                  <a [routerLink]="['/live', s.id, 'stanza']" class="btn btn--primary btn--sm"
+                    >Entra</a
+                  >
+                } @else if (s.mode === 'LIVEKIT' && s.canJoinLive && stato(s) === 'imminente') {
+                  <a [routerLink]="['/live', s.id, 'stanza']" class="btn btn--ghost btn--sm"
+                    >Entra</a
+                  >
+                } @else if (s.joinUrl) {
+                  <a [href]="s.joinUrl" target="_blank" rel="noopener" class="btn btn--ghost btn--sm"
+                    >Entra</a
+                  >
+                } @else {
+                  <span class="live-riga__conto">{{ quandoManca(s) }}</span>
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      }
     }
   </div>
 </section>

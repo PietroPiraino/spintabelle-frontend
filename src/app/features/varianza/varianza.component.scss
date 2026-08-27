@@ -2,26 +2,22 @@
   display: block;
 }
 
+// ⚠️ La pagina era FUORI dal sistema: `.vz` reimplementava a mano il
+// contenitore (`max-width` + `margin` + padding proprio) e `.vz__hero` la
+// testata, con `.vz__title` e `.vz__lead` che riscrivevano da zero l'`h1` e il
+// `.lead` globali. Conseguenze misurabili, entrambe visibili accanto a
+// qualunque altra pagina: il contenuto era 48px più stretto (padding laterale
+// 1.5rem contro i 2.5rem di `.container`) e cominciava 64px più in alto
+// (padding verticale 2.5rem contro i 6.5rem di `.section`).
+//
+// Ora il markup è `<section class="section vz"><div class="container">` e la
+// testata è `.page-hero` nudo — senza `--center`, ed è una scelta: questa è
+// una pagina STRUMENTO, e un titolo centrato sopra un pannello di controllo a
+// due colonne si legge come scollegato dal lavoro che sta sotto.
+//
+// Di `.vz` resta solo ciò che il sistema non dà.
 .vz {
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: clamp(1rem, 3vw, 2.5rem) clamp(0.9rem, 3vw, 1.5rem) 4rem;
-}
-
-.vz__hero {
-  margin-bottom: 1.75rem;
-}
-.vz__title {
-  font-family: var(--font-display);
-  font-size: clamp(1.7rem, 4vw, 2.6rem);
-  margin: 0 0 0.5rem;
-  color: var(--text);
-}
-.vz__lead {
-  max-width: 60ch;
-  color: var(--text-muted);
-  line-height: 1.55;
-  margin: 0;
+  padding-bottom: 4rem;
 }
 
 .vz__grid {
@@ -39,7 +35,11 @@
 /* ---------- pannello impostazioni ---------- */
 .vz__panel {
   position: sticky;
-  top: 1rem;
+  // ⚠️ L'header del sito è `position: sticky` e resta in cima allo scroll: con
+  // `top: 1rem` il pannello ci scivolava SOTTO e le prime righe (Formato,
+  // Buy-in) finivano coperte. 4.5rem ≈ l'altezza della barra più il respiro di
+  // prima.
+  top: 4.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
@@ -63,7 +63,15 @@
   background: var(--bg-1);
   border-radius: var(--radius);
 }
+// ⚠️ 44px dichiarati sui comandi del pannello. Misurati a 390px il 27/08/2026:
+// i due segmenti stavano a 42px e il collegamento «Inserisci le % a mano» a 21.
+// Il pannello del simulatore e' fatto quasi solo di questi controlli, ed e'
+// l'unica cosa che si tocca su questa pagina.
 .vz__seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   border: 0;
   background: transparent;
   color: var(--text-muted);
@@ -107,6 +115,9 @@
   gap: 0.4rem;
 }
 .vz__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   border: 1px solid var(--line);
   background: var(--bg-1);
   color: var(--text-muted);
@@ -210,20 +221,12 @@ input[type='number']:focus-visible {
   font-size: 0.85rem;
   color: var(--text-muted);
 }
-.vz__select {
-  width: 100%;
-  padding: 0.5rem 0.55rem;
-  background: var(--bg-1);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-}
-.vz__select:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 1px;
-}
+// ⚠️ Qui c'era `.vz__select`, una skin locale del `<select>`: padding `.5rem`
+// contro `.78rem 1rem`, fondo `--bg-1` contro `--surface-1`, nessuna freccetta
+// e nessun anello di focus — cioè tre dropdown che non somigliavano a nessun
+// altro campo del sito, ed è la differenza che si vedeva mettendo
+// /simulatore-varianza accanto a qualunque altra pagina. I `<select>` usano
+// ora `.input` (styles/_forms.scss), e queste regole erano codice morto.
 .vz__hint--warn {
   color: var(--copper-500, var(--gold-text));
   font-style: italic;
@@ -242,7 +245,15 @@ input[type='number']:focus-visible {
   align-self: flex-start;
   border: 0;
   background: none;
+  // ⚠️ 44px sul BERSAGLIO, non sul testo: e' un collegamento in mezzo al
+  // pannello e ingrandirlo lo farebbe sembrare un pulsante. Il padding
+  // verticale allarga l'area toccabile lasciando la riga com'e'; il margine
+  // negativo annulla lo spazio che quel padding aggiungerebbe attorno.
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 0;
+  margin-block: -0.5rem;
   color: var(--gold-text, var(--copper-500));
   font: inherit;
   font-size: 0.82rem;
@@ -369,6 +380,7 @@ input[type='number']:focus-visible {
   border-radius: var(--radius-sm);
 }
 .vz__unitbtn {
+  min-height: 44px;
   border: 0;
   background: transparent;
   color: var(--text-muted);
@@ -572,10 +584,12 @@ input[type='number']:focus-visible {
   font-size: 0.9rem;
   color: var(--text-muted);
 }
-.vz__bust-pick .vz__select {
+// Il selettore del bankroll sta in mezzo a una frase: si stringe sul contenuto
+// invece di occupare la riga. Il resto (fondo, bordo, freccetta, focus) viene
+// da `.input`.
+.vz__bust-pick .input {
   width: auto;
-  min-width: 4.5rem;
-  padding: 0.4rem 0.5rem;
+  min-width: 5.5rem;
   font-family: var(--font-mono);
   font-weight: 600;
 }
@@ -666,7 +680,17 @@ input[type='number']:focus-visible {
 }
 
 /* ---------- contenuto evergreen (SEO) ---------- */
+// ⚠️ COLONNA DI LETTURA CENTRATA, come il globale .seo-block. Questo blocco
+// aveva solo il filetto superiore, e i figli con la loro larghezza massima
+// (.vz__cta 70ch, .vz__faq 75ch) restavano appiccicati a sinistra dentro un
+// contenitore da 1180px, con mezza pagina vuota a destra. È la stessa deriva
+// che il commento in testa a .seo-block (styles/_utilities.scss) descrive e
+// corregge: la copia locale di questa pagina non l'aveva mai ricevuta, ed è
+// una delle ragioni per cui il simulatore sembrava «tutto allineato a
+// sinistra». Basta centrare il padre: .vz__cta e .vz__faq stanno dentro.
 .vz__seo {
+  max-width: 74ch;
+  margin-inline: auto;
   margin-top: 2.5rem;
   padding-top: 1.75rem;
   border-top: 1px solid var(--line);

@@ -2,9 +2,13 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -82,6 +86,11 @@ export class SubscribeComponent {
   protected readonly me = signal<MySubscription | null>(null);
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
+
+  private readonly injector = inject(Injector);
+
+  /** L'h2 del pannello di pagamento: è il bersaglio del focus (vedi `vaiAlPagamento`). */
+  private readonly testaPagamento = viewChild<ElementRef<HTMLElement>>('testaPagamento');
 
   protected readonly selectedTier = signal<SubscriptionTier | null>(null);
   protected readonly submitting = signal(false);
@@ -212,6 +221,9 @@ export class SubscribeComponent {
   }
 
   protected choose(tier: SubscriptionTier): void {
+    // Scegliendo un piano si va al pannello: nasce sotto tutta la griglia.
+    if (this.auth.isAuthenticated()) this.vaiAlPagamento();
+
     // Anonimo: per abbonarsi serve un account → al login, poi ritorno qui.
     if (!this.auth.isAuthenticated()) {
       void this.router.navigate(['/login'], {
@@ -223,6 +235,47 @@ export class SubscribeComponent {
     this.submitError.set(null);
     // i buoni sono validati per uno specifico tier: cambiando piano si azzerano
     this.clearDiscounts();
+  }
+
+  /**
+   * Porta al pannello di pagamento, che nasce SOTTO l'intera griglia.
+   *
+   * ⚠️ Non è una comodità: sotto ~660px la griglia è a una colonna, quindi chi
+   * tocca «Scegli Pesce Rosso» sulla prima card genera il pannello sotto la
+   * SECONDA — a 390px sono ~950px più giù, cioè oltre due schermate. Nessuno
+   * sposta scroll o focus da solo (lo scroll custom di `app.config.ts` scatta
+   * solo al cambio di percorso), e l'unico segnale che qualcosa è successo
+   * usciva dal campo visivo.
+   *
+   * ⚠️ Si sposta il FOCUS e non solo lo scroll: porta con sé lo scorrimento ed
+   * è anche la cosa giusta per chi naviga da tastiera o con uno screen reader,
+   * che altrimenti resterebbe sul bottone mentre la pagina cambia sotto.
+   *
+   * ⚠️ `afterNextRender` e non una chiamata sincrona: in zoneless il pannello
+   * è dentro un `@if` che monta nello stesso ciclo, quindi un
+   * `querySelector` immediato trova `null` e il difetto diventa «a volte
+   * funziona». Il `viewChild` è `signal`-based e lo stesso vale per lui.
+   */
+  protected vaiAlPagamento(): void {
+    afterNextRender(
+      () => {
+        const h = this.testaPagamento();
+        h?.nativeElement.focus({ preventScroll: false });
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /**
+   * Chiude l'avviso su un buono rifiutato.
+   *
+   * ⚠️ Serve perché il rollback di `revalidate()` toglie il codice appena
+   * aggiunto: spariscono i badge e con essi le «✕» di `removeCode()`, che era
+   * l'unico punto che azzerava `discountError`. Restava un messaggio d'errore
+   * su un codice non più applicato, e il bottone d'acquisto spento.
+   */
+  protected chiudiErroreSconto(): void {
+    this.discountError.set(null);
   }
 
   protected cancelChoice(): void {

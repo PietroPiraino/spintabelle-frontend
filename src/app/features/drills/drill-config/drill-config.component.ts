@@ -16,6 +16,7 @@ import {
   DrillSpotType,
   PreflopMeta,
 } from '../../../core/models/api.models';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { DrillService } from '../../../core/services/drill.service';
 import { PreflopService } from '../../../core/services/preflop.service';
@@ -38,6 +39,7 @@ interface DepthOption {
 
 @Component({
   selector: 'app-drill-config',
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './drill-config.component.html',
   styleUrl: './drill-config.component.scss',

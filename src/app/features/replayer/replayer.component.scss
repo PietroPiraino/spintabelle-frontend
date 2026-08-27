@@ -31,9 +31,17 @@
   gap: 0.4rem;
   justify-items: start;
   padding: 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md, 10px);
-  background: var(--surface);
+  // ⚠️ SOLO token che esistono davvero. Qui c'erano `--border`, `--radius-md`
+  // e `--surface`: nessuno dei tre è in `styles/_tokens.scss`, quindi bordo e
+  // fondo erano dichiarazioni INVALIDE e la card usciva trasparente e senza
+  // bordo — si vedeva solo come «le card della vetrina sembrano sparse». Il
+  // raggio cadeva sul fallback `10px`, che mascherava il difetto facendo
+  // sembrare viva tutta la regola. È lo stesso errore già corretto in
+  // `my-hands.component.scss` (vedi il commento in testa a quel file): la
+  // correzione era stata applicata lì e mai propagata al file gemello.
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
   color: inherit;
   text-decoration: none;
   // ⚠️ 44px dichiarati: è una card cliccabile, e il padding da solo non li

@@ -54,6 +54,15 @@
 }
 
 .dc__chip {
+  // ⚠️ 44px dichiarati + `inline-flex`. Col solo `padding: .5rem 1rem` su un
+  // `<button>` l'altezza reale era ~35px (la variante `--sm` ~31px), e questi
+  // sono i controlli PRINCIPALI della pagina: sei gruppi, decine di chip, tutti
+  // da toccare. Senza `inline-flex` il `min-height` alza la scatola ma lascia
+  // il testo in alto.
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 0.5rem 1rem;
   border-radius: 999px;
   border: 1px solid var(--line-strong);

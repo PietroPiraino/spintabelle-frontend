@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { News } from '../../../core/models/api.models';
+import { NEWS_CATEGORY_LABELS, News } from '../../../core/models/api.models';
 import { stripMarkdown } from '../../../core/utils/strip-markdown';
 
 /**
@@ -40,9 +40,27 @@ function troncaAlleParole(testo: string, max: number): string {
         />
       }
       <div class="news-card__body">
-        <time class="news-card__date" [attr.datetime]="news().createdAt">
-          {{ news().createdAt | date: 'dd MMMM yyyy' }}
-        </time>
+        <!--
+          ⚠️ La categoria è l'attributo su cui si filtra, e prima non si vedeva
+          da nessuna parte: cliccando "Tornei" la griglia cambiava e nessuna
+          card diceva perché. Sta sulla STESSA riga della data, che occupava
+          una riga da sola: così il costo in altezza è zero.
+          ⚠️ Badge NUDO e non la variante --tag: qui non è cliccabile, e quella
+          porta cursor:pointer (più i 44px, che su un'etichetta sono un buco).
+          ⚠️ Il ramo condizionale non è pigrizia: il campo è opzionale per
+          costruzione — il backend legge in lean(), che non applica i default
+          di schema, quindi una riga storica può arrivare senza.
+          (Niente apici inversi qui dentro: è il template literal del
+          componente e lo chiuderebbero.)
+        -->
+        <div class="row news-card__meta">
+          <time class="news-card__date" [attr.datetime]="news().createdAt">
+            {{ news().createdAt | date: 'dd MMMM yyyy' }}
+          </time>
+          @if (news().categoria; as c) {
+            <span class="badge">{{ etichette[c] }}</span>
+          }
+        </div>
         <h3 class="news-card__title">
           <a [routerLink]="['/news', news()._id]">{{ news().title }}</a>
         </h3>
@@ -91,6 +109,11 @@ function troncaAlleParole(testo: string, max: number): string {
       flex: 1;
     }
 
+    .news-card__meta {
+      gap: 0.6rem;
+      row-gap: 0.35rem;
+    }
+
     .news-card__date {
       font-family: var(--font-mono);
       font-size: 0.72rem;
@@ -129,6 +152,8 @@ function troncaAlleParole(testo: string, max: number): string {
 })
 export class NewsCardComponent {
   readonly news = input.required<News>();
+
+  protected readonly etichette = NEWS_CATEGORY_LABELS;
 
   /**
    * L'immagine della card: la FOTO se c'è, altrimenti la targa social.

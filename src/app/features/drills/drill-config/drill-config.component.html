@@ -1,16 +1,145 @@
-<section class="container dc">
-  <header class="dc__head">
+<!--
+  ⚠️ Questa pagina è PUBBLICA e prerenderizzata dal 27/08/2026: prima aveva
+  `authGuard` sul padre e un visitatore anonimo vedeva soltanto il form di
+  login, senza sapere che cosa si stesse perdendo. Il guard è sceso sui due
+  figli (`sessione` e `risultati`), che restano chiusi: lì
+  `DrillResultsComponent` chiama tre endpoint nel costruttore e un anonimo
+  vedrebbe una pagina che spara 401 sopra scheletri vuoti.
+
+  ⚠️ Il gate sta nel COMPONENTE, non nella rotta: una rotta con `authGuard` non
+  è prerenderizzabile: il guard aspetta `ready$`, che in Node non emette mai,
+  quindi la pagina non si stabilizza e non entra nel manifest.
+
+  ⚠️ Si gatta su `isAuthenticated()` e MAI su `ready()`: in prerender `ready()`
+  non diventa mai vero, e l'HTML statico conterrebbe solo «sto verificando la
+  sessione» — è il difetto che /tabelle ha pagato fino al 16/08/2026.
+-->
+<section class="section">
+  <div class="container dc">
+    <header class="page-hero page-hero--center">
+      <span class="eyebrow">Allenamento</span>
+      <h1>Allenamento sui preflop di Spin &amp; Go e Twister</h1>
+      <p class="lead">
+        Una mano alla volta, in una situazione vera: decidi l'azione e ti
+        diciamo subito quanto eri vicino alla scelta di equilibrio.
+      </p>
+    </header>
+
+    @if (!auth.isAuthenticated()) {
+      <section class="gate" aria-labelledby="dc-gate">
+        <h2 id="dc-gate">L'allenamento è riservato agli iscritti</h2>
+        <p>
+          Per allenarti e per tenere traccia dei tuoi risultati serve un
+          account. La registrazione è gratuita.
+        </p>
+        <div class="row">
+          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
+          <a
+            class="btn btn--ghost"
+            [routerLink]="['/login']"
+            [queryParams]="{ redirect: '/allenamento' }"
+            >Accedi</a
+          >
+        </div>
+        @if (!auth.ready()) {
+          <p class="gate__hint">Stiamo verificando la tua sessione…</p>
+        }
+      </section>
+
+      <section class="seo-block" aria-labelledby="dc-seo-title">
+        <h2 id="dc-seo-title">Come funziona l'allenamento preflop</h2>
+        <p>
+          Leggere una tabella e saperla applicare al tavolo sono due cose
+          diverse. In un tre-max hyper turbo la decisione arriva in pochi
+          secondi e non c'è tempo per cercare: o la mano la riconosci, o hai
+          già scelto male. L'allenamento serve esattamente a questo — a
+          trasformare una tabella consultata in una risposta automatica.
+        </p>
+        <details class="seo-more">
+          <summary class="seo-more__sum">Continua a leggere</summary>
+          <p>
+            Il meccanismo è semplice. Scegli che cosa vuoi allenare — il
+            formato, la profondità di stack, la posizione, il tipo di
+            situazione — e ti serviamo una mano alla volta, presa da quelle
+            combinazioni. Tu dichiari l'azione: passare, chiamare, rilanciare,
+            andare all-in. Subito dopo ti mostriamo la risposta di equilibrio
+            per quella mano in quel punto esatto, con la frequenza con cui la
+            soluzione la gioca e quanto costa in EV la scelta che hai fatto.
+          </p>
+          <p>
+            Non è un quiz a risposta singola, ed è la differenza che conta.
+            Nella maggior parte degli spot la risposta giusta è una
+            <strong>miscela</strong>: la stessa mano si apre una volta su tre e
+            si passa le altre due. Per questo la valutazione non è «giusto o
+            sbagliato» ma quanto la tua scelta si allontana dall'equilibrio —
+            una mano giocata a bassa frequenza non è un errore, giocarla sempre
+            sì.
+          </p>
+          <p>
+            Ogni sessione resta registrata: nella sezione dei risultati vedi
+            come cambia la tua precisione nel tempo, quali situazioni ti
+            costano di più e dove invece sei già solido. È lì che si capisce
+            che cosa vale la pena ripassare, invece di riallenare quello che
+            già sai.
+          </p>
+        </details>
+        <p class="seo-block__cta">
+          Le tabelle da cui vengono le risposte sono le
+          <a routerLink="/tabelle">tabelle GTO preflop</a>. Se vuoi prima capire
+          la teoria, comincia dalle <a routerLink="/guide">guide di strategia</a>
+          o dal <a routerLink="/simulatore-varianza">simulatore di varianza</a>.
+        </p>
+      </section>
+
+      <section class="faq" aria-labelledby="dc-faq-title">
+        <h2 id="dc-faq-title">Domande frequenti sull'allenamento</h2>
+        <details class="faq__item">
+          <summary class="faq__sum"><h3>Serve un abbonamento per allenarsi?</h3></summary>
+          <p>
+            No. L'allenamento è compreso nell'account gratuito, come le tabelle
+            preflop: basta registrarsi.
+          </p>
+        </details>
+        <details class="faq__item">
+          <summary class="faq__sum"><h3>Su quali formati si allena?</h3></summary>
+          <p>
+            Sugli stessi delle tabelle: Spin &amp; Go e Twister tre-max, a tutte
+            le profondità di stack disponibili, comprese le varianti con ante e
+            quelle con stack asimmetrici.
+          </p>
+        </details>
+        <details class="faq__item">
+          <summary class="faq__sum"><h3>Perché la risposta a volte è «dipende»?</h3></summary>
+          <p>
+            Perché nella maggior parte delle situazioni la strategia di
+            equilibrio è mista: la stessa mano si gioca in modi diversi con
+            frequenze diverse. Ti mostriamo quelle frequenze e quanto costa in
+            EV la scelta che hai fatto, non un verdetto secco.
+          </p>
+        </details>
+        <details class="faq__item">
+          <summary class="faq__sum"><h3>Quanto dura una sessione?</h3></summary>
+          <p>
+            La decidi tu: puoi fermarti quando vuoi e la sessione viene
+            comunque salvata. Meglio poche mani al giorno con attenzione che
+            una sessione lunga fatta in automatico.
+          </p>
+        </details>
+        <details class="faq__item">
+          <summary class="faq__sum"><h3>I risultati restano salvati?</h3></summary>
+          <p>
+            Sì, sul tuo account: la precisione nel tempo, le situazioni più
+            costose e lo storico delle sessioni. È da lì che si capisce che cosa
+            ripassare.
+          </p>
+        </details>
+      </section>
+    } @else {
     <div class="dc__head-row">
-      <h1>Allenamento</h1>
       <button class="btn btn--ghost btn--sm" (click)="viewResults()">
         I miei risultati
       </button>
     </div>
-    <p class="lead">
-      Scegli quali situazioni allenare: ti serviremo una mano alla volta, tu
-      decidi l'azione e ti diciamo subito quanto eri vicino al GTO.
-    </p>
-  </header>
 
   @if (metaError()) {
     <div class="empty-state">
@@ -153,4 +282,6 @@
       }
     </div>
   }
+    }
+  </div>
 </section>

@@ -182,10 +182,12 @@ async function main() {
 
   // ── che siamo ancora in directory mode ────────────────────────────────
   console.log('\n§5 — Siamo ancora in directory mode\n');
-  const negozio = await fetch(`${BASE}/negozio`, { method: 'HEAD' });
+  // ⚠️ `/account` e non più `/negozio`: vedi la nota gemella in
+  // check-news-live.mjs — il Negozio è pubblico e indicizzato dal 27/08/2026.
+  const gated = await fetch(`${BASE}/account`, { method: 'HEAD' });
   verifica(
-    '/negozio porta ancora X-Robots-Tag',
-    /noindex/i.test(negozio.headers.get('x-robots-tag') ?? ''),
+    '/account porta ancora X-Robots-Tag',
+    /noindex/i.test(gated.headers.get('x-robots-tag') ?? ''),
     "public/_headers non si applica più: probabile passaggio ad advanced mode (_worker.js), che spegnerebbe la deindicizzazione di TUTTE le rotte client",
   );
 

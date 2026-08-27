@@ -32,7 +32,17 @@ import { GUIDE } from './guides.data';
 
         @if (guide.length === 0) {
           <div class="empty-state">
-            <div class="empty-state__suit" aria-hidden="true">♠ ♥ ♣ ♦</div>
+            <!--
+              ⚠️ VUOTO di proposito: la sagoma la disegna .empty-state__suit
+              con una maschera (styles/_utilities.scss), e quel commento lo
+              dice già. Qui c'erano i quattro semi scritti come CARATTERI, che
+              su iOS diventano emoji e ignorano il colore: quattro glifi
+              squillanti dove il progetto dichiara "ornamento tenue", per
+              giunta dentro una scatola larga 1.75rem.
+              (Niente apici inversi in questo commento: sta dentro il template
+              literal del componente e lo chiuderebbe.)
+            -->
+            <div class="empty-state__suit" aria-hidden="true"></div>
             <p>Le prime guide stanno arrivando.</p>
           </div>
         }

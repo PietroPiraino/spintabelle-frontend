@@ -11,6 +11,7 @@
 // ⚠️ Globale perché la pagina di un articolo ha DUE rese e la stesura
 // dell'edge non ha l'attributo dell'incapsulamento: vedi l'intestazione del
 // file.
+@use 'styles/news-list';
 @use 'styles/news-share';
 @use 'styles/news-guide';
 @use 'styles/utilities';

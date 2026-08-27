@@ -66,7 +66,9 @@
 }
 
 .value-prop__suit {
-  font-size: 1.7rem;
+  // `display: flex` e non `font-size`: il seme è un `<app-icon>` (un SVG che
+  // eredita `currentColor`), non più un glifo. Colore e alone restano qui.
+  display: flex;
   color: var(--copper-500);
   filter: drop-shadow(0 0 12px rgba(255, 106, 31, 0.55));
 }

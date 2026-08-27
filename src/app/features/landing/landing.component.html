@@ -49,7 +49,9 @@
     <div class="grid grid--3">
       @for (prop of valueProps; track prop.title; let i = $index) {
         <div class="card card--pad card--hover value-prop rise" [style.animation-delay.ms]="i * 100">
-          <span class="value-prop__suit" aria-hidden="true">{{ prop.suit }}</span>
+          <span class="value-prop__suit" aria-hidden="true">
+            <app-icon [name]="prop.suit" [size]="28" />
+          </span>
           <h3>{{ prop.title }}</h3>
           <p>{{ prop.text }}</p>
         </div>
@@ -99,7 +101,8 @@
     <div class="container">
       <div class="section-head spread">
         <div class="stack" style="gap: 0.9rem">
-          <span class="eyebrow">Dal tavolo</span>
+          <!-- ⚠️ Stesso occhiello dell'indice /news: vedi OCCHIELLO_INDICE. -->
+          <span class="eyebrow">Attualità</span>
           <h2>Ultime news</h2>
         </div>
         <a routerLink="/news" class="btn btn--ghost btn--sm">Tutte le news</a>

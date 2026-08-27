@@ -305,13 +305,17 @@
     line-height: 1.6;
     color: var(--text-muted);
 
+    // Maschera e non il carattere: vedi `--mask-quadri` in _tokens.scss.
     &::before {
-      content: '♦';
+      content: '';
       position: absolute;
       left: 0;
-      top: 0;
-      font-size: 0.6rem;
-      color: var(--gold);
+      top: 0.5em;
+      width: 0.5em;
+      height: 0.5em;
+      background: var(--gold);
+      mask: var(--mask-quadri) center / contain no-repeat;
+      -webkit-mask: var(--mask-quadri) center / contain no-repeat;
     }
   }
 }

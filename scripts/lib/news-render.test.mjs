@@ -25,6 +25,10 @@ import { fileURLToPath } from 'node:url';
 import { hasNoindex, injectNoindex } from './csr-noindex.mjs';
 import {
   DESCRIZIONE_INDICE,
+  ETICHETTE_CATEGORIA,
+  H1_INDICE,
+  LEAD_INDICE,
+  OCCHIELLO_INDICE,
   GLIFI_CONDIVISIONE,
   SITO,
   TITOLO_INDICE,
@@ -41,6 +45,8 @@ const QUI = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(QUI, '../..');
 const INDEX = join(REPO, 'src/index.html');
 const ROTTE = join(REPO, 'src/app/app.routes.ts');
+const ELENCO_NEWS = join(REPO, 'src/app/features/news/news-list/news-list.component.html');
+const MODELLI = join(REPO, 'src/app/core/models/api.models.ts');
 const COMPONENTE = join(REPO, 'src/app/features/news/news-detail/news-detail.component.ts');
 const TEMPLATE = join(REPO, 'src/app/features/news/news-detail/news-detail.component.html');
 const ICONE = join(REPO, 'src/app/shared/ui/icon/icon.component.ts');
@@ -737,7 +743,12 @@ test('l indice ha un solo <h1> e i titoli degli articoli come <h2> collegati', (
   assert.match(main, /href="\/news\/65f0000000000000000000bb\/"/);
   assert.ok(!hasNoindex(html));
   assert.match(html, new RegExp(`<link rel="canonical" href="${SITO}/news/">`));
-  assert.match(html, /<title>News — Best Fish Forever<\/title>/);
+  // ⚠️ Legato alla costante, non al letterale: qui c'era scritto a mano
+  // «News — Best Fish Forever», quindi il test fissava il titolo VECCHIO e
+  // andava rosso a ogni rinomino legittimo. Un test che si rompe quando il
+  // codice fa la cosa giusta e' un test che qualcuno cancella. La deriva fra
+  // le due rese la sorvegliano i tre test in fondo al file.
+  assert.ok(html.includes(`<title>${TITOLO_INDICE}</title>`));
 });
 
 test('indice vuoto: lo dice, invece di restare una pagina bianca', () => {
@@ -867,6 +878,58 @@ test('deriva: titolo e description dell indice combaciano con app.routes.ts', ()
     sorgente.includes(DESCRIZIONE_INDICE),
     "app.routes.ts non contiene piu' la description dell'indice news. " +
       'Aggiorna DESCRIZIONE_INDICE in functions/lib/render-news.mjs insieme alla rotta.',
+  );
+});
+
+test('deriva: occhiello, h1 e lead dell indice combaciano con la resa Angular', () => {
+  // ⚠️ Il test qui sopra copre title e description, cioe' i META. Occhiello, h1
+  // e lead sono il TESTO IN PAGINA, ed erano scoperti: fino al 27/08/2026
+  // vivevano come letterali in due file e nessuno li confrontava. Il modo di
+  // fallire e' quello gia' pagato il 19/08 — si committa la meta' Angular, si
+  // dimentica la cartella delle Function, il build e' verde, il deploy e'
+  // verde, e la pagina servita al crawler resta la vecchia.
+  const sorgente = readFileSync(ELENCO_NEWS, 'utf8');
+  for (const [nome, valore] of [
+    ['OCCHIELLO_INDICE', OCCHIELLO_INDICE],
+    ['H1_INDICE', H1_INDICE],
+    ['LEAD_INDICE', LEAD_INDICE],
+  ]) {
+    // Il lead nel template Angular va a capo: si confronta a spazi normalizzati.
+    const atteso = valore.replace(/\s+/g, ' ').trim();
+    const reso = sorgente.replace(/\s+/g, ' ');
+    assert.ok(
+      reso.includes(atteso),
+      `news-list.component.html non contiene piu' ${nome}.\n  atteso: "${atteso}"\n` +
+        "Le due rese di /news direbbero cose diverse, e quella che legge Google e' l'altra.",
+    );
+  }
+});
+
+test('deriva: le etichette delle categorie combaciano con api.models.ts', () => {
+  // ⚠️ ETICHETTE_CATEGORIA e' la TERZA copia della mappa (backend, frontend,
+  // edge): la Function e l'app sono due build diverse e non possono importarsi.
+  // Senza questo confronto, rinominare una categoria da una parte sola darebbe
+  // due etichette diverse per lo stesso articolo, e nulla fallirebbe.
+  const sorgente = readFileSync(MODELLI, 'utf8');
+  const blocco = /NEWS_CATEGORY_LABELS[^{]*\{([\s\S]*?)\}/.exec(sorgente)?.[1];
+  assert.ok(
+    blocco,
+    "api.models.ts non contiene piu' NEWS_CATEGORY_LABELS: la guardia sta leggendo il file sbagliato.",
+  );
+
+  const daModelli = {};
+  for (const m of blocco.matchAll(/'?([a-z-]+)'?:\s*'([^']+)'/g)) daModelli[m[1]] = m[2];
+
+  assert.equal(
+    Object.keys(daModelli).length,
+    8,
+    `lette ${Object.keys(daModelli).length} etichette invece di 8: il formato di api.models.ts e' cambiato.`,
+  );
+  assert.deepEqual(
+    ETICHETTE_CATEGORIA,
+    daModelli,
+    "Le etichette dell'edge (render-news.mjs) e quelle dell'app (api.models.ts) divergono: " +
+      "lo stesso articolo mostrerebbe due categorie diverse prima e dopo l'idratazione.",
   );
 });
 

@@ -60,9 +60,67 @@ export const OG_PREDEFINITA = `${SITO}/og.png`;
 // l'apertura — e cambia sotto uno scraper che il JS non lo esegue affatto. Un
 // test in `scripts/lib/news-render.test.mjs` rilegge `app.routes.ts` e fallisce
 // se le due copie divergono.
-export const TITOLO_INDICE = 'News — Best Fish Forever';
+export const TITOLO_INDICE = 'Notizie dal mondo del poker — Best Fish Forever';
 export const DESCRIZIONE_INDICE =
-  'News e aggiornamenti dalla scuola di poker Best Fish Forever: strategie per Spin & Go e Twister, novità e vita della community.';
+  'Notizie di poker in italiano: tornei dal vivo, circuito online, regolamentazione e industria, lette con l’occhio di chi studia il gioco.';
+
+/**
+ * L'occhiello e il titolo dell'indice, esportati perché esistano in UN posto
+ * solo per l'edge — e perché il test di deriva possa leggerli.
+ *
+ * ⚠️ **Erano «Dal tavolo» / «News della scuola», e dicevano il falso.** Sette
+ * categorie su otto (`live`, `online`, `mtt`, `cash`, `industry`,
+ * `regolamentazione`, `strategia`) non parlano della scuola: «la-scuola» è
+ * **una** delle otto. La testata annunciava una cosa e la griglia ne mostrava
+ * un'altra. E «Dal tavolo» è uno slogan che dice «il NOSTRO tavolo» proprio
+ * dove il contenuto è il mondo esterno.
+ *
+ * ⚠️ Queste stringhe vivono in QUATTRO posti fra due build diverse
+ * (`app.routes.ts`, questo file, `news-list.component.html`,
+ * `landing.component.html`) e `functions/` sta fuori da `dist/`: un rinomino a
+ * metà **compila verde, si deploya verde** e lascia il titolo vecchio a chi
+ * legge in SERP. Si cambiano insieme, in un commit solo, e si lancia
+ * `npm run test:scripts` a mano — non è nella catena di build.
+ */
+export const OCCHIELLO_INDICE = 'Attualità';
+export const H1_INDICE = 'Notizie dal mondo del poker';
+
+/**
+ * Il paragrafo introduttivo dell'indice, per il LETTORE.
+ *
+ * ⚠️ Separato da `DESCRIZIONE_INDICE`, che è per la SERP: sono due mestieri
+ * diversi. E deve stare in ENTRAMBE le rese con la stessa stringa — prima
+ * l'edge stampava la description come paragrafo e Angular non stampava nulla,
+ * quindi il testo compariva al primo paint e **spariva all'idratazione**,
+ * facendo risalire la pagina di ~3 righe.
+ */
+/**
+ * Le etichette delle otto categorie.
+ *
+ * ⚠️ È la TERZA copia (backend `news.types.ts`, frontend `api.models.ts`, qui):
+ * la Function e l'app sono due build diverse e non possono importarsi — stesso
+ * precedente di `functions/lib/markdown.mjs`, dei glifi di condivisione e della
+ * mappa delle guide. A tenerla allineata c'è un test di deriva in
+ * `scripts/lib/news-render.test.mjs`, che rilegge `api.models.ts`: senza,
+ * rinominare una categoria da una parte sola darebbe due etichette diverse per
+ * lo stesso articolo, e nulla fallirebbe.
+ *
+ * ⚠️ Serve QUI e non solo in Angular: se il badge comparisse solo dopo
+ * l'idratazione, le due rese divergerebbero sul CONTENUTO e non sullo stile.
+ */
+export const ETICHETTE_CATEGORIA = {
+  live: 'Poker live',
+  online: 'Poker online',
+  mtt: 'Tornei',
+  cash: 'Cash game',
+  industry: 'Industria',
+  regolamentazione: 'Regolamentazione',
+  strategia: 'Strategia',
+  'la-scuola': 'La scuola',
+};
+
+export const LEAD_INDICE =
+  'Tornei dal vivo, poker online, regolamentazione e industria: quello che succede nel gioco, raccontato per chi lo studia. Ogni articolo passa da una rilettura umana prima di essere pubblicato.';
 
 // ---- Aiutanti di base ---------------------------------------------------
 
@@ -668,10 +726,18 @@ export function renderIndice(scheletro, articoli) {
       const iso = String(a?.createdAt ?? '');
       const quando = dataLeggibile(iso);
       const sommario = estratto(a?.body);
+      // ⚠️ Il campo è opzionale per costruzione (il backend legge in `.lean()`,
+      // che non applica i default di schema): una riga storica può non averlo,
+      // e un'etichetta sconosciuta non deve stampare `undefined`.
+      const etichetta = ETICHETTE_CATEGORIA[a?.categoria] ?? '';
       return [
         '<li class="news-list__voce">',
         '<article>',
+        // Senza data ne' categoria non si emette una riga vuota.
+        quando || etichetta ? '<div class="news-list__meta">' : '',
         quando ? `<time datetime="${escapeHtml(iso)}">${escapeHtml(quando)}</time>` : '',
+        etichetta ? `<span class="badge">${escapeHtml(etichetta)}</span>` : '',
+        quando || etichetta ? '</div>' : '',
         `<h2><a href="/news/${encodeURIComponent(chiave)}/">${escapeHtml(titolo)}</a></h2>`,
         sommario ? `<p>${escapeHtml(sommario)}</p>` : '',
         '</article>',
@@ -685,14 +751,19 @@ export function renderIndice(scheletro, articoli) {
   const corpo = [
     '<main class="app-main">',
     '<section class="section"><div class="container">',
-    '<div class="section-head">',
-    '<span class="eyebrow">Dal tavolo</span>',
+    // ⚠️ `.page-hero.page-hero--center`, lo stesso primitivo delle altre
+    // vetrine (styles/_utilities.scss): questa resa e quella Angular devono
+    // impaginare allo stesso modo, o la pagina si riscrive all'idratazione.
+    '<header class="page-hero page-hero--center">',
+    `<span class="eyebrow">${escapeHtml(OCCHIELLO_INDICE)}</span>`,
     // ⚠️ Un solo `<h1>` in tutta la pagina, e i titoli degli articoli sono
     // `<h2>`: e' la stessa regola che `check-prerender-content.mjs` impone alle
     // pagine statiche e che la sonda dal vivo verifica su queste.
-    '<h1>News della scuola</h1>',
-    '</div>',
-    `<p>${escapeHtml(DESCRIZIONE_INDICE)}</p>`,
+    `<h1>${escapeHtml(H1_INDICE)}</h1>`,
+    // ⚠️ DENTRO la testata e con la classe `.lead`: prima era un `<p>` nudo
+    // fuori dal blocco, quindi non lo toccava nessuna regola.
+    `<p class="lead">${escapeHtml(LEAD_INDICE)}</p>`,
+    '</header>',
     voci.length
       ? `<ul class="news-list">\n${voci.join('\n')}\n</ul>`
       : '<p>Nessuna news pubblicata, torna a trovarci presto.</p>',

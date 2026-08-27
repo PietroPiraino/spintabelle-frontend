@@ -115,8 +115,19 @@ export const routes: Routes = [
     },
   },
   {
+    // ⚠️ IL PADRE NON HA PIÙ `authGuard`, e i due figli sì. Non è un
+    // allentamento: una rotta guardata NON è prerenderizzabile (il guard
+    // aspetta `ready$`, che in Node non emette mai → la rotta non si attiva e
+    // la pagina non si stabilizza), quindi finché il guard stava qui
+    // /allenamento riceveva la shell CSR col canonical della home e chi ci
+    // arrivava dal menu vedeva soltanto un form di login.
+    //
+    // ⚠️ Togliendolo dal padre BISOGNA rimetterlo sui figli, o
+    // `/allenamento/sessione` e `/allenamento/risultati` diventano
+    // raggiungibili da chiunque — e `DrillResultsComponent` chiama tre
+    // endpoint nel costruttore senza alcun gate: un anonimo aprirebbe una
+    // pagina che spara tre 401 sopra degli scheletri vuoti.
     path: 'allenamento',
-    canActivate: [authGuard],
     children: [
       {
         path: '',
@@ -124,10 +135,18 @@ export const routes: Routes = [
           import('./features/drills/drill-config/drill-config.component').then(
             (m) => m.DrillConfigComponent,
           ),
-        title: 'Allenamento — Best Fish Forever',
+        title: 'Allenamento preflop per Spin & Go e Twister — Best Fish Forever',
+        data: {
+          // ⚠️ Senza `description` il listener SEO di app.config.ts ripiega su
+          // quella della HOME: una pagina nuova nascerebbe con la descrizione
+          // di un'altra, e nulla lo segnalerebbe.
+          description:
+            'Allenati sulle decisioni preflop di Spin & Go e Twister: una mano alla volta, con la frequenza di equilibrio e il costo in EV della tua scelta.',
+        },
       },
       {
         path: 'sessione',
+        canActivate: [authGuard],
         loadComponent: () =>
           import('./features/drills/drill-runner/drill-runner.component').then(
             (m) => m.DrillRunnerComponent,
@@ -136,6 +155,7 @@ export const routes: Routes = [
       },
       {
         path: 'risultati',
+        canActivate: [authGuard],
         loadComponent: () =>
           import('./features/drills/drill-results/drill-results.component').then(
             (m) => m.DrillResultsComponent,
@@ -237,10 +257,14 @@ export const routes: Routes = [
       import('./features/news/news-list/news-list.component').then(
         (m) => m.NewsListComponent,
       ),
-    title: 'News — Best Fish Forever',
+    // ⚠️ Copia di `TITOLO_INDICE`/`DESCRIZIONE_INDICE` in
+    // `functions/lib/render-news.mjs`: le due rese devono dire la stessa cosa,
+    // e a sorvegliarle c'è `scripts/lib/news-render.test.mjs` (che però NON
+    // gira in `npm run build` — va lanciato a mano con `npm run test:scripts`).
+    title: 'Notizie dal mondo del poker — Best Fish Forever',
     data: {
       description:
-        'News e aggiornamenti dalla scuola di poker Best Fish Forever: strategie per Spin & Go e Twister, novità e vita della community.',
+        'Notizie di poker in italiano: tornei dal vivo, circuito online, regolamentazione e industria, lette con l’occhio di chi studia il gioco.',
     },
   },
   {
@@ -283,12 +307,22 @@ export const routes: Routes = [
     },
   },
   {
-    // Spendere punti richiede una sessione → authGuard (a differenza di /abbonati).
+    // ⚠️ Niente `authGuard` dal 27/08/2026: la pagina è pubblica e
+    // prerenderizzata, e il gate vive nel componente. Prima un visitatore che
+    // toccava «Negozio» nel menu — presente su OGNI pagina pubblica — vedeva
+    // solo un form di login, senza sapere che cosa ci fosse dietro.
+    // ⚠️ Il ramo anonimo del template è scritto sotto vincolo art. 9
+    // DL 87/2018: nessun prezzo in punti, nessuna card gadget, nessun accenno
+    // a come i punti si guadagnano. Il commento in testa a
+    // shop.component.html elenca le tre cose e il perché.
     path: 'negozio',
     loadComponent: () =>
       import('./features/shop/shop.component').then((m) => m.ShopComponent),
-    canActivate: [authGuard],
-    title: 'Negozio — Best Fish Forever',
+    title: 'Negozio della scuola: punti BFF, buoni e gadget — Best Fish Forever',
+    data: {
+      description:
+        'Il negozio di Best Fish Forever: qui i punti BFF assegnati agli iscritti diventano buoni sconto, abbonamenti e gadget della scuola.',
+    },
   },
   {
     path: 'news/:id',

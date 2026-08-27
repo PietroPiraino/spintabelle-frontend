@@ -7,7 +7,7 @@
 -->
 <section class="section">
   <div class="container">
-    <div class="section-head">
+    <header class="page-hero page-hero--center">
       <span class="eyebrow">Affiliazioni</span>
       <h1>Il programma di affiliazione</h1>
       <p class="lead">
@@ -16,7 +16,46 @@
         dal tuo account: l'elenco delle sale e le condizioni sono riservati agli
         iscritti.
       </p>
-    </div>
+    </header>
+
+    <!--
+      ⚠️ IL GATE STA QUI, subito sotto la testata, e non più in fondo alla
+      pagina. Fino al 27/08/2026 era l'ultimo blocco prima dei Termini, cioè
+      DOPO i tre passi di «Come funziona»: sopra la piega non c'era un solo
+      pulsante. È lo stesso difetto corretto su /docs, /live e /lezioni il
+      23/08 — e mai propagato qui, perché lì il gate era già un blocco a sé e
+      qui viveva dentro l'`@else` del ramo autenticato.
+
+      Per questo ora è un `@if` PROPRIO e non più un `@else`: il ramo
+      autenticato resta dov'è, in fondo, perché è lì che comincia il lavoro.
+
+      ⚠️ E porta `.gate` (styles/_utilities.scss) invece della copia locale
+      `.aff__gate`: quella era allineata a sinistra, con un terzo `clamp` per
+      l'h2 e un `.aff__gate-hint` identico riga per riga a `.gate__hint`.
+      Nessun marchio di operatore qui dentro — questa parte è indicizzabile.
+    -->
+    @if (!auth.isAuthenticated()) {
+      <section class="gate" aria-labelledby="aff-accedi">
+        <h2 id="aff-accedi">Le sale sono riservate agli iscritti</h2>
+        <p>
+          L'elenco delle sale con cui collaboriamo e le relative condizioni sono
+          visibili solo dall'area riservata. La richiesta parte dal tuo account.
+        </p>
+        <div class="row">
+          <a
+            class="btn btn--primary"
+            [routerLink]="['/login']"
+            [queryParams]="{ redirect: loginRedirect() }"
+          >
+            Accedi per vedere le sale disponibili
+          </a>
+          <a class="btn btn--ghost" routerLink="/registrazione">Registrati</a>
+        </div>
+        @if (!auth.ready()) {
+          <p class="gate__hint">Stiamo verificando la tua sessione…</p>
+        }
+      </section>
+    }
 
     <!-- Come funziona: sta in pagina per tutti, anonimi compresi. -->
     <section class="aff__how" aria-labelledby="aff-come-funziona">
@@ -807,33 +846,13 @@
           </ul>
         }
       </section>
-    } @else {
-      <!--
-        Anonimo: è questo il blocco che finisce nell'HTML prerenderizzato.
-        ⚠️ Il `redirect` porta il percorso CON la sua query string, altrimenti un
-        deep-link `?completa=<slug>` arrivato per email muore sul login.
-      -->
-      <section class="aff__gate" aria-labelledby="aff-accedi">
-        <h2 id="aff-accedi">Le sale sono riservate agli iscritti</h2>
-        <p>
-          L'elenco delle sale con cui collaboriamo e le relative condizioni sono
-          visibili solo dall'area riservata. La richiesta parte dal tuo account.
-        </p>
-        <div class="row aff__gate-actions">
-          <a
-            class="btn btn--primary"
-            [routerLink]="['/login']"
-            [queryParams]="{ redirect: loginRedirect() }"
-          >
-            Accedi per vedere le sale disponibili
-          </a>
-          <a class="btn btn--ghost" routerLink="/registrazione">Registrati</a>
-        </div>
-        @if (!auth.ready()) {
-          <p class="aff__gate-hint">Stiamo verificando la tua sessione…</p>
-        }
-      </section>
     }
+    <!--
+      ⚠️ Nessun `@else` qui: il blocco per l'anonimo è risalito subito sotto la
+      testata (vedi il commento lassù). Il `redirect` che porta là dentro
+      include la query string, altrimenti un deep-link `?completa=<slug>`
+      arrivato per email muore sul login.
+    -->
 
     <!-- ── Termini del programma (in pagina, per tutti) ── -->
     <section class="aff__terms" id="aff-termini" aria-labelledby="aff-terms-h">

@@ -48,7 +48,33 @@ const SEMI = /[♠♥♦♣]/;
 const AMMESSI = new Map([
   ['features/landing/landing.component.html', 'la mano 7♣ 4♣ del marchio, dentro una frase'],
   ['features/tables/tables.component.html', 'le tre carte del visualizzatore (A♣ 7♣ 4♣): contenuto'],
+
+  // ⚠️ Le voci qui sotto sono nate il 27/08/2026, quando la scansione si è
+  // estesa da `.html` a `.ts` e `.scss`. Non sono un allargamento delle
+  // maglie: sono i file in cui il seme NON è un ornamento del DOM, e per
+  // ognuno la ragione dice perché un'icona lì sarebbe sbagliata.
+  //
+  // Il motivo per cui la scansione è cambiata: tre semi ornamentali erano
+  // sopravvissuti al lotto del 23/08 proprio perché non stavano in un `.html`
+  // — due dentro un array TypeScript (la home e il Negozio) e uno dentro un
+  // `content:` SCSS (i vantaggi dei piani). La guardia era verde e il difetto
+  // era in produzione su iOS.
+
+  // Contenuto: una carta da gioco ha un seme, e si scrive come si scrive.
+  ['features/drills/poker-table/poker-table.component.ts', 'il seme delle carte del tavolo: contenuto'],
+  ['features/drills/hand-card/hand-card.component.ts', 'il seme delle carte della mano: contenuto'],
+  ['features/not-found/not-found.component.ts', 'il 4♠4 della pagina 404: è il numero, scritto con una carta'],
+
+  // Tela, non DOM: questi semi finiscono in una texture o in un atlante
+  // disegnato su `<canvas>`. Lì la presentazione emoji non si applica (li
+  // rasterizziamo noi) e un `<app-icon>` non sarebbe nemmeno rappresentabile.
+  ['shared/three/suit-points.ts', 'atlante 2x2 dei semi disegnato su canvas: texture, non DOM'],
+  ['features/about/particle-school/emblem-shapes.ts', 'glifi campionati su canvas per la forma delle particelle'],
+  ['features/landing/hero-3d/hero-3d.component.ts', 'il fiori disegnato nella texture delle carte 3D'],
 ]);
+
+/** Estensioni scandite. Vedi il commento su AMMESSI per il perché delle ultime due. */
+const ESTENSIONI = ['.html', '.ts', '.scss'];
 
 /** Tutti gli `.html` sotto `src/app`, percorso relativo con le barre in avanti. */
 function templates(dir = APP, base = '') {
@@ -57,17 +83,28 @@ function templates(dir = APP, base = '') {
     const pieno = join(dir, voce);
     const rel = base ? `${base}/${voce}` : voce;
     if (statSync(pieno).isDirectory()) fuori.push(...templates(pieno, rel));
-    else if (voce.endsWith('.html')) fuori.push(rel);
+    else if (ESTENSIONI.some((e) => voce.endsWith(e)) && !voce.endsWith('.spec.ts')) fuori.push(rel);
   }
   return fuori;
 }
 
 /**
  * ⚠️ I commenti si tolgono PRIMA di cercare. Le note che spiegano questa regola
- * citano i semi per esteso (il footer lo fa), e una guardia che fallisce sulla
- * spiegazione di se stessa è una guardia che qualcuno cancella.
+ * citano i semi per esteso (il footer lo fa, e così questo stesso file), e una
+ * guardia che fallisce sulla spiegazione di se stessa è una guardia che
+ * qualcuno cancella.
+ *
+ * Tre sintassi, perché dal 27/08/2026 si leggono tre linguaggi: `<!-- -->` nei
+ * template, e le due di TypeScript/SCSS.
+ *
+ * ⚠️ Le STRINGHE non si toccano, ed è il punto: è esattamente lì che vivevano i
+ * due semi sfuggiti per mesi (`suit: '♦'` in un array di componente).
  */
-const senzaCommenti = (html) => html.replace(/<!--[\s\S]*?-->/g, '');
+const senzaCommenti = (testo) =>
+  testo
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^[ \t]*\/\/.*$/gm, '');
 
 test('nessun seme come CARATTERE nei template, fuori dai due casi ammessi', () => {
   const colpevoli = [];
@@ -105,7 +142,22 @@ test('⚠️ i due file ammessi contengono ancora un seme: l’elenco non invecc
   }
 });
 
-test('deriva: la maschera CSS e l’icona `spade` sono la STESSA sagoma', () => {
+/**
+ * Le tre maschere del CSS, appaiate al ramo di `app-icon` che disegna lo stesso
+ * seme.
+ *
+ * ⚠️ `--mask-quadri` e `--mask-fiori` sono nate il 27/08/2026 insieme a questa
+ * riga, e non erano un di più: finché l'unica maschera era la picche, un `♦` o
+ * un `♣` in un `content:` non aveva alternativa se non restare un carattere —
+ * cioè il difetto. Quattro punti del sito ci erano rimasti dentro.
+ */
+const MASCHERE = [
+  ['picche', 'spade'],
+  ['quadri', 'diamond'],
+  ['fiori', 'club'],
+];
+
+test('deriva: le maschere CSS e le icone dei semi sono le STESSE sagome', () => {
   // Le due vivono in due linguaggi che non possono importarsi (SCSS e
   // TypeScript), quindi il tracciato è scritto due volte. Due picche diverse
   // nella stessa pagina — una nel divisore del footer, una in uno stato vuoto —
@@ -113,17 +165,25 @@ test('deriva: la maschera CSS e l’icona `spade` sono la STESSA sagoma', () => 
   const ts = readFileSync(ICONE, 'utf8');
   const scss = readFileSync(TOKEN, 'utf8');
 
-  const ramo = ts.slice(ts.indexOf("@case ('spade')"));
-  const daIcona = /d="([^"]+)"/.exec(ramo)?.[1];
-  assert.ok(daIcona, "il ramo `spade` di app-icon non ha più un `d`: la guardia sta leggendo il file sbagliato.");
+  for (const [seme, icona] of MASCHERE) {
+    const ramo = ts.slice(ts.indexOf(`@case ('${icona}')`));
+    const daIcona = /d="([^"]+)"/.exec(ramo)?.[1];
+    assert.ok(
+      daIcona,
+      `il ramo ${icona} di app-icon non ha più un attributo d: la guardia sta leggendo il file sbagliato.`,
+    );
 
-  const daMaschera = /--mask-picche:[\s\S]*?path d='([^']+)'/.exec(scss)?.[1];
-  assert.ok(daMaschera, '`--mask-picche` non è più in _tokens.scss, o non contiene più un tracciato.');
+    const daMaschera = new RegExp(`--mask-${seme}:[\\s\\S]*?path d='([^']+)'`).exec(scss)?.[1];
+    assert.ok(
+      daMaschera,
+      `--mask-${seme} non è più in _tokens.scss, o non contiene più un tracciato.`,
+    );
 
-  assert.equal(
-    daMaschera,
-    daIcona,
-    'La picche del CSS (`--mask-picche`) e quella di `app-icon` sono due sagome diverse: ' +
-      'la stessa pagina mostrerebbe due disegni per lo stesso seme.',
-  );
+    assert.equal(
+      daMaschera,
+      daIcona,
+      `Il ${seme} del CSS (--mask-${seme}) e quello di app-icon (${icona}) sono due sagome ` +
+        'diverse: la stessa pagina mostrerebbe due disegni per lo stesso seme.',
+    );
+  }
 });

@@ -1,18 +1,81 @@
 <section class="section">
   <div class="container">
-    <div class="section-head">
-      <span class="eyebrow">Dal tavolo</span>
-      <h1>News della scuola</h1>
+    <!--
+      ⚠️ Occhiello, h1 e lead devono coincidere con `OCCHIELLO_INDICE`,
+      `H1_INDICE` e `LEAD_INDICE` di `functions/lib/render-news.mjs`: questa
+      pagina la compone la Pages Function al primo paint e Angular la
+      ricostruisce all'idratazione. Due testi diversi = la pagina si riscrive
+      sotto gli occhi, e quello che legge Google è l'altro.
+    -->
+    <header class="page-hero page-hero--center">
+      <span class="eyebrow">Attualità</span>
+      <h1>Notizie dal mondo del poker</h1>
+      <p class="lead">
+        Tornei dal vivo, poker online, regolamentazione e industria: quello che
+        succede nel gioco, raccontato per chi lo studia. Ogni articolo passa da
+        una rilettura umana prima di essere pubblicato.
+      </p>
+    </header>
+
+    <!--
+      ⚠️ Il filtro NON entra nell'URL, ed è una decisione da non "sistemare".
+      L'indice lo compone la Pages Function, che chiama l'API con
+      `page=1&limit=9` COSTANTE e non legge la query string; la sua cache di
+      bordo però la include. Con un `?categoria=` avremmo otto URL che
+      rispondono 200 con l'elenco NON filtrato, in cache un minuto ciascuno, e
+      tutti con lo stesso canonical `/news/` — cioè il bucket «pagina
+      duplicata» già visto in Search Console. E provandolo col browser
+      sembrerebbe funzionare, perché con JavaScript il filtro funziona davvero.
+      È l'unico stato di lista del sito non condivisibile via URL: renderlo
+      tale vuole tre cose insieme (la Function legge il parametro, emette il
+      canonical della vista filtrata, e le pillole diventano `<a href>` con la
+      barra finale), non una.
+    -->
+    <div class="news__cats row" role="group" aria-label="Filtra per categoria">
+      <button
+        type="button"
+        class="badge badge--tag"
+        [class.is-active]="categoria() === null"
+        (click)="filtra(null)"
+      >
+        Tutte
+      </button>
+      @for (c of categorie; track c) {
+        <button
+          type="button"
+          class="badge badge--tag"
+          [class.is-active]="categoria() === c"
+          (click)="filtra(c)"
+        >
+          {{ etichette[c] }}
+        </button>
+      }
     </div>
 
-    @if (!items()) {
+    @if (error()) {
+      <div class="form-feedback is-error" role="alert">
+        {{ error() }}
+        <button type="button" class="btn btn--ghost btn--sm" (click)="riprova()">
+          Riprova
+        </button>
+      </div>
+    }
+
+    @if (!items() && !error()) {
       <div class="spinner" role="status" aria-label="Caricamento news"></div>
-    } @else if (items()!.length === 0) {
+    } @else if (items() && items()!.length === 0) {
       <div class="empty-state">
         <div class="empty-state__suit" aria-hidden="true"></div>
-        <p>Nessuna news pubblicata, torna a trovarci presto.</p>
+        @if (etichettaAttiva(); as e) {
+          <p>Nessuna notizia in «{{ e }}» per ora.</p>
+          <button type="button" class="btn btn--ghost btn--sm" (click)="filtra(null)">
+            Mostra tutte
+          </button>
+        } @else {
+          <p>Nessuna news pubblicata, torna a trovarci presto.</p>
+        }
       </div>
-    } @else {
+    } @else if (items()) {
       <div class="grid grid--3">
         @for (news of items()!; track news._id; let i = $index) {
           <div class="rise" [style.animation-delay.ms]="(i % 9) * 60">
