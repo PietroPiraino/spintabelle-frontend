@@ -1,0 +1,534 @@
+{
+ "RUNOUT": {
+  "publicId": "86DP72A227",
+  "room": "altra",
+  "roomLabel": "Altra sala",
+  "network": "IPOKER",
+  "gameType": "TWISTER",
+  "gameTypeLabel": "Twister",
+  "playedAt": "2026-06-15T22:44:59.000Z",
+  "tableSize": 3,
+  "tableMax": 3,
+  "decimali": 0,
+  "currency": "EUR",
+  "smallBlind": 15,
+  "bigBlind": 30,
+  "ante": 5,
+  "players": [
+   {
+    "seat": 3,
+    "nome": "BabyLoca",
+    "chipsIniziali": 550,
+    "posizione": "BTN",
+    "isHero": true,
+    "carte": [
+     "7h",
+     "Qc"
+    ]
+   },
+   {
+    "seat": 6,
+    "nome": "lauripietro79",
+    "chipsIniziali": 278,
+    "posizione": "SB",
+    "isHero": false,
+    "carte": [
+     "Tc",
+     "Qh"
+    ]
+   },
+   {
+    "seat": 10,
+    "nome": "VIJusticeII",
+    "chipsIniziali": 672,
+    "posizione": "BB",
+    "isHero": false,
+    "carte": [
+     "Td",
+     "9h"
+    ]
+   }
+  ],
+  "heroSeat": 3,
+  "streets": [
+   {
+    "strada": "PREFLOP",
+    "board": [],
+    "azioni": [
+     {
+      "seat": 6,
+      "tipo": "ANTE",
+      "importo": 5,
+      "totaleStrada": 5,
+      "potDopo": 5
+     },
+     {
+      "seat": 10,
+      "tipo": "ANTE",
+      "importo": 5,
+      "totaleStrada": 5,
+      "potDopo": 10
+     },
+     {
+      "seat": 3,
+      "tipo": "ANTE",
+      "importo": 5,
+      "totaleStrada": 5,
+      "potDopo": 15
+     },
+     {
+      "seat": 6,
+      "tipo": "SB",
+      "importo": 15,
+      "totaleStrada": 15,
+      "potDopo": 30
+     },
+     {
+      "seat": 10,
+      "tipo": "BB",
+      "importo": 30,
+      "totaleStrada": 30,
+      "potDopo": 60
+     },
+     {
+      "seat": 3,
+      "tipo": "FOLD",
+      "importo": 0,
+      "totaleStrada": 0,
+      "potDopo": 60
+     },
+     {
+      "seat": 6,
+      "tipo": "RAISE",
+      "importo": 258,
+      "totaleStrada": 273,
+      "potDopo": 318
+     },
+     {
+      "seat": 10,
+      "tipo": "CALL",
+      "importo": 243,
+      "totaleStrada": 273,
+      "potDopo": 561
+     }
+    ]
+   },
+   {
+    "strada": "FLOP",
+    "board": [
+     "Kh",
+     "3h",
+     "7d"
+    ],
+    "azioni": []
+   },
+   {
+    "strada": "TURN",
+    "board": [
+     "Kh",
+     "3h",
+     "7d",
+     "Jc"
+    ],
+    "azioni": []
+   },
+   {
+    "strada": "RIVER",
+    "board": [
+     "Kh",
+     "3h",
+     "7d",
+     "Jc",
+     "Kd"
+    ],
+    "azioni": []
+   }
+  ],
+  "board": [
+   "Kh",
+   "3h",
+   "7d",
+   "Jc",
+   "Kd"
+  ],
+  "potFinale": 561,
+  "rake": 0,
+  "risultati": [
+   {
+    "seat": 6,
+    "vinto": 561,
+    "mostrate": [
+     "Tc",
+     "Qh"
+    ]
+   }
+  ],
+  "anonimizzata": false,
+  "likes": 0,
+  "dislikes": 0,
+  "createdAt": "2026-08-25T16:33:16.913Z",
+  "ogImageUrl": ""
+ },
+ "COMPLETA": {
+  "publicId": "MFHYTTKRYJ",
+  "room": "altra",
+  "roomLabel": "Altra sala",
+  "network": "IPOKER",
+  "gameType": "TWISTER",
+  "gameTypeLabel": "Twister",
+  "playedAt": "2026-06-15T22:44:35.000Z",
+  "tableSize": 3,
+  "tableMax": 3,
+  "decimali": 0,
+  "currency": "EUR",
+  "smallBlind": 10,
+  "bigBlind": 20,
+  "ante": 0,
+  "players": [
+   {
+    "seat": 3,
+    "nome": "BabyLoca",
+    "chipsIniziali": 560,
+    "posizione": "SB",
+    "isHero": true,
+    "carte": [
+     "Qs",
+     "8d"
+    ]
+   },
+   {
+    "seat": 6,
+    "nome": "lauripietro79",
+    "chipsIniziali": 398,
+    "posizione": "BB",
+    "isHero": false
+   },
+   {
+    "seat": 10,
+    "nome": "VIJusticeII",
+    "chipsIniziali": 542,
+    "posizione": "BTN",
+    "isHero": false
+   }
+  ],
+  "heroSeat": 3,
+  "streets": [
+   {
+    "strada": "PREFLOP",
+    "board": [],
+    "azioni": [
+     {
+      "seat": 3,
+      "tipo": "SB",
+      "importo": 10,
+      "totaleStrada": 10,
+      "potDopo": 10
+     },
+     {
+      "seat": 6,
+      "tipo": "BB",
+      "importo": 20,
+      "totaleStrada": 20,
+      "potDopo": 30
+     },
+     {
+      "seat": 10,
+      "tipo": "RAISE",
+      "importo": 40,
+      "totaleStrada": 40,
+      "potDopo": 70
+     },
+     {
+      "seat": 3,
+      "tipo": "FOLD",
+      "importo": 0,
+      "totaleStrada": 10,
+      "potDopo": 70
+     },
+     {
+      "seat": 6,
+      "tipo": "RAISE",
+      "importo": 80,
+      "totaleStrada": 100,
+      "potDopo": 150
+     },
+     {
+      "seat": 10,
+      "tipo": "CALL",
+      "importo": 60,
+      "totaleStrada": 100,
+      "potDopo": 210
+     }
+    ]
+   },
+   {
+    "strada": "FLOP",
+    "board": [
+     "Kh",
+     "Td",
+     "8s"
+    ],
+    "azioni": [
+     {
+      "seat": 6,
+      "tipo": "CHECK",
+      "importo": 0,
+      "totaleStrada": 0,
+      "potDopo": 210
+     },
+     {
+      "seat": 10,
+      "tipo": "CHECK",
+      "importo": 0,
+      "totaleStrada": 0,
+      "potDopo": 210
+     }
+    ]
+   },
+   {
+    "strada": "TURN",
+    "board": [
+     "Kh",
+     "Td",
+     "8s",
+     "5c"
+    ],
+    "azioni": [
+     {
+      "seat": 6,
+      "tipo": "CHECK",
+      "importo": 0,
+      "totaleStrada": 0,
+      "potDopo": 210
+     },
+     {
+      "seat": 10,
+      "tipo": "CHECK",
+      "importo": 0,
+      "totaleStrada": 0,
+      "potDopo": 210
+     }
+    ]
+   },
+   {
+    "strada": "RIVER",
+    "board": [
+     "Kh",
+     "Td",
+     "8s",
+     "5c",
+     "3c"
+    ],
+    "azioni": [
+     {
+      "seat": 6,
+      "tipo": "BET",
+      "importo": 20,
+      "totaleStrada": 20,
+      "potDopo": 230
+     },
+     {
+      "seat": 10,
+      "tipo": "RAISE",
+      "importo": 442,
+      "totaleStrada": 442,
+      "potDopo": 672
+     },
+     {
+      "seat": 6,
+      "tipo": "FOLD",
+      "importo": 0,
+      "totaleStrada": 20,
+      "potDopo": 672
+     }
+    ]
+   }
+  ],
+  "board": [
+   "Kh",
+   "Td",
+   "8s",
+   "5c",
+   "3c"
+  ],
+  "potFinale": 250,
+  "rake": 0,
+  "risultati": [
+   {
+    "seat": 10,
+    "vinto": 250
+   }
+  ],
+  "anonimizzata": false,
+  "likes": 0,
+  "dislikes": 0,
+  "createdAt": "2026-08-25T16:33:16.911Z",
+  "ogImageUrl": ""
+ },
+ "HEADSUP": {
+  "publicId": "MAHG8P2DDX",
+  "room": "altra",
+  "roomLabel": "Altra sala",
+  "network": "IPOKER",
+  "gameType": "TWISTER",
+  "gameTypeLabel": "Twister",
+  "playedAt": "2026-06-15T22:47:00.000Z",
+  "tableSize": 2,
+  "tableMax": 2,
+  "decimali": 0,
+  "currency": "EUR",
+  "smallBlind": 20,
+  "bigBlind": 40,
+  "ante": 5,
+  "players": [
+   {
+    "seat": 3,
+    "nome": "BabyLoca",
+    "chipsIniziali": 912,
+    "posizione": "BTN",
+    "isHero": true,
+    "carte": [
+     "Kh",
+     "9d"
+    ]
+   },
+   {
+    "seat": 10,
+    "nome": "VIJusticeII",
+    "chipsIniziali": 588,
+    "posizione": "BB",
+    "isHero": false
+   }
+  ],
+  "heroSeat": 3,
+  "streets": [
+   {
+    "strada": "PREFLOP",
+    "board": [],
+    "azioni": [
+     {
+      "seat": 3,
+      "tipo": "ANTE",
+      "importo": 5,
+      "totaleStrada": 5,
+      "potDopo": 5
+     },
+     {
+      "seat": 10,
+      "tipo": "ANTE",
+      "importo": 5,
+      "totaleStrada": 5,
+      "potDopo": 10
+     },
+     {
+      "seat": 3,
+      "tipo": "SB",
+      "importo": 20,
+      "totaleStrada": 20,
+      "potDopo": 30
+     },
+     {
+      "seat": 10,
+      "tipo": "BB",
+      "importo": 40,
+      "totaleStrada": 40,
+      "potDopo": 70
+     },
+     {
+      "seat": 3,
+      "tipo": "CALL",
+      "importo": 20,
+      "totaleStrada": 40,
+      "potDopo": 90
+     },
+     {
+      "seat": 10,
+      "tipo": "CHECK",
+      "importo": 0,
+      "totaleStrada": 40,
+      "potDopo": 90
+     }
+    ]
+   },
+   {
+    "strada": "FLOP",
+    "board": [
+     "Qh",
+     "2h",
+     "4c"
+    ],
+    "azioni": [
+     {
+      "seat": 10,
+      "tipo": "CHECK",
+      "importo": 0,
+      "totaleStrada": 0,
+      "potDopo": 90
+     },
+     {
+      "seat": 3,
+      "tipo": "CHECK",
+      "importo": 0,
+      "totaleStrada": 0,
+      "potDopo": 90
+     }
+    ]
+   },
+   {
+    "strada": "TURN",
+    "board": [
+     "Qh",
+     "2h",
+     "4c",
+     "Kd"
+    ],
+    "azioni": [
+     {
+      "seat": 10,
+      "tipo": "CHECK",
+      "importo": 0,
+      "totaleStrada": 0,
+      "potDopo": 90
+     },
+     {
+      "seat": 3,
+      "tipo": "BET",
+      "importo": 80,
+      "totaleStrada": 80,
+      "potDopo": 170
+     },
+     {
+      "seat": 10,
+      "tipo": "FOLD",
+      "importo": 0,
+      "totaleStrada": 0,
+      "potDopo": 170
+     }
+    ]
+   }
+  ],
+  "board": [
+   "Qh",
+   "2h",
+   "4c",
+   "Kd"
+  ],
+  "potFinale": 90,
+  "rake": 0,
+  "risultati": [
+   {
+    "seat": 3,
+    "vinto": 90,
+    "mostrate": [
+     "Kh",
+     "9d"
+    ]
+   }
+  ],
+  "anonimizzata": false,
+  "likes": 0,
+  "dislikes": 0,
+  "createdAt": "2026-08-25T16:33:16.922Z",
+  "ogImageUrl": ""
+ }
+}

@@ -95,6 +95,45 @@
   --t-med: 320ms var(--ease-out);
 
   color-scheme: light;
+
+  // ── Feltro del replayer ──────────────────────────────────────────────
+  // ⚠️ Sono TOKEN e non valori scritti nel componente, ed è la correzione di un
+  // difetto misurato: il replayer disegnava il tavolo con `--feltro-chiaro` e
+  // `--feltro-scuro`, che **non sono mai esistite**. Ogni uso cadeva sul valore
+  // di ripiego scritto in linea, quindi la superficie più grande della pagina —
+  // più estesa di qualunque altra — era l'unica a ignorare del tutto il sistema
+  // dei temi, e in «tramonto» era un corpo estraneo.
+  // ⚠️ **Il feltro è ARANCIONE dal 27/08/2026, per decisione del titolare**: in
+  // tema col marchio (`--copper-600` = #e25510, l'arancio del pesce). Prima era
+  // verde, e il commento qui diceva «un feltro rosa non è un feltro» — la
+  // ragione era la convenzione del panno da poker, ma il marchio viene prima:
+  // il tavolo è la superficie più estesa del sito e ora è **sua**.
+  // ⚠️ Restano tre valori distinti, uno per tema: cambiano profondità e
+  // temperatura con lo sfondo su cui poggiano. La **sponda** resta scura
+  // (navy/prugna) in tutti e tre — è il bordo del tavolo, e il contrasto
+  // scuro-su-arancio è l'accostamento del marchio.
+  // ⚠️ Le carte sono bianche con i quattro semi a colori: su questi arancioni
+  // il rapporto di contrasto resta oltre 4,5:1 — verificato prima di scegliere
+  // i valori, non dopo.
+  --feltro-1: #c9541b;
+  --feltro-2: #8e3712;
+  --feltro-sponda: #16223f;
+  --feltro-testo: #ffffff;
+  --feltro-tenue: rgba(255, 255, 255, 0.58);
+  --feltro-riga: rgba(255, 255, 255, 0.16);
+
+  // ── Posizioni al tavolo (targhe del replayer) ────────────────────────
+  // ⚠️ **Definite UNA volta e identiche nei tre temi**, come `--logo-plate` e
+  // `--mask-picche`, e per la stessa ragione: non sono decorazione, sono un
+  // **codice** — si leggono per riconoscere chi è il bottone senza compitare
+  // tre lettere. Un codice che cambia colore col tema smette di essere un
+  // codice. E possono restare fisse perché la targa su cui poggiano è scura in
+  // tutti e tre i temi (`--feltro-sponda` mescolato col nero), non chiara in
+  // uno e scura nell'altro.
+  --pos-btn: #35d17a; // bottone: verde
+  --pos-sb: #46d9e6; // piccolo buio: ciano
+  --pos-bb: #6a9cff; // grande buio: blu
+  --pos-altra: rgba(255, 255, 255, 0.72); // tutte le altre: nessun codice
 }
 
 // ============================================================
@@ -155,6 +194,14 @@
   --shadow-pop: 0 22px 60px rgba(70, 33, 60, 0.16);
 
   color-scheme: light;
+
+  // Feltro del replayer (vedi `:root`).
+  --feltro-1: #cc5a26;
+  --feltro-2: #8f3a1a;
+  --feltro-sponda: #46213c;
+  --feltro-testo: #fffaf6;
+  --feltro-tenue: rgba(255, 250, 246, 0.6);
+  --feltro-riga: rgba(255, 250, 246, 0.18);
 }
 
 // ============================================================
@@ -214,4 +261,12 @@
   --shadow-pop: 0 24px 70px rgba(4, 7, 16, 0.75);
 
   color-scheme: dark;
+
+  // Feltro del replayer (vedi `:root`).
+  --feltro-1: #a8471c;
+  --feltro-2: #66290e;
+  --feltro-sponda: #0c1224;
+  --feltro-testo: #f4efe6;
+  --feltro-tenue: rgba(244, 239, 230, 0.58);
+  --feltro-riga: rgba(244, 239, 230, 0.14);
 }

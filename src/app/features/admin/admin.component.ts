@@ -82,6 +82,8 @@ export class AdminComponent {
         return this.pending.affiliazioni();
       case 'redazione':
         return this.pending.redazione();
+      case 'segnalazioni':
+        return this.pending.segnalazioni();
     }
   }
 

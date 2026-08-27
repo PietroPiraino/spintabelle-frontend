@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { AdminHandsService } from './admin-hands.service';
 import { AffiliationsService } from './affiliations.service';
 import { NewsService } from './news.service';
 import { SubscriptionsService } from './subscriptions.service';
@@ -19,12 +20,15 @@ import { SubscriptionsService } from './subscriptions.service';
 export class AdminPendingService {
   private readonly affiliationsApi = inject(AffiliationsService);
   private readonly newsApi = inject(NewsService);
+  private readonly handsApi = inject(AdminHandsService);
   private readonly subscriptionsApi = inject(SubscriptionsService);
 
   readonly richieste = signal<number | null>(null);
   readonly affiliazioni = signal<number | null>(null);
   /** Articoli `IN_REVISIONE`: la coda della Redazione. */
   readonly redazione = signal<number | null>(null);
+  /** Segnalazioni aperte sulle mani del Replayer. */
+  readonly segnalazioni = signal<number | null>(null);
 
   /** Istante dell'ultimo refresh non forzato partito davvero. */
   private lastRefresh = 0;
@@ -56,6 +60,10 @@ export class AdminPendingService {
     this.newsApi.pendingCount().subscribe({
       next: (res) => this.redazione.set(res.inCoda),
       error: () => this.redazione.set(null),
+    });
+    this.handsApi.segnalazioniAperte().subscribe({
+      next: (res) => this.segnalazioni.set(res.count),
+      error: () => this.segnalazioni.set(null),
     });
   }
 }

@@ -1,5 +1,14 @@
 {
   "version": 1,
-  "include": ["/news", "/news/*", "/news-sitemap.xml", "/sitemap-articoli.xml"],
-  "exclude": []
+  "include": [
+    "/news",
+    "/news/*",
+    "/news-sitemap.xml",
+    "/sitemap-articoli.xml",
+    "/replayer/*"
+  ],
+  "exclude": [
+    "/replayer",
+    "/replayer/"
+  ]
 }

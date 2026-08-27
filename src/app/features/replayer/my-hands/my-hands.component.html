@@ -1,0 +1,627 @@
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Strumenti</span>
+      <h1>Le mie mani</h1>
+      <p class="lead">
+        Tutte le mani che hai caricato, una riga per ciascuna: carte, strade,
+        livello e netto senza doverne aprire nemmeno una.
+      </p>
+    </div>
+
+    @if (auth.user()) {
+      <!--
+        ⚠️ Il caricamento NON parte da qui: lo fa un `effect()` sul signal
+        `auth.user()` nel componente. Un binding che chiama un metodo per
+        l'effetto collaterale rigirerebbe a ogni ciclo di change detection.
+      -->
+      <section class="mh" aria-labelledby="mh-lib">
+        <div class="mh__head">
+          <h2 id="mh-lib">La tua libreria</h2>
+          @if (quota(); as q) {
+            <p class="mh__quota">{{ quotaTesto(q) }}</p>
+          }
+          <!-- ⚠️ Il caricamento vive su /replayer: da qui ci si arriva, non si fa. -->
+          <a class="btn btn--ghost btn--sm mh__carica" routerLink="/replayer">
+            Carica altre mani
+          </a>
+        </div>
+
+        <!-- ── filtri ───────────────────────────────────────────────── -->
+        <div class="mh__filtri">
+          <label class="visually-hidden" for="mh-formato">Formato</label>
+          <select
+            id="mh-formato"
+            class="input mh__sel"
+            [ngModel]="formato()"
+            (ngModelChange)="cambiaFormato($event)"
+          >
+            @for (f of formati; track f.valore) {
+              <option [value]="f.valore">{{ f.etichetta }}</option>
+            }
+          </select>
+
+          <label class="visually-hidden" for="mh-cerca">
+            Cerca fra gli avversari e le sale
+          </label>
+          <input
+            id="mh-cerca"
+            class="input mh__cerca"
+            type="search"
+            placeholder="Cerca un avversario o una sala…"
+            [ngModel]="ricerca()"
+            (ngModelChange)="digita($event)"
+          />
+
+          @if (filtriAttivi()) {
+            <button type="button" class="btn btn--ghost btn--sm" (click)="azzeraFiltri()">
+              Azzera i filtri
+            </button>
+          }
+        </div>
+
+        @if (errore(); as e) {
+          <!-- ⚠️ Un errore si MOSTRA: mai travestito da libreria vuota. -->
+          <div class="mh__errore" role="alert">
+            <p>{{ e }}</p>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="carica(page())"
+            >
+              Riprova
+            </button>
+          </div>
+        } @else if (caricando() && !righe().length) {
+          <p class="mh__aiuto">Carico…</p>
+        } @else if (!righe().length) {
+          <div class="empty-state">
+            @if (filtriAttivi()) {
+              <p>Nessuna mano corrisponde a questi filtri.</p>
+              <button type="button" class="btn btn--ghost btn--sm" (click)="azzeraFiltri()">
+                Azzera i filtri
+              </button>
+            } @else {
+              <p>
+                Non hai ancora caricato nessuna mano.
+                <a routerLink="/replayer">Incollane una nel Replayer</a> per
+                cominciare.
+              </p>
+            }
+          </div>
+        } @else {
+          <!-- ── barra della selezione ──────────────────────────────── -->
+          @if (nSelezionate() > 0) {
+            <!--
+              ⚠️ Conferme IN LINEA e non `confirm()` nativi: nel progetto non
+              esiste alcun dialog, ed è una scelta pinnata dalle spec (idioma di
+              `live-room.component.ts` e `admin-news.component.ts`). Il messaggio
+              dice sempre QUANTE mani, perché è l'unico numero che chi preme non
+              può ricontare da solo.
+            -->
+            <div
+              class="mh__gruppo"
+              role="region"
+              aria-label="Azioni sulle mani selezionate"
+            >
+              <strong class="mh__gruppo-conto">
+                {{ nSelezionate() }}
+                {{ nSelezionate() === 1 ? 'selezionata' : 'selezionate' }}
+              </strong>
+
+              @if (confermaGruppo() === 'elimina') {
+                <span class="mh__conferma">
+                  Cancellare {{ nSelezionate() }}
+                  {{ nSelezionate() === 1 ? 'mano' : 'mani' }}? I collegamenti che
+                  hai condiviso smetteranno di funzionare.
+                  <strong>Non si torna indietro.</strong>
+                </span>
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  [disabled]="inGruppo()"
+                  (click)="eliminaSelezionate()"
+                >
+                  Sì, cancella
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="confermaGruppo.set(null)"
+                >
+                  Annulla
+                </button>
+              } @else if (confermaGruppo() === 'anonimizza') {
+                <span class="mh__conferma">
+                  Su {{ nSelezionate() }}
+                  {{ nSelezionate() === 1 ? 'mano' : 'mani' }} i nomi verranno
+                  sostituiti dalle posizioni al tavolo.
+                  <strong>Non si torna indietro.</strong>
+                </span>
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  [disabled]="inGruppo()"
+                  (click)="anonimizzaSelezionate()"
+                >
+                  Conferma
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="confermaGruppo.set(null)"
+                >
+                  Annulla
+                </button>
+              } @else {
+                <!--
+                  ⚠️ **Primo della barra, e l'unico `btn--primary`.** È il solo
+                  comando del gruppo che non tocca niente: gli altri quattro
+                  cancellano, riscrivono i nomi o rendono pubbliche delle mani.
+                  Il rilievo segue il rischio, e l'unico comando innocuo è anche
+                  quello che si userà più spesso.
+                  ⚠️ Nessun `[disabled]="inGruppo()"`: quel segnale dice «una
+                  scrittura di gruppo è in corso», e questo non scrive niente.
+                -->
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  (click)="rivediSelezionate()"
+                >
+                  Rivedi le {{ nSelezionate() }}
+                  {{ nSelezionate() === 1 ? 'mano' : 'mani' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="inGruppo()"
+                  (click)="confermaGruppo.set('elimina')"
+                >
+                  Elimina
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="inGruppo()"
+                  (click)="confermaGruppo.set('anonimizza')"
+                >
+                  Togli i nomi
+                </button>
+                <!--
+                  ⚠️ Due pulsanti e non un interruttore: su una selezione mista
+                  «inverti» non ha un esito prevedibile, e qui si decide che cosa
+                  diventa pubblico.
+                -->
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="inGruppo()"
+                  (click)="vetrinaSelezionate(true)"
+                >
+                  Metti in vetrina
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="inGruppo()"
+                  (click)="vetrinaSelezionate(false)"
+                >
+                  Togli dalla vetrina
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="cambiaTutte(false)"
+                >
+                  Deseleziona
+                </button>
+              }
+            </div>
+          }
+
+          <!-- ── la tabella ─────────────────────────────────────────── -->
+          <div class="mh__scroll">
+            <table class="mh__tab">
+              <caption class="visually-hidden">
+                Le tue mani: mano dell’eroe, punto, azioni di ogni strada,
+                livello, netto e data. Le prime due colonne restano ferme
+                scorrendo in orizzontale.
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="mh__c-sel">
+                    <!--
+                      ⚠️ `indeterminate` è una PROPRIETÀ del DOM, non un
+                      attributo: senza il binding, una selezione parziale
+                      mostrerebbe la spunta di testa vuota — cioè direbbe «non ho
+                      selezionato niente» con dodici righe selezionate.
+
+                      ⚠️ L'etichetta che avvolge la casella È il bersaglio da
+                      44px: una casella nuda sta sui 17, e allargarla la
+                      disegnerebbe gigante (il browser scala il controllo nativo).
+                    -->
+                    <label class="mh__pick">
+                      <input
+                        type="checkbox"
+                        class="mh__spunta"
+                        aria-label="Seleziona tutte le mani di questa pagina"
+                        [checked]="tutteSelezionate()"
+                        [indeterminate]="alcuneSelezionate()"
+                        (change)="cambiaTutte($any($event.target).checked)"
+                      />
+                    </label>
+                  </th>
+                  <th scope="col" class="mh__c-mano">Mano</th>
+                  <th scope="col">Punto</th>
+                  <!--
+                    ⚠️ **Preflop, Flop, Turn e River non sono più quattro
+                    colonne.** Con carte, piatto e sequenza in ciascuna, erano di
+                    gran lunga le più larghe della tabella e portavano il totale
+                    oltre lo schermo: il titolare non voleva lo scorrimento
+                    orizzontale. Ora vivono nella riga di dettaglio che questo
+                    comando apre — visibili quando servono, senza spingere fuori
+                    schermo le colonne che si leggono a colpo d'occhio.
+                  -->
+                  <th scope="col" class="mh__c-ico">
+                    <span class="visually-hidden">Dettaglio per strada</span>
+                  </th>
+                  <th scope="col" class="mh__c-ico">
+                    <span class="visually-hidden">Rivedi</span>
+                  </th>
+                  <th scope="col">Livello</th>
+                  <th scope="col" class="is-num">Vinto</th>
+                  <th scope="col" class="is-num">EV Diff</th>
+                  <th scope="col">Data</th>
+                  <th scope="col" class="mh__c-azioni">
+                    <span class="visually-hidden">Azioni</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of righe(); track r.id) {
+                  <tr [class.mh__riga--vetrina]="r.inVetrina">
+                    <td class="mh__c-sel">
+                      <label class="mh__pick">
+                        <input
+                          type="checkbox"
+                          class="mh__spunta"
+                          [attr.aria-label]="'Seleziona ' + r.descrizione"
+                          [checked]="selezionata(r.id)"
+                          (change)="cambiaSelezione(r.id, $any($event.target).checked)"
+                        />
+                      </label>
+                    </td>
+
+                    <!--
+                      ⚠️ Le carte si DISEGNANO con `app-playing-card`: rango,
+                      seme e quattro colori. I segnaposto testuali di prima erano
+                      i «quadrati bianchi» che il Titolare ha bocciato. La misura
+                      si pilota solo con `--pc-h`, dal foglio di stile.
+                    -->
+                    <td class="mh__c-mano">
+                      <span class="mh__carte">
+                        @for (c of r.carte; track $index) {
+                          <app-playing-card [carta]="c" />
+                        }
+                      </span>
+                      @if (r.inVetrina) {
+                        <span class="visually-hidden">In vetrina</span>
+                      }
+                      @if (r.anonimizzata) {
+                        <span class="visually-hidden">Nomi rimossi</span>
+                      }
+                    </td>
+
+                    <!-- ⚠️ Cella vuota finché il lotto che calcola il punto non è in linea. -->
+                    <td class="mh__c-punto">{{ r.punto }}</td>
+
+                    <td class="mh__c-ico">
+                      <!--
+                        ⚠️ Un `<button>` con `aria-expanded`/`aria-controls`
+                        verso l'id della riga di dettaglio, l'idioma di
+                        /affiliazioni: senza, chi naviga da tastiera o con uno
+                        screen reader non sa che quel comando apre qualcosa né
+                        dove sia finito.
+                      -->
+                      <button
+                        type="button"
+                        class="mh__ico mh__ico--apri"
+                        [class.is-aperta]="aperta() === r.id"
+                        [attr.aria-expanded]="aperta() === r.id"
+                        [attr.aria-controls]="'mh-dett-' + r.id"
+                        [attr.aria-label]="
+                          (aperta() === r.id ? 'Chiudi il dettaglio di ' : 'Apri il dettaglio di ')
+                            + r.descrizione
+                        "
+                        [title]="'Dettaglio per strada'"
+                        (click)="apriDettaglio(r.id)"
+                      >
+                        <app-icon name="chevron-down" [size]="16" />
+                      </button>
+                    </td>
+
+                    <td class="mh__c-ico">
+                      <a
+                        class="mh__ico"
+                        [routerLink]="['/replayer', r.publicId]"
+                        [attr.aria-label]="'Rivedi ' + r.descrizione"
+                        [title]="'Rivedi ' + r.descrizione"
+                      >
+                        <app-icon name="play" [size]="16" />
+                      </a>
+                    </td>
+
+                    <td class="mh__c-livello">{{ r.livello }}</td>
+
+                    <!--
+                      ⚠️ Tre classi esplicite e non `[class]="'…--'+segno"`: una
+                      `[class]` con una stringa si porta dietro la regola di
+                      fusione con l'attributo statico, che è esattamente il
+                      genere di dettaglio che si rompe in silenzio a un
+                      aggiornamento.
+                    -->
+                    <td class="is-num">
+                      @if (r.vinto; as v) {
+                        <span
+                          class="mh__cifra"
+                          [class.mh__cifra--pos]="v.segno === 'pos'"
+                          [class.mh__cifra--neg]="v.segno === 'neg'"
+                          [class.mh__cifra--zero]="v.segno === 'zero'"
+                          >{{ v.testo }}</span
+                        >
+                      }
+                    </td>
+
+                    <td class="is-num mh__c-ev">
+                      @if (r.evDiff; as v) {
+                        <span
+                          class="mh__cifra"
+                          [class.mh__cifra--pos]="v.segno === 'pos'"
+                          [class.mh__cifra--neg]="v.segno === 'neg'"
+                          [class.mh__cifra--zero]="v.segno === 'zero'"
+                          [title]="
+                            v.stima
+                              ? 'Stima: su un all-in preflop l’equity è campionata, non calcolata su tutti i casi.'
+                              : 'Calcolata su tutti i board possibili.'
+                          "
+                          >{{ v.stima ? '~' : '' }}{{ v.testo }}</span
+                        >
+                      } @else {
+                        <!--
+                          ⚠️ **La cella vuota diceva «rotto».** L'EV Diff è
+                          definito solo dove la domanda esiste: qualcuno all-in,
+                          qualcuno che chiama, le carte di tutti note e l'eroe
+                          ancora in mano. Su questo archivio sono 4 mani su 18 —
+                          il numero **giusto**, non una colonna che non funziona.
+                          Un trattino con la sua spiegazione lo dice; il vuoto no.
+                        -->
+                        <span
+                          class="mh__cifra mh__cifra--vuota"
+                          title="Si calcola solo sulle mani andate all-in e chiamate, con le carte di tutti note."
+                          >—</span
+                        >
+                      }
+                    </td>
+
+                    <!-- ⚠️ Data e ora ESATTE, mai «16 ore fa». -->
+                    <td class="mh__c-data">
+                      {{ r.quando | date: 'dd MMM yyyy, HH:mm' }}
+                    </td>
+
+                    <td class="mh__c-azioni">
+                      <!--
+                        ⚠️ Quando i nomi sono già stati tolti il pulsante resta,
+                        disabilitato: toglierlo farebbe ballare la colonna di
+                        riga in riga, e chi guarda non capirebbe che quella mano
+                        è già a posto.
+                      -->
+                      <button
+                        type="button"
+                        class="mh__ico"
+                        [disabled]="r.anonimizzata"
+                        [attr.aria-label]="
+                          r.anonimizzata
+                            ? 'Nomi già rimossi'
+                            : 'Togli i nomi da ' + r.descrizione
+                        "
+                        [title]="r.anonimizzata ? 'Nomi già rimossi' : 'Togli i nomi'"
+                        (click)="arma(r.id, 'anonimizza')"
+                      >
+                        <app-icon name="users" [size]="16" />
+                      </button>
+                      <button
+                        type="button"
+                        class="mh__ico mh__ico--rischio"
+                        [attr.aria-label]="'Elimina ' + r.descrizione"
+                        title="Elimina"
+                        (click)="arma(r.id, 'elimina')"
+                      >
+                        <app-icon name="trash" [size]="16" />
+                      </button>
+                    </td>
+                  </tr>
+
+                  <!--
+                    ⚠️ **Il dettaglio per strada, e ha la PRECEDENZA più bassa
+                    di una conferma**: due righe aggiuntive sotto la stessa riga
+                    si leggono come un errore di resa, e fra le due quella che
+                    chiede una decisione vince. Perciò `@else if`, non un secondo
+                    `@if`.
+                  -->
+                  @if (aperta() === r.id && !armataQualunque(r.id)) {
+                    <tr class="mh__riga-dett" [attr.id]="'mh-dett-' + r.id">
+                      <td [attr.colspan]="COLONNE">
+                        <div class="mh__dett">
+                          @for (s of r.strade; track $index) {
+                            @if (s) {
+                              <div class="mh__dett-strada">
+                                <span class="mh__dett-nome">{{ s.nome }}</span>
+                                @if (s.carte.length) {
+                                  <span class="mh__board">
+                                    @for (c of s.carte; track $index) {
+                                      <app-playing-card [carta]="c" />
+                                    }
+                                  </span>
+                                }
+                                @if (s.pot) {
+                                  <span class="mh__pot">piatto {{ s.pot }}</span>
+                                }
+                                @if (s.gettoni.length) {
+                                  <span class="mh__note">
+                                    @for (g of s.gettoni; track $index) {
+                                      <span
+                                        class="mh__gett"
+                                        [class.mh__gett--eroe]="g.eroe"
+                                        [attr.aria-label]="g.etichetta"
+                                        >{{ g.codice }}</span
+                                      >
+                                    }
+                                  </span>
+                                }
+                              </div>
+                            }
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+
+                  <!--
+                    ⚠️ La conferma è una RIGA a parte, sotto quella armata: in
+                    una cella alta 44px non ci sta, e la riga che si sta per
+                    cancellare deve restare sotto gli occhi mentre si decide.
+                  -->
+                  @if (armata(r.id, 'elimina')) {
+                    <tr class="mh__riga-conferma">
+                      <td [attr.colspan]="COLONNE">
+                        <span class="mh__conferma">
+                          Cancellare questa mano? Il collegamento che hai
+                          condiviso smetterà di funzionare.
+                          <strong>Non si torna indietro.</strong>
+                        </span>
+                        <button
+                          type="button"
+                          class="btn btn--primary btn--sm"
+                          (click)="cancella(r.id)"
+                        >
+                          Sì, cancella
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn--ghost btn--sm"
+                          (click)="disarma()"
+                        >
+                          Annulla
+                        </button>
+                      </td>
+                    </tr>
+                  } @else if (armata(r.id, 'anonimizza')) {
+                    <tr class="mh__riga-conferma">
+                      <td [attr.colspan]="COLONNE">
+                        <span class="mh__conferma">
+                          I nomi dei giocatori verranno sostituiti dalle posizioni
+                          al tavolo. <strong>Non si torna indietro.</strong>
+                        </span>
+                        <button
+                          type="button"
+                          class="btn btn--primary btn--sm"
+                          (click)="anonimizza(r.id)"
+                        >
+                          Conferma
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn--ghost btn--sm"
+                          (click)="disarma()"
+                        >
+                          Annulla
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!--
+            ⚠️ La legenda non è ornamento: è la sede in cui l'unità dei piatti di
+            strada viene dichiarata UNA volta. Toglierla vuol dire rimettere
+            « bb» in tre colonne per riga.
+          -->
+          <p class="mh__legenda">
+            Il filetto ramato a sinistra segna le mani in vetrina. Il numero
+            accanto alle carte comuni è il piatto a inizio strada, in grandi bui.
+          </p>
+
+          @if (totalPages() > 1) {
+            <div class="row mh__pager">
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                [disabled]="page() <= 1"
+                (click)="carica(page() - 1)"
+              >
+                ← Precedenti
+              </button>
+              <span class="mh__pager-conto">
+                Pagina {{ page() }} di {{ totalPages() }} · {{ total() }} mani
+              </span>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                [disabled]="page() >= totalPages()"
+                (click)="carica(page() + 1)"
+              >
+                Successive →
+              </button>
+            </div>
+          }
+
+          <!--
+            ⚠️ Conferma IN LINEA anche qui: è l'azione più distruttiva che un
+            utente possa fare sui propri dati, e il messaggio dice quante mani.
+          -->
+          <div class="mh__svuota">
+            @if (confermaSvuota()) {
+              <p class="mh__conferma">
+                Verranno cancellate <strong>tutte</strong> le tue
+                {{ total() }} mani, e i collegamenti che hai condiviso
+                smetteranno di funzionare.
+                <strong>Non si torna indietro.</strong>
+              </p>
+              <div class="row">
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  (click)="svuota()"
+                >
+                  Sì, svuota la libreria
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="confermaSvuota.set(false)"
+                >
+                  Annulla
+                </button>
+              </div>
+            } @else {
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="confermaSvuota.set(true)"
+              >
+                Svuota la libreria
+              </button>
+            }
+          </div>
+        }
+      </section>
+    } @else {
+      <!-- La rotta è guardata: si arriva qui solo per un attimo, durante il
+           bootstrap della sessione. -->
+      <p class="mh__aiuto">Stiamo verificando la tua sessione…</p>
+    }
+  </div>
+</section>

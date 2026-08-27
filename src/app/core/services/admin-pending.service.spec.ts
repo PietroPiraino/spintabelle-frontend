@@ -20,6 +20,11 @@ describe('AdminPendingService', () => {
     r.url === `${API}/admin/affiliations/pending-count`;
   const isRedazione = (r: { url: string }) =>
     r.url === `${API}/admin/news/pending-count`;
+  /** ⚠️ Le segnalazioni sulle mani del Replayer: sono una QUARTA chiamata, e la
+   *  spec le enumera tutte — `http.verify()` fallisce su una richiesta che
+   *  nessuno ha atteso, ed è proprio così che questa si è fatta notare. */
+  const isSegnalazioni = (r: { url: string }) =>
+    r.url === `${API}/admin/hands/reports/pending-count`;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -43,6 +48,7 @@ describe('AdminPendingService', () => {
       .flush({ items: [], total: 7, page: 1, limit: 1, totalPages: 7 });
     http.expectOne(isAffiliazioni).flush({ inVerifica: 2 });
     http.expectOne(isRedazione).flush({ inCoda: 3 });
+    http.expectOne(isSegnalazioni).flush({ count: 3 });
 
     expect(service.richieste()).toBe(7);
     expect(service.affiliazioni()).toBe(2);
@@ -56,6 +62,7 @@ describe('AdminPendingService', () => {
       .flush({ items: [], total: 1, page: 1, limit: 1, totalPages: 1 });
     http.expectOne(isAffiliazioni).flush({ inVerifica: 0 });
     http.expectOne(isRedazione).flush({ inCoda: 0 });
+    http.expectOne(isSegnalazioni).flush({ count: 0 });
 
     // la shell chiama refresh() a ogni cambio sezione: senza il freno ogni
     // click farebbe tre chiamate — qui NON deve partire nulla
@@ -71,6 +78,7 @@ describe('AdminPendingService', () => {
       .flush({ items: [], total: 4, page: 1, limit: 1, totalPages: 4 });
     http.expectOne(isAffiliazioni).flush({ inVerifica: 1 });
     http.expectOne(isRedazione).flush({ inCoda: 5 });
+    http.expectOne(isSegnalazioni).flush({ count: 5 });
     expect(service.richieste()).toBe(4);
     expect(service.redazione()).toBe(5);
   });
@@ -86,6 +94,7 @@ describe('AdminPendingService', () => {
       .flush({ items: [], total: 7, page: 1, limit: 1, totalPages: 7 });
     http.expectOne(isAffiliazioni).flush({ inVerifica: 9 });
     http.expectOne(isRedazione).flush({ inCoda: 5 });
+    http.expectOne(isSegnalazioni).flush({ count: 5 });
     expect(service.richieste()).toBe(7);
     expect(service.redazione()).toBe(5);
 
@@ -98,10 +107,12 @@ describe('AdminPendingService', () => {
     http
       .expectOne(isRedazione)
       .flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectOne(isSegnalazioni).flush({ count: 4 });
 
     expect(service.richieste()).toBeNull();
-    // Il vicino sano non viene trascinato giù: i tre conteggi sono indipendenti.
+    // I vicini sani non vengono trascinati giù: i conteggi sono indipendenti.
     expect(service.affiliazioni()).toBe(9);
     expect(service.redazione()).toBeNull();
+    expect(service.segnalazioni()).toBe(4);
   });
 });

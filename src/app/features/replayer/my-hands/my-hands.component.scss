@@ -1,0 +1,528 @@
+// La libreria delle mani, come tabella densa (modello Hand2Note).
+//
+// ⚠️ **Solo token che ESISTONO davvero.** La stesura precedente di questo file
+// usava `var(--surface)` e `var(--border)`: in `styles/_tokens.scss` non esiste
+// né l'uno né l'altro, quindi la dichiarazione era invalida e il fondo delle
+// schede cadeva su `transparent` — un difetto che non si vede finché il fondo
+// pagina somiglia alla superficie. I nomi buoni sono `--surface-1`/`--surface-2`
+// e `--line`/`--line-strong`.
+//
+// ⚠️ Leggere i VALORI dei token, non i nomi: `--cream-100` non è una crema, è il
+// colore del testo principale (navy nel tema chiaro).
+
+.mh {
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 14px);
+  padding: 1rem 1rem 1.25rem;
+  // La larghezza della colonna della spunta vive QUI e in un posto solo: è
+  // insieme la sua larghezza e lo scostamento `left` della colonna bloccata
+  // successiva. Due numeri scritti a mano divergono, e la seconda colonna
+  // scivolerebbe sotto la prima scorrendo.
+  --mh-sel: 44px;
+
+  // ⚠️ **I 44px vanno DICHIARATI anche sui pulsanti di contorno.** Misurato in
+  // questa pagina: un `.btn--sm` nudo sta a **38px** — «Carica altre mani» e
+  // «Svuota la libreria» erano gli unici bersagli sotto soglia rimasti. È la
+  // stessa regola già scritta per `styles/_news-share.scss`.
+  .btn {
+    min-height: 44px;
+  }
+}
+
+.mh__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.9rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+}
+
+.mh__quota {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+// Il caricamento è su /replayer: da qui ci si arriva.
+.mh__carica {
+  margin-left: auto;
+}
+
+.mh__aiuto {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  margin: 0.75rem 0;
+}
+
+.mh__errore {
+  border: 1px solid var(--copper-600);
+  border-radius: var(--radius-md, 10px);
+  padding: 0.8rem;
+  margin-top: 0.9rem;
+
+  p {
+    margin: 0 0 0.6rem;
+  }
+}
+
+// ── filtri ─────────────────────────────────────────────────────────────
+
+.mh__filtri {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.9rem 0;
+}
+
+// ⚠️ `.input` globale ha 0.78rem di padding verticale: sono già oltre i 44px di
+// altezza, quindi qui si stringe solo in larghezza, mai in altezza.
+.mh__sel {
+  width: auto;
+  min-width: 12rem;
+}
+
+.mh__cerca {
+  width: auto;
+  flex: 1 1 14rem;
+  min-width: 12rem;
+}
+
+// ── barra della selezione multipla ─────────────────────────────────────
+
+.mh__gruppo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.6rem;
+  border: 1px solid var(--copper-600);
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface-2);
+}
+
+.mh__gruppo-conto {
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.25rem;
+}
+
+.mh__conferma {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+// ── la tabella ─────────────────────────────────────────────────────────
+
+// Scorrimento orizzontale con le ombre a gradiente: idioma di
+// `admin-stats.component.scss`. I due strati `local` fanno da copertura sul
+// bordo, i due `scroll` sono l'ombra che dice «di là continua».
+// ⚠️ Il gradiente di sinistra qui non si vedrà mai: lo copre la colonna
+// bloccata, che è opaca — ed è giusto così, perché a sinistra non c'è nulla di
+// nascosto. Il filetto sul bordo destro della colonna bloccata è ciò che segna
+// la linea di congelamento.
+.mh__scroll {
+  overflow-x: auto;
+  background-image:
+    linear-gradient(to right, var(--surface-1) 55%, transparent),
+    linear-gradient(to left, var(--surface-1) 55%, transparent),
+    linear-gradient(to right, var(--text-faint), transparent),
+    linear-gradient(to left, var(--text-faint), transparent);
+  background-position:
+    0 0,
+    100% 0,
+    0 0,
+    100% 0;
+  background-size:
+    46px 100%,
+    46px 100%,
+    24px 100%,
+    24px 100%;
+  background-repeat: no-repeat;
+  background-attachment: local, local, scroll, scroll;
+}
+
+.mh__tab {
+  width: 100%;
+  // ⚠️ `separate` e NON `collapse`: con i bordi fusi, una cella `position:
+  // sticky` perde il proprio bordo (i bordi collassati appartengono alla
+  // tabella, non alla cella, e non viaggiano con lei). Con `border-spacing: 0`
+  // il risultato visivo è identico e i filetti restano attaccati alle celle.
+  border-collapse: separate;
+  border-spacing: 0;
+  // ⚠️ 0,78rem e non 0,8: misurato, i due centesimi di rem valgono una
+  // sessantina di pixel sulle tredici colonne — cioè la differenza fra la
+  // colonna delle azioni visibile a 1280px e fuori schermo.
+  font-size: 0.78rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0 0.32rem;
+    // ⚠️ I 44px sono DICHIARATI qui, una volta: su una riga di tabella
+    // `height` si comporta da altezza minima, e ogni bersaglio della riga
+    // (spunta, ▶, cestino) eredita l'altezza della propria cella. Senza,
+    // una riga sta sui ~30px e nessun controllo arriva al bersaglio minimo.
+    height: 44px;
+    border-bottom: 1px solid var(--line);
+    // Niente va a capo: una riga che si sdoppia distrugge la densità, che è
+    // l'unica ragione per cui questa tabella esiste.
+    white-space: nowrap;
+  }
+
+  thead th {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 500;
+    // ⚠️ 0,06em e non gli 0,1 di `admin-stats`: qui le intestazioni sono
+    // tredici e diverse colonne sono larghe quanto la LORO etichetta, non
+    // quanto il contenuto — la spaziatura si paga tredici volte.
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--copper-600);
+    height: 36px;
+    border-bottom-color: var(--line-strong);
+  }
+
+  tbody tr:hover td {
+    background: var(--surface-2);
+  }
+
+  .is-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// ── le due colonne bloccate ────────────────────────────────────────────
+// ⚠️ Codice nuovo per il progetto: nessun'altra tabella qui ha colonne bloccate.
+// Servono tre cose insieme, e a mancarne una il difetto è muto: `position:
+// sticky` + uno sfondo OPACO (senza, il contenuto che scorre si legge sotto) +
+// uno `z-index` che le tenga sopra le celle normali.
+//
+// ⚠️⚠️ **I selettori sono innestati sotto `.mh__tab` per SPECIFICITÀ, e questo
+// è un difetto già misurato, non una precauzione.** Scritti sciolti valevano
+// (0,1,0) contro lo (0,1,1) di `.mh__tab td`, quindi il `padding: 0` non
+// passava: la colonna della spunta era larga **62px** invece di 44, mentre la
+// seconda colonna si bloccava a `left: 44px` — cioè, scorrendo, saltava
+// indietro di 18px e finiva **sotto** la prima. In un'istantanea non si vede: si
+// vede solo scorrendo, ed è esattamente quello che il telefono fa.
+.mh__tab {
+  .mh__c-sel {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    width: var(--mh-sel);
+    min-width: var(--mh-sel);
+    padding: 0;
+    background: var(--surface-1);
+  }
+
+  .mh__c-mano {
+    position: sticky;
+    left: var(--mh-sel);
+    z-index: 2;
+    background: var(--surface-1);
+    padding-left: 0.3rem;
+    /**
+     * ⚠️ **Il filetto di congelamento è stato TOLTO, e la posizione `sticky`
+     * resta.** Quel `box-shadow: 1px 0 0` segnalava «di qua la colonna è ferma,
+     * di là scorre»: aveva senso quando la tabella usciva dallo schermo. Da
+     * quando le quattro colonne di strada sono passate nella riga di dettaglio
+     * la tabella **entra intera** (1146px su 1146 di viewport), quindi non
+     * scorre niente e quella linea annunciava un comportamento che non c'è —
+     * si leggeva come un divisorio fra Mano e Punto, e il titolare l'ha
+     * bocciata. Il `sticky` invece serve ancora, come rete su un telefono
+     * stretto: là il filetto tornerebbe utile, ma non vale un secondo stato da
+     * mantenere per un caso che si vede solo sotto i 400px.
+     */
+  }
+
+  tbody tr:hover .mh__c-sel,
+  tbody tr:hover .mh__c-mano {
+    background: var(--surface-2);
+  }
+
+  // Le mani in vetrina: un filetto ramato sul bordo sinistro della riga.
+  // ⚠️ La vetrina non ha una colonna propria (il Titolare ne ha chieste
+  // tredici, e nessuna è questa), ma è uno stato che l'utente ha scelto e deve
+  // poter vedere: senza, i due comandi di gruppo agirebbero su qualcosa di
+  // invisibile.
+  .mh__riga--vetrina .mh__c-sel {
+    box-shadow: inset 3px 0 0 var(--copper-600);
+  }
+}
+
+// ── la spunta ──────────────────────────────────────────────────────────
+// ⚠️ Il bersaglio è l'ETICHETTA, non la casella: una `<input type=checkbox>`
+// nuda sta sui 18px, e portarla a 44 la disegnerebbe gigante (i browser scalano
+// il controllo nativo). L'etichetta riempie la cella, la casella resta piccola.
+.mh__pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mh-sel);
+  height: 44px;
+  cursor: pointer;
+}
+
+.mh__spunta {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--copper-600);
+  cursor: pointer;
+}
+
+// ── contenuto delle celle ──────────────────────────────────────────────
+
+// Le carte dell'eroe: la colonna che si guarda per prima, quindi le più grandi.
+// ⚠️ `app-playing-card` si dimensiona SOLO con `--pc-h`, dall'esterno.
+.mh__carte {
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: middle;
+  --pc-h: 1.55rem;
+}
+
+// Le carte comuni: più piccole delle proprie, perché sono contesto.
+.mh__board {
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: middle;
+  margin-right: 0.3rem;
+  --pc-h: 1.1rem;
+}
+
+.mh__c-strada {
+  color: var(--text-muted);
+}
+
+// Il piatto a inizio strada. ⚠️ È una MISURA, non un codice: resta nella forma
+// italiana di `formatBui` («18,7 bb»), mentre i gettoni qui accanto usano il
+// punto decimale dei codici del preflop. La differenza è voluta ed è spiegata in
+// `hand-notation.ts`.
+.mh__pot {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  margin-right: 0.35rem;
+}
+
+.mh__note {
+  display: inline-flex;
+  gap: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.mh__gett {
+  color: var(--text-muted);
+}
+
+// ⚠️ L'eroe si distingue per PESO e COLORE, ed è l'unica cosa che rende
+// leggibile `X B1 R4 C3` senza rileggerlo: la sottolineatura ramata è la stessa
+// convenzione di Hand2Note.
+.mh__gett--eroe {
+  color: var(--text);
+  font-weight: 700;
+  border-bottom: 2px solid var(--copper-600);
+  padding-bottom: 1px;
+}
+
+.mh__c-punto,
+.mh__c-livello,
+.mh__c-data {
+  color: var(--text-muted);
+}
+
+.mh__c-livello,
+.mh__c-data {
+  font-variant-numeric: tabular-nums;
+}
+
+// Il netto e la differenza di EV: il segno lo dice il testo, il colore lo
+// conferma. ⚠️ Mai il colore da solo — chi non distingue rosso e verde legge
+// comunque il `+` o il `-`.
+.mh__cifra {
+  font-weight: 600;
+}
+
+.mh__cifra--pos {
+  color: var(--felt);
+}
+
+.mh__cifra--neg {
+  color: var(--danger);
+}
+
+.mh__cifra--zero {
+  color: var(--text-faint);
+}
+
+// ── i comandi della riga ───────────────────────────────────────────────
+
+// ⚠️ Stessa questione di specificità delle colonne bloccate: senza il
+// contenitore, `.mh__tab td` vincerebbe e le due colonne di icone porterebbero
+// 0,4rem di respiro per parte che non serve a niente (i pulsanti sono già 44px).
+.mh__tab {
+  .mh__c-ico,
+  .mh__c-azioni {
+    padding: 0;
+    white-space: nowrap;
+  }
+}
+
+.mh__ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  // ⚠️ 44px DICHIARATI: un pulsante con dentro un'icona da 16 sta sui 20.
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    color: var(--copper-600);
+  }
+
+  &:disabled {
+    color: var(--text-faint);
+    cursor: default;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.mh__ico--rischio:hover {
+  color: var(--danger);
+}
+
+// La riga di conferma: sta SOTTO quella armata, che resta sotto gli occhi.
+.mh__riga-conferma td {
+  height: auto;
+  padding: 0.6rem 0.55rem;
+  white-space: normal;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--copper-600);
+
+  // ⚠️ **Al centro, non a sinistra.** La riga occupa tutta la larghezza della
+  // tabella e la domanda finiva contro il bordo sinistro con i due pulsanti a
+  // seguire: si leggeva come una nota, non come una decisione da prendere.
+  // Centrata, il testo e i comandi formano un blocco solo sotto la riga a cui
+  // si riferiscono.
+  // ⚠️ `text-align` e **non** `display: flex`: un `<td>` dichiarato flex esce
+  // dal contesto di formattazione della tabella e il browser gli costruisce
+  // intorno una cella anonima — il `colspan` smette di valere e la riga si
+  // disallinea. Qui il contenuto è tutto inline (uno `<span>` e due pulsanti),
+  // quindi l'allineamento del testo li centra tutti.
+  text-align: center;
+
+  .btn {
+    margin-left: 0.4rem;
+  }
+}
+
+// ── coda ───────────────────────────────────────────────────────────────
+
+.mh__legenda {
+  margin: 0.6rem 0 0;
+  color: var(--text-faint);
+  font-size: 0.8rem;
+}
+
+.mh__pager {
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.6rem;
+}
+
+.mh__pager-conto {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.mh__svuota {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+// Su telefono la scheda si stringe: lo scorrimento della tabella deve poter
+// arrivare fino al bordo, o le prime colonne bloccate sembrano staccate.
+@media (max-width: 560px) {
+  .mh {
+    padding: 0.75rem 0.6rem 1rem;
+  }
+
+  .mh__carica {
+    margin-left: 0;
+  }
+}
+
+// ── riga di dettaglio per strada ──────────────────────────────────────
+// ⚠️ Sostituisce le quattro colonne Preflop/Flop/Turn/River, che erano di gran
+// lunga le più larghe e portavano la tabella oltre lo schermo. Stesso idioma
+// della riga di conferma qui sopra: una `<tr>` in più con `colspan`, altezza
+// libera e `white-space: normal`.
+.mh__riga-dett > td {
+  height: auto;
+  // ⚠️ Il rientro parte dal fondo della colonna delle spunte **più** un margine
+  // vero: allineata al filo, la scritta PREFLOP sembrava incollata al bordo
+  // della tabella invece che appartenere alla riga sopra.
+  padding: 0.5rem 0.6rem 0.7rem calc(var(--mh-sel) + 1.6rem);
+  white-space: normal;
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+}
+
+.mh__dett {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+}
+
+.mh__dett-strada {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mh__dett-nome {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+// Il comando che apre: la freccia ruota, così lo stato si vede senza leggere.
+.mh__ico--apri {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  app-icon { transition: transform var(--t-fast); display: block; }
+  &.is-aperta app-icon { transform: rotate(180deg); }
+  &:hover { color: var(--copper-600); }
+}
+
+// ⚠️ Il trattino della cella EV vuota è tenue di proposito: dice «qui non si
+// applica», non «manca un dato».
+.mh__cifra--vuota {
+  color: var(--text-faint);
+  cursor: help;
+}

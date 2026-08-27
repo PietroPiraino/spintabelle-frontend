@@ -1,0 +1,422 @@
+// La pagina pubblica usa i primitivi condivisi (`.section`, `.section-head`,
+// `.gate`, `.seo-block`, `.seo-more`, `.faq`) di `styles/_utilities.scss`.
+// ⚠️ Ricopiarli qui li farebbe divergere dal resto del sito alla prima modifica
+// di un token. Qui sotto c'è solo ciò che è proprio della vetrina.
+
+.rv {
+  margin: 2rem 0;
+
+  h2 {
+    margin: 0 0 0.35rem;
+  }
+}
+
+.rv__sotto {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.rv__griglia {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+}
+
+.rv__card {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: start;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  // ⚠️ 44px dichiarati: è una card cliccabile, e il padding da solo non li
+  // garantisce su una mano senza carte note.
+  min-height: 44px;
+
+  &:hover {
+    border-color: var(--copper-600);
+  }
+}
+
+// Il FORMATO in evidenza, come nella libreria e sulla pagina della mano: è ciò
+// che dice a chi guarda che cosa sta per aprire.
+.rv__formato {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--copper-600);
+  color: var(--copper-600);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.rv__carte {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+// Segnaposto testuale della carta. ⚠️ I semi restano due caratteri ASCII: su
+// iOS `♥` e `♦` prendono la presentazione emoji e ignorano `color:`.
+.rv__carta {
+  min-width: 2rem;
+  padding: 0.1rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--logo-plate);
+  color: #16223f;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.rv__pot {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.rv__meta {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+// ── zona di caricamento ───────────────────────────────────────────────
+// ⚠️ Il bordo tratteggiato non è decorazione: è ciò che fa riconoscere l'area
+// come **zona di rilascio**. Prima era una textarea nuda dentro una card, e il
+// titolare l'ha bocciata proprio perché «non ha nessun bordo che ci permetta di
+// riconoscerla».
+
+.rc {
+  display: grid;
+  gap: 0.9rem;
+  margin-bottom: 2.5rem;
+}
+
+.rc__zona {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem;
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  transition: border-color var(--t-fast), background var(--t-fast);
+
+  &.is-sopra {
+    border-color: var(--copper-500);
+    background: color-mix(in srgb, var(--copper-500) 8%, var(--surface-2));
+  }
+}
+
+.rc__zona-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text-muted);
+}
+
+.rc__zona-testo {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+// ⚠️ `<label>` con dentro un input nascosto: è il solo modo di avere un
+// pulsante che apre il selettore di file **e** rispetti i 44px, senza JavaScript.
+.rc__scegli {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.rc__testo {
+  width: 100%;
+  min-height: 9rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text);
+  // Una hand history è testo allineato a colonne: il monospazio non è un vezzo.
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  resize: vertical;
+}
+
+.rc__aiuto {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 0.82rem;
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.95em;
+  }
+}
+
+// ── la coda dei file ──────────────────────────────────────────────────
+
+.rc__coda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.rc__file {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  font-size: 0.88rem;
+
+  &--ko {
+    border-color: var(--danger);
+  }
+}
+
+.rc__file-nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.rc__file-peso {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rc__file-ko {
+  color: var(--danger);
+  font-size: 0.82rem;
+}
+
+.rc__file-x {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--danger);
+  }
+}
+
+// ── anteprima ─────────────────────────────────────────────────────────
+
+.rc__esito {
+  padding: 0.9rem 1rem;
+  border-left: 3px solid var(--copper-600);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+
+  &--ko {
+    border-left-color: var(--text-faint);
+  }
+}
+
+.rc__esito-titolo {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.rc__conti {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.rc__motivo {
+  display: block;
+  color: var(--text-faint);
+  font-size: 0.86rem;
+}
+
+.rc__avviso {
+  color: var(--copper-600);
+}
+
+.rc__conclusione {
+  margin: 0.6rem 0 0;
+}
+
+.rc__vetrina {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.4rem 0;
+  font-size: 0.92rem;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    margin-top: 0.15rem;
+    flex: none;
+  }
+}
+
+// ── stati della vetrina ───────────────────────────────────────────────
+
+.rv__stato {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+// ── vetrina: ordine, card e voto ──────────────────────────────────────
+
+.rv__ordini {
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0.6rem 0 1rem;
+}
+
+// ⚠️ La card non è più un unico `<a>`: il corpo è il collegamento, il voto gli
+// sta accanto. Lo sfondo e il bordo restano sull'`<article>`, o l'ombra
+// dell'hover si fermerebbe a metà.
+.rv__corpo {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  padding: 0.9rem 0.8rem 0.6rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.rv__voto {
+  display: flex;
+  justify-content: center;
+  padding: 0 0.6rem 0.7rem;
+}
+
+.rv__mipiace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  // ⚠️ I 44px vanno **dichiarati**: un pulsante nudo con questo contenuto sta
+  // sui 30px, e i 44 non arrivano da soli (precedente in `_news-share.scss`).
+  min-height: 44px;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast);
+
+  &:hover { color: var(--copper-600); border-color: var(--copper-600); }
+
+  &.is-attivo {
+    color: var(--copper-600);
+    border-color: var(--copper-600);
+    // Il cuore è disegnato come contorno (`fill: none` sul root del
+    // componente): pieno lo si ottiene qui, senza una seconda icona.
+    app-icon svg { fill: currentColor; }
+  }
+}
+
+.rv__conta {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+// ── «come funziona»: tre passi, nessuna prosa ─────────────────────────
+
+.rc__come {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.7rem;
+  margin: 0 0 1.1rem;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: 'n titolo' 'n testo';
+    align-items: center;
+    gap: 0.1rem 0.6rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+  }
+
+  strong { grid-area: titolo; font-size: 0.95rem; }
+  span:not(.rc__come-n) {
+    grid-area: testo;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+}
+
+.rc__come-n {
+  grid-area: n;
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: var(--copper-600);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+// ── esito del caricamento ─────────────────────────────────────────────
+
+.rc__esito--ok {
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  padding: 1.2rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--felt) 45%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--felt) 8%, transparent);
+
+  app-icon { color: var(--felt); }
+}
+
+.rc__esito-titolo {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.rc__esito-nota {
+  display: block;
+  font-weight: 400;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.rc__esito-azioni {
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}

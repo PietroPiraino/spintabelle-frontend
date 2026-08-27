@@ -24,15 +24,18 @@ describe('AdminComponent (shell dashboard)', () => {
     r.url === `${API}/admin/affiliations/pending-count`;
   const isRedazione = (r: { url: string }) =>
     r.url === `${API}/admin/news/pending-count`;
+  const isSegnalazioni = (r: { url: string }) =>
+    r.url === `${API}/admin/hands/reports/pending-count`;
 
   const el = () => fixture.nativeElement as HTMLElement;
   const text = () => el().textContent ?? '';
 
-  /** Risponde ai tre conteggi del costruttore (`AdminPendingService`). */
+  /** Risponde ai QUATTRO conteggi del costruttore (`AdminPendingService`). */
   const flushPending = async (
     richieste: number | null,
     inVerifica: number | null,
     inCoda: number | null = 0,
+    segnalazioni: number | null = 0,
   ) => {
     const reqRichieste = http.expectOne(isRichieste);
     if (richieste === null) {
@@ -57,6 +60,12 @@ describe('AdminComponent (shell dashboard)', () => {
       reqRedazione.flush(null, { status: 500, statusText: 'Server Error' });
     } else {
       reqRedazione.flush({ inCoda });
+    }
+    const reqSegn = http.expectOne(isSegnalazioni);
+    if (segnalazioni === null) {
+      reqSegn.flush(null, { status: 500, statusText: 'Server Error' });
+    } else {
+      reqSegn.flush({ count: segnalazioni });
     }
     await fixture.whenStable();
     fixture.detectChanges();
@@ -89,10 +98,10 @@ describe('AdminComponent (shell dashboard)', () => {
     return link?.querySelector('.admin-shell__badge')?.textContent?.trim() ?? null;
   };
 
-  it('rende le 17 voci raggruppate, con i chip "Presto" sui placeholder', async () => {
+  it('rende le 18 voci raggruppate, con i chip "Presto" sui placeholder', async () => {
     await flushPending(0, 0);
 
-    expect(el().querySelectorAll('.admin-shell__link').length).toBe(17);
+    expect(el().querySelectorAll('.admin-shell__link').length).toBe(18);
     for (const label of ['Contenuti', 'Vendite', 'Utenti', 'Finanze', 'Analisi']) {
       expect(text()).toContain(label);
     }

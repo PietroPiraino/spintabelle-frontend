@@ -49,6 +49,62 @@ export const routes: Routes = [
     },
   },
   {
+    // ⚠️ Niente `authGuard`, come per `lezioni`: una rotta guardata NON e'
+    // prerenderizzabile (il guard aspetta `ready$`, che in Node non emette mai)
+    // e Cloudflare le servirebbe la shell CSR col canonical della home. Il gate
+    // vive nel componente; i dati restano protetti dal backend.
+    path: 'replayer',
+    loadComponent: () =>
+      import('./features/replayer/replayer.component').then(
+        (m) => m.ReplayerComponent,
+      ),
+    title: 'Replayer delle mani di poker — Best Fish Forever',
+    data: {
+      description:
+        'Rivedi una mano di poker azione per azione e condividila con un collegamento. Spin & Go, Twister, cash game e tornei: incolli il resoconto e il sito ricostruisce la mano.',
+    },
+  },
+  {
+    // ⚠️ PAGINA PUBBLICA di una singola mano: chi ha il collegamento la apre
+    // senza account, ed e' meta' della funzione. Il `noindex` NON e' qui — lo
+    // mettono `public/_headers` e il renderer di bordo (decisione D2).
+    //
+    // ⚠️ REGOLA TEMPORANEA in `public/_redirects` finche' non arriva la Pages
+    // Function (fase 4). Quando arrivera', quella regola VA TOLTA: le regole di
+    // `_redirects` sono valutate PRIMA delle Function, quindi lasciarla
+    // spegnerebbe l'SSR di bordo lasciando la shell vuota. Non e' una cosa da
+    // ricordarsi: `scripts/check-routes.mjs` fallisce il build se una rotta
+    // servita dalla Function ha anche una regola qui.
+    path: 'replayer/:publicId',
+    loadComponent: () =>
+      import('./features/replayer/hand-replay/hand-replay.component').then(
+        (m) => m.HandReplayComponent,
+      ),
+    title: 'Mano di poker — Best Fish Forever',
+    data: {
+      description: 'Una mano di poker rivista azione per azione.',
+      noindex: true,
+    },
+  },
+  {
+    // La libreria personale. ⚠️ Si chiama `/mie-mani` e NON `/replayer/libreria`:
+    // quest'ultima finirebbe sotto l'`include` `/replayer/*` di
+    // `public/_routes.json` (fase 4), quindi la Function all'edge chiederebbe
+    // all'API una mano chiamata «libreria» e risponderebbe 404 alla libreria di
+    // un utente collegato.
+    path: 'mie-mani',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/replayer/my-hands/my-hands.component').then(
+        (m) => m.MyHandsComponent,
+      ),
+    title: 'Le mie mani — Best Fish Forever',
+    data: {
+      description: 'La tua libreria di mani caricate.',
+      noindex: true,
+    },
+  },
+  {
     path: 'chi-siamo',
     loadComponent: () =>
       import('./features/about/about.component').then((m) => m.AboutComponent),
@@ -418,6 +474,18 @@ export const routes: Routes = [
             './features/admin/admin-participation/admin-participation.component'
           ).then((m) => m.AdminParticipationComponent),
         title: 'Admin · Partecipazione — Best Fish Forever',
+      },
+      {
+        // ⚠️ Rotta figlia INLINE con `path` letterale: `loadChildren` e'
+        // invisibile a `check-routes.mjs` e consegnerebbe alla rotta l'HTML
+        // della home, in silenzio. La regola `/admin/*` di `_redirects` copre
+        // gia' ogni nuovo segmento.
+        path: 'replayer',
+        loadComponent: () =>
+          import(
+            './features/admin/admin-replayer/admin-replayer.component'
+          ).then((m) => m.AdminReplayerComponent),
+        title: 'Admin · Replayer — Best Fish Forever',
       },
       {
         path: 'stakings',

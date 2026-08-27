@@ -5,7 +5,11 @@ import { IconName } from '../../shared/ui/icon/icon.component';
  * `AdminComponent.badgeCount` la importa da qui invece di riscriverla, così
  * aggiungere un badge non compila finché non gli si dà anche la sua fonte.
  */
-export type AdminBadge = 'richieste' | 'affiliazioni' | 'redazione';
+export type AdminBadge =
+  | 'richieste'
+  | 'affiliazioni'
+  | 'redazione'
+  | 'segnalazioni';
 
 export interface AdminNavItem {
   /** Segmento figlio sotto `/admin` (`''` = Panoramica). */
@@ -84,6 +88,17 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { path: 'iscritti', label: 'Iscritti', icon: 'users' },
       { path: 'partecipazione', label: 'Partecipazione', icon: 'activity' },
+      // ⚠️ Le segnalazioni sulle mani del Replayer. Il badge conta le APERTE, e
+      // qui conta davvero: chi segnala e' quasi sempre un TERZO che si e'
+      // trovato nominato in una mano, non ha un account e non ha altro canale.
+      // Una coda che nessuno guarda trasforma la via di rimozione dell'art. 17
+      // in una cassetta delle lettere murata.
+      {
+        path: 'replayer',
+        label: 'Replayer',
+        icon: 'inbox',
+        badge: 'segnalazioni',
+      },
     ],
   },
   {

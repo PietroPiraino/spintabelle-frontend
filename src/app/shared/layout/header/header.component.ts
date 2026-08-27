@@ -60,6 +60,9 @@ export class HeaderComponent {
       label: 'Studia',
       children: [
         { path: '/lezioni', label: 'Lezioni' },
+        // ⚠️ `isNew` spostato qui dal Negozio: il flag e' UNO e si muove a mano,
+        // e il Replayer e' la sezione nuova. Riportarlo indietro e' una riga.
+        { path: '/replayer', label: 'Replayer', isNew: true },
         { path: '/docs', label: 'Docs' },
         { path: '/simulatore-varianza', label: 'Simulatore varianza' },
         { path: '/tabelle', label: 'Tabelle' },
@@ -71,9 +74,9 @@ export class HeaderComponent {
       label: 'Scuola',
       children: [
         { path: '/affiliazioni', label: 'Affiliazioni' },
-        // ⚠️ `isNew` e' un flag che si sposta A MANO: oggi solo il Negozio.
-        // Le guide ce l'hanno avuto e non sono piu' una novita'.
-        { path: '/negozio', label: 'Negozio', isNew: true },
+        // ⚠️ `isNew` e' un flag che si sposta A MANO: oggi sta sul Replayer.
+        // Le guide e il Negozio ce l'hanno avuto e non sono piu' una novita'.
+        { path: '/negozio', label: 'Negozio' },
         { path: '/guide', label: 'Guide' },
         { path: '/chi-siamo', label: 'Chi siamo' },
       ],

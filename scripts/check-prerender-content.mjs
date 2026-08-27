@@ -50,6 +50,10 @@ const MIN_PAROLE = {
   '/': 900,
   '/tabelle': 400, // il visualizzatore e' dietro login: qui vive solo l'evergreen
   '/lezioni': 350, // idem: il catalogo e' dietro il JWT, qui c'e' solo il teaser
+  // Il teaser del Replayer: la vetrina e la libreria stanno dietro il JWT,
+  // quindi qui c'e' solo copy statico. ⚠️ Misurato 961 al primo build: la soglia
+  // sta sotto per lasciare margine a una riscrittura, non a uno svuotamento.
+  '/replayer': 700,
   '/docs': 300, // idem
   '/live': 300, // idem: il calendario e' dietro il JWT
   '/abbonati': 100, // TODO fase 3: sale a 400 quando arriva il blocco editoriale

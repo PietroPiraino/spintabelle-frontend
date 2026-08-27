@@ -17,6 +17,7 @@ import { parseRedirects, findMatch, lintRules, sampleUrl, routeCoversUrl } from 
 import {
   parseRoutesJson,
   findInclude,
+  servitaDallaFunction,
   lintIncludes,
   urlDiEsempio,
 } from './lib/pages-functions.mjs';
@@ -137,7 +138,11 @@ const formeDallaFunction = (rotta) => {
   const dentro = [];
   const fuori = [];
   for (const url of urlDiEsempio(rotta))
-    (findInclude(routesJson.include, url) ? dentro : fuori).push(url);
+    // ⚠️ `servitaDallaFunction` e non `findInclude`: **`exclude` vince su
+    // `include`**, e guardando i soli `include` la guardia dichiarava servita
+    // dalla Function una pagina che Cloudflare ritaglia fuori — per esempio
+    // `/replayer/`, che e' prerenderizzata e sta dentro `/replayer/*`.
+    (servitaDallaFunction(routesJson, url) ? dentro : fuori).push(url);
   return { dentro, fuori };
 };
 

@@ -1,0 +1,2123 @@
+// ⚠️⚠️ **QUESTO FOGLIO È IL PIÙ PESANTE DEL SITO (~20 kB di CSS servito) ed è
+// il motivo per cui il tetto d'errore in `angular.json` è stato alzato da 20 a
+// 24 kB il 27/08/2026.** Non è una licenza: è un debito dichiarato.
+//
+// Perché è così grande: un tavolo da poker con tre temi, da due a nove posti,
+// due geometrie di ancoraggio (ellisse su desktop, superellisse sul rettangolo
+// del telefono), tre orientamenti e una container query. Il tetto di 20 kB era
+// tarato su un componente normale.
+//
+// ⚠️ **Prima di aggiungere altre regole qui, va spezzato.** La strada NON è
+// spostarle in un foglio globale come `_news-share.scss`: là il problema era
+// l'opposto (l'HTML dell'edge non ha l'attributo di incapsulamento), mentre qui
+// metà delle regole **sovrascrive** regole del componente, e un foglio globale
+// ha una classe in meno di specificità — perderebbe in silenzio. È lo stesso
+// meccanismo che ha fatto ricomparire l'elenco laterale su iPhone.
+//
+// ⚠️ I commenti sono `//` e mai `/* */`: Sass tiene i secondi nel CSS servito,
+// e questa documentazione peserebbe sulla rete di chi apre una mano.
+
+// Il replayer di una mano — **replica ravvicinata di Hand2Note**, ma sui tre
+// temi del sito.
+//
+// ⚠️ **TUTTI i colori vengono dai token**, `_tokens.scss`, e nessuno è scritto
+// qui. La versione precedente disegnava contro un vocabolario che in questo
+// progetto **non esiste** — `--border`, `--surface`, `--bg`, `--radius-md`,
+// `--font-sans`, `--gold-400`, `--navy-600`, `--feltro-chiaro`,
+// `--feltro-scuro`: nove custom property mai definite, quindi ogni loro uso
+// cadeva sul valore di ripiego scritto in linea. Effetto: bordi e superfici non
+// venivano disegnati affatto, e il feltro — la superficie più grande della
+// pagina — era l'unica cosa del sito a ignorare del tutto i tre temi.
+// I nomi veri sono `--line`, `--surface-1`, `--bg-1`, `--radius`,
+// `--font-body`, `--gold`, `--navy-700` e i `--feltro-*` aggiunti apposta.
+//
+// ⚠️ **Il fondo NON è il nero fisso di Hand2Note** (decisione del Titolare): si
+// copia la *forma* — feltro come ellisse appena accennata, targhe a pillola,
+// anello su chi deve parlare, comandi in basso — non la tavolozza.
+//
+// ⚠️ **Nessun testo sotto i 12px.** Prima tutta la tipografia del tavolo stava
+// fra 8,3 e 11,5px, contro i 16px da cui parte il resto del sito: a quelle
+// dimensioni un nickname non si legge, si indovina.
+
+// ⚠️⚠️ **IL RESPIRO DELLA PAGINA È RIDOTTO QUI, E NON È UN VEZZO.** `.section`
+// vale `padding-block: clamp(3.5rem, 8vw, 6.5rem)` — giusto per una pagina che
+// si legge, sbagliato per una che si **usa**: misurata a 1280×900, spingeva il
+// titolo a 168px dall'alto e la **barra dei comandi a 878-948**, cioè fuori
+// dallo schermo. I comandi del replayer non sono un piè di pagina: senza di
+// loro la mano non avanza, e chi apre un collegamento condiviso vede un tavolo
+// fermo senza capire come muoverlo. Recuperati ~80px senza rimpicciolire il
+// feltro di un pixel.
+.section {
+  padding-block: 1.6rem 2.5rem;
+}
+
+.rp {
+  display: grid;
+  gap: 1rem;
+  max-width: 860px;
+  margin-inline: auto;
+}
+
+// ── intestazione ──────────────────────────────────────────────────────
+
+.rp__head {
+  text-align: center;
+}
+
+.rp__titolo {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2.1rem);
+}
+
+.rp__sotto {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+// ── la scena: tavolo + elenco di provenienza ──────────────────────────
+// ⚠️ La colonna dell'elenco compare **solo se c'è un contesto** e **solo sopra i
+// 900px**: su un telefono in orizzontale lo schermo è alto 390px e una colonna
+// di mani sarebbe una feritoia. Là il posto nella sequenza lo dicono le due
+// frecce della barra col loro contatore — che c'è a ogni misura.
+
+.rp__scena {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  // ⚠️ `stretch` e non `start`: è ciò che permette all'elenco di prendere
+  // l'altezza della riga (cioè del tavolo) invece della propria.
+  .rp__scena--con-lista {
+    // ⚠️ Il tavolo prende `minmax(0, 1fr)` e non `1fr`: un `1fr` nudo ha
+    // `min-width: auto`, quindi il contenuto del feltro potrebbe impedirgli di
+    // stringersi e la colonna dell'elenco finirebbe fuori dal contenitore.
+    grid-template-columns: minmax(0, 1fr) 13rem;
+    align-items: stretch;
+  }
+}
+
+.rp__palco {
+  position: relative;
+  min-width: 0;
+}
+
+// ── l'invito a ruotare il telefono ────────────────────────────────────
+// ⚠️ **Codice nuovo: nel progetto non esisteva alcuna gestione
+// dell'orientamento.** In verticale su un telefono il feltro resta largo ~358px
+// e il tavolo si disfa (targhe sul board, nickname ridotti a tre lettere e
+// un'ellissi). Meglio dire che serve più larghezza che disegnare una cosa
+// illeggibile e lasciar credere che sia quello il tavolo.
+// ⚠️ **Sostituisce il tavolo E TUTTO CIÒ CHE LO PILOTA.** Prima il feltro
+// spariva ma restavano la barra dei comandi, la riga della decisione e la linea
+// del tempo: comandi che muovono un tavolo invisibile, cioè un'interfaccia che
+// finge di funzionare. Ora restano solo il titolo (si sa che mano è), l'invito a
+// girare e il blocco di condivisione.
+// ⚠️⚠️ **`.rp__share` NON si nasconde, e non è una preferenza di resa**: dentro
+// c'è «Segnala questa mano», che funziona **senza account** ed è una condizione
+// di liceità del trattamento (`gdpr/valutazione-replayer-mani.md`). Una via con
+// cui un terzo esercita i propri diritti non può dipendere da come si tiene in
+// mano il telefono. Una media query che la nascondesse sarebbe un problema
+// legale, non un difetto di CSS.
+// ⚠️ È una regola CSS e non un signal: l'orientamento cambia senza che nessuno
+// tocchi la pagina, e un listener di resize in zoneless è codice che si può
+// ⚠️ **Il blocco «telefono in verticale» NON sta più qui: è in fondo al file,**
+// accanto a quello orizzontale. Stava in cima e le sue regole **perdevano per
+// ordine di sorgente**: `display: none` su `.rp__barra` non faceva niente,
+// perché `.rp__barra { display: flex }` è dichiarato novecento righe più sotto e
+// a parità di specificità vince l'ultimo. Il sintomo era muto — nessun errore,
+// la regola presente nel CSS servito, e i comandi comunque a schermo.
+
+// Un telefono stilizzato che ruota: disegnato, non un'emoji.
+.rp__ruota-icona {
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+}
+
+.rp__ruota-tel {
+  width: 1.6rem;
+  height: 2.6rem;
+  border: 2px solid var(--copper-500);
+  border-radius: 0.35rem;
+  animation: rp-ruota 2.6s var(--ease-out) infinite;
+}
+
+@keyframes rp-ruota {
+  0%,
+  30% {
+    transform: rotate(0deg);
+  }
+  55%,
+  85% {
+    transform: rotate(-90deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.rp__ruota-t {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.rp__ruota-p {
+  margin: 0;
+  max-width: 30ch;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+// ── il tavolo ─────────────────────────────────────────────────────────
+
+// ⚠️⚠️ **IL TAVOLO È UNA QUERY CONTAINER, E TUTTO CIÒ CHE STA SUL FELTRO SI
+// MISURA IN `cqw`/`cqh`. Nessuna misura in `rem` o `vw` là dentro, mai.**
+// È la regola che chiude per costruzione il difetto misurato a 390px: l'ovale
+// era in `vw` e le scatole dei posti in `rem`, quindi il tavolo si stringeva e i
+// posti no — a 390px il feltro misurava 308×202 mentre un posto ne occupava il
+// 28% in larghezza e il 42% in altezza, e tutti e tre uscivano dal feltro.
+// Con `container-type: size` un `1cqw` è l'1% della larghezza del TAVOLO: le
+// percentuali delle ancore e le dimensioni delle scatole vivono nello stesso
+// sistema e non possono più divergere.
+.rp__tavolo {
+  container-type: size;
+  container-name: tavolo;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  // ⚠️ Il tavolo non deve mangiarsi lo schermo: prima spingeva i comandi sotto
+  // la piega, cioè nascondeva proprio ciò che serve per far avanzare la mano.
+  max-height: 62vh;
+  margin-inline: auto;
+
+  // La scatola di un posto, misurata sul tavolo.
+  // ⚠️ **I valori nascono da una misura, non da un'idea di quanto stia bene.**
+  // L'ancora più a sinistra sta a x = 8-10 e la fascia centrale — dove vivono
+  // board e piatto — comincia a x ≈ 32: la scatola deve chiudersi PRIMA. A
+  // 26cqw arrivava a 36 e mangiava il bordo sinistro del board.
+  // ⚠️ I commenti di questo foglio sono `//` e non `/* */` **di proposito**:
+  // Sass tiene i secondi nel CSS servito, e questo componente è già sopra il
+  // budget di 12 kB per foglio — la documentazione non deve pesare sulla rete.
+  --posto-w: 20cqw;
+
+  // ⚠️⚠️ **LA CARTA DEL BOARD È L'UNITÀ DI MISURA DEL CENTRO, e prima non lo
+  // era.** Piatto e pot odds avevano font e spaziature in `rem`, cioè **fissi**,
+  // mentre le carte scalano col contenitore: su desktop la carta è alta 42px e
+  // la pillola del piatto ne misurava **45**, con un carattere da 20,8 — il
+  // piatto era più grande delle carte, ed era vero a ogni dimensione.
+  //
+  // Legando le scritte a questa variabile la relazione diventa **strutturale**:
+  // il piatto non può tornare più grande di una carta, perché è definito come
+  // una frazione di essa. È la stessa lezione del pavimento in `rem` dentro un
+  // sistema in `cq*` — una misura fissa in un sistema che scala, a un certo
+  // punto smette di partecipare e non lo annuncia.
+  --pc-board: clamp(1.4rem, 9cqh, 2.6rem);
+
+  &[data-n='4'],
+  &[data-n='5'],
+  &[data-n='6'] {
+    --posto-w: 18cqw;
+  }
+  &[data-n='7'],
+  &[data-n='8'],
+  &[data-n='9'] {
+    --posto-w: 15cqw;
+  }
+}
+
+.rp__feltro {
+  position: absolute;
+  inset: 0;
+  border-radius: 50% / 50%;
+  background:
+    radial-gradient(
+      ellipse at 50% 38%,
+      color-mix(in srgb, var(--feltro-1) 88%, #fff) 0%,
+      var(--feltro-1) 42%,
+      var(--feltro-2) 100%
+    );
+  // La sponda: un cuscino, non un contorno piatto a spigolo vivo.
+  border: 0.7rem solid var(--feltro-sponda);
+  box-shadow:
+    inset 0 0 4rem rgb(0 0 0 / 0.32),
+    inset 0 0.15rem 0 rgb(255 255 255 / 0.06),
+    0 0.6rem 1.8rem rgb(0 0 0 / 0.22);
+}
+
+// ── centro: quote, board e piatto ─────────────────────────────────────
+
+.rp__centro {
+  position: absolute;
+  // ⚠️ **50% esatto, e non 47% come prima.** `volo()` fa convergere le fiche su
+  // `{x:50, y:50}` — le coordinate del TAVOLO, non di questo riquadro. Con il
+  // piatto a 47 (e a 44 sotto i 560px) le fiche atterravano tre punti sopra il
+  // piatto: poco, ma abbastanza da leggersi come «vanno verso zone a caso». Ora
+  // i due centri coincidono **per costruzione**, invece di essere tenuti
+  // allineati a mano in due file diversi.
+  top: 50%;
+  left: 50%;
+  // ⚠️ Sopra i posti e sopra le pile puntate: il board è l'unica cosa che non
+  // può mai finire coperta, e questo è il paracadute se un giorno un'ancora
+  // nuova avvicinasse troppo una pila al centro.
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  display: grid;
+  // ⚠️⚠️ **Le aree vanno DICHIARATE, e per un giro non lo erano.** Tre figli
+  // portavano `grid-area: pot` / `board` / `odds` verso aree **mai definite**:
+  // dichiarazioni inerti, e la disposizione a schermo era quella dell'ordine
+  // DOM, per caso. Misurato su una mano 3-max: board e piatto **alla stessa
+  // `y`, sovrapposti** — la scritta del piatto copriva le carte comuni.
+  //
+  // Piatto e quote **affiancati**: su un feltro 16:10 la larghezza è la
+  // dimensione abbondante, l'altezza quella contesa. Impilati, la colonna
+  // centrale arrivava dentro le fiche puntate del posto in basso.
+  //
+  // ⚠️ Le quote possono mancare (compaiono solo se c'è da chiamare): con la
+  // sola cella `pot` occupata la riga resta centrata perché la colonna vuota
+  // collassa a zero — `width: max-content` qui sotto è ciò che lo garantisce.
+  grid-template-areas:
+    'pot odds'
+    'board board';
+  justify-items: center;
+  align-items: center;
+  // ⚠️ 1,2 e non 1,6: ogni decimo di `cqh` qui è spazio tolto due volte, sopra e
+  // sotto, alla fascia in cui vanno le fiche puntate dei posti centrati — che su
+  // un tavolo alto 538px è larga sei punti percentuali in tutto.
+  gap: 1.2cqh;
+  // ⚠️ Abbraccia il contenuto: largo l'84% del tavolo, questo riquadro si
+  // sovrapponeva a ogni posto laterale — invisibile a occhio, ma sufficiente a
+  // rendere insensata qualunque misura di collisione, e a spostare le cose il
+  // giorno che ci si mette dentro qualcos'altro.
+  width: max-content;
+  max-width: 88%;
+}
+
+// ── le quote (pot odds), SOTTO il piatto ──────────────────────────────
+// ⚠️ **Compaiono solo quando c'è qualcosa da chiamare** — il `@if` sta nel
+// template. È la regola di Hand2Note: una riga sempre presente che dice «—»
+// insegna a non guardarla, e il giorno che serve non la si vede più.
+// ⚠️ **Sotto e non sopra**: `.rp__centro` è `width: max-content`, quindi il
+// figlio più largo detta la larghezza dell'intero blocco. Sopra il board, questo
+// riquadro la portava dal 19,2% al 26% del tavolo e le pile puntate dei posti
+// laterali ci finivano dentro — misurato, 421 px² a 1280px. Sotto, il blocco
+// cresce in altezza, dove lo spazio c'è.
+
+// ⚠️ **Le quote stanno di FIANCO al piatto, non sotto.** Impilate, allungavano
+// la colonna centrale fin dentro la pila puntata del posto in basso — nello
+// screenshot del titolare «POT ODDS 22%» copriva il gettone «1,0 bb». Di fianco
+// il blocco cresce dove lo spazio c'è: in larghezza, che su un feltro 16:10 è
+// la dimensione abbondante.
+.rp__quote {
+  grid-area: odds;
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  // ⚠️ Le stesse misure del piatto (titolare): le due pillole stanno affiancate
+  // nella riga sopra il board e devono leggersi come una coppia, non come due
+  // oggetti di peso diverso.
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.42);
+  border: 1px solid color-mix(in srgb, var(--neon-cyan) 55%, transparent);
+  color: var(--feltro-testo);
+  white-space: nowrap;
+  animation: rp-appare 220ms var(--ease-out);
+}
+
+// ⚠️ Un fotogramma SUO e non quello delle fiche puntate: `rp-punta` porta dentro
+// il `translate(-50%, -50%)` che quelle hanno per stare al loro punto sul
+// feltro, e riusarlo qui — dove il riquadro è un figlio di griglia — lo farebbe
+// partire spostato di mezza larghezza. Due animazioni simili non sono la stessa
+// animazione.
+@keyframes rp-appare {
+  from {
+    opacity: 0;
+    transform: translateY(0.2rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rp__quote-eti {
+  color: var(--feltro-tenue);
+  font-size: max(0.5rem, calc(var(--pc-board) * 0.24));
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rp__quote-val {
+  color: var(--neon-cyan);
+  // ⚠️ La pillola delle quote **copriva un giocatore** (segnalato su una mano
+  // 3-max): era larga quanto il piatto pur portando due parole e una
+  // percentuale. Ridotta alla stessa scala del resto del centro.
+  font-size: max(0.58rem, calc(var(--pc-board) * 0.3));
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rp__board {
+  grid-area: board;
+  display: flex;
+  gap: 1cqw;
+
+  // ⚠️⚠️ **Anche le carte comuni vanno misurate sul TAVOLO.** Erano le uniche
+  // rimaste al valore predefinito del componente (2,6rem = 41,6px **fisси**), e
+  // il commento in testa a questo foglio vieta esattamente questo: su un
+  // telefono in orizzontale il feltro è alto 242px, quindi il board da solo ne
+  // occupava il **17,4%** contro il 7,8% di un desktop — e con esso il blocco
+  // centrale si mangiava la fascia dove va la targa del posto in alto. Misurato
+  // con `getBoundingClientRect`, non dedotto: 42px a 1280 come a 844.
+  app-playing-card {
+    --pc-h: var(--pc-board);
+  }
+}
+
+.rp__bcard {
+  display: block;
+
+  // Le carte comuni che escono adesso: scendono e si girano.
+  &--nuova {
+    animation: rp-carta-esce 460ms var(--ease-out) backwards;
+    animation-delay: var(--ritardo, 0ms);
+  }
+}
+
+@keyframes rp-carta-esce {
+  from {
+    opacity: 0;
+    transform: translateY(-14%) rotateY(70deg) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rp__slot {
+  // ⚠️ **La stessa formula delle carte comuni qui sopra**, o il board cambia
+  // larghezza nel momento in cui esce il flop: le caselle vuote e le carte vere
+  // occupano lo stesso posto e devono essere alte uguale.
+  // ⚠️ La **stessa** misura delle carte, o il board cambia larghezza nel
+  // momento in cui esce il flop: caselle vuote e carte vere occupano lo stesso
+  // posto e devono essere alte uguale.
+  width: calc(var(--pc-board) / 1.4);
+  aspect-ratio: 5 / 7;
+  border: 1px dashed var(--feltro-riga);
+  border-radius: 0.3rem;
+}
+
+.rp__piatto {
+  grid-area: pot;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  // ⚠️ **Spaziatura verticale ZERO, orizzontale 4px** — misure chieste dal
+  // titolare. La pillola prende l'altezza dal solo testo: era il secondo
+  // oggetto più alto del centro dopo il board, e sul feltro deve essere il
+  // board a comandare. Restano 4px a sinistra per staccare il gettone.
+  padding: 0 4px;
+
+  // Il gettone del piatto scende con la carta; quello davanti ai giocatori no.
+  .rp__pila {
+    // Anche il gettone segue la scala ridotta, o resta lui a dettare l'altezza.
+    --fiche-d: min(0.85rem, calc(var(--pc-board) * 0.34));
+  }
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.32);
+  border: 1px solid var(--feltro-riga);
+  color: var(--feltro-testo);
+  transition: transform var(--t-med), box-shadow var(--t-med);
+
+  &--vinto {
+    box-shadow: 0 0 0 2px var(--gold), 0 0 1.6rem rgb(255 181 71 / 0.5);
+  }
+}
+
+.rp__pot-eti {
+  color: var(--feltro-tenue);
+  // La stessa misura dell'etichetta delle quote: le due pillole sono una coppia.
+  font-size: max(0.5rem, calc(var(--pc-board) * 0.24));
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rp__pot-val {
+  // ⚠️ Niente `--font-display` qui: il carattere da titoli, a questa misura,
+  // rendeva il piatto più pesante delle quote anche a parità di corpo — e
+  // l'uniformità chiesta è **visiva**, non solo di `font-size`.
+  font-weight: 800;
+  // ⚠️⚠️ **ERA IN `vw`, cioè legato alla FINESTRA e non al tavolo** —
+  // `clamp(1rem, 2.4vw, 1.3rem)`. Su un desktop largo prendeva sempre il
+  // massimo (20,8px) qualunque fosse la dimensione del feltro, e la pillola del
+  // piatto veniva alta **45px contro i 42 di una carta**: la scritta più grande
+  // del tavolo era quella che doveva stare in secondo piano.
+  //
+  // Ora è una frazione della carta del board (`--pc-board`): il piatto è
+  // leggibile e **non può tornare più grande delle carte**, perché è definito
+  // in termini di esse. Il pavimento in `rem` resta come minimo di leggibilità
+  // sui feltri più piccoli.
+  // ⚠️ **La STESSA scala delle quote** (`* 0.3`), su mobile e su desktop:
+  // richiesta del titolare, «preferisco misure piccole come quelle di
+  // rp__quote per entrambi». Le due pillole stanno affiancate sopra il board e
+  // devono leggersi come una coppia; il piatto era più alto e più grosso, cioè
+  // si prendeva un rilievo che non gli serve — il numero che conta lo si legge
+  // lo stesso.
+  font-size: max(0.58rem, calc(var(--pc-board) * 0.3));
+  font-variant-numeric: tabular-nums;
+}
+
+// ── le fiche ──────────────────────────────────────────────────────────
+// ⚠️ Sono fiche vere, non pilloline di testo, e il loro COLORE dice l'entità
+// della puntata. Riusa la scala azioni del sito (`--act-*`), la stessa della
+// matrice GTO di `/tabelle`: un rilancio grosso ha qui lo stesso colore che ha
+// là. Prima il replayer non usava un solo token di quella scala e ogni puntata
+// era una pillola ambra identica — 1 bb e 22 bb con lo stesso peso visivo.
+
+// ⚠️ **Il diametro passa da una variabile**, perché la pila del **piatto** deve
+// poter rimpicciolire mentre quella davanti ai giocatori resta com'è. Fisso a
+// 1,05rem era il pavimento nascosto della pillola del piatto: con la carta a
+// 19px la pillola restava alta 28 — il gettone dentro non scendeva.
+.rp__pila {
+  --fiche-d: 1.05rem;
+  position: relative;
+  display: inline-block;
+  width: var(--fiche-d);
+  height: var(--fiche-d);
+  flex: none;
+}
+
+.rp__fiche {
+  --c: var(--act-call);
+  position: absolute;
+  left: 0;
+  // ⚠️ Anche lo sfalsamento della pila segue il diametro: fisso in `rem`, su un
+  // gettone rimpicciolito le fiche si sarebbero staccate l'una dall'altra.
+  bottom: calc(var(--i, 0) * var(--fiche-d) * 0.152);
+  width: var(--fiche-d);
+  height: var(--fiche-d);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, var(--c) 0 40%, transparent 41%),
+    repeating-conic-gradient(
+      from 0deg,
+      var(--c) 0deg 22deg,
+      var(--logo-plate) 22deg 44deg
+    );
+  box-shadow:
+    0 0.05rem 0.1rem rgb(0 0 0 / 0.45),
+    inset 0 0 0 1px rgb(0 0 0 / 0.2);
+
+  &--piatto {
+    --c: var(--gold);
+  }
+}
+
+// Le quattro fasce: piccola, media, grande, all-in.
+[data-fascia='piccola'] .rp__fiche {
+  --c: var(--act-call);
+}
+[data-fascia='media'] .rp__fiche {
+  --c: var(--act-raise-1);
+}
+[data-fascia='grande'] .rp__fiche {
+  --c: var(--act-raise-3);
+}
+[data-fascia='allin'] .rp__fiche {
+  --c: var(--act-allin);
+}
+[data-fascia='vinta'] .rp__fiche {
+  --c: var(--gold);
+}
+// Fiche che tornano indietro: spente, non sono più in gioco.
+[data-fascia='resto'] .rp__fiche {
+  --c: var(--act-fold);
+}
+
+// ── le fiche puntate, SUL FELTRO ──────────────────────────────────────
+// ⚠️ **Non stanno più dentro la targa.** Là si vedeva *quanto* qualcuno aveva
+// puntato, mai *dove fossero i soldi*: il feltro — cioè la cosa che il replayer
+// disegna — non diceva niente di quanto c'era in mezzo al tavolo.
+//
+// ⚠️⚠️ **LE APPOGGIA IL CSS AL BORDO DELLA SCATOLA DEL POSTO, NON UNA COORDINATA
+// CALCOLATA IN TYPESCRIPT.** Il primo giro le metteva a una percentuale del
+// tavolo e le misure l'hanno bocciato: pile **sulle targhe** (1.353 px² a
+// 1280px) e **sul board** (741 px² a 844×390). La ragione è strutturale — un
+// punto calcolato ha bisogno dell'altezza della scatola, che qui vale il 15,3%
+// del tavolo su un desktop e il **26,7%** su un telefono in orizzontale, perché
+// carte e testo hanno estremi in `rem` mentre il tavolo si misura in `cq`. In
+// TypeScript quel numero non esiste; qui il bordo è `100%`.
+
+.rp__puntata {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+  padding: 0.06em 0.5em 0.06em 0.3em;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.46);
+  border: 1px solid var(--feltro-riga);
+  color: var(--feltro-testo);
+  white-space: nowrap;
+  animation: rp-fiche-entrano 240ms var(--ease-out) backwards;
+}
+
+// ⚠️⚠️ **L'animazione d'ingresso NON tocca `transform`, e non è pedanteria.**
+// Il posizionamento di questa pila vive in `transform: translate(…)` (è così che
+// si centra sul bordo della scatola): un fotogramma che dichiarasse
+// `transform: none` — come fa quello del riquadro delle quote — glielo
+// azzererebbe alla fine dell'animazione e la pila **salterebbe** di mezza
+// larghezza. Si anima `scale`, che in CSS è una proprietà a sé e non passa da lì.
+@keyframes rp-fiche-entrano {
+  from {
+    opacity: 0;
+    scale: 0.72;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+// ⚠️ Il lato lo decide `latoDelleFiche` (`replay-state.ts`) e arriva come
+// `data-lato` sul posto: **sempre verso il centro del tavolo**.
+.rp__posto[data-lato='sinistra'] .rp__puntata {
+  left: calc(100% + 1.4cqw);
+  top: 50%;
+  transform: translateY(-50%);
+}
+.rp__posto[data-lato='destra'] .rp__puntata {
+  right: calc(100% + 1.4cqw);
+  top: 50%;
+  transform: translateY(-50%);
+}
+.rp__posto[data-lato='basso'] .rp__puntata {
+  bottom: calc(100% + 1.4cqh);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.rp__posto[data-lato='alto'] .rp__puntata {
+  top: calc(100% + 1.4cqh);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+// ⚠️⚠️ **SU UN TAVOLO BASSO I POSTI CENTRATI NON HANNO SPAZIO DAVANTI A SÉ, E
+// NE HANNO IN ABBONDANZA DI FIANCO.** Misure a 844×390 (feltro 804×242): la
+// scatola dell'eroe occupa da 59,3% a 86% e il blocco centrale arriva al 61,4%
+// — fra i due non resta niente. Ma il feltro è **largo 804px con due o tre
+// posti sopra**: a destra della scatola dell'eroe c'è un terzo di tavolo vuoto.
+// Là le fiche vanno di fianco, non davanti.
+// ⚠️ **Il basso a destra e l'alto a sinistra**, non tutti e due dalla stessa
+// parte: in heads-up si guarderebbero in faccia sulla stessa colonna, e a tre
+// giocatori quella colonna è occupata dal posto laterale.
+// ⚠️ Sei giocatori su un tavolo così basso **restano stretti** e non c'è
+// disposizione che li salvi: il posto in alto al centro ha un vicino a destra e
+// uno a sinistra. È un cash game su un telefono in orizzontale — fuori dai
+// formati della scuola (Spin & Go e Twister sono a due e tre) — e si accetta.
+// ⚠️⚠️ **HEADS-UP: LE FICHE VANNO DI LATO, A QUALUNQUE DIMENSIONE.** Con due
+// giocatori i due posti stanno **per definizione** sulla colonna centrale
+// (basso e alto al centro, la disposizione di Hand2Note e di ogni client), e su
+// quella stessa colonna stanno anche piatto, quote e board. Mettendo le fiche
+// davanti al posto — cioè verso il centro — l'intera mano finiva in una
+// striscia larga un quinto, con due terzi di feltro vuoti a destra e a
+// sinistra: è la schermata che il titolare ha mandato, dove «POT ODDS 22%»
+// copriva il gettone della puntata.
+//
+// ⚠️ **Non è una scorciatoia per telefoni**: vale anche a 1280px, perché la
+// causa non è la dimensione ma il **numero di giocatori**. La regola sotto
+// (`@container`) risolve un problema diverso — un tavolo schiacciato in
+// altezza — e le due si sovrappongono senza contraddirsi: entrambe mandano le
+// fiche dello stesso posto dallo stesso lato.
+.rp__tavolo[data-n='2'] {
+  .rp__posto[data-lato='basso'] .rp__puntata {
+    bottom: auto;
+    top: 50%;
+    left: calc(100% + 1.4cqw);
+    transform: translateY(-50%);
+  }
+  .rp__posto[data-lato='alto'] .rp__puntata {
+    top: 50%;
+    left: auto;
+    right: calc(100% + 1.4cqw);
+    transform: translateY(-50%);
+  }
+}
+
+// ⚠️ **Qui c'erano DUE blocchi `@container` (≤250px e ≤215px) e sono stati
+// CANCELLATI nella riprogettazione della modalità telefono (27/08/2026).**
+// Erano compensazioni stratificate per un ovale 16:10 troppo stretto: tre
+// soglie che si sovrascrivevano a vicenda, con l'ordine nel file a decidere chi
+// vincesse — e si è già rotto una volta proprio così. Ora il tavolo in
+// orizzontale è un rettangolo a tutta larghezza dimensionato dal budget di
+// altezza (vedi il blocco `landscape` in fondo al file), e le dimensioni di
+// carte e centro vivono LÌ, in una sede sola. Resta il solo blocco ≤340 qui
+// sotto, che risolve un problema ancora vero: su un tavolo basso le fiche
+// puntate dei posti centrati non hanno spazio davanti e vanno di lato.
+
+@container tavolo (max-height: 340px) {
+  .rp__posto[data-lato='basso'] .rp__puntata {
+    bottom: auto;
+    top: 50%;
+    left: calc(100% + 1.4cqw);
+    transform: translateY(-50%);
+  }
+  .rp__posto[data-lato='alto'] .rp__puntata {
+    top: 50%;
+    bottom: auto;
+    left: auto;
+    right: calc(100% + 1.4cqw);
+    transform: translateY(-50%);
+  }
+
+  // ⚠️ **Tipografia del centro e delle targhe più stretta.** Su un tavolo alto
+  // 242px il gettone del piatto e il riquadro delle quote sono misurati in `rem`
+  // e in `vw`, cioè **non si accorgono** che il feltro si è schiacciato: insieme
+  // occupavano il 22% dell'altezza contro il 10% scarso di un desktop. Qui si
+  // stringono, restando sopra il pavimento dei 12px che questo foglio impone.
+  // ⚠️ **Qui c'era la tipografia del centro ridotta in `rem`, ed è stata
+  // TOLTA.** Erano sei regole nate per compensare un piatto e delle quote
+  // dimensionati in `rem`/`vw`, cioè indipendenti dal tavolo. Ora piatto e
+  // quote sono definiti come **frazione della carta del board**
+  // (`--pc-board`), quindi calano da soli — e queste sei righe non
+  // compensavano più niente: lo **impedivano**. Misurato: a 740×360 tenevano il
+  // piatto a 31px contro una carta di 19, cioè ricreavano esattamente la
+  // sproporzione che dovevano curare.
+  .rp__targa {
+    padding: 0.14rem 0.35rem;
+    line-height: 1.15;
+  }
+
+  // ⚠️ **Le quote restano SOTTO il piatto anche qui, ed è stato provato il
+  // contrario.** Metterle di fianco sembra ovvio (un tavolo basso ha larghezza
+  // da buttare) e allarga il blocco centrale dal 19,4% al **27%**, perché
+  // `width: max-content` prende la riga più larga: le pile dei posti laterali ci
+  // finivano dentro, 1.121 px² misurati a 844×390. Sotto non dà fastidio a
+  // nessuno, ora che le pile dei posti centrati sono passate di fianco.
+}
+
+.rp__puntata-val {
+  // ⚠️ **Frazione della carta, come piatto e quote.** In `rem` la pillola della
+  // puntata restava larga 112px su ogni feltro: su una mano 6-max quella del
+  // posto di destra, che punta verso il centro, arrivava a sfiorare l'angolo
+  // della targa dell'eroe in basso (misurato, 124px² a 932×430). Scalando con
+  // il tavolo la pillola si accorcia dove i posti sono più fitti.
+  font-size: max(0.56rem, calc(var(--pc-board) * 0.32));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.rp__puntata-nota {
+  margin-left: 0.22rem;
+  font-weight: 500;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.rp__puntata--resto {
+  opacity: 0.82;
+}
+
+// ── la raccolta: le stesse fiche che scivolano al centro ──────────────
+// ⚠️ **Riusa `.rp__puntata`**, quindi parte esattamente da dove le fiche stanno:
+// è la classe che porta il posizionamento, e duplicarlo qui vorrebbe dire due
+// punti di partenza che un giorno divergono. Lo spostamento è in `cqw`/`cqh` —
+// percentuali del **tavolo** — perché è l'unico modo di dire «vai al centro» da
+// dentro un elemento appeso a un altro.
+.rp__raccolta {
+  z-index: 4;
+  padding: 0;
+  border: 0;
+  background: none;
+  pointer-events: none;
+  animation: rp-raccogli 620ms var(--ease-out) forwards;
+}
+
+@keyframes rp-raccogli {
+  from {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  // ⚠️ La dissolvenza comincia prima della fine: arrivando piene, le fiche si
+  // fermerebbero sopra il piatto e lo coprirebbero. Così restano una scia.
+  60% {
+    opacity: 0.8;
+  }
+  to {
+    translate: calc(var(--vx) * 1cqw) calc(var(--vy) * 1cqh);
+    opacity: 0;
+  }
+}
+
+// ── i posti ───────────────────────────────────────────────────────────
+
+.rp__posto {
+  position: absolute;
+  z-index: 1;
+  // ⚠️ Le coordinate arrivano da variabili invece che dall'attributo `style`
+  // diretto: così la media query orizzontale può passare al superellisse
+  // (`--sx/--sy`) senza che il componente sappia nulla dell'orientamento.
+  left: var(--x);
+  top: var(--y);
+  // ⚠️ `--anc` vale 0 a sinistra, 1 a destra, 0,5 al centro: la scatola è
+  // **appesa** all'ancora dal lato esterno invece che centrata su di essa.
+  // Centrata, a quattro giocatori metà scatola usciva dal contenitore e a otto
+  // due scatole si sovrapponevano.
+  transform: translate(calc(var(--anc, 0.5) * -100%), calc(var(--ancy, 0.5) * -100%));
+  display: grid;
+  justify-items: center;
+  gap: 0.4cqh;
+  width: var(--posto-w);
+  font-size: clamp(0.62rem, 3.1cqw, 0.86rem);
+  transition: opacity var(--t-med), filter var(--t-med);
+
+  // ⚠️ Chi passa si smorza: la targa resta (il posto è ancora occupato), le
+  // carte se ne vanno — vedi `.rp__carte`.
+  &--passato .rp__targa {
+    opacity: 0.42;
+  }
+  &--passato .rp__carte {
+    filter: grayscale(0.85);
+    opacity: 0.55;
+  }
+
+  // Chi DEVE parlare: è la domanda, e si vede. L'anello luminoso è il segnale
+  // più forte del tavolo, e ce l'ha una sola persona alla volta.
+  &--agisce .rp__targa {
+    box-shadow: 0 0 0 2px var(--neon-cyan), 0 0 1.2rem rgb(0 212 212 / 0.35);
+  }
+
+  // Chi ha appena parlato.
+  &--turno .rp__targa {
+    box-shadow: 0 0 0 2px var(--gold);
+  }
+
+  &--vince .rp__targa {
+    box-shadow: 0 0 0 2px var(--gold), 0 0 1.6rem rgb(255 181 71 / 0.55);
+  }
+}
+
+.rp__carte {
+  display: flex;
+  gap: 0.4cqw;
+  // ⚠️ L'altezza resta riservata anche quando le carte spariscono (chi passa):
+  // senza, la targa risalirebbe di due centimetri e il tavolo si muoverebbe a
+  // ogni fold — cioè la cosa più frequente della mano.
+  min-height: clamp(1.2rem, 9cqh, 2.4rem);
+
+  // ⚠️ Anche le carte vanno nel sistema del container, o restano grandi mentre
+  // il tavolo si stringe: è la stessa ragione per cui la scatola è in `cqw`.
+  app-playing-card {
+    --pc-h: clamp(1.2rem, 9cqh, 2.4rem);
+  }
+}
+
+// ── la targa: pillola `stack | nickname`, posizione sotto ─────────────
+// ⚠️ Due righe e non tre (era `posizione / nome / stack`): la scatola del posto
+// è alta un quinto del tavolo, e ogni riga che si toglie è spazio che torna al
+// feltro — cioè alle fiche puntate, che adesso ci stanno in mezzo.
+
+.rp__targa {
+  display: grid;
+  justify-items: center;
+  gap: 0.05rem;
+  width: 100%;
+  padding: 0.24rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--feltro-sponda) 88%, #000);
+  border: 1px solid var(--feltro-riga);
+  color: var(--feltro-testo);
+  line-height: 1.25;
+  transition: box-shadow var(--t-fast), background var(--t-fast);
+
+  // ⚠️ L'intera pillola si accende quando l'azione prende il posto del
+  // nickname: è il gesto di Hand2Note, e serve a farla notare **col taglio
+  // dell'occhio**, senza dover leggere.
+  &.is-lampo {
+    background: var(--gold);
+    border-color: var(--gold);
+    // ⚠️ Il navy scuro: è il testo SOPRA l'oro, non un colore di tema.
+    color: #16223f;
+
+    .rp__pos {
+      color: rgb(22 34 63 / 0.7);
+    }
+  }
+}
+
+// La cella condivisa fra il nickname e l'etichetta dell'azione.
+// ⚠️ **Stessa cella di griglia**, quindi l'altezza è il massimo delle due e non
+// cambia allo scambio: con due rami alternati la targa si alzava e si abbassava
+// a ogni azione, e il tavolo saltava.
+.rp__riga-slot {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+
+  > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.rp__riga {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28em;
+  min-width: 0;
+  transition: opacity var(--t-fast);
+
+  .rp__targa.is-lampo & {
+    opacity: 0;
+  }
+}
+
+.rp__stack {
+  flex: none;
+  font-size: 0.95em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.rp__barretta {
+  flex: none;
+  width: 1px;
+  height: 0.85em;
+  background: currentColor;
+  opacity: 0.3;
+}
+
+.rp__nome {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+// L'azione al posto del nickname.
+.rp__lampo {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 0.95em;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transform: translateY(0.25em);
+  transition: opacity var(--t-fast), transform var(--t-fast);
+
+  .rp__targa.is-lampo & {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// ── la posizione, in codice colore ────────────────────────────────────
+// ⚠️ I tre colori sono **token** (`--pos-btn/-sb/-bb`), identici nei tre temi:
+// sono un codice, non decorazione — vedi il commento in `_tokens.scss`.
+
+.rp__pos {
+  color: var(--pos-altra);
+  font-size: 0.82em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+
+  &[data-pos='BTN'] {
+    color: var(--pos-btn);
+  }
+  &[data-pos='SB'] {
+    color: var(--pos-sb);
+  }
+  &[data-pos='BB'] {
+    color: var(--pos-bb);
+  }
+}
+
+.rp__vince {
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #16223f;
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  animation: rp-vince 300ms var(--ease-out);
+}
+
+@keyframes rp-vince {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// ── il bottone del mazziere ───────────────────────────────────────────
+// ⚠️ Mancava del tutto, ed è l'oggetto che dice **da dove si conta**: senza, la
+// posizione di ciascuno è un'etichetta da leggere invece che una cosa da vedere.
+// Disegnato come una fiche (bordo scanalato), non come un cerchietto piatto.
+
+.rp__dealer {
+  position: absolute;
+  right: -0.9em;
+  top: 0.9em;
+  display: grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, var(--logo-plate) 0 58%, transparent 59%),
+    repeating-conic-gradient(
+      from 0deg,
+      var(--logo-plate) 0deg 22deg,
+      var(--pos-btn) 22deg 44deg
+    );
+  color: #1a1a1a;
+  font-size: 0.86em;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
+}
+
+// ── le fiche in volo ──────────────────────────────────────────────────
+// ⚠️ È la sola risposta visiva alla domanda «dove sono finiti quei soldi».
+// Senza, ogni passaggio di denaro è un salto fra due numeri.
+
+.rp__volo {
+  position: absolute;
+  z-index: 4;
+  left: var(--da-x);
+  top: var(--da-y);
+  width: 1.05rem;
+  height: 1.05rem;
+  pointer-events: none;
+  animation: rp-vola 620ms var(--ease-out) forwards;
+}
+
+@keyframes rp-vola {
+  from {
+    left: var(--da-x);
+    top: var(--da-y);
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  // ⚠️ La dissolvenza comincia a metà volo e non in fondo: atterrando piene, le
+  // fiche si fermavano sopra il nickname del vincitore e lo coprivano — visto
+  // in uno screenshot dell'assegnazione, non dedotto. Così restano una scia.
+  55% {
+    opacity: 0.85;
+  }
+  to {
+    left: var(--a-x);
+    top: var(--a-y);
+    opacity: 0;
+    transform: scale(0.86);
+  }
+}
+
+// ── l'elenco di provenienza ───────────────────────────────────────────
+
+.rp__lista {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .rp__scena--con-lista .rp__lista {
+    display: block;
+    // ⚠️⚠️ **ALTO QUANTO IL TAVOLO, non 62vh.** Con un tetto in `vh` l'elenco
+    // usciva **il doppio** del feltro (787px contro 397 su uno schermo alto
+    // 1270) e fra il fondo del tavolo e la pulsantiera restava un buco enorme:
+    // la riga della griglia la dettava l'elenco, non il tavolo.
+    // La coppia `height: 0` + `min-height: 100%` è il modo di dire «riempi la
+    // riga ma non contribuire a definirla»: l'altezza la fissa il tavolo, e qui
+    // dentro si scorre. Senza `height: 0` il contenuto tornerebbe a gonfiare la
+    // riga e il buco riapparirebbe.
+    height: 0;
+    min-height: 100%;
+    overflow-y: auto;
+    padding: 0.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--surface-1);
+  }
+}
+
+.rp__lista-eti {
+  margin: 0 0 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rp__lista-ol {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rp__lista-riga {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  // ⚠️ 44px DICHIARATI: una riga d'elenco non ci arriva da sola.
+  min-height: 44px;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+
+  &:hover {
+    background: var(--bg-0);
+    color: var(--text);
+  }
+
+  &.is-corrente {
+    border-color: var(--copper-500);
+    color: var(--text);
+  }
+
+  app-playing-card {
+    --pc-h: 1.5rem;
+  }
+}
+
+.rp__lista-n {
+  flex: none;
+  width: 1.4rem;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rp__lista-carte {
+  display: inline-flex;
+  flex: none;
+  gap: 0.12rem;
+}
+
+// Il netto dell'eroe nella riga dell'elenco: spinto a destra, mai a capo.
+.rp__lista-netto {
+  margin-left: auto;
+  flex: none;
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-faint);
+
+  &.is-pos {
+    color: var(--felt);
+  }
+
+  &.is-neg {
+    color: var(--danger);
+  }
+}
+
+.rp__lista-formato {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+}
+
+// ── la domanda ────────────────────────────────────────────────────────
+
+.rp__decisione {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem 1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  font-size: 0.92rem;
+
+  &--esito {
+    border-color: var(--gold);
+  }
+}
+
+.rp__dec-chi {
+  font-size: 1rem;
+}
+
+.rp__dec-dato {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+
+  strong {
+    color: var(--text);
+  }
+}
+
+.rp__mostrate {
+  display: inline-flex;
+  gap: 0.2rem;
+  vertical-align: middle;
+}
+
+// ── la barra dei comandi ──────────────────────────────────────────────
+// ⚠️ **Tutto ciò che si preme sta qui**, come in Hand2Note: passo, riproduzione,
+// strada, carte scoperte, mano precedente e successiva. Le strade stavano sul
+// feltro: erano un oggetto in più sulla superficie che deve restare pulita, e
+// l'unico comando lontano da tutti gli altri.
+
+.rp__barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem 0.55rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 999px;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+}
+
+.rp__gruppo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rp__gruppo--minori {
+  gap: 0.5rem;
+}
+
+// Il separatore fra i gruppi: un filetto, non un carattere.
+.rp__div {
+  width: 1px;
+  align-self: stretch;
+  min-height: 1.6rem;
+  background: var(--line-strong);
+}
+
+.rp__cbtn {
+  display: grid;
+  place-items: center;
+  // ⚠️ 44px DICHIARATI: un pulsante icona non ci arriva da solo.
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-1);
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--t-fast), transform var(--t-fast), color var(--t-fast);
+
+  &:hover:not(:disabled) {
+    background: var(--bg-0);
+  }
+  &:disabled {
+    opacity: 0.34;
+    cursor: default;
+  }
+
+  // ⚠️ Il pulsante principale è pieno di `--copper-500`, non di `--copper-600`:
+  // il 600 nel tema scuro è dichiarato «arancio per testo/link», e usarlo come
+  // fondo con l'icona bianca dava un contrasto di 2,32:1 — illeggibile proprio
+  // nel tema in cui più gente guarda le mani la sera.
+  &--play {
+    width: 52px;
+    height: 52px;
+    border: 0;
+    background: var(--copper-500);
+    color: #ffffff;
+    box-shadow: var(--glow-copper);
+
+    &:hover:not(:disabled) {
+      background: var(--copper-400);
+      transform: scale(1.05);
+    }
+  }
+
+  // L'occhio acceso: si vede che è un interruttore inserito, non un pulsante
+  // qualunque premuto un attimo fa.
+  &--occhio.is-attivo {
+    border-color: var(--gold);
+    color: var(--gold-text);
+    background: color-mix(in srgb, var(--gold) 16%, transparent);
+  }
+}
+
+// ── le quattro strade, dentro la barra ────────────────────────────────
+
+.rp__strade {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.15rem;
+  border-radius: 999px;
+  background: var(--bg-0);
+  border: 1px solid var(--line);
+}
+
+.rp__strada {
+  min-height: 34px;
+  padding: 0.25rem 0.62rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  font: 700 0.74rem/1 var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+
+  &:hover:not(:disabled) {
+    color: var(--text);
+  }
+
+  // ⚠️ Le strade che la mano non ha raggiunto restano a schermo, **spente e non
+  // cliccabili**: è così che la barra dice fin dove è arrivata questa mano.
+  &:disabled {
+    color: var(--text-faint);
+    cursor: default;
+  }
+
+  &.is-attiva {
+    background: var(--copper-500);
+    color: #ffffff;
+  }
+}
+
+.rp__vel {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-1);
+  color: var(--text);
+  font: 700 0.9rem/1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.rp__conta,
+.rp__conta-mani {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rp__conta-mani {
+  min-width: 2.6rem;
+  text-align: center;
+}
+
+// ── linea del tempo ───────────────────────────────────────────────────
+
+.rp__timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: center;
+}
+
+.rp__tl-strada {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: center;
+}
+
+.rp__tl-eti {
+  // ⚠️ Non `--text-faint`: erano l'unica cosa che diceva com'è strutturata la
+  // mano, e stavano rese come una nota a piè di pagina.
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rp__tl-passi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.rp__tl-passo {
+  min-height: 32px;
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-1);
+  color: var(--text-muted);
+  font: 600 0.78rem/1.1 var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+
+  &:hover {
+    border-color: var(--line-strong);
+    color: var(--text);
+  }
+
+  &.is-fatto {
+    color: var(--text);
+  }
+
+  &.is-corrente {
+    background: var(--copper-500);
+    border-color: var(--copper-500);
+    color: #ffffff;
+  }
+
+  // I passi che non sono decisioni si distinguono: si subiscono, non si scelgono.
+  &[data-tipo='APERTURA'],
+  &[data-tipo='RACCOLTA'],
+  &[data-tipo='RESTITUZIONE'] {
+    font-weight: 500;
+    font-style: italic;
+  }
+  &[data-tipo='CARTE'] {
+    border-color: var(--line-strong);
+    font-weight: 700;
+  }
+  &[data-tipo='ASSEGNAZIONE'],
+  &[data-tipo='SHOWDOWN'] {
+    border-color: var(--gold);
+    color: var(--gold-text);
+  }
+  &[data-azione='FOLD'].is-fatto {
+    color: var(--text-faint);
+  }
+}
+
+// ── voti, condivisione, segnalazione ──────────────────────────────────
+
+.rp__voti {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.rp__voto {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-1);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+
+  &--mio {
+    border-color: var(--copper-500);
+    color: var(--copper-600);
+  }
+}
+
+.rp__voti-conta {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.rp__share {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.rp__share-eti {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rp__share-riga {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+// ⚠️ I 44px vanno DICHIARATI anche qui: un `.btn--sm` nudo sta sui 38, e la
+// riga di condivisione è il comando per cui la pagina esiste — è quella che si
+// preme da telefono dopo aver mandato la mano a un amico.
+@media (pointer: coarse) {
+  .rp__share-riga .btn {
+    min-height: 44px;
+  }
+}
+
+.rp__url {
+  flex: 1 1 18rem;
+  min-height: 44px;
+  padding: 0 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.rp__segnala {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+}
+
+.rp__segnala-link {
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.rp__segnala-q,
+.rp__segnalato {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.rp__errore,
+.rp__caricando {
+  padding: 3rem 0;
+  text-align: center;
+}
+
+// ── schermi stretti ───────────────────────────────────────────────────
+// ⚠️ Il tavolo quadrato serve alle finestre strette **in orizzontale** (una
+// finestra desktop ridotta): sul telefono in verticale il tavolo non si disegna
+// affatto, c'è l'invito a ruotare.
+
+@media (max-width: 560px) {
+  .rp__tavolo {
+    aspect-ratio: 1 / 1;
+  }
+
+  .rp__feltro {
+    border-width: 0.45rem;
+  }
+
+  // ⚠️ Il centro sale: su schermo stretto il tavolo è quadrato e la scatola
+  // dell'eroe, appesa al bordo inferiore, arrivava a sfiorare il gettone del
+  // piatto (misurati 6px di sovrapposizione a 390px).
+  // ⚠️ Il `top: 44%` che stava qui è stato TOLTO: il centro deve restare a 50%
+  // in ogni condizione, o le fiche non atterrano nel piatto (vedi `.rp__centro`).
+
+  .rp__strada {
+    padding: 0.25rem 0.42rem;
+    font-size: 0.7rem;
+  }
+
+  .rp__barra {
+    border-radius: var(--radius);
+  }
+
+  .rp__timeline {
+    gap: 0.5rem;
+  }
+}
+
+// ── bersagli da dito ──────────────────────────────────────────────────
+// ⚠️ **44px DICHIARATI dove si tocca.** Su un puntatore grosso (dito) i comandi
+// più cliccati della pagina — la linea del tempo e la barra delle strade —
+// stavano a 30-32px: misurati, non stimati. Col mouse restano compatti, perché
+// lì il bersaglio è un pixel e l'altezza è solo spazio tolto al tavolo.
+@media (pointer: coarse) {
+  .rp__tl-passo,
+  .rp__strada {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .rp__segnala-link {
+    min-height: 44px;
+  }
+}
+
+// ⚠️ Chi ha chiesto meno movimento vede gli **stati finali**, non le
+// transizioni: nessuna informazione va persa, cambia solo che le fiche
+// compaiono dove devono arrivare invece di scivolarci, e che l'azione al posto
+// del nickname compare e sparisce senza dissolvenza. Il componente lo sa anche
+// in TypeScript (`ridottoMoto`) e non genera affatto le fiche in volo.
+@media (prefers-reduced-motion: reduce) {
+  .rp *,
+  .rp *::before,
+  .rp *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+// dimenticare di ripulire per ottenere ciò che il browser fa da sé.
+
+.rp__ruota {
+  display: none;
+}
+
+@media (orientation: portrait) and (max-width: 620px) {
+  .rp__tavolo,
+  .rp__barra,
+  .rp__decisione,
+  .rp__timeline {
+    display: none;
+  }
+
+  .rp__ruota {
+    display: grid;
+    justify-items: center;
+    gap: 0.6rem;
+    padding: 2.2rem 1.2rem;
+    border-radius: var(--radius);
+    border: 1px dashed var(--line-strong);
+    background: var(--surface-1);
+    text-align: center;
+  }
+}
+
+// ── telefono in orizzontale ───────────────────────────────────────────
+//
+// ⚠️⚠️ **IL TAVOLO È LO SCHERMO: larghezza piena, altezza dal budget, forma
+// rettangolare.** È la riprogettazione del 27/08/2026, dopo che due impianti
+// sono stati bocciati dal titolare con le misure a confermare:
+//
+// - **larghezza a comandare + ovale** (l'origine): 804×242, rapporto 3,3:1,
+//   un'ellisse schiacciata coi comandi sotto la piega a y=501 su 390;
+// - **altezza a comandare + ovale** (il primo rimedio): proporzionato ma
+//   minuscolo — 445px di feltro su 860 di scena, angoli vuoti, targhe e centro
+//   che collidevano su ogni feltro basso, tre `@container` di compensazione.
+//
+// La forma attuale non ha un rapporto imposto: larghezza = scena, altezza =
+// `100dvh − 9,5rem`, e il rettangolo arrotondato rende utilizzabili gli angoli
+// che l'ellisse tagliava. Le targhe restano ancorate dalla stessa formula
+// ellittica di sempre (`replay-state.ts`): su un rettangolo quei punti cadono
+// vicino ai bordi, che è esattamente dove il titolare le vuole.
+@media (orientation: landscape) and (max-height: 680px) {
+  // ⚠️ Richiesta del titolare: su mobile la sezione respira 10px, non i suoi
+  // padding da desktop. `.section` sta nel template di QUESTO componente,
+  // quindi la regola è scopata e non tocca il resto del sito.
+  .section {
+    padding-block: 10px;
+  }
+
+  .rp {
+    position: relative; // àncora della riga-decisione in overlay, vedi sotto
+    gap: 0.4rem;
+  }
+
+  // ⚠️⚠️ **IL TITOLO ESCE DALLA VISTA SU TUTTA LA FASCIA ORIZZONTALE, e prima
+  // lo faceva solo sotto i 420px.** Comprimerlo non bastava: misurato su un
+  // iPhone 14 Pro Max ruotato (932×430), fra intestazione del sito e titolo
+  // compresso restavano **136px sopra la scena** — quasi un terzo dello
+  // schermo — e il tavolo, dimensionato su un budget che quei pixel non li
+  // contava, finiva **25px dietro la barra dei comandi**, coprendo proprio la
+  // targa dell'eroe.
+  //
+  // ⚠️ `clip-path` e non `display: none`: resta nell'albero di accessibilità.
+  // Il titolo è l'unico punto in cui la pagina dichiara *quale* mano si sta
+  // guardando, e toglierlo farebbe pagare l'intero costo a chi legge con uno
+  // screen reader — cioè a chi il tavolo non lo vede comunque.
+  .rp__head {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .rp__tavolo {
+    // ⚠️⚠️ **DI CHE COSA È FATTO 9,5rem (152px), e perché scriverlo qui è la
+    // correzione del difetto.** Il numero è la somma di due cose misurate:
+    //
+    //   ~91px  sopra la scena  → intestazione del sito + spaziature
+    //                            (il titolo della mano ora è fuori vista)
+    //   ~52px  sotto           → la barra dei comandi (44 di altezza + 8 di
+    //                            stacco dal fondo), che è **fissa** e quindi
+    //                            non occupa flusso: se il tavolo non le lascia
+    //                            posto, gliene passa sotto
+    //   ────
+    //   ~143px, arrotondati a 152 per un margine di sicurezza
+    //
+    // Il difetto stava proprio nell'assenza di questa scomposizione: la
+    // costante c'era, ma non diceva che cosa contasse, e per un giro è stata
+    // applicata anche dove il titolo era **visibile** e mangiava altri 45px —
+    // cioè dove era falsa. Chi tocca la barra o l'intestazione deve rifare
+    // questa somma, non indovinare un numero nuovo.
+    //
+    // Verificato dopo la modifica a 932×430, 844×390 e 740×360: nessuna targa
+    // oltre la cima della barra.
+    // Il budget, RIFATTO per la barra in flusso (richiesta del titolare:
+    // niente `fixed`): 100dvh − intestazione (64) − sezione (20) − barra in
+    // flusso (~44) − due gap (~16) ≈ 100dvh − 144px = 9rem. Con la barra nel
+    // flusso il «tavolo sotto la barra» è impossibile per costruzione: stanno
+    // uno sopra l'altra nella griglia.
+    // ⚠️ **11,5rem e non 9: i 40px in più sono la FASCIA DELLA DECISIONE.** La
+    // striscia è centrata sul bordo alto, e al centro in alto c'è un posto ogni
+    // volta che i giocatori sono pari (2, 4, 6, 8): misurato, si toccavano per
+    // 2px — quanto basta a vedersi. Invece di rimpicciolire la striscia o di
+    // ributtare giù il posto (il titolare l'ha chiesto **più in alto**), la
+    // striscia esce del tutto dal feltro e si prende una banda sua, che il
+    // `margin-top` qui sotto le riserva.
+    height: calc(100dvh - 10.5rem);
+    // La banda in cui sporge la striscia della decisione, sopra il verde: 12px
+    // bastano ora che la striscia sta a −10px invece che fuori del tutto.
+    margin-top: 12px;
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+    // ⚠️⚠️ **NESSUN `aspect-ratio`, ED È LA RIPROGETTAZIONE (27/08/2026).**
+    // Prima qui c'era un ovale (16:10, poi 2,2:1) dentro uno schermo ben più
+    // largo: a 932×430 il feltro usciva 445px su una scena da 860 — metà
+    // schermo di verde vuoto ai lati, targhe costrette dentro l'ovale, e tre
+    // `@container` di compensazione che si pestavano i piedi. Il titolare l'ha
+    // bocciato («tante aree dello schermo inutilizzate», «forma brutta che
+    // lascia spazi vuoti agli angoli»).
+    //
+    // Ora larghezza = lo schermo, altezza = il budget: la forma emerge da sole
+    // queste due misure (≈3:1 su un telefono), come in Hand2Note. Gli angoli
+    // sono spazio utile perché il feltro è un **rettangolo arrotondato** (vedi
+    // `.rp__feltro` qui sotto), non un'ellisse che li taglia via.
+    //
+    // ⚠️ Anche il tetto `26rem` se n'è andato: serviva all'ovale per non
+    // gonfiarsi sui tablet, ma questa media query finisce a 680px di altezza —
+    // il budget dà al massimo 528px, che su uno schermo ruotato è corretto.
+  }
+
+  // Il feltro squadrato: lati dritti, angoli morbidi.
+  // ⚠️ Il raggio è in `cqh` così le teste restano proporzionate all'altezza del
+  // tavolo, con un tetto perché su un feltro alto non diventi un'ellisse di
+  // ritorno.
+  .rp__feltro {
+    // 100px: il valore provato a mano dal titolare — teste morbide, lati
+    // dritti. Sui feltri alti meno di 200px il browser lo riduce da sé.
+    border-radius: 100px;
+  }
+
+  // ⚠️ **L'elenco laterale è roba da DESKTOP e qui si nasconde.** Compare da
+  // `min-width: 900px`, quindi un telefono da 932px ruotato lo riceve e il
+  // tavolo perde 210px proprio dove lo spazio è tutto. I tasti ▲ ▼ per passare
+  // di mano continuano a funzionare — è il pannello a sparire, non il contesto.
+  // ⚠️⚠️ **IL SELETTORE DEVE ESSERE `.rp__scena--con-lista .rp__lista`, non il
+  // solo `.rp__lista`** — ed è un difetto che è arrivato fino al titolare. La
+  // regola che ACCENDE l'elenco (`@media (min-width: 900px)`, più su) usa due
+  // classi, quindi ha specificità (0,2,0): un `display: none` su una classe
+  // sola (0,1,0) **perde**, per quanto venga dopo nel file. Su un iPhone 14 Pro
+  // Max ruotato (932px: passa il `min-width: 900px`) l'elenco compariva quindi
+  // sotto il tavolo e spingeva la pulsantiera **fuori schermo**, a y=553 su una
+  // finestra alta 430.
+  //
+  // ⚠️ **Perché nessuna misura l'aveva visto**: l'elenco esiste solo quando si
+  // arriva da un contesto (vetrina o libreria), e tutte le sonde aprivano le
+  // mani per **URL diretto** — dove `haContesto()` è falso e l'elenco non è
+  // proprio nel DOM. Una sonda che non attraversa il percorso dell'utente non
+  // può trovare i difetti di quel percorso.
+  .rp__scena--con-lista .rp__lista,
+  .rp__lista {
+    display: none;
+  }
+
+  .rp__scena--con-lista {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  // ⚠️ **La linea del tempo non si rende su mobile** — richiesta esplicita del
+  // titolare («non abbiamo bisogno del riassunto preflop-flop-turn-river»).
+  // Resta nel DOM e su desktop: qui sotto la piega rimangono solo la riga della
+  // decisione e la condivisione, che sono il contenuto da scorrimento
+  // volontario.
+  .rp__timeline {
+    display: none;
+  }
+
+  // ⚠️ **Le dimensioni di carte e targhe vivono QUI, in una sede sola** — non
+  // più spalmate su tre `@container` che si sovrascrivevano a vicenda.
+  //
+  // Board a `11cqh` (dai 9 di base): il titolare ha chiesto un board «più
+  // grande e ben visibile», e ora che il feltro è largo quanto lo schermo lo
+  // spazio c'è. Carte dei giocatori a `10cqh`, senza il pavimento di 1,2rem
+  // che su un feltro basso vinceva sul `cqh` e le teneva grandi mentre tutto
+  // il resto scendeva.
+  .rp__tavolo {
+    --pc-board: clamp(1.2rem, 14cqh, 3.2rem);
+    // ⚠️ La targa: `min()` fra la proporzione e un tetto assoluto. Con il
+    // tavolo largo 860px, `20cqw` faceva targhe da 172px — «il riquadro con il
+    // nickname è troppo grande» — e siccome crescono col tavolo, allargare il
+    // feltro le gonfiava. Il tetto in `rem` spezza quel legame.
+    --posto-w: min(20cqw, 8.5rem);
+  }
+
+  .rp__posto {
+    font-size: clamp(0.58rem, 2.6cqw, 0.72rem);
+  }
+
+  .rp__targa {
+    padding: 0.12rem 0.3rem;
+  }
+
+  .rp__riga {
+    line-height: 1.05;
+  }
+
+  .rp__pos {
+    font-size: 0.72em;
+    line-height: 1.1;
+  }
+
+  .rp__posto .rp__carte {
+    min-height: clamp(1rem, 13cqh, 3rem);
+
+    app-playing-card {
+      --pc-h: clamp(1rem, 13cqh, 3rem);
+    }
+  }
+
+  // ⚠️ **L'eroe scende verso il bordo, perché ORA il bordo è dritto.** Le
+  // ancore ellittiche lasciano all'eroe un margine dal fondo (8% del tavolo)
+  // che sull'ovale serviva a tenerlo dentro la curva; sul rettangolo quel
+  // margine è spazio buttato, e sul feltro più basso (740×360 → 208px) era
+  // esattamente ciò che mancava: la targa dell'eroe toccava il board per 5px.
+  // Lo spostamento è la **terza componente del `translate`**, non un
+  // `top: !important`: le coordinate restano quelle inline di `stile()`, e il
+  // volo delle fiche continua a partire dal punto giusto.
+  .rp__posto[data-lato='basso'] {
+    transform: translate(
+      calc(var(--anc, 0.5) * -100%),
+      calc(var(--ancy, 0.5) * -100% + 3cqh)
+    );
+  }
+
+  // Simmetrico per chi sta in alto al centro (l'avversario in heads-up).
+  // ⚠️⚠️ **QUI IL TAVOLO È UN RETTANGOLO, QUINDI I POSTI PASSANO AL
+  // SUPERELLISSE** (`--sx/--sy`, vedi `RAGGIO_SQ_*` in `replay-state.ts`).
+  // Sull'ellisse i quattro angoli del feltro restavano vuoti e i posti si
+  // stringevano al centro: a 5 giocatori due finivano accalcati in alto,
+  // mentre gli altri due erano ai lati. Ora scivolano lungo i lati lunghi —
+  // (23,16) e (77,16) diventano **(12,9) e (88,9)** — ed è la disposizione che
+  // il titolare ha indicato.
+  //
+  // ⚠️ Cambia anche il **verso di aggancio** (`--anc-s`/`--ancy-s`): un posto
+  // che sull'ellisse cadeva a metà altezza sul superellisse è in alto, e la
+  // targa deve sporgere dall'altra parte.
+  .rp__posto {
+    left: var(--sx);
+    top: var(--sy);
+    transform: translate(
+      calc(var(--anc-s, 0.5) * -100%),
+      calc(var(--ancy-s, 0.5) * -100%)
+    );
+  }
+
+  // ⚠️ **La spinta verso il basso dei posti alti è stata TOLTA.** Serviva a far
+  // posto alla striscia della decisione quando questa stava a `top: -4px`, cioè
+  // per metà dentro il feltro. Ora la striscia sta a **−10px** (richiesta del
+  // titolare): finisce 16px dentro il tavolo invece di 22, e il superellisse
+  // porta comunque i posti alti più in alto. Spingerli ancora giù sarebbe il
+  // contrario di ciò che è stato chiesto — «il giocatore al centro in alto deve
+  // trovarsi ancora un po' più in alto».
+
+  // Le fiche seguono il lato del **superellisse**: `data-lato-s`, non
+  // `data-lato`. Quest'ultimo resta al desktop, dove i posti sono altrove.
+  // ⚠️ **Le fiche puntano SEMPRE verso il centro del tavolo.** Il lato lo decide
+  // `latoFicheQuadro` confrontando di quanto il posto è spostato in orizzontale
+  // e in verticale (vedi `replay-state.ts`): qui si traduce solo in un offset.
+  // La versione precedente ragionava a fasce e mandava le fiche del posto in
+  // basso a destra **fuori dal feltro**, facendo comparire lo scorrimento
+  // orizzontale sull'intera pagina.
+  .rp__posto[data-lato-s='sinistra'] .rp__puntata {
+    inset: auto;
+    left: calc(100% + 1.4cqw);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .rp__posto[data-lato-s='destra'] .rp__puntata {
+    inset: auto;
+    right: calc(100% + 1.4cqw);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+// ⚠️ **Il posto in alto al centro scende di 3cqh per fare posto alla
+// striscia**, che il titolare vuole a −10px e centrata. Con un numero pari di
+// giocatori (2, 4, 6, 8) lì c'è un posto e i due si toccavano.
+//
+// ⚠️ **Resta comunque molto più in alto di prima**, che era l'altra richiesta:
+// il superellisse lo porta a y=5% e queste tre unità lo riportano a ~8%,
+// mentre nella versione precedente stava a 12,5% — quindi ~11px più su su un
+// feltro da 246px, non più giù.
+  .rp__posto[data-lato-s='alto'] {
+    transform: translate(
+      calc(var(--anc-s, 0.5) * -100%),
+      calc(var(--ancy-s, 0.5) * -100% + 3cqh)
+    );
+  }
+
+  // ⚠️ Nessuna regola per `alto`/`basso`: su questo tavolo `latoFicheQuadro`
+  // **non li restituisce mai** — le fiche vanno sempre di lato, perché sopra e
+  // sotto la targa ci sono le carte (e per i posti centrali il board).
+
+
+
+
+  // ⚠️ **Qui c'era un raddoppio dello scostamento per l'heads-up (6cqh), ed è
+  // stato TOLTO insieme al capoverso del nome.** Era il rimedio a targhe alte
+  // 89px che non stavano nella colonna del centro; con la targa su una riga
+  // (~57px) i 3cqh generici bastano — misurato a zero su entrambe le mani — e
+  // i 6cqh in più spingevano l'eroe **dentro la zona della barra fissa**.
+
+  // ⚠️ **La barra è tornata NEL FLUSSO — richiesta del titolare — e il giro in
+  // `position: fixed` va ricordato per non rifarlo.** Era fissa perché
+  // ancorata al contenitore finiva sotto la piega; ma fissa copriva la riga
+  // della decisione e galleggiava sopra contenuto che scorreva. In flusso,
+  // con il budget del tavolo che la conta (vedi il commento sul `height`),
+  // tutto sta nel viewport per costruzione e niente copre niente.
+  .rp__barra {
+    flex-wrap: nowrap;
+    gap: 0.15rem;
+    padding: 0.15rem 0.3rem;
+    width: fit-content;
+    margin-inline: auto;
+
+    // ⚠️ Bersagli sotto i 44px del progetto: richiesta esplicita del titolare
+    // («ridurrei la grandezza dei bottoni»), valida SOLO in questa media
+    // query. L'involucro era «allungato verticalmente»: era il play a dettare
+    // l'altezza della barra.
+    .rp__cbtn {
+      width: 32px;
+      height: 36px;
+    }
+    .rp__cbtn--play {
+      width: 38px;
+      height: 38px;
+    }
+    .rp__strada {
+      padding: 0.15rem 0.3rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.02em;
+      min-width: 0;
+      min-height: 36px;
+    }
+    .rp__strade {
+      gap: 0.1rem;
+    }
+    // ⚠️ `nowrap` sui contatori: «10 / 19» andava a capo dentro il gruppo
+    // stretto e allungava la barra in verticale.
+    .rp__conta,
+    .rp__conta-mani {
+      font-size: 0.7rem;
+      white-space: nowrap;
+    }
+    .rp__div {
+      margin-inline: 0.15rem;
+    }
+  }
+
+  // ⚠️ **La riga della decisione va in overlay sul bordo ALTO del tavolo** —
+  // richiesta del titolare: prima stava sotto, la barra la copriva, e per
+  // leggerla si scorreva. In alto è «sempre in bella vista senza occupare
+  // spazio»: una striscia sottile, colore diverso dal feltro (navy translucido
+  // col filetto dorato), una riga sola con ellissi.
+  //
+  // ⚠️ A SINISTRA e non al centro: in heads-up l'avversario sta in alto al
+  // centro, e una pillola centrata gli finirebbe sopra la targa. L'angolo
+  // alto-sinistro è libero in ogni configurazione (le ancore ellittiche non
+  // ci mettono mai nessuno).
+  .rp__decisione {
+    position: absolute;
+    // ⚠️ **A cavallo del bordo alto del feltro (−4px), non dentro.** Dentro, a
+    // 844/740 la pillola toccava la targa del posto di sinistra: sui feltri
+    // bassi quel posto sale (è centrato al 29% dell'altezza) fin quasi al
+    // bordo. Sulla linea del bordo la fascia è libera in ogni configurazione:
+    // le ancore ellittiche non appoggiano mai nessuno sull'orlo alto-sinistro.
+    // −10px, come deciso dal titolare. ⚠️ A questa quota la striscia entra ~16px
+    // dentro il feltro, e con un numero **pari** di giocatori lì c'è un posto (in
+    // alto al centro): a cedere è il **posto**, che scende di 3cqh — vedi
+    // `data-lato-s='alto'` più sotto — non la striscia.
+    top: -10px;
+    // ⚠️ **Centrata**, come chiesto dal titolare. Prima era a sinistra per
+    // schivare il posto in alto al centro: quel posto esiste con 2, 4, 6 e 8
+    // giocatori, e la collisione è stata misurata (7px di sovrapposizione su
+    // una mano 6-max). La schivata ora la fa il **posto**, che in orizzontale
+    // scende di 2cqh invece di salire (vedi `data-lato='alto'`), non la
+    // pillola.
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    // ⚠️ **Quasi tutta la larghezza del tavolo, e serve davvero.** Il tetto
+    // precedente (`min(60%, 30rem)` = 480px) tagliava col troncamento la riga
+    // completa — «Tocca a granlook (HJ) · piatto 26 bb · da chiamare 6,4 bb ·
+    // puntata 33% piatto · stack effettivo 88 bb» — cioè proprio il caso in cui
+    // quei numeri servono. Con il feltro largo quanto lo schermo lo spazio c'è:
+    // a 932px il tavolo è 860 e la riga più lunga ne chiede ~570.
+    // L'ellissi resta come ultima rete sui feltri stretti.
+    max-width: calc(100% - 1.5rem);
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    gap: 0.5rem;
+    padding: 0.18rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    background: color-mix(in srgb, #16223f 88%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+    color: #f2ede2;
+
+    // ⚠️⚠️ **I COLORI DEI FIGLI VANNO RIDICHIARATI, e ometterlo è stato un
+    // difetto vero.** `.rp__dec-dato` usa `--text-muted` e `strong` usa
+    // `--text`: token pensati per il fondo chiaro della pagina. Sulla striscia
+    // navy diventavano **scuro su scuro** — i tre dati (piatto, da chiamare,
+    // stack effettivo) erano nel DOM, misurati come «non troncati», e a schermo
+    // **invisibili**. Nessuna misura di collisione poteva vederlo: solo
+    // guardare la targa.
+    .rp__dec-chi,
+    .rp__dec-dato,
+    .rp__dec-chi strong,
+    .rp__dec-dato strong {
+      color: inherit;
+    }
+
+    .rp__dec-dato {
+      opacity: 0.82;
+    }
+
+    // La gerarchia interna si appiattisce: nella striscia è tutto un corpo solo.
+    .rp__dec-chi {
+      font-size: inherit;
+    }
+
+    .rp__dec-dato strong,
+    .rp__dec-chi strong {
+      color: inherit;
+    }
+
+    // ⚠️ Le mini-carte dentro la pillola dell'esito si NASCONDONO: allo
+    // showdown le stesse carte sono già scoperte sul feltro, e qui dentro
+    // portavano la striscia a 49px di altezza — che sui feltri bassi finiva
+    // sopra la targa del posto di sinistra (misurato: 1323px² a 740×360, solo
+    // al passo finale).
+    .rp__mostrate {
+      display: none;
+    }
+  }
+
+  // ⚠️ **La pillola della vincita esce dal flusso e va DI FIANCO alla targa,
+  // sul lato opposto alle fiche.** In flusso aggiungeva 25px all'altezza del
+  // posto **solo al passo finale**: la targa del vincitore cresceva
+  // all'improvviso e — misurato sull'heads-up, dove i posti stanno sulla
+  // colonna del centro — finiva sopra le caselle del board (124px² a 740×360)
+  // e dentro la zona della barra. Di fianco non cresce niente: sul rettangolo
+  // a tutta larghezza lo spazio laterale è quello che avanza.
+  //
+  // ⚠️ Il lato è l'**opposto** di dove il blocco ≤340 mette le fiche vinte,
+  // o pillola e pila si coprirebbero a vicenda proprio al passo in cui
+  // compaiono insieme.
+  .rp__posto .rp__vince {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+  }
+
+  // ⚠️ **Il lato lo decide `data-lato-s`, cioè la direzione VERSO IL CENTRO** —
+  // la stessa regola delle fiche puntate. Con `data-lato` (l'ellisse del
+  // desktop) la pillola del vincitore usciva dal tavolo: misurato a 844×390, il
+  // posto più a destra la spingeva a x=852 su una finestra da 844, con tanto di
+  // scorrimento orizzontale della pagina.
+  .rp__posto[data-lato-s='destra'] .rp__vince,
+  .rp__posto[data-lato-s='alto'] .rp__vince {
+    right: calc(100% + 1.2cqw);
+    left: auto;
+  }
+
+  .rp__posto[data-lato-s='sinistra'] .rp__vince,
+  .rp__posto[data-lato-s='basso'] .rp__vince {
+    left: calc(100% + 1.2cqw);
+    right: auto;
+  }
+
+  // ⚠️ **Il nome torna su UNA riga — e la storia va letta per non rifare il
+  // giro.** Il capoverso (nome sotto lo stack) era nato quando la targa era
+  // larga `20cqw` di un tavolo da 445px = **89px**: al nome restavano 29px ed
+  // era tagliato sempre. Ma il capoverso rende la targa alta ~89px, e in
+  // heads-up — dove entrambi i posti stanno sulla colonna del centro — quella
+  // altezza NON STA: a 740×360 il budget verticale (posto + centro + posto)
+  // superava il tavolo di 11px, e nessuno scostamento poteva ripararlo.
+  //
+  // Ora la targa è larga `min(20cqw, 8.5rem)` = ~136px sul tavolo a tutta
+  // larghezza: il nome ci sta su una riga accanto allo stack, la targa scende
+  // a ~2 righe, e la colonna heads-up chiude con 30px di margine.
+  // L'`ellipsis` di base resta come rete sui nickname oltre i ~14 caratteri.
+}
+
+// ⚠️ **Qui c'era un secondo blocco per gli orizzontali sotto i 420px, ed è
+// stato TOLTO.** Faceva due cose: nascondere il titolo (che ora la regola sopra
+// fa su tutta la fascia) e sottrarre `6.5rem` invece di `9.5rem`. Due costanti
+// per lo stesso conto sono due cose da tenere allineate a mano, e infatti non
+// lo erano: con 6,5rem a 844×390 il tavolo sforava di **51px**. Una fascia
+// sola, una costante sola, misurata.
+
+// La spunta della condivisione: sostituisce il pulsante «Copia da qui».
+.rp__share-daqui {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  // ⚠️ 44px dichiarati: una riga di testo con una casella sta sui 24.
+  min-height: 44px;
+
+  input {
+    width: 1.05rem;
+    height: 1.05rem;
+    accent-color: var(--copper-600);
+  }
+}

@@ -42,6 +42,7 @@
 /allenamento/*          /index.csr  200
 /live/:id/stanza        /index.csr  200
 /login                  /index.csr  200
+/mie-mani               /index.csr  200
 /negozio                /index.csr  200
 /password-dimenticata   /index.csr  200
 /recupera-verifica      /index.csr  200

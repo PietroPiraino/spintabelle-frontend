@@ -1,0 +1,767 @@
+<section class="section">
+  <div class="container">
+    @if (errore(); as e) {
+      <div class="rp__errore">
+        <h1>Mano non disponibile</h1>
+        <p>{{ e }}</p>
+        <a routerLink="/replayer" class="btn btn--primary">Vai al Replayer</a>
+      </div>
+    } @else if (mano(); as m) {
+      @if (stato(); as st) {
+        <div class="rp" [attr.data-strada]="st.strada" [attr.data-passo]="st.tipo">
+          <!-- ── intestazione ──────────────────────────────────────── -->
+          <header class="rp__head">
+            <!-- ⚠️ Il FORMATO per primo: è ciò che dice a chi apre il
+                 collegamento che cosa sta guardando. La sala è metadato
+                 tecnico e sta in coda, mai in un titolo (art. 9). -->
+            <h1 class="rp__titolo">Mano di {{ m.gameTypeLabel }}</h1>
+            <p class="rp__sotto">
+              {{ m.tableSize }} giocatori
+              @if (m.bigBlind) {
+                <!-- ⚠️ I bui in FICHE, non in bui: «bui 0,5 bb/1,0 bb» è una
+                     tautologia che occupa il posto dell'informazione. «15/30»
+                     dice la profondità vera del livello. -->
+                · bui {{ fiche(m.smallBlind) }}/{{ fiche(m.bigBlind) }}
+              }
+              @if (m.ante) {
+                · ante {{ fiche(m.ante) }}
+              }
+              · {{ m.roomLabel }}
+            </p>
+          </header>
+
+          <!-- ⚠️ Ciò che una tecnologia assistiva annuncia a ogni passo: senza
+               questa regione il replayer è muto per chi non vede il tavolo. -->
+          <p class="visually-hidden" aria-live="polite">{{ annuncio() }}</p>
+
+          <!-- ── la scena: tavolo + elenco di provenienza ───────────── -->
+          <div class="rp__scena" [class.rp__scena--con-lista]="haContesto()">
+            <div class="rp__palco">
+              <!--
+                ⚠️ **L'invito a ruotare, e NON un tavolo schiacciato.** In
+                verticale su un telefono il feltro resta largo 358px: le targhe
+                si sovrappongono al board e i nickname diventano tre lettere e
+                un'ellissi. Meglio dire che serve più larghezza che disegnare
+                una cosa illeggibile e lasciar credere che sia quello il tavolo.
+                ⚠️ **Solo il TAVOLO viene sostituito**: comandi, linea del tempo,
+                condivisione e soprattutto **segnalazione** restano in pagina.
+              -->
+              <div class="rp__ruota">
+                <span class="rp__ruota-icona" aria-hidden="true">
+                  <span class="rp__ruota-tel"></span>
+                </span>
+                <p class="rp__ruota-t">Gira il telefono per rivedere la mano</p>
+                <!--
+                  ⚠️ **Questo testo È STATO RISCRITTO perché era diventato
+                  falso.** Prometteva «La mano resta tutta qui sotto: azioni,
+                  piatto e linea del tempo si leggono anche così» — vero finché
+                  in verticale restavano i comandi, la riga della decisione e la
+                  linea del tempo. Ora non ci sono più: erano comandi che
+                  pilotavano un tavolo invisibile. Chi cambia quella media query
+                  deve rileggere questa frase, o la pagina torna a promettere
+                  qualcosa che non offre.
+                -->
+                <p class="rp__ruota-p">
+                  Il feltro ha bisogno di una schermata più larga. Gira il
+                  telefono e la rivedi azione per azione, con il piatto e la
+                  linea del tempo.
+                </p>
+              </div>
+
+              <div class="rp__tavolo" [attr.data-n]="m.players.length">
+                <div class="rp__feltro"></div>
+
+                <div class="rp__centro">
+                  <div class="rp__board">
+                    @for (c of st.board; track $index) {
+                      <span
+                        class="rp__bcard"
+                        [class.rp__bcard--nuova]="st.carteNuove.includes(c)"
+                        [style.--ritardo]="($index % 3) * 130 + 'ms'"
+                      >
+                        <app-playing-card [carta]="c" />
+                      </span>
+                    }
+                    @for (v of [].constructor(5 - st.board.length); track $index) {
+                      <span class="rp__slot"></span>
+                    }
+                  </div>
+
+                  <div class="rp__piatto" [class.rp__piatto--vinto]="st.tipo === 'ASSEGNAZIONE'">
+                    @if (st.pot > 0) {
+                      <span class="rp__pila" aria-hidden="true">
+                        @for (i of pila(st.pot); track i) {
+                          <span class="rp__fiche rp__fiche--piatto" [style.--i]="i"></span>
+                        }
+                      </span>
+                    }
+                    <span class="rp__pot-eti">Piatto</span>
+                    <!--
+                      ⚠️ **Raccolto PIÙ quello che è sul tavolo**, che è ciò che un
+                      giocatore chiama «il piatto». Mostrando il solo raccolto, per
+                      tutta la prima strada il gettone diceva «0,0 bb» mentre sul
+                      feltro c'erano i bui, e la riga sotto ne dichiarava 7,5.
+                      ⚠️ `inGioco` **esclude** la puntata non chiamata (sta in
+                      `daRestituire`), altrimenti qui tornerebbe il piatto gonfiato
+                      proprio nel passo della raccolta.
+                    -->
+                    <strong class="rp__pot-val">{{ imp(st.pot + st.inGioco) }}</strong>
+                  </div>
+
+                  <!--
+                    ⚠️ **Le quote SOLO quando c'è qualcosa da chiamare.** È la
+                    regola di Hand2Note ed è quella giusta: una riga che resta a
+                    schermo dicendo «—» insegna a non guardarla, e quando poi
+                    serve davvero non la si vede più.
+
+                    ⚠️ **SOTTO il piatto e non sopra il board**, ed è una misura:
+                    sopra, il riquadro allargava il blocco centrale dal 19,2% al
+                    **26%** della larghezza del tavolo — `width: max-content`
+                    prende il figlio più largo — e le pile puntate dei posti
+                    laterali ci finivano sopra (421 px² a 1280px). Sotto, il
+                    blocco cresce verso il basso, dove lo spazio c'è.
+
+                    ⚠️ **Porta solo la percentuale, non anche l'importo da
+                    chiamare**: quello sta nel riquadro sotto il tavolo, con
+                    piatto e stack effettivo. Qui va il numero che si *giudica*
+                    (quante volte devi avere ragione), là i numeri che si
+                    *leggono* — e la stringa in più era metà della larghezza di
+                    troppo.
+                  -->
+                  @if (st.quote; as q) {
+                    <div class="rp__quote">
+                      <span class="rp__quote-eti">Pot odds</span>
+                      <strong class="rp__quote-val"
+                        >{{ (q.equityNecessaria * 100).toFixed(0) }}%</strong
+                      >
+                    </div>
+                  }
+                </div>
+
+                <!-- ── i posti ───────────────────────────────────────── -->
+                @for (s of st.seggi; track s.seat) {
+                  <div
+                    class="rp__posto"
+                    [class.rp__posto--passato]="s.passato"
+                    [class.rp__posto--agisce]="s.deveAgire"
+                    [class.rp__posto--turno]="s.diTurno"
+                    [class.rp__posto--hero]="s.isHero"
+                    [class.rp__posto--vince]="s.vinto"
+                    [attr.data-lato]="latoDi(s.seat)"
+                    [attr.data-lato-s]="latoQuadroDi(s.seat)"
+                    [style]="stile(s.seat)"
+                  >
+                    <div class="rp__carte">
+                      @if (s.carte.length) {
+                        @for (c of s.carte; track $index) {
+                          <app-playing-card [carta]="c" />
+                        }
+                      } @else if (!s.passato) {
+                        <app-playing-card />
+                        <app-playing-card />
+                      }
+                      <!--
+                        ⚠️ **Chi passa perde le carte** (riferimento Hand2Note):
+                        è il gesto del tavolo, ed è ciò che rende leggibile a
+                        colpo d'occhio quanta gente è ancora nella mano. La targa
+                        resta, smorzata, quindi il posto continua a vedersi
+                        occupato — che era la ragione per cui prima si tenevano
+                        due dorsi grigi.
+                        ⚠️ **L'ERoe fa eccezione**: le sue carte restano visibili
+                        anche dopo un fold, perché «che cosa avevo quando ho
+                        passato» è metà del motivo per cui si rivede una mano. È
+                        una decisione di progetto già presa, non un'incoerenza.
+                      -->
+                    </div>
+
+                    <div class="rp__targa" [class.is-lampo]="lampoAcceso(s.seat)">
+                      <!--
+                        ⚠️ **L'azione prende il posto del nickname per due
+                        secondi**, poi il nome torna. Sostituisce l'intera prima
+                        riga (stack e nome) e non il solo nickname: «RILANCIA
+                        15 bb» accanto a «14,2 bb |» non ci sta, e la targa si
+                        allargherebbe — cioè il tavolo salterebbe a ogni azione.
+
+                        ⚠️ **Le due righe stanno nella STESSA cella di griglia e
+                        si dissolvono l'una nell'altra**, invece di alternarsi con
+                        un `@if`. Due ragioni, entrambe misurate su un tavolo
+                        vero: con l'alternanza l'altezza della targa cambia a
+                        ogni azione (le due stringhe non sono alte uguale) e il
+                        posto **salta**; e soprattutto un ramo che sparisce non
+                        si può animare in uscita, quindi il nickname tornava con
+                        uno scatto. Il ritorno animato è la metà del gesto che
+                        rende la cosa leggibile — chi ha chiesto meno movimento
+                        vede lo stesso scambio, senza dissolvenza.
+                      -->
+                      <span class="rp__riga-slot">
+                        <span class="rp__riga">
+                          <span class="rp__stack">
+                            @if (s.allIn) {
+                              <!--
+                                ⚠️ **«All-in» con l'iniziale maiuscola**: sta al
+                                posto dello stack, cioè dove tutte le altre
+                                righe portano una cifra, e in minuscolo si
+                                leggeva come una nota a margine invece che come
+                                lo stato del giocatore.
+                              -->
+                              {{ VERBI.ALLIN }}
+                            } @else {
+                              {{ imp(s.chips) }}
+                            }
+                          </span>
+                          <span class="rp__barretta" aria-hidden="true"></span>
+                          <span class="rp__nome">{{ s.nome }}</span>
+                        </span>
+                        @if (lampoDi(s.seat); as azione) {
+                          <!-- ⚠️ `aria-hidden`: la regione `aria-live` in cima
+                               alla pagina ha già annunciato questa azione, e un
+                               elemento a opacità zero resta comunque nell'albero
+                               di accessibilità — senza questo, un lettore di
+                               schermo leggerebbe due volte la stessa cosa e il
+                               nickname sparirebbe sotto di essa. -->
+                          <span class="rp__lampo" aria-hidden="true">{{ azione }}</span>
+                        }
+                      </span>
+                      <span class="rp__pos" [attr.data-pos]="s.posizione">{{ s.posizione }}</span>
+                    </div>
+
+                    <!-- ── le fiche puntate ──────────────────────────── -->
+                    <!--
+                      ⚠️ **Figlie del posto, appoggiate dal CSS al bordo della sua
+                      scatola** (`data-lato`), non a una coordinata calcolata: la
+                      scatola è alta il 15% del tavolo su un desktop e il 27% su un
+                      telefono in orizzontale, e nessuna costante scelta a tavolino
+                      va bene per entrambi — misurato, le pile finivano sulle targhe
+                      e sul board.
+                    -->
+                    @if (puntataDi(s.seat); as q) {
+                      <span
+                        class="rp__puntata"
+                        [class.rp__puntata--resto]="q.resto"
+                        [attr.data-fascia]="q.fascia"
+                      >
+                        <span class="rp__pila" aria-hidden="true">
+                          @for (i of pila(q.importo); track i) {
+                            <span class="rp__fiche" [style.--i]="i"></span>
+                          }
+                        </span>
+                        <span class="rp__puntata-val">
+                          {{ imp(q.importo) }}@if (q.resto) {
+                            <span class="rp__puntata-nota">indietro</span>
+                          }
+                        </span>
+                      </span>
+                    }
+
+                    <!--
+                      ⚠️ **La raccolta NON si disegna più qui.** Era un elemento
+                      figlio del posto, spostato di «50 − ancora»: ma partiva
+                      dalla pila puntata, che è già staccata dall'ancora, quindi
+                      la traslazione finiva corta e le fiche convergevano su un
+                      punto qualunque del feltro invece che sul piatto — a
+                      schermo, pile che volano «verso zone a caso». Ora c'è un
+                      solo strato di volo a livello di tavolo (`volo()`), dove i
+                      due capi sono coordinate assolute e la destinazione è il
+                      centro per costruzione.
+                    -->
+
+                    @if (s.vinto) {
+                      <span class="rp__vince">+{{ imp(s.vinto) }}</span>
+                    }
+
+                    @if (bottone() === s.seat) {
+                      <!-- Il bottone del mazziere, disegnato come una fiche:
+                           dice da dove si conta. -->
+                      <span class="rp__dealer" aria-label="Bottone del mazziere">D</span>
+                    }
+                  </div>
+                }
+
+                <!-- ── il piatto che va a chi ha vinto ───────────────── -->
+                <!--
+                  ⚠️ L'UNICO volo rimasto a livello di tavolo, perché è l'unico
+                  che parte da un punto del tavolo (il centro) e non da un posto.
+                  La raccolta sta dentro i posti, dove stanno le fiche.
+                  ⚠️ È la ricreazione dell'elemento a far ripartire l'animazione
+                  CSS, senza bisogno di alcuna libreria (e questa applicazione è
+                  ZONELESS, quindi @angular/animations non si usa).
+                -->
+                @for (f of volo(); track f.chiave) {
+                  <span
+                    class="rp__volo"
+                    [attr.data-fascia]="f.fascia"
+                    [style.--da-x]="f.da.x + '%'"
+                    [style.--da-y]="f.da.y + '%'"
+                    [style.--a-x]="f.a.x + '%'"
+                    [style.--a-y]="f.a.y + '%'"
+                    aria-hidden="true"
+                  >
+                    @for (i of pila(f.importo); track i) {
+                      <span class="rp__fiche" [style.--i]="i"></span>
+                    }
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!--
+              ⚠️ **L'elenco di provenienza esiste solo se c'è davvero.** Da un
+              collegamento condiviso il contesto non c'è (vedi
+              `ReplayContextService`): non si mostra un elenco vuoto né un
+              segnaposto, semplicemente la colonna non c'è e ▲ ▼ sono spenti.
+            -->
+            @if (haContesto()) {
+              <aside class="rp__lista" aria-label="Mani da cui sei arrivato">
+                <p class="rp__lista-eti">{{ contesto.titolo() }}</p>
+                <ol class="rp__lista-ol">
+                  @for (x of contesto.mani(); track x.publicId; let i = $index) {
+                    <li>
+                      <button
+                        type="button"
+                        class="rp__lista-riga"
+                        [class.is-corrente]="i === indiceNelContesto()"
+                        [attr.aria-current]="i === indiceNelContesto() ? 'true' : null"
+                        (click)="apriMano(x.publicId)"
+                      >
+                        <span class="rp__lista-n">{{ i + 1 }}</span>
+                        <span class="rp__lista-carte">
+                          @for (c of x.carte; track $index) {
+                            <app-playing-card [carta]="c" />
+                          }
+                        </span>
+                        <span class="rp__lista-formato">{{ x.formato }}</span>
+                        <!--
+                          ⚠️ Il netto dell'eroe, col segno e il colore: è
+                          l'informazione che dice **quale** mano si sta cercando
+                          quando il formato è lo stesso per tutte (in una
+                          sessione di cash game l'etichetta «Cash game» si
+                          ripete su ogni riga e non distingue niente).
+                        -->
+                        @if (x.netto; as netto) {
+                          <span
+                            class="rp__lista-netto"
+                            [class.is-pos]="netto.startsWith('+')"
+                            [class.is-neg]="netto.startsWith('−')"
+                            >{{ netto }}</span
+                          >
+                        }
+                      </button>
+                    </li>
+                  }
+                </ol>
+              </aside>
+            }
+          </div>
+
+          <!-- ── la barra dei comandi ──────────────────────────────── -->
+          <!--
+            ⚠️ **Sta SUBITO SOTTO IL TAVOLO, prima del riquadro della decisione**,
+            ed è una misura: col riquadro in mezzo la barra cadeva a y 878-948 su
+            una finestra da 900px, cioè **fuori dallo schermo**. I comandi
+            appartengono al tavolo — senza di loro la mano non avanza — mentre il
+            riquadro è materiale da leggere e può stare più giù.
+
+            ⚠️ **Le strade stanno QUI e non sul feltro** (modello Hand2Note):
+            sopra il tavolo erano un oggetto in più su una superficie che deve
+            restare pulita, e per giunta l'unico comando lontano da tutti gli
+            altri. Tutto ciò che si preme sta su una riga sola: passo,
+            riproduzione, strada, carte scoperte, mano precedente e successiva.
+          -->
+          <div class="rp__barra" role="group" aria-label="Comandi del replayer">
+            <div class="rp__gruppo">
+              <button
+                type="button"
+                class="rp__cbtn"
+                (click)="inizio()"
+                [disabled]="passo() === 0"
+                aria-label="Torna all’inizio"
+                title="Inizio (tasto Home)"
+              >
+                <app-icon name="refresh" />
+              </button>
+              <button
+                type="button"
+                class="rp__cbtn"
+                (click)="indietro()"
+                [disabled]="passo() === 0"
+                aria-label="Passo precedente"
+                title="Precedente (freccia sinistra)"
+              >
+                <app-icon name="arrow-left" />
+              </button>
+              <button
+                type="button"
+                class="rp__cbtn rp__cbtn--play"
+                (click)="riproduci()"
+                [attr.aria-label]="inRiproduzione() ? 'Metti in pausa' : 'Riproduci'"
+                title="Riproduci (barra spaziatrice)"
+              >
+                <app-icon [name]="inRiproduzione() ? 'pause' : 'play'" />
+              </button>
+              <button
+                type="button"
+                class="rp__cbtn"
+                (click)="avanti()"
+                [disabled]="passo() >= ultimo()"
+                aria-label="Passo successivo"
+                title="Successivo (freccia destra)"
+              >
+                <app-icon name="arrow-right" />
+              </button>
+            </div>
+
+            <span class="rp__div" aria-hidden="true"></span>
+
+            <!--
+              ⚠️ **Tutte e quattro le strade, sempre**: quelle che la mano non ha
+              raggiunto restano a schermo, spente e non cliccabili. È così che la
+              barra dice *fin dove è arrivata* questa mano — con l'elenco
+              variabile di prima, una mano chiusa preflop mostrava un unico
+              bottone e sembrava un'etichetta.
+            -->
+            <div class="rp__strade" role="group" aria-label="Strade della mano">
+              @for (s of barraStrade(); track s.nome) {
+                <button
+                  type="button"
+                  class="rp__strada"
+                  [class.is-attiva]="s.attiva"
+                  [disabled]="s.passo === null"
+                  [attr.aria-current]="s.attiva ? 'step' : null"
+                  [attr.title]="
+                    s.passo === null ? 'La mano non è arrivata al ' + s.etichetta : null
+                  "
+                  (click)="vaiAStrada(s.passo)"
+                >
+                  {{ s.etichetta }}
+                </button>
+              }
+            </div>
+
+            <span class="rp__div" aria-hidden="true"></span>
+
+            <!-- ⚠️ Un interruttore con `aria-pressed`, non una casella di
+                 spunta: è un comando della barra, e deve avere la stessa forma e
+                 lo stesso bersaglio dei suoi vicini. Spento quando non c'è
+                 niente da scoprire, che è la maggioranza delle mani. -->
+            <button
+              type="button"
+              class="rp__cbtn rp__cbtn--occhio"
+              [class.is-attivo]="mostraTutto()"
+              [attr.aria-pressed]="mostraTutto()"
+              [disabled]="!qualcunoDaScoprire()"
+              (click)="mostraTutto.set(!mostraTutto())"
+              [attr.aria-label]="
+                qualcunoDaScoprire()
+                  ? 'Mostra tutte le carte'
+                  : 'Nessuna carta da scoprire in questa mano'
+              "
+              [attr.title]="
+                qualcunoDaScoprire()
+                  ? 'Mostra tutte le carte'
+                  : 'Nessuna carta da scoprire in questa mano'
+              "
+            >
+              <app-icon [name]="mostraTutto() ? 'eye' : 'eye-off'" />
+            </button>
+
+            <span class="rp__div" aria-hidden="true"></span>
+
+            <!--
+              ⚠️ **Mano precedente e successiva.** Spenti se non c'è un elenco di
+              provenienza — cioè sempre, quando si apre un collegamento
+              condiviso. Il contatore sta in mezzo alle due frecce perché è lì
+              che serve, e perché sotto i 900px l'elenco laterale non c'è e
+              questo resta l'unico modo per sapere dove si è.
+            -->
+            <div class="rp__gruppo rp__gruppo--mani">
+              <button
+                type="button"
+                class="rp__cbtn"
+                (click)="manoPrec()"
+                [disabled]="!manoPrecedente()"
+                aria-label="Mano precedente"
+                title="Mano precedente (freccia su)"
+              >
+                <app-icon name="arrow-up" />
+              </button>
+              @if (haContesto()) {
+                <span class="rp__conta-mani">
+                  {{ indiceNelContesto() + 1 }}/{{ contesto.mani().length }}
+                </span>
+              }
+              <button
+                type="button"
+                class="rp__cbtn"
+                (click)="manoSucc()"
+                [disabled]="!manoSuccessiva()"
+                aria-label="Mano successiva"
+                title="Mano successiva (freccia giù)"
+              >
+                <app-icon name="arrow-down" />
+              </button>
+            </div>
+
+            <!-- Comandi secondari: si leggono, non si cercano. -->
+            <div class="rp__gruppo rp__gruppo--minori">
+              <button
+                type="button"
+                class="rp__vel"
+                (click)="cambiaVelocita()"
+                [attr.aria-label]="'Velocità ' + velocita() + '×, tocca per cambiare'"
+                title="Velocità di riproduzione"
+              >
+                {{ velocita() }}×
+              </button>
+              <span class="rp__conta">{{ passo() + 1 }} / {{ ultimo() + 1 }}</span>
+            </div>
+          </div>
+
+          <!-- ── la domanda ────────────────────────────────────────── -->
+          <!--
+            ⚠️ Questo riquadro è il punto del replayer, non un ornamento: senza,
+            si vede sempre e solo che cosa qualcuno HA fatto, mai la scelta che
+            ha davanti. Sono i numeri con cui una decisione si giudica.
+            ⚠️ **La percentuale di equity NON è più qui**: sta sul feltro, sotto
+            il piatto, dove gli occhi vanno comunque. Qui restano gli importi —
+            piatto, da chiamare, stack effettivo — che sono un'altra cosa:
+            ripetere lo *stesso* numero in due punti è il modo in cui uno dei due
+            comincia a mentire, ma questi non si ripetono.
+          -->
+          @if (!st.finita) {
+            <div class="rp__decisione">
+              @if (st.seggi.length && chiAgisce(); as chi) {
+                <span class="rp__dec-chi">
+                  Tocca a <strong>{{ chi.nome }}</strong> ({{ chi.posizione }})
+                </span>
+                <span class="rp__dec-dato">
+                  piatto <strong>{{ imp(st.pot + st.inGioco) }}</strong>
+                </span>
+                <!-- ⚠️ L'IMPORTO da chiamare sta qui, la PERCENTUALE sul feltro:
+                     sono due numeri diversi e nessuno dei due ripete l'altro. -->
+                @if (st.quote; as q) {
+                  <span class="rp__dec-dato">
+                    da chiamare <strong>{{ imp(q.daChiamare) }}</strong>
+                  </span>
+                }
+                @if (entitaCorrente(); as e) {
+                  <span class="rp__dec-dato">
+                    puntata <strong>{{ e }}</strong>
+                  </span>
+                }
+                <span class="rp__dec-dato">
+                  stack effettivo <strong>{{ imp(st.stackEffettivo) }}</strong>
+                </span>
+              } @else {
+                <span class="rp__dec-chi">{{ etichettaStrada(st.strada) }}</span>
+                <!--
+                  ⚠️ **`st.pot` e non `st.pot + st.inGioco`**, ed è la stessa
+                  trappola del piatto gonfiato in una veste nuova: al passo della
+                  raccolta ciò che resta sul feltro è la puntata **non chiamata**,
+                  che sta per tornare indietro. Sommandola, questa riga diceva
+                  «piatto 34 bb» mentre il gettone sul feltro, due centimetri
+                  sopra, diceva «13 bb». Due numeri diversi con la stessa
+                  etichetta nella stessa schermata: uno dei due è per forza una
+                  bugia, e chi legge non può sapere quale.
+                -->
+                <span class="rp__dec-dato">
+                  piatto <strong>{{ imp(st.pot + st.inGioco) }}</strong>
+                </span>
+                @if (st.daRestituire; as r) {
+                  <span class="rp__dec-dato">
+                    <strong>{{ imp(r.importo) }}</strong> tornano a
+                    {{ nomeDi(r.seat) }}
+                  </span>
+                }
+              }
+            </div>
+          } @else if (m.risultati.length) {
+            <!-- ⚠️ Il vincitore si nomina col NICKNAME, non col numero di
+                 posto: «13 bb al posto 10» era letteralmente irrisolvibile
+                 guardando la pagina, perché il numero di seggio non compare in
+                 nessuna targa. -->
+            <div class="rp__decisione rp__decisione--esito">
+              @for (r of m.risultati; track r.seat) {
+                <span class="rp__dec-chi">
+                  <strong>{{ nomeDi(r.seat) }}</strong> vince
+                  <strong>{{ imp(r.vinto) }}</strong>
+                </span>
+                <!--
+                  ⚠️ Il rake si DICHIARA. Il piatto sul feltro è lordo, chi vince
+                  incassa il netto: senza questa riga i due numeri non tornano e
+                  sembra un errore di conto, quando l'errore sarebbe far sparire
+                  la trattenuta della sala. Sulle mani da torneo è zero e la riga
+                  non compare.
+                -->
+                @if (st.rake > 0) {
+                  <span class="rp__dec-dato">
+                    piatto {{ imp(st.pot) }} · rake {{ imp(st.rake) }}
+                  </span>
+                }
+                @if (r.mostrate?.length) {
+                  <span class="rp__mostrate">
+                    @for (c of r.mostrate ?? []; track $index) {
+                      <app-playing-card [carta]="c" />
+                    }
+                  </span>
+                }
+              }
+            </div>
+          }
+
+          <!-- ── linea del tempo ───────────────────────────────────── -->
+          <!--
+            ⚠️ Un gettone per passo, con CHI e QUANTO: prima stampava il tipo
+            grezzo in inglese maiuscolo, quindi due «CHECK» adiacenti erano
+            indistinguibili e nessuno sapeva di chi fossero.
+          -->
+          <div class="rp__timeline" role="group" aria-label="Passi della mano">
+            @for (g of perStrada(); track g.strada + g.passi[0].indice) {
+              <div class="rp__tl-strada">
+                <span class="rp__tl-eti">{{ g.etichetta }}</span>
+                <div class="rp__tl-passi">
+                  @for (p of g.passi; track p.indice) {
+                    <button
+                      type="button"
+                      class="rp__tl-passo"
+                      [attr.data-tipo]="p.tipo"
+                      [attr.data-azione]="p.azione?.tipo ?? null"
+                      [class.is-fatto]="passo() > p.indice"
+                      [class.is-corrente]="passo() === p.indice"
+                      [attr.aria-current]="passo() === p.indice ? 'step' : null"
+                      (click)="vaiAStrada(p.indice)"
+                    >
+                      {{ etichettaPasso(p) }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- ── voti ──────────────────────────────────────────────── -->
+          @if (auth.isAuthenticated()) {
+            <div class="rp__voti">
+              <button
+                type="button"
+                class="rp__voto"
+                [class.rp__voto--mio]="mioVoto() === 1"
+                (click)="vota(1)"
+                aria-label="Mi piace"
+              >
+                <app-icon name="check" /> {{ likes() }}
+              </button>
+              <button
+                type="button"
+                class="rp__voto"
+                [class.rp__voto--mio]="mioVoto() === -1"
+                (click)="vota(-1)"
+                aria-label="Non mi piace"
+              >
+                <app-icon name="alert-triangle" /> {{ dislikes() }}
+              </button>
+            </div>
+          } @else if (likes() || dislikes()) {
+            <!-- Da anonimo i conteggi si vedono, ma non si vota: la rotta del
+                 voto è autenticata e un pulsante che porta al 401 è una bugia. -->
+            <p class="rp__voti-conta">{{ likes() }} mi piace · {{ dislikes() }} no</p>
+          }
+
+          <!-- ── condivisione ──────────────────────────────────────── -->
+          <footer class="rp__share">
+            <p class="rp__share-eti">Condividi questa mano</p>
+            <!--
+              ⚠️ **UN pulsante solo, e una spunta.** Prima qui c'erano «Copia» e
+              «Copia da qui» — due pulsanti che sembrano la stessa cosa, e il
+              titolare l'ha detto senza giri: «non capisco il senso». La
+              differenza (il secondo aggiungeva `?a=N`, il link partiva
+              dall'azione corrente) era reale ma invisibile. Ora è una spunta
+              che dice cosa fa, e l'input mostra **l'indirizzo che verrà
+              copiato davvero**: spuntando, il `?a=` compare sotto gli occhi.
+            -->
+            <div class="rp__share-riga">
+              <input
+                class="rp__url"
+                type="text"
+                readonly
+                [value]="urlCondiviso()"
+                aria-label="Collegamento alla mano"
+                (focus)="$any($event.target).select()"
+              />
+              <button type="button" class="btn btn--ghost btn--sm" (click)="copia()">
+                {{ copiato() ? 'Copiato' : 'Copia' }}
+              </button>
+            </div>
+            @if (passo() > 0) {
+              <label class="rp__share-daqui">
+                <input
+                  type="checkbox"
+                  [checked]="daQui()"
+                  (change)="daQui.set($any($event.target).checked)"
+                />
+                Fai partire il link da questa azione ({{ passo() + 1 }})
+              </label>
+            }
+
+            <!--
+              ⚠️ «Segnala» funziona SENZA account, ed è una condizione di
+              liceità: chi ne ha più bisogno è un giocatore nominato in questa
+              mano, che non è iscritto e non sa di essere qui. Per la stessa
+              ragione resta raggiungibile anche col telefono in verticale, dove
+              il tavolo lascia il posto all'invito a ruotare.
+            -->
+            <div class="rp__segnala">
+              @if (segnalato()) {
+                <p class="rp__segnalato">
+                  Segnalazione ricevuta. La leggiamo e ti rispondiamo entro un
+                  mese, prima se possiamo.
+                </p>
+              } @else if (segnalaAperto()) {
+                <p class="rp__segnala-q">Perché vuoi segnalare questa mano?</p>
+                <div class="row">
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="segnala('DATI_PERSONALI')"
+                  >
+                    Compaio in questa mano e voglio essere rimosso
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="segnala('CONTENUTO_ILLECITO')"
+                  >
+                    Contenuto illecito
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="segnala('ALTRO')"
+                  >
+                    Altro
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="segnalaAperto.set(false)"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              } @else {
+                <button
+                  type="button"
+                  class="rp__segnala-link"
+                  (click)="segnalaAperto.set(true)"
+                >
+                  Segnala questa mano
+                </button>
+              }
+            </div>
+          </footer>
+        </div>
+      }
+    } @else {
+      <p class="rp__caricando">Carico la mano…</p>
+    }
+  </div>
+</section>

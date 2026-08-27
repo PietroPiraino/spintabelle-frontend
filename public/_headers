@@ -52,6 +52,13 @@
   X-Robots-Tag: noindex, follow
 /login
   X-Robots-Tag: noindex, follow
+# ⚠️ Le pagine delle mani NON vanno indicizzate (decisione D2): contengono i
+# nickname di giocatori terzi, e la difendibilita' del trattamento poggia sul
+# fatto che un nome sia raggiungibile da chi ha il collegamento e NON cercabile.
+/replayer/:publicId
+  X-Robots-Tag: noindex, follow
+/mie-mani
+  X-Robots-Tag: noindex, follow
 /negozio
   X-Robots-Tag: noindex, follow
 /password-dimenticata

@@ -1,0 +1,427 @@
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">Strumenti</p>
+      <h1>Replayer delle mani</h1>
+      <p class="lead">
+        Incolla il resoconto di una mano o di un torneo intero — oppure trascina
+        qui il file — e rivedilo azione per azione.
+      </p>
+    </div>
+
+    <!-- ── caricamento ────────────────────────────────────────────────── -->
+    <!--
+      ⚠️ Il gate è su `isAuthenticated()`, MAI su `ready()`: `ready()` non è mai
+      vero durante il prerender, e l'HTML statico conterrebbe soltanto «sto
+      verificando la sessione».
+    -->
+    @if (!auth.isAuthenticated()) {
+      <div class="gate">
+        <h2>Per caricare le tue mani serve un account</h2>
+        <p>
+          La registrazione è gratuita e ti dà subito duecento mani da caricare —
+          un torneo intero. Se invece hai ricevuto il collegamento a una mano,
+          puoi aprirla senza iscriverti.
+        </p>
+        <div class="row">
+          <a routerLink="/registrazione" class="btn btn--primary">Registrati gratis</a>
+          <a
+            routerLink="/login"
+            [queryParams]="{ redirect: '/replayer' }"
+            class="btn btn--ghost"
+            >Accedi</a
+          >
+        </div>
+        @if (!auth.ready()) {
+          <p class="gate__hint">Sto verificando la sessione…</p>
+        }
+      </div>
+    } @else {
+      <section class="rc" aria-labelledby="rc-t">
+        <h2 id="rc-t" class="visually-hidden">Carica le tue mani</h2>
+
+        <!--
+          ⚠️ **La striscia «come funziona» sta FUORI dai tre passi**, sopra il
+          modulo: chi arriva qui la prima volta non sa che si può incollare un
+          torneo intero, e la spiegazione stava dentro un aiuto richiudibile
+          che nessuno apre. Tre passi, nessuna prosa.
+        -->
+        <ol class="rc__come">
+          <li>
+            <span class="rc__come-n">1</span>
+            <strong>Incolla o trascina</strong>
+            <span>Il resoconto di una mano, o il file di un torneo intero.</span>
+          </li>
+          <li>
+            <span class="rc__come-n">2</span>
+            <strong>Controlla</strong>
+            <span>Ti diciamo quante mani abbiamo trovato prima di salvare nulla.</span>
+          </li>
+          <li>
+            <span class="rc__come-n">3</span>
+            <strong>Rivedi</strong>
+            <span>Azione per azione, con piatto, punto ed EV a fine mano.</span>
+          </li>
+        </ol>
+
+        @if (esito(); as e) {
+          <!-- ── esito: che cosa ho caricato e che cosa posso fare ora ── -->
+          <!--
+            ⚠️ Prima qui c'era **solo un toast**, che sparisce da sé: il modulo
+            tornava vuoto e chi aveva appena caricato un torneo non sapeva né
+            dove fossero finite le mani né che cosa fare dopo. Le due strade
+            sono dichiarate, e restano a schermo finché non si sceglie.
+          -->
+          <div class="rc__esito rc__esito--ok" role="status">
+            <app-icon name="check" [size]="20" />
+            <p class="rc__esito-titolo">
+              @if (e.ids.length === 1) {
+                Mano importata.
+              } @else {
+                {{ e.ids.length }} mani importate.
+              }
+              @if (e.inVetrina) {
+                <span class="rc__esito-nota">È anche nella vetrina qui sotto.</span>
+              }
+            </p>
+            <div class="row rc__esito-azioni">
+              @if (e.ids.length === 1) {
+                <a class="btn btn--primary" [routerLink]="['/replayer', e.ids[0]]">
+                  Rivedi la mano
+                </a>
+              } @else {
+                <a class="btn btn--primary" routerLink="/mie-mani">
+                  Vedi le {{ e.ids.length }} mani
+                </a>
+              }
+              <button type="button" class="btn btn--ghost" (click)="caricaAncora()">
+                Carica altro
+              </button>
+            </div>
+          </div>
+        } @else if (anteprima(); as a) {
+          <!-- ── passo 2: che cosa sto per importare ─────────────────── -->
+          <!--
+            ⚠️ Due passi, e il primo non scrive niente: l'anteprima dice quante
+            mani ci sono, quante sono già in libreria e quante entrano nella
+            quota. È ciò che rende leggibile un caricamento da duecento mani
+            prima di farlo.
+          -->
+          <div class="rc__esito" [class.rc__esito--ko]="a.esito !== 'OK'">
+            <p class="rc__esito-titolo">{{ a.messaggio }}</p>
+
+            <ul class="rc__conti">
+              @if (a.maniTrovate) {
+                <li><strong>{{ a.maniTrovate }}</strong> mani trovate</li>
+              }
+              @if (a.roomLabel) {
+                <li>circuito riconosciuto: <strong>{{ a.roomLabel }}</strong></li>
+              }
+              @if (a.maniDuplicate) {
+                <li>{{ a.maniDuplicate }} già nella tua libreria</li>
+              }
+              @if (a.maniScartate) {
+                <li>
+                  {{ a.maniScartate }} scartate
+                  @for (mo of a.motiviScarto; track mo) {
+                    <span class="rc__motivo">{{ mo }}</span>
+                  }
+                </li>
+              }
+              <!--
+                ⚠️ `indizio` c'era già nella risposta e non veniva mostrato: è la
+                riga che dice «ho riconosciuto un formato che non supportiamo»
+                invece di lasciare chi carica davanti a un rifiuto muto.
+              -->
+              @if (a.indizio) {
+                <li class="rc__motivo">Formato riconosciuto ma non supportato: {{ a.indizio }}</li>
+              }
+              @if (a.importabili < a.maniNuove) {
+                <li class="rc__avviso">
+                  Ne entrano <strong>{{ a.importabili }}</strong>: hai raggiunto il
+                  tuo limite. <a routerLink="/abbonati">Alza il limite</a> oppure
+                  fai spazio nella libreria.
+                </li>
+              }
+            </ul>
+
+            <p class="rc__conclusione">
+              @if (a.importabili > 0) {
+                Verranno importate <strong>{{ a.importabili }}</strong> mani.
+              } @else {
+                Non c’è niente da importare.
+              }
+            </p>
+          </div>
+
+          @if (a.importabili > 0) {
+            <!--
+              ⚠️ La spunta nasce SPENTA, e «ricorda la mia scelta» NON va
+              aggiunto: sarebbe l'opt-out che la decisione D5 ha rifiutato,
+              raggiunto per un'altra strada. Il testo nomina la CONSEGUENZA.
+            -->
+            <label class="rc__vetrina">
+              <input type="checkbox" [(ngModel)]="inVetrina" />
+              <span>
+                Mostra queste mani nella vetrina pubblica — chiunque potrà
+                sfogliarle, anche senza il collegamento.
+              </span>
+            </label>
+          }
+
+          <div class="row">
+            @if (a.importabili > 0) {
+              <button
+                type="button"
+                class="btn btn--primary"
+                [disabled]="importando()"
+                (click)="importa()"
+              >
+                {{ importando() ? 'Importo…' : 'Importa' }}
+              </button>
+            }
+            <button type="button" class="btn btn--ghost" (click)="annulla()">
+              Annulla
+            </button>
+          </div>
+        } @else {
+          <!-- ── passo 1: la zona di rilascio ────────────────────────── -->
+          <div
+            class="rc__zona"
+            [class.is-sopra]="sopraLaZona()"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)"
+            (drop)="onDrop($event)"
+          >
+            <div class="rc__zona-head">
+              <app-icon name="upload" [size]="20" />
+              <p class="rc__zona-testo">
+                Trascina qui i file delle mani, oppure incolla il testo qui sotto.
+              </p>
+              <label class="btn btn--ghost btn--sm rc__scegli">
+                Scegli un file
+                <input
+                  type="file"
+                  multiple
+                  [attr.accept]="estensioni"
+                  class="visually-hidden"
+                  (change)="onFile($event)"
+                />
+              </label>
+            </div>
+
+            <label class="visually-hidden" for="rc-testo">Resoconto della mano</label>
+            <textarea
+              id="rc-testo"
+              class="rc__testo"
+              rows="8"
+              [(ngModel)]="testo"
+              placeholder="Incolla qui il resoconto della mano o del torneo…"
+            ></textarea>
+
+            <p class="rc__aiuto">
+              Accetta <code>.txt</code>, <code>.xml</code>, <code>.log</code> e
+              archivi <code>.zip</code>. Le mani di un torneo restano nell’ordine
+              in cui sono state giocate.
+            </p>
+          </div>
+
+          @if (coda().length) {
+            <ul class="rc__coda">
+              @for (f of coda(); track f.nome) {
+                <li class="rc__file" [class.rc__file--ko]="f.errore">
+                  <app-icon name="file-text" [size]="16" />
+                  <span class="rc__file-nome">{{ f.nome }}</span>
+                  @if (f.errore) {
+                    <span class="rc__file-ko">{{ f.errore }}</span>
+                  } @else {
+                    <span class="rc__file-peso">{{ peso(f.byte) }}</span>
+                  }
+                  <button
+                    type="button"
+                    class="rc__file-x"
+                    [attr.aria-label]="'Togli ' + f.nome"
+                    (click)="togliFile(f.nome)"
+                  >
+                    <app-icon name="x" [size]="16" />
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (troppoGrande()) {
+            <p class="rc__avviso" role="alert">
+              Sono {{ pesoKb() }} kB: il limite per un caricamento è 2048 kB.
+              Togli qualche file e fai due giri.
+            </p>
+          }
+
+          <div class="row">
+            <button
+              type="button"
+              class="btn btn--primary"
+              [disabled]="!puoAnalizzare()"
+              (click)="analizza()"
+            >
+              {{ analizzando() ? 'Sto leggendo…' : 'Analizza' }}
+            </button>
+            <a routerLink="/mie-mani" class="btn btn--ghost">La mia libreria</a>
+          </div>
+        }
+      </section>
+    }
+
+    <!-- ── vetrina ────────────────────────────────────────────────────── -->
+    <!--
+      ⚠️ **FUORI dai rami di autenticazione.** Prima esisteva in due copie
+      identiche di 39 righe, una per ramo, e per giunta senza stato vuoto: la
+      vetrina è opt-in per mano, quindi il più delle volte è vuota, e la pagina
+      si riduceva a una card sola. È ciò che ha fatto chiedere «ma dove si trova
+      questa vetrina?».
+    -->
+    <section class="rv" aria-labelledby="rv-t">
+      <h2 id="rv-t">Mani dalla community</h2>
+      <p class="rv__sotto">
+        Le mani che gli iscritti hanno scelto di mostrare. Aprine una: si rivede
+        azione per azione.
+      </p>
+
+      <!--
+        ⚠️ L'ordine è **dichiarato e cambiabile**. Prima era «punteggio
+        decrescente» e, con i voti quasi tutti a zero, degenerava in «più
+        recenti» senza che si vedesse perché — si leggeva come un ordine a caso.
+        Le pillole riusano il pattern dei filtri di /docs (`badge badge--tag` +
+        `is-active` dentro un `role="group"`): nessuno stile nuovo.
+      -->
+      <div class="row rv__ordini" role="group" aria-label="Ordina la vetrina">
+        @for (o of ORDINI; track o.chiave) {
+          <button
+            type="button"
+            class="badge badge--tag"
+            [class.is-active]="ordine() === o.chiave"
+            [attr.aria-pressed]="ordine() === o.chiave"
+            (click)="cambiaOrdine(o.chiave)"
+          >{{ o.etichetta }}</button>
+        }
+      </div>
+
+      @if (vetrinaCaricando()) {
+        <p class="rv__stato">Carico le mani…</p>
+      } @else if (vetrinaErrore()) {
+        <p class="rv__stato" role="alert">
+          Non sono riuscito a caricare la vetrina. Riprova fra poco: le tue mani
+          e il resto della pagina funzionano lo stesso.
+        </p>
+      } @else if (!vetrina().length) {
+        <div class="empty-state">
+          <p>
+            Per ora la vetrina è vuota. Ci finiscono <strong>solo</strong> le mani
+            per cui chi le ha caricate ha spuntato la casella: di norma una mano
+            resta privata e la si condivide con il suo collegamento.
+          </p>
+        </div>
+      } @else {
+        <ul class="rv__griglia">
+          @for (m of vetrina(); track m.publicId) {
+            <li>
+              <!--
+                ⚠️ **`<article>` con il collegamento sul corpo, non un unico
+                `<a>` come prima.** Il comando di voto è un `<button>`: dentro un
+                link sarebbe markup invalido e, peggio, un clic sul cuore
+                porterebbe via dalla pagina. Le due cose devono restare
+                fratelli.
+              -->
+              <article class="rv__card">
+                <a class="rv__corpo" [routerLink]="['/replayer', m.publicId]">
+                  <span class="rv__formato">{{ m.gameTypeLabel }}</span>
+                  <span class="rv__carte">
+                    @for (c of carteEroe(m); track $index) {
+                      <app-playing-card [carta]="c" />
+                    }
+                  </span>
+                  <span class="rv__pot">piatto {{ pot(m) }}</span>
+                  <span class="rv__meta">
+                    {{ m.tableSize }} giocatori
+                    <!--
+                      ⚠️ La **data esatta**, non «due giorni fa»: è ciò che rende
+                      leggibile l'ordine predefinito, ed è la stessa richiesta
+                      fatta per la tabella della libreria.
+                    -->
+                    · {{ m.playedAt | date: 'd MMM yyyy' }}
+                  </span>
+                </a>
+
+                <div class="rv__voto">
+                  <button
+                    type="button"
+                    class="rv__mipiace"
+                    [class.is-attivo]="mioVoto(m.publicId) === 1"
+                    [attr.aria-pressed]="mioVoto(m.publicId) === 1"
+                    [attr.aria-label]="
+                      (mioVoto(m.publicId) === 1 ? 'Togli il mi piace a' : 'Metti mi piace a')
+                        + ' questa mano'
+                    "
+                    (click)="vota(m, 1)"
+                  >
+                    <!--
+                      ⚠️ Un solo `heart`, **riempito via CSS** quando è attivo.
+                      Un `heart-fill` nuovo avrebbe voluto anche il suo ramo
+                      `@case` in `icon.component.ts`, e senza quello l'icona
+                      esce **vuota in silenzio** — nessun errore, il codice
+                      compila.
+                    -->
+                    <app-icon name="heart" />
+                    <span class="rv__conta">{{ m.likes ?? 0 }}</span>
+                  </button>
+                </div>
+              </article>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <!-- ── i collegamenti interni ──────────────────────────────────────
+      ⚠️ **Di questo blocco è rimasta solo questa riga.** Sopra c'erano un `<h2>`
+      e cinque paragrafi di prosa evergreen: il titolare li ha bocciati lì —
+      «spezza troppo la vista della pagina» — e sono diventati quattro domande
+      della fisarmonica qui sotto. I collegamenti invece **restano**: sono
+      navigazione verso le altre sezioni della scuola, non testo da leggere, e
+      sono l'unico punto della pagina che le nomina.
+      ⚠️ Il conteggio parole della guardia non cala: il testo si è spostato, non
+      perso, e l'estrattore legge dentro un `<details>` chiuso.
+    -->
+    <div class="seo-block">
+      <p class="seo-block__cta">
+        <a routerLink="/guide">Le guide di strategia</a> ·
+        <a routerLink="/tabelle">Le tabelle preflop</a> ·
+        <a routerLink="/lezioni">Le lezioni video</a> ·
+        <a routerLink="/simulatore-varianza">Il simulatore di varianza</a>
+      </p>
+    </div>
+
+    <!-- ── FAQ ────────────────────────────────────────────────────────── -->
+    <!--
+      ⚠️ `<details>` NATIVI e mai un `@if`: il ramo falso non emette markup,
+      quindi il testo sparirebbe dall'HTML prerenderizzato — e con lui la SEO e
+      il pavimento di parole della guardia di build.
+    -->
+    <div class="faq">
+      @for (f of faq; track f.q) {
+        <details class="faq__item">
+          <!--
+            ⚠️ **`faq__q` e `faq__a` non sono decorative.** Erano le uniche
+            mancanti su tutto il sito — sette pagine con la fisarmonica, sei con
+            le classi e questa senza — e la differenza si vede: senza `faq__a` la
+            risposta perde il padding orizzontale e finisce a filo del bordo
+            della card, senza `faq__q` la domanda tiene il margine inferiore di
+            un titolo qualunque e si stacca dal chevron con cui è allineata.
+          -->
+          <summary class="faq__sum"><h3 class="faq__q">{{ f.q }}</h3></summary>
+          <p class="faq__a">{{ f.a }}</p>
+        </details>
+      }
+    </div>
+  </div>
+</section>

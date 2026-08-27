@@ -101,17 +101,21 @@ describe('AdminOverviewComponent (Panoramica)', () => {
   // Terza fonte di `AdminPendingService`: la coda della redazione.
   const isRedazione = (r: { url: string }) =>
     r.url === `${API}/admin/news/pending-count`;
+  // Quarta fonte: le segnalazioni sulle mani del Replayer.
+  const isSegnalazioni = (r: { url: string }) =>
+    r.url === `${API}/admin/hands/reports/pending-count`;
 
   const el = () => fixture.nativeElement as HTMLElement;
   const text = () => el().textContent ?? '';
 
-  /** Risponde alle CINQUE chiamate del costruttore (stats, audit, 3 conteggi). */
+  /** Risponde alle SEI chiamate del costruttore (stats, audit, 4 conteggi). */
   const flushAll = async ({
     stats = statsView() as AdminStatsView | null,
     actions = auditEntries as AdminActionLogEntry[] | null,
     richieste = 5 as number | null,
     inVerifica = 3 as number | null,
     inCoda = 7 as number | null,
+    segnalazioni = 2 as number | null,
   } = {}) => {
     const reqStats = http.expectOne(isStats);
     if (stats === null) {
@@ -160,6 +164,13 @@ describe('AdminOverviewComponent (Panoramica)', () => {
       reqRed.flush({ inCoda });
     }
 
+    const reqSegn = http.expectOne(isSegnalazioni);
+    if (segnalazioni === null) {
+      reqSegn.flush(null, { status: 500, statusText: 'Server Error' });
+    } else {
+      reqSegn.flush({ count: segnalazioni });
+    }
+
     await fixture.whenStable();
     fixture.detectChanges();
   };
@@ -197,6 +208,7 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     http.expectOne(isStats).flush(statsView());
     http.expectOne(isAffiliazioni).flush({ inVerifica: 0 });
     http.expectOne(isRedazione).flush({ inCoda: 0 });
+    http.expectOne(isSegnalazioni).flush({ count: 0 });
     await fixture.whenStable();
   });
 

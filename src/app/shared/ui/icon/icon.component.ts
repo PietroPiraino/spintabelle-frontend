@@ -56,6 +56,20 @@ export const ICON_NAMES = [
   'telegram',
   'facebook',
   'lock',
+  // comandi del replayer delle mani
+  'play',
+  'pause',
+  'arrow-left',
+  'arrow-right',
+  'arrow-up',
+  'arrow-down',
+  'trash',
+  // l'occhio del replayer: «mostra tutte le carte» nella barra dei comandi
+  'eye',
+  'eye-off',
+  'upload',
+  'download',
+  'x',
   // i quattro semi delle carte: divisori, stati vuoti, card di accesso
   'spade',
   'heart',
@@ -327,6 +341,58 @@ export type IconName = (typeof ICON_NAMES)[number];
       @case ('lock') {
         <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
         <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      }
+      @case ('play') {
+        <path d="M6 4v16l14-8z" fill="currentColor" stroke="none" />
+      }
+      @case ('pause') {
+        <path d="M7 4h4v16H7zM13 4h4v16h-4z" fill="currentColor" stroke="none" />
+      }
+      @case ('arrow-left') {
+        <path d="M19 12H5" />
+        <path d="m12 19-7-7 7-7" />
+      }
+      @case ('arrow-right') {
+        <path d="M5 12h14" />
+        <path d="m12 5 7 7-7 7" />
+      }
+      @case ('arrow-up') {
+        <path d="M12 19V5" />
+        <path d="m5 12 7-7 7 7" />
+      }
+      @case ('arrow-down') {
+        <path d="M12 5v14" />
+        <path d="m19 12-7 7-7-7" />
+      }
+      @case ('eye') {
+        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+        <circle cx="12" cy="12" r="3" />
+      }
+      @case ('eye-off') {
+        <path d="M10.6 5.1A10.9 10.9 0 0 1 12 5c6.4 0 10 7 10 7a18.3 18.3 0 0 1-2.7 3.6" />
+        <path d="M6.3 6.3A18 18 0 0 0 2 12s3.6 7 10 7a10.7 10.7 0 0 0 4.3-.9" />
+        <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+        <line x1="2" x2="22" y1="2" y2="22" />
+      }
+      @case ('trash') {
+        <path d="M3 6h18" />
+        <path d="M8 6V4h8v2" />
+        <path d="M19 6l-1 14H6L5 6" />
+        <path d="M10 11v6M14 11v6" />
+      }
+      @case ('upload') {
+        <path d="M12 16V4" />
+        <path d="m7 9 5-5 5 5" />
+        <path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
+      }
+      @case ('download') {
+        <path d="M12 4v12" />
+        <path d="m7 11 5 5 5-5" />
+        <path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
+      }
+      @case ('x') {
+        <path d="M18 6 6 18" />
+        <path d="m6 6 12 12" />
       }
       @case ('spade') {
         <path

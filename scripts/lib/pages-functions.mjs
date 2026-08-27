@@ -91,6 +91,26 @@ export function findInclude(patterns, url) {
 }
 
 /**
+ * L'URL arriva davvero alla Function?
+ *
+ * ⚠️ **`exclude` VINCE su `include`, e fino al 25/08/2026 questa guardia non lo
+ * sapeva.** Cloudflare lo onora — è documentato e serve proprio a ritagliare
+ * un buco dentro un `include` largo — mentre qui si guardavano solo gli
+ * `include`. Conseguenza: un'esclusione sbagliata (o una giusta) non veniva
+ * vista, e la guardia poteva sia gridare al lupo sia tacere su un buco vero.
+ *
+ * Il caso che l'ha resa necessaria: `/replayer/*` cattura **anche**
+ * `/replayer/` — cioè la forma canonica della pagina prerenderizzata della
+ * sezione, che finirebbe alla Function e riceverebbe un 404. L'`exclude` la
+ * ritaglia fuori, e la guardia deve poterlo capire.
+ */
+export function servitaDallaFunction(routes, url) {
+  const exclude = routes?.exclude ?? [];
+  if (exclude.some((p) => includeMatches(p, url))) return false;
+  return findInclude(routes?.include ?? [], url) !== null;
+}
+
+/**
  * Invarianti su un singolo pattern di `include`. Oggi ce n'e' una sola, ed e'
  * la regola d'oro della casa nella sua terza incarnazione (dopo `_redirects` e
  * `_headers`): niente catch-all.

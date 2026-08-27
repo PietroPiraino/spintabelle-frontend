@@ -45,6 +45,15 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'simulatore-varianza', renderMode: RenderMode.Prerender },
   { path: 'chi-siamo', renderMode: RenderMode.Prerender },
   { path: 'abbonati', renderMode: RenderMode.Prerender },
+  // Pagina pubblica del Replayer: teaser + gate nel componente, come /lezioni.
+  // ⚠️ La singola mano (`/replayer/:publicId`) NON e' qui: arriva con la fase 4
+  // insieme alla Pages Function che la compone all'edge. Rotta e consegna sono
+  // la stessa cosa — separarle lascerebbe un buco silenzioso in produzione.
+  { path: 'replayer', renderMode: RenderMode.Prerender },
+  // La singola mano: Client, come le news. In produzione l'HTML iniziale lo
+  // scrivera' la Pages Function (fase 4); questo render mode vale per la
+  // navigazione interna allo SPA.
+  { path: 'replayer/:publicId', renderMode: RenderMode.Client },
   // Pagina prodotto: prerenderizzata dal 16/08/2026, quando le e' stato tolto
   // `authGuard` (una rotta guardata non stabilizza in prerender). Il ramo che
   // finisce nell'HTML statico e' il teaser anonimo; il catalogo vero resta

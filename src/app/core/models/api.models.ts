@@ -1906,3 +1906,224 @@ export interface HealthStatus {
   newsPipeline: string;
   uptime: number;
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Replayer — mani di poker caricate dagli utenti (voce di registro A16)
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * ⚠️ **Il FORMATO è ciò che va in evidenza, non la sala** (decisione del
+ * Titolare del 25/08/2026): all'utente interessa se sta guardando uno Spin & Go,
+ * un Twister, un cash o un MTT. Il backend manda `gameTypeLabel` già pronta —
+ * non ricalcolarla qui, o le due fonti divergono.
+ */
+export type HandGameType =
+  | 'SPIN'
+  | 'TWISTER'
+  | 'MTT'
+  | 'SNG'
+  | 'HUSNG'
+  | 'CASH';
+
+export type HandStreetName = 'PREFLOP' | 'FLOP' | 'TURN' | 'RIVER';
+
+export interface HandPlayerView {
+  seat: number;
+  /** ⚠️ Nickname di un terzo, o la posizione se la mano è stata anonimizzata. */
+  nome: string;
+  chipsIniziali: number;
+  posizione: string;
+  isHero: boolean;
+  /** Note solo per l'eroe e per chi ha mostrato allo showdown. */
+  carte?: string[];
+}
+
+export interface HandActionView {
+  seat: number;
+  tipo: string;
+  /** Quanto questa azione aggiunge al piatto. */
+  importo: number;
+  /** Totale investito nella strada dopo l'azione: le fiche davanti al posto. */
+  totaleStrada: number;
+  potDopo: number;
+  /** Il tipo prima della promozione ad `ALLIN`. */
+  tipoOriginale?: string;
+}
+
+export interface HandStreetView {
+  strada: HandStreetName;
+  board: string[];
+  azioni: HandActionView[];
+  /**
+   * Il piatto **a inizio strada**, ante comprese.
+   *
+   * ⚠️ **Arriva dal server e non si ricalcola qui.** L'aritmetica del piatto è
+   * dominio — la usano il replayer per animare la raccolta, la libreria per
+   * stampare il piatto di ogni strada, e i netti ne dipendono — e con due copie
+   * basta correggerne una perché due pagine del sito dichiarino due piatti
+   * diversi per la stessa mano. La sede unica è `contiDiStrada` in
+   * `backend/src/hands/hands.types.ts`.
+   */
+  pot: number;
+  /** Quanto le puntate di questa strada aggiungono al piatto (ante escluse). */
+  raccolto: number;
+  /** L'eccedenza non chiamata che torna a chi l'ha messa. */
+  restituzione: { seat: number; importo: number } | null;
+}
+
+export interface HandResultView {
+  seat: number;
+  vinto: number;
+  mostrate?: string[];
+}
+
+/**
+ * Una mano come la manda il backend.
+ *
+ * ⚠️ **Gli importi sono INTERI in unità minime**, e `decimali` dice quante cifre
+ * valgono: `0` per le fiche di un torneo, `2` per il denaro (`180` = 1,80 €).
+ * Non è un dettaglio di serializzazione — è il modo in cui un `number` in
+ * virgola mobile non tocca mai l'aritmetica del piatto. Dividere per 100 solo
+ * al momento di **stampare**, mai prima.
+ */
+export interface HandView {
+  publicId: string;
+  room: string;
+  roomLabel: string;
+  network: string;
+  gameType: HandGameType;
+  /** ⚠️ La stringa da mostrare per prima: «Spin & Go», «Twister», «Cash game»… */
+  gameTypeLabel: string;
+  playedAt: string | null;
+  tableSize: number;
+  tableMax: number;
+  decimali: number;
+  currency: string | null;
+  smallBlind: number;
+  bigBlind: number;
+  ante: number;
+  players: HandPlayerView[];
+  heroSeat: number | null;
+  streets: HandStreetView[];
+  board: string[];
+  potFinale: number;
+  rake: number;
+  risultati: HandResultView[];
+  /**
+   * Quanto ciascuno ha guadagnato o perso. ⚠️ **Non deducibile da `risultati`**,
+   * che i parser costruiscono filtrando `vinto > 0` e che quindi contiene i soli
+   * **vincitori**: chi perde non compare affatto.
+   */
+  netti: { seat: number; netto: number }[];
+  /**
+   * Il **punto finale dell'eroe**, calcolato all'importazione dalle sue due
+   * carte più il board completo.
+   *
+   * ⚠️ `null` significa «non calcolabile» — le carte dell'eroe non sono note,
+   * oppure la mano è finita prima che ci fossero cinque carte comuni — **non**
+   * «punto scarso». La cella resta vuota, e vuota è la risposta giusta.
+   */
+  punto: { categoria: string; rango: number; etichetta: string } | null;
+  /** L'equity dell'eroe al momento dell'all-in, fra 0 e 1. */
+  equityEroe: number | null;
+  /** Le fiche che si attendeva, date quell'equity e quel piatto. */
+  chipsAttese: number | null;
+  /**
+   * Fiche vinte meno fiche attese: **positivo = ha corso bene**, come in
+   * Hand2Note. ⚠️ `null` quando non c'è un all-in da valutare, e `null` è
+   * diverso da `0`, che significa «è andata esattamente come doveva».
+   */
+  evDiff: number | null;
+  /** ⚠️ Va **mostrato**: su un all-in preflop l'equity è campionata, non esatta. */
+  evStima: boolean;
+  anonimizzata: boolean;
+  likes: number;
+  dislikes: number;
+  createdAt: string;
+  /**
+   * L'anteprima social generata dal backend. ⚠️ Non la usa l'app Angular — la
+   * pagina condivisa la compone la Pages Function, ed è lei a leggere questo
+   * campo. Sta nel modello perché è quello che l'API risponde, e perché è ciò
+   * che `check-hands-live.mjs` confronta con l'HTML servito.
+   */
+  ogImageUrl: string;
+}
+
+/** Una mano nella libreria personale: porta anche ciò che solo il proprietario vede. */
+export interface HandMineView extends HandView {
+  id: string;
+  inVetrina: boolean;
+  uploadId: string;
+}
+
+export interface HandQuota {
+  /** `-1` = nessun tetto (amministratore). */
+  tetto: number;
+  usate: number;
+  residue: number;
+}
+
+/**
+ * L'esito dell'anteprima: che cosa **succederebbe**, senza che nulla sia stato
+ * scritto. ⚠️ È metà della funzione, non un'ottimizzazione — la frase «ne
+ * importo 43 e ne lascio fuori 144» deve poter essere letta **prima**.
+ */
+export interface HandUploadPreview {
+  esito:
+    | 'OK'
+    | 'VUOTO'
+    | 'TROPPO_GRANDE'
+    | 'TROPPE_MANI'
+    | 'FORMATO_NON_SUPPORTATO'
+    | 'ILLEGGIBILE';
+  messaggio: string;
+  maniTrovate: number;
+  maniNuove: number;
+  maniDuplicate: number;
+  maniScartate: number;
+  motiviScarto: string[];
+  quota: HandQuota;
+  /** Quante ne entrerebbero davvero: `min(nuove, residue)`. */
+  importabili: number;
+  room?: string;
+  roomLabel?: string;
+  gameType?: HandGameType;
+  /** Il formato riconosciuto ma non supportato («888poker», «GGPoker»…). */
+  indizio?: string;
+}
+
+/**
+ * L'ordine della vetrina.
+ *
+ * ⚠️ Chiuso, e i valori sono **gli stessi stringhe che il DTO del server
+ * dichiara**: col `forbidNonWhitelisted` globale un valore non previsto non
+ * viene ignorato, fa fallire l'intera chiamata con 400.
+ */
+export type HandVetrinaOrdine = 'recenti' | 'apprezzate';
+
+/** L'esito di un'importazione, mostrato a schermo finché non si ricomincia. */
+export interface EsitoImport {
+  ids: string[];
+  inVetrina: boolean;
+}
+
+export interface HandImportResult extends HandUploadPreview {
+  uploadId: string;
+  publicIds: string[];
+}
+
+export interface HandMineList {
+  items: HandMineView[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  quota: HandQuota;
+}
+
+export type HandReportReason =
+  | 'DATI_PERSONALI'
+  | 'CONTENUTO_ILLECITO'
+  | 'NON_MIA'
+  | 'FORMATO'
+  | 'ALTRO';

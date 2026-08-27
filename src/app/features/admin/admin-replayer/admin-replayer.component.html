@@ -1,0 +1,185 @@
+<div class="admin-head">
+  <h2>Segnalazioni sulle mani</h2>
+  <div class="ar__filtri">
+    <button
+      type="button"
+      class="btn btn--ghost btn--sm"
+      [class.is-attivo]="stato() === 'APERTA'"
+      (click)="cambiaFiltro('APERTA')"
+    >
+      Aperte
+    </button>
+    <button
+      type="button"
+      class="btn btn--ghost btn--sm"
+      [class.is-attivo]="stato() === 'TUTTE'"
+      (click)="cambiaFiltro('TUTTE')"
+    >
+      Tutte
+    </button>
+  </div>
+</div>
+
+<!--
+  ⚠️ La coda esiste perché chi segnala, nel caso che conta, è un TERZO che si è
+  trovato nominato in una mano: non è un nostro iscritto, non ha altro canale, e
+  non saprà mai se nessuno ha guardato. Una coda non letta trasforma la via di
+  rimozione dell'art. 17 in una cassetta delle lettere murata.
+-->
+<p class="ar__nota">
+  Chi segnala spesso <strong>non è iscritto</strong>: è un giocatore che si è
+  trovato nominato in una mano. Le segnalazioni marcate «senza account» sono
+  quelle da guardare per prime.
+</p>
+
+@if (errore(); as e) {
+  <div class="ar__errore" role="alert">
+    <p>{{ e }}</p>
+    <button type="button" class="btn btn--ghost btn--sm" (click)="carica(page())">
+      Riprova
+    </button>
+  </div>
+} @else if (caricando() && !items().length) {
+  <p class="ar__vuoto">Carico…</p>
+} @else if (!items().length) {
+  <div class="empty-state">
+    <p>
+      @if (stato() === 'APERTA') {
+        Nessuna segnalazione aperta.
+      } @else {
+        Nessuna segnalazione.
+      }
+    </p>
+  </div>
+} @else {
+  <ul class="ar__lista">
+    @for (r of items(); track r.id) {
+      <li class="ar__riga" [class.ar__riga--aperta]="aperto() === r.id">
+        <button type="button" class="ar__sommario" (click)="apri(r.id)">
+          <span class="ar__testa">
+            @if (r.senzaAccount) {
+              <span class="ar__anonimo">Senza account</span>
+            }
+            <span class="ar__motivo">{{ etichettaMotivo(r.motivo) }}</span>
+            <span class="badge badge--tag">{{ r.stato }}</span>
+          </span>
+          <span class="ar__meta">
+            {{ data(r.createdAt) }}
+            @if (r.mano) {
+              · {{ r.mano.roomLabel }}
+              @if (r.mano.status === 'RIMOSSA') {
+                · <strong>già rimossa</strong>
+              }
+              @if (r.mano.anonimizzata) {
+                · <strong>già anonimizzata</strong>
+              }
+            } @else {
+              · <strong>mano non più esistente</strong>
+            }
+          </span>
+        </button>
+
+        @if (aperto() === r.id) {
+          <div class="ar__pannello">
+            @if (r.dettaglio) {
+              <p class="ar__dettaglio">«{{ r.dettaglio }}»</p>
+            }
+            @if (r.contatto) {
+              <p class="ar__contatto">Recapito lasciato: {{ r.contatto }}</p>
+            }
+            @if (r.mano) {
+              <p class="ar__giocatori">
+                Al tavolo:
+                @for (p of r.mano.players; track p.nome) {
+                  <span>{{ p.posizione }} {{ p.nome }}</span>
+                }
+              </p>
+              <a
+                class="btn btn--ghost btn--sm"
+                [routerLink]="['/replayer', r.handPublicId]"
+                target="_blank"
+                >Apri la mano</a
+              >
+            }
+
+            @if (r.stato === 'APERTA') {
+              <label class="ar__motivo-eti" [attr.for]="'ar-m-' + r.id">
+                Motivo della decisione (resta agli atti)
+              </label>
+              <input
+                [id]="'ar-m-' + r.id"
+                class="ar__input"
+                type="text"
+                [(ngModel)]="motivo"
+                placeholder="Perché hai deciso così…"
+              />
+
+              <div class="ar__azioni">
+                <!--
+                  ⚠️ TRE AZIONI, TRE SIGNIFICATI. «Togli i nomi» è la risposta
+                  all'art. 17 che non distrugge la mano: il terzo esce dal
+                  documento e chi studia continua a vederla. «Rimuovi» toglie la
+                  pagina ma lascia il nome nel documento — non è una
+                  cancellazione, e non va usata quando la richiesta è quella.
+                -->
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  (click)="anonimizza(r)"
+                >
+                  Togli i nomi (irreversibile)
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="rimuovi(r)">
+                  Rimuovi la mano
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="ripristina(r)"
+                >
+                  Ripristina
+                </button>
+                <span class="ar__sep"></span>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="accogli(r)">
+                  Chiudi: accolta
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="respingi(r)">
+                  Chiudi: respinta
+                </button>
+              </div>
+            } @else {
+              <p class="ar__decisa">
+                Chiusa come <strong>{{ r.stato }}</strong>
+                @if (r.decisionNote) {
+                  — «{{ r.decisionNote }}»
+                }
+              </p>
+            }
+          </div>
+        }
+      </li>
+    }
+  </ul>
+
+  @if (totalPages() > 1) {
+    <div class="ar__pager">
+      <button
+        type="button"
+        class="btn btn--ghost btn--sm"
+        [disabled]="page() <= 1"
+        (click)="carica(page() - 1)"
+      >
+        Precedente
+      </button>
+      <span>{{ page() }} di {{ totalPages() }}</span>
+      <button
+        type="button"
+        class="btn btn--ghost btn--sm"
+        [disabled]="page() >= totalPages()"
+        (click)="carica(page() + 1)"
+      >
+        Successiva
+      </button>
+    </div>
+  }
+}
