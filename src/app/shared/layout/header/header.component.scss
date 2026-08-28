@@ -152,14 +152,26 @@
 }
 
 @media (min-width: 1025px) {
-  .header__has-menu:hover > .header__menu,
+  // ⚠️ L'HOVER apre solo quando NESSUN menu è aperto per clic (`.is-locked` sta
+  // sulla `<nav>` e vale `openDropdown() !== null`). Prima era `:hover` nudo, e
+  // le due condizioni si sommavano: cliccato «Studia», il suo menu restava
+  // aperto per `.is-open` — che il mouse non spegne — e passando su «Scuola» si
+  // apriva anche il secondo. Essendo entrambi `position: absolute` in wrapper
+  // fratelli, i due pannelli finivano uno sull'altro.
+  //
+  // ⚠️ `:focus-within` NON entra in questa regola e resta sempre attivo: è ciò
+  // che tiene aperto il menu mentre si tabula fra le sue voci. Spegnerlo
+  // insieme all'hover sostituirebbe un difetto visivo con una tastiera rotta.
+  .header__nav:not(.is-locked) .header__has-menu:hover > .header__menu,
   .header__has-menu:focus-within > .header__menu {
     opacity: 1;
     translate: 0 0;
     pointer-events: auto;
   }
 
-  .header__group:hover .header__caret,
+  // Il caret segue la stessa regola: girato in giù su un menu che non si apre
+  // sarebbe una promessa non mantenuta.
+  .header__nav:not(.is-locked) .header__group:hover .header__caret,
   .header__group:focus-within .header__caret {
     transform: rotate(225deg);
   }

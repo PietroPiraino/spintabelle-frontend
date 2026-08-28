@@ -18,7 +18,21 @@
       <span></span><span></span><span></span>
     </button>
 
-    <nav id="nav-principale" class="header__nav" [class.is-open]="menuOpen()" aria-label="Navigazione principale">
+    <!--
+      ⚠️ `is-locked` = «un menu è già aperto per CLIC». Spegne l'apertura per
+      HOVER degli altri gruppi (vedi header.component.scss): senza, cliccando
+      «Studia» e passando il mouse su «Scuola» restavano aperti ENTRAMBI —
+      `.is-open` e `:hover` sono due condizioni indipendenti sulla stessa
+      proprietà, e i due `.header__menu` sono `position: absolute` in wrapper
+      fratelli, quindi si sovrapponevano.
+    -->
+    <nav
+      id="nav-principale"
+      class="header__nav"
+      [class.is-open]="menuOpen()"
+      [class.is-locked]="openDropdown() !== null"
+      aria-label="Navigazione principale"
+    >
       <!-- gruppi a tendina: hover/focus su desktop, accordion (tap) su mobile -->
       @for (group of groups; track group.id) {
         <div class="header__has-menu header__group" [class.is-open]="openDropdown() === group.id">
