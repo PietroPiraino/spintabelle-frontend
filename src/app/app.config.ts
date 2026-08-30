@@ -28,7 +28,6 @@ import {
   provideRouter,
   withComponentInputBinding,
   withInMemoryScrolling,
-  withViewTransitions,
 } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -90,7 +89,18 @@ export const appConfig: ApplicationConfig = {
       // perché il 'top' del router scatta anche quando cambiano SOLO i query
       // param (es. navigare l'albero delle tabelle) e riporterebbe in cima
       withInMemoryScrolling({ anchorScrolling: 'enabled' }),
-      withViewTransitions(),
+      // ⚠️ NIENTE `withViewTransitions()`, tolto il 30/08/2026 — e non e' una
+      // svista da "ripristinare". Faceva partire un `document.startViewTransition()`
+      // a OGNI navigazione con query param: ogni passo del replayer, ogni
+      // cambio nel visualizzatore tabelle, ogni clic su «Simula» nel
+      // simulatore (`run()` chiama `syncUrl()` prima dell'await). Ognuno
+      // costava due rasterizzazioni dell'intero viewport dentro il task del
+      // click, ed e' cio' che il report Cloudflare del 29-30/08/2026 misurava
+      // come 224 e 208 ms di INP sui pulsanti del replayer.
+      // In tutto `src/` non c'era UN SOLO `view-transition-name` ne' una regola
+      // `::view-transition`: nessuno aveva mai disegnato una transizione, si
+      // pagava solo la dissolvenza di default dello user agent. Era arrivata
+      // col boilerplate iniziale (`git log -S` -> un solo commit, 75fb3a4).
     ),
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: LOCALE_ID, useValue: 'it' },
@@ -175,8 +185,13 @@ export const appConfig: ApplicationConfig = {
           } else if (
             !e.anchor &&
             path !== lastPath &&
-            // l'evento arriva DOPO la view transition: se nel frattempo
-            // l'utente ha già scrollato, non strappargli la pagina di mano
+            // ⚠️ NON e' codice morto, anche se fino al 30/08/2026 il commento
+            // qui parlava di view transitions (tolte quel giorno, sopra). La
+            // ragione e' un'altra e vale ancora: `RouterScroller` emette
+            // l'evento `Scroll` un macrotask/frame DOPO `NavigationEnd`
+            // (`Promise.race` fra `setTimeout(0)` e `requestAnimationFrame`).
+            // In quel frame l'utente puo' aver gia' cominciato a scorrere: se
+            // e' successo, non gli si strappa la pagina di mano.
             Math.abs(window.scrollY - yAtEnd) < 4
           ) {
             viewport.scrollToPosition([0, 0]); // pagina nuova
