@@ -2,7 +2,11 @@
   display: block;
   position: relative;
   width: 100%;
-  height: clamp(240px, 34vh, 400px);
+  // ⚠️ La misura vive in `varianza.component.scss` (`:host`), qui si
+  // consuma: e' la stessa altezza che lo scheletro dei risultati deve
+  // riservare, e due copie dello stesso numero in due file divergono in
+  // silenzio. Il fallback serve se il componente viene usato altrove.
+  height: var(--vz-bust-h, clamp(240px, 34vh, 400px));
   background: var(--surface-1);
   border: 1px solid var(--line);
   border-radius: var(--radius);

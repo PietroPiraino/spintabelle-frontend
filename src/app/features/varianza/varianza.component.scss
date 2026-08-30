@@ -1,5 +1,15 @@
 :host {
   display: block;
+
+  // ⚠️ FONTE UNICA delle altezze dei due grafici. Le consumano gli `:host` di
+  // `app-varianza-graph` e `app-varianza-bust-chart` (le custom property
+  // ereditano) e lo scheletro dei risultati qui sotto. Prima erano tre numeri
+  // in tre file: `.vz__empty` e il grafico avevano gia' la stessa `clamp`
+  // scritta due volte, e se qualcuno ne avesse cambiata una il CLS del grafico
+  // sarebbe tornato senza che nulla lo segnalasse. Sorvegliato da
+  // scripts/lib/varianza-scheletro.test.mjs.
+  --vz-graph-h: clamp(340px, 52vh, 620px);
+  --vz-bust-h: clamp(240px, 34vh, 400px);
 }
 
 // ⚠️ La pagina era FUORI dal sistema: `.vz` reimplementava a mano il
@@ -284,11 +294,20 @@ input[type='number']:focus-visible {
 }
 .vz__progress {
   height: 4px;
+  // ⚠️ `visibility` e NON `display`/`opacity`: deve OCCUPARE lo spazio (e' il
+  // punto) e restare fuori dall'albero di accessibilita'. Con il vecchio `@if`
+  // la barra spariva a fine simulazione, il form si accorciava di 4px + 1.1rem
+  // di gap = 21,6px, e sotto i 900px trascinava `.vz__main` con se'.
+  visibility: hidden;
   border-radius: 999px;
   background: var(--bg-1);
   overflow: hidden;
   position: relative;
 }
+.vz__progress.is-on {
+  visibility: visible;
+}
+
 .vz__progress::after {
   content: '';
   position: absolute;
@@ -435,6 +454,15 @@ input[type='number']:focus-visible {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text);
+  // ⚠️ DUE RIGHE SEMPRE. E' l'unico pezzo del blocco risultati la cui altezza
+  // dipende dal VALORE e non dal testo statico: a quattro colonne «da −1.234 a
+  // 5.678 buy-in» va a capo e «±1.234 buy-in» no, a una colonna nessuno dei
+  // due. Nessuno scheletro puo' indovinare quale caso vivra', e la differenza
+  // (~28px per riga di griglia) tornerebbe come spostamento esattamente nel
+  // frame che lo scheletro esiste per spegnere.
+  // Prezzo: card un po' piu' arieggiate quando il valore sta su una riga.
+  // Costo zero sul primo paint — questo blocco esiste solo dopo una simulazione.
+  min-height: calc(1.1rem * 1.6 * 2);
 }
 .vz__card-sub {
   font-size: 0.78rem;
@@ -623,7 +651,7 @@ input[type='number']:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  height: clamp(340px, 52vh, 620px);
+  height: var(--vz-graph-h);
   background: var(--surface-1);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -757,4 +785,61 @@ input[type='number']:focus-visible {
 .vz__credits a {
   color: var(--text-muted);
   text-decoration: underline;
+}
+
+/* ---------- scheletro dei risultati ---------- */
+//
+// ⚠️ Lo shimmer e' lo STESSO di `.pf__skeleton` (tables.component.scss) e di
+// `.header__auth-wait` (header.component.scss): gradiente 100deg,
+// `background-size: 220% 100%`, 1.4s linear infinite, `background-position:
+// -120% 0`. Non se ne inventa un terzo. (Il pattern e' duplicato localmente in
+// tre componenti e non promosso a utility: promuoverlo tocca `_utilities.scss`,
+// che e' usato ovunque, e va deciso a parte.)
+//
+// Nessuna `prefers-reduced-motion` locale: la spegne gia' il reset globale
+// (`styles/_reset.scss`, `animation-duration: .01ms !important`).
+
+.vz__skel-bar {
+  display: block;
+  width: 68%;
+  height: 1.1em;
+  border-radius: 4px;
+  background: linear-gradient(100deg, var(--bg-0) 30%, var(--line) 50%, var(--bg-0) 70%);
+  background-size: 220% 100%;
+  animation: vz-shimmer 1.4s linear infinite;
+}
+
+.vz__skel-bar--pct {
+  width: 4.5ch;
+  // ⚠️ `inline-block` e non `block`: questa barra sta dentro uno <strong>
+  // INLINE, in mezzo a una frase. Da `block` spezzava il paragrafo in due
+  // righe e `.vz__bust-head` veniva 29px piu' alta su desktop e 50 su mobile —
+  // cioe' lo scheletro sovra-riservava e il blocco si ACCORCIAVA all'arrivo
+  // dei dati: uno spostamento, solo nel verso opposto. Misurato, non dedotto:
+  // il primo sospetto (il <select> finto) era sbagliato e i numeri non si sono
+  // mossi di un pixel.
+  display: inline-block;
+  vertical-align: middle;
+}
+
+// ⚠️ Il <select> dello scheletro e' DISABILITATO e non travestito: il colore
+// del testo resta quello vero, cosi' la scatola e' identica a quella del
+// blocco pieno. Solo l'aria di "non ancora pronto" viene dall'opacita'.
+.vz__bust[aria-hidden='true'] .input {
+  opacity: 0.55;
+}
+
+.vz__skel-chart {
+  // ⚠️ La STESSA altezza di `app-varianza-bust-chart`, dalla fonte unica in
+  // `:host`. Un numero ricopiato qui divergerebbe al primo ritocco del grafico.
+  height: var(--vz-bust-h);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+@keyframes vz-shimmer {
+  to {
+    background-position: -120% 0;
+  }
 }

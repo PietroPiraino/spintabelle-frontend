@@ -138,9 +138,17 @@
         <button type="submit" class="vz__run" [disabled]="running()">
           @if (running()) { Simulazione… {{ (progress() * 100).toFixed(0) }}% } @else { Simula }
         </button>
-        @if (running()) {
-          <div class="vz__progress" [style.--p.%]="progress() * 100"></div>
-        }
+        <!--
+          ⚠️ SEMPRE nel flusso, visibilità pilotata dalla classe. Con un `@if`
+          questo elemento spariva alla FINE della simulazione — cioè secondi
+          dopo il clic, fuori dai 500ms in cui uno spostamento è scusato — e il
+          <form> (flex column, gap 1.1rem) si accorciava di 21,6px. Sotto i
+          900px `.vz__grid` è a colonna singola e `.vz__main` sta SOTTO il
+          form: è il `div.vz__main` con 12 occorrenze nella vista debug
+          Cloudflare del 30/08/2026.
+        -->
+        <div class="vz__progress" [class.is-on]="running()"
+             [style.--p.%]="progress() * 100" aria-hidden="true"></div>
       </form>
 
       <!-- ============ GRAFICO + STATISTICHE ============ -->
@@ -211,6 +219,15 @@
           @if (result()) {
             <span class="vz__meta">{{ fmtBuyins(result()!.numSims) }} simulazioni ·
               {{ fmtBuyins(result()!.numGames) }} partite</span>
+          } @else if (mostraScheletro()) {
+            <!--
+              ⚠️ Stesso testo, non un segnaposto: `numSims()`/`numGames()` sono
+              già esattamente ciò che il risultato riporterà (`buildConfig` li
+              clampa a valori già clampati da `onNum`). `.vz__graph-tools` è
+              flex-wrap: su un telefono questo span può valere una riga intera.
+            -->
+            <span class="vz__meta">{{ fmtBuyins(numSims()) }} simulazioni ·
+              {{ fmtBuyins(numGames()) }} partite</span>
           }
         </div>
 
@@ -321,6 +338,56 @@
               più estrema. Non è una promessa di risultato.
             </p>
           </div>
+        } @else if (mostraScheletro()) {
+          <!--
+            SCHELETRO DEI RISULTATI — non è una copia approssimata del blocco
+            qui sopra: usa le STESSE classi e le STESSE stringhe, e rende per
+            davvero i valori già noti al clic (`numGames`, `mode`, `avgStack`).
+            Così le altezze si auto-misurano dallo stesso CSS invece di essere
+            numeri indovinati che invecchiano al primo ritocco. Le uniche
+            incognite sono i sei valori di card, e stanno dentro
+            `.vz__skel-bar`, che non ha altezza propria: gliela dà il
+            `min-height` di `.vz__card-v`.
+
+            PERCHÉ ESISTE: `run()` accende `running()` in modo sincrono sul
+            clic (quel riassetto è dentro i 500ms ed è scusato), ma il worker
+            risponde SECONDI dopo — e lì compaiono in un solo frame ~1.400px
+            mai riservati. Fuori dai 500ms, contano per intero.
+
+            ⚠️ `aria-hidden`: chi usa uno screen reader sente già
+            «Simulazione in corso… X%» da `.vz__empty-title`.
+          -->
+          <div class="vz__results" aria-hidden="true">
+            <h2 class="vz__results-title">Cosa aspettarti su {{ fmtBuyins(numGames()) }} partite</h2>
+
+            <div class="vz__cards">
+              @for (haSub of skelSub(); track $index) {
+                <div class="vz__card">
+                  <span class="vz__card-k">{{ skelLabel[$index] }}</span>
+                  <span class="vz__card-v"><span class="vz__skel-bar"></span></span>
+                  @if (haSub) { <span class="vz__card-sub">{{ skelSubLabel[$index] }}</span> }
+                </div>
+              }
+            </div>
+
+            <!-- Due <details> CHIUSI: 44px di summary + 20px di margin-top ciascuno. -->
+            <details class="vz__more">
+              <summary class="vz__more-sum">Differenza fra EV e mediana</summary>
+            </details>
+            <details class="vz__dist vz__more">
+              <summary class="vz__more-sum vz__dist-title">
+                Distribuzione dei risultati su {{ fmtBuyins(numGames()) }} partite
+              </summary>
+            </details>
+
+            @if (mode() === 'chip') {
+              <p class="vz__hint">Valori in <strong>chip EV puri</strong> (senza rake né montepremi): è l'abilità grezza. Stack medio: ~{{ fmtBuyins(avgStack()) }} chip = 1 buy-in.</p>
+            }
+            <p class="vz__disclaimer">
+              Numeri indicativi da simulazione Monte Carlo: la varianza reale può essere anche
+              più estrema. Non è una promessa di risultato.
+            </p>
+          </div>
         }
 
         @if (bustData(); as bust) {
@@ -347,6 +414,49 @@
             </div>
             <app-varianza-bust-chart [bust]="bust" [numGames]="result()!.numGames"
               [selected]="selectedBankroll()" />
+            <p class="vz__hint">
+              Ogni curva è un bankroll: la quota di giocatori che, col tuo edge, ha perso l'intero
+              bankroll (bust) entro quella partita. Più buy-in tieni, più la curva resta bassa. Qui il
+              gioco non si ferma mai (nessun cash-out): è lo scenario peggiore per il bankroll.
+            </p>
+          </section>
+        } @else if (mostraScheletro() && mode() === 'money') {
+          <!--
+            ⚠️ E LA SEZIONE ROVINA, che è metà del problema e la parte che si
+            dimentica: da sola vale ~150-190px di titolo, testata e nota, OLTRE
+            ai 240-400px del grafico. Uno scheletro che riservasse solo le card
+            lascerebbe quel residuo nello stesso identico frame che si voleva
+            spegnere.
+
+            Solo in modalità soldi: `bustData()` è null in EV Chip.
+          -->
+          <section class="vz__bust" aria-hidden="true">
+            <h2 class="vz__results-title">Rischio di rovina</h2>
+            <div class="vz__bust-head">
+              <label class="vz__bust-pick">
+                <span>Ho</span>
+                <!--
+                  ⚠️ Un <select> VERO, disabilitato — non uno <span> travestito.
+                  Con lo <span> la testata veniva 29px più alta su desktop e
+                  50px su mobile (misurato), cioè lo scheletro sovra-riservava
+                  e il blocco si accorciava all'arrivo dei dati: uno
+                  spostamento, solo nel verso opposto. L'altezza di un campo
+                  non si indovina, si prende dall'elemento che la produce.
+                  Disabilitato non è focalizzabile, e la sezione è aria-hidden.
+                -->
+                <select class="input" disabled tabindex="-1">
+                  <option>{{ selectedBankroll() }}</option>
+                </select>
+                <span>buy-in di bankroll</span>
+              </label>
+              <p class="vz__bust-headline">
+                →
+                <strong class="vz__bust-num"><span class="vz__skel-bar vz__skel-bar--pct"></span></strong>
+                di rischio di rovina su {{ fmtBuyins(numGames()) }} partite
+              </p>
+            </div>
+            <!-- Stessa altezza di `app-varianza-bust-chart`, da `--vz-bust-h`. -->
+            <div class="vz__skel-chart"></div>
             <p class="vz__hint">
               Ogni curva è un bankroll: la quota di giocatori che, col tuo edge, ha perso l'intero
               bankroll (bust) entro quella partita. Più buy-in tieni, più la curva resta bassa. Qui il

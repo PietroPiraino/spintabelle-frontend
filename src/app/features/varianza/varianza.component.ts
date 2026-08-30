@@ -146,6 +146,82 @@ export class VarianzaComponent {
     this.mode() === 'chip' ? this.chipResult() : this.moneyResult(),
   );
 
+  /**
+   * La modalità del run IN VOLO, `null` se non ne gira nessuno. Non è un
+   * doppione di `running()`: serve a sapere *per quale* modalità si sta
+   * simulando. Vedi `mostraScheletro`.
+   */
+  private readonly runningMode = signal<SimMode | null>(null);
+
+  /**
+   * Se mostrare lo scheletro dei risultati.
+   *
+   * ⚠️ NON è `running()`, e NON è `!result()`. Le due scorciatoie sono
+   * entrambe sbagliate, in due modi diversi:
+   *
+   * 1. Con `!result()` da solo lo scheletro comparirebbe a chi arriva sulla
+   *    pagina e non ha mai simulato: ~1.400px di finto contenuto sotto un
+   *    riquadro che dice «Pronto a scoprire la tua varianza?», che spingono
+   *    giù `.vz__seo`, le FAQ e il footer per sempre.
+   *
+   * 2. Con `running()` da solo si introdurrebbe un difetto PEGGIORE di quello
+   *    che questo scheletro esiste per curare, perché `setMode()` non annulla
+   *    il run in volo: clic su Simula in modalità soldi → dopo un secondo
+   *    l'utente passa a EV Chip → il worker finisce quattro secondi dopo e
+   *    scrive `moneyResult`, che `result()` non guarda più → `running` cade e
+   *    lo scheletro CROLLA di ~1.400px a quattro secondi dall'ultimo clic,
+   *    cioè fuori dalla finestra di 500ms in cui uno spostamento è scusato.
+   *
+   * Con la congiunzione, al cambio di modalità `runningMode()` smette di
+   * combaciare con `mode()` e lo scheletro sparisce SUBITO, dentro i 500ms del
+   * clic che ha cambiato modalità.
+   */
+  protected readonly mostraScheletro = computed(
+    () => !this.result() && this.runningMode() === this.mode(),
+  );
+
+  /**
+   * Quali delle sei card hanno il `.vz__card-sub`, nell'ordine del template.
+   *
+   * ⚠️ Non è ridondante: a una colonna (telefono) le righe della griglia sono
+   * per-card, quindi una card senza sottotitolo è davvero più bassa e lo
+   * scheletro deve riprodurlo. A due o più colonne le righe si pareggiano da
+   * sole e questo array non fa danno.
+   */
+  protected readonly skelSub = computed<readonly boolean[]>(() =>
+    this.mode() === 'money'
+      ? [!!this.buyinEur(), true, true, true, true, false]
+      : [false, true, true, true, true, false],
+  );
+
+  /**
+   * Le sei etichette del blocco pieno, VERBATIM e nello stesso ordine.
+   *
+   * ⚠️ Copiate qui apposta: è ciò che fa andare a capo `.vz__card-k` negli
+   * stessi punti, e quindi riservare l'altezza giusta invece di indovinarla.
+   * Un rinomino nel blocco pieno che non arrivasse qui produrrebbe uno
+   * scheletro di altezza diversa, cioè uno spostamento — in silenzio.
+   * Sorvegliato da `scripts/lib/varianza-scheletro.test.mjs`.
+   */
+  protected readonly skelLabel = [
+    'Risultato mediano',
+    'Nel 90% dei casi',
+    'Downswing tipico',
+    'Punto più basso',
+    'Break-even più lungo',
+    'Deviazione std finale',
+  ] as const;
+
+  /** I sottotitoli, stessa regola. Il ` ` tiene la riga alle card senza testo. */
+  protected readonly skelSubLabel = [
+    ' ',
+    'tra il 5° e il 95° percentile',
+    '1 su 20: fino a  ',
+    'nel 5% dei casi peggiori',
+    '1 su 20: fino a  ',
+    ' ',
+  ] as const;
+
   // --- derivati / anteprima live ---
   protected readonly format = computed(() => findFormat(this.formatId()) ?? this.formats[0]);
   protected readonly tier = computed(() => pickTier(this.format(), this.buyinEur()));
@@ -351,6 +427,11 @@ export class VarianzaComponent {
     const seed = this.pendingSeed ?? ((Math.floor(Math.random() * 0xffffffff) >>> 0) || 1);
     this.pendingSeed = null;
     const cfg = this.buildConfig(seed);
+    // ⚠️ Da `cfg.mode` e non da `mode()`: è la modalità in cui il risultato
+    // verrà davvero scritto qui sotto, ed è quella con cui `mostraScheletro`
+    // deve confrontarsi. Se l'utente cambia modalità mentre il worker gira, i
+    // due smettono di combaciare e lo scheletro sparisce subito.
+    this.runningMode.set(cfg.mode);
     this.syncUrl(seed);
     try {
       const res = await this.runner.run(cfg, (f) => this.progress.set(f));
@@ -360,6 +441,7 @@ export class VarianzaComponent {
       this.error.set(e instanceof Error ? e.message : 'Errore durante la simulazione.');
     } finally {
       this.running.set(false);
+      this.runningMode.set(null);
     }
   }
 
