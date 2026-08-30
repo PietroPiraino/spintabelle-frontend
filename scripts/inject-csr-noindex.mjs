@@ -1,4 +1,22 @@
-// Inietta il `noindex` nella shell CSR — e SOLO in quella.
+// Prepara la shell CSR — e SOLO quella. TRE chirurgie, non una:
+//   1. inietta il `<meta name="robots" content="noindex, follow">`
+//   2. TOGLIE il `<link rel="canonical">` ereditato da src/index.html
+//   3. inlina il foglio di stile GLOBALE nella <head>
+//
+// ⚠️ IL NOME DEL FILE DICE SOLO LA PRIMA, ed e' impreciso da prima che ci fosse
+// la terza. La rinomina costa 18 riferimenti in 12 file (package.json, i
+// messaggi d'errore di check-prerender-content.mjs, check-news-live.mjs,
+// public/_headers, public/robots.txt, README.md, i due renderer di bordo, tre
+// test): va fatta come commit separato e meccanico, con
+// `grep -rn "inject-csr-noindex"` a zero prima del merge, mai insieme a una
+// modifica funzionale. Nel frattempo a tenere onesto il nome c'e'
+// scripts/lib/catena-build.test.mjs, che verifica gli anelli della catena.
+//
+// PERCHE' UN SOLO SCRIPT e non tre. Due programmi che aprono, leggono,
+// modificano e riscrivono lo STESSO file hanno una lost update se qualcuno li
+// mette in parallelo, li riordina, o ne infila un terzo in mezzo: file valido,
+// deploy verde, e una chirurgia su tre. Un lettore, uno scrittore, una
+// post-condizione verificata sulla stessa stringa in memoria.
 //
 // PERCHE' ESISTE. Le rotte non prerenderizzate (RenderMode.Client: /login,
 // /registrazione, /negozio, /allenamento, /account, /admin, /live/:id/stanza,
@@ -38,12 +56,19 @@ import {
   injectNoindex,
   stripCanonical,
 } from './lib/csr-noindex.mjs';
+import {
+  fogliDichiarati,
+  inserisciCssInline,
+  percorsoDelFoglio,
+  verificaCssInline,
+} from './lib/csr-css.mjs';
 
 // ⚠️ Default `process.cwd()` e non un percorso Windows assoluto: su POSIX
 // `C:/…` non e' assoluto e verrebbe attaccato alla cwd, con il risultato che
 // lo script non farebbe nulla proprio sul runner di Cloudflare.
 const ROOT = resolve(process.argv[2] ?? process.cwd());
-const SHELL = join(ROOT, 'dist/frontend/browser/index.csr.html');
+const BROWSER = join(ROOT, 'dist/frontend/browser');
+const SHELL = join(BROWSER, 'index.csr.html');
 
 if (!existsSync(join(ROOT, 'dist/frontend/browser'))) {
   console.warn(
@@ -107,6 +132,79 @@ if (hasCanonical(out)) {
 } else {
   fatto.push('nessun canonical da rimuovere');
 }
+
+// ---- 3. Il foglio globale INLINE ----------------------------------------
+//
+// PERCHE'. Beasties (dipendenza transitiva di @angular/build, si riconosce da
+// `data-beasties-container` su <html>) calcola la critical CSS dall'HTML RESO.
+// In index.csr.html <app-root> contiene 447 byte di boot-loader: ha inlinato,
+// correttamente e inutilmente, la critical CSS dell'ANIMAZIONE DI CARICAMENTO.
+// Misurato il 30/08/2026: due <style> per 9.279 B, e `h1{`, `.container{`,
+// `.section{`, `.page-hero` ASSENTI — contro i 37-44 kB delle prerenderizzate.
+// Ma quella shell e' il corpo di 12 rotte client (public/_redirects) E delle
+// pagine composte all'edge (/replayer/*, /news, /news/*), dove le Function
+// sostituiscono il boot-loader con un articolo INTERO: dipinto senza CSS e
+// riflowato quando il <link media="print"> (priorita' Lowest, dietro dieci
+// modulepreload) atterra. E' il 12% di CLS «insufficiente» del report
+// Cloudflare del 29-30/08/2026.
+//
+// ⚠️ PREMESSA CHE NESSUNA GUARDIA PUO' VERIFICARE: questo serve a qualcosa
+// finche' la shell resta il corpo di quelle pagine. Se un giorno /replayer/*
+// diventasse prerenderizzata, o `_redirects` cambiasse, l'iniezione resterebbe
+// verde e smetterebbe di servire. Chi tocca quei file guardi anche qui.
+//
+// I DUE <link> RESTANO. Se l'iniezione fallisse o fosse incompleta il sito
+// resta stilato, e il foglio esterno — che nel documento sta DOPO il blocco
+// iniettato — vince a parita' di specificita': la copia inline e' un
+// acceleratore, non l'autorita'. Toglierli e' un secondo giro, dopo che il CLS
+// e' misurato buono. Costo di questa scelta: ~6 kB gzip di doppione alla PRIMA
+// visita (il foglio ha l'hash nel nome, quindi poi e' in cache lunga).
+const hrefs = fogliDichiarati(out);
+if (!hrefs.length) {
+  console.error(
+    '\n❌ Nessun <link rel="stylesheet"> nella shell CSR.' +
+      "\n   E' l'unico modo che ho di sapere QUALE foglio inlinare: il nome porta" +
+      "\n   l'hash del build e non e' cablabile. O Beasties ha cambiato forma, o" +
+      "\n   il foglio globale e' sparito: aggiorna fogliDichiarati() in" +
+      '\n   scripts/lib/csr-css.mjs (coperta da npm run test:scripts).\n',
+  );
+  process.exit(1);
+}
+
+let byteInline = 0;
+try {
+  const fogli = hrefs.map((href) => {
+    const css = readFileSync(join(BROWSER, percorsoDelFoglio(href)), 'utf8');
+    byteInline += css.length;
+    return { href, css };
+  });
+  out = inserisciCssInline(out, fogli);
+} catch (e) {
+  console.error(`\n❌ Non riesco a inlinare il CSS globale nella shell CSR: ${e.message}\n`);
+  process.exit(1);
+}
+
+// ⚠️ LA POST-CONDIZIONE, sullo STESSO predicato che usera' poi
+// check-prerender-content.mjs: due copie della stessa verifica in due file sono
+// una divergenza che aspetta solo di succedere. Un'iniezione che non inietta e
+// non lo dice e' il modo in cui una rete di sicurezza si stacca in silenzio.
+const guaiCss = verificaCssInline(out, (percorso) => {
+  try {
+    return readFileSync(join(BROWSER, percorso), 'utf8');
+  } catch {
+    return null;
+  }
+});
+if (guaiCss.length) {
+  console.error(
+    "\n❌ Il CSS globale NON e' finito nella shell CSR come dovrebbe:\n   • " +
+      guaiCss.join('\n   • ') +
+      '\n   Aggiorna inserisciCssInline()/verificaCssInline() in' +
+      '\n   scripts/lib/csr-css.mjs (coperte da npm run test:scripts).\n',
+  );
+  process.exit(1);
+}
+fatto.push(`inlinati ${hrefs.length} foglio/i globale/i (${byteInline} B)`);
 
 if (out === html) {
   console.log(`\n✓ Shell CSR: ${fatto.join(' · ')}.\n`);

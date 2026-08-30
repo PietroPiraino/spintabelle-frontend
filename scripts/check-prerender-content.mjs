@@ -20,6 +20,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve, relative, dirname, sep } from 'node:path';
 import { hasCanonical, hasNoindex } from './lib/csr-noindex.mjs';
+import { verificaCssInline } from './lib/csr-css.mjs';
 
 // ⚠️ Il default e' `process.cwd()` e NON un percorso Windows assoluto. Con
 // `'C:/Projects/poker-ranges/frontend'` questa guardia era MUTA su Cloudflare:
@@ -176,6 +177,53 @@ if (hasCanonical(shellHtml))
       'altrui e\' la coppia che puo\' far consolidare il noindex sulla home.',
   );
 
+// ---- 1-ter. La shell CSR deve portare il foglio globale INLINE ------------
+//
+// Ce lo scrive lo stesso iniettore, subito dopo `ng build`. Qui si verifica che
+// ci sia ARRIVATO, con la STESSA funzione che lo scrive: due copie del
+// predicato in due file sono una divergenza che aspetta solo di succedere.
+//
+// PERCHE' CONTA. Beasties calcola la critical CSS dall'HTML RESO, e in
+// index.csr.html <app-root> contiene 447 byte di boot-loader: senza iniezione
+// la shell parte con `h1{`, `.container{`, `.section{` ASSENTI. Ma e' il corpo
+// di 12 rotte client (public/_redirects) e di /replayer/*, /news, /news/* —
+// che dentro <app-root> ci mettono un articolo intero, dipinto senza CSS e
+// ridisegnato da capo quando il <link media="print"> atterra. E' il 12% di CLS
+// «insufficiente» misurato il 30/08/2026 (div.rp__barra, span.rp__volo,
+// #nav-principale — l'header porta la classe GLOBALE `.container` —, e
+// section.overview__block).
+const guaiCss = verificaCssInline(shellHtml, (percorso) => {
+  try {
+    return readFileSync(join(BROWSER, percorso), 'utf8');
+  } catch {
+    // Il foglio dichiarato non esiste su disco: lo dice verificaCssInline, con
+    // un messaggio migliore di quello che potrei dare qui.
+    return null;
+  }
+});
+if (guaiCss.length)
+  nota(
+    "index.csr.html — il foglio globale non e' inline nella <head>: " +
+      guaiCss.join(' · ') +
+      ". Lo inietta scripts/inject-csr-noindex.mjs (inserisciCssInline in " +
+      'scripts/lib/csr-css.mjs, coperta da npm run test:scripts): e\' ancora ' +
+      'nella catena di `npm run build`? Senza, ogni pagina servita dalla shell ' +
+      'si ridisegna da capo quando il foglio differito atterra.',
+  );
+
+// ⚠️ Soglia anti-DOPPIONE, non un budget. Misurato il 30/08/2026: 43.286 B con
+// il foglio inline. Se un domani Beasties inlinasse tutto DA SE', la shell
+// arriverebbe a ~70 kB con lo stesso CSS scritto due volte — corretto a video,
+// e nessuna delle asserzioni qui sopra se ne accorgerebbe (guardano che il CSS
+// ci SIA, non che non ci sia due volte). Avvisa e non blocca: e' un odore, non
+// una deriva, e non deve fermare un deploy da solo.
+if (shellHtml.length > 80_000)
+  console.warn(
+    `\n⚠️  index.csr.html e' ${shellHtml.length} B (misurati 43.286 il 30/08/2026).` +
+      "\n   Controlla che il foglio globale non sia inline DUE volte: potrebbe" +
+      "\n   averlo inlinato anche Beasties, oltre a scripts/inject-csr-noindex.mjs.\n",
+  );
+
 if (pagine.length < MIN_PAGINE)
   nonCapisco(
     `trovate solo ${pagine.length} pagine prerenderizzate (soglia ${MIN_PAGINE}): ` +
@@ -294,5 +342,5 @@ if (errori.length) {
 
 console.log(
   `\n✓ ${righe.length} pagine prerenderizzate, tutte con contenuto, h1 e canonical` +
-    ` (noindex solo su ${[...NOINDEX_ATTESO].join(', ')}); shell CSR con noindex.\n`,
+    ` (noindex solo su ${[...NOINDEX_ATTESO].join(', ')}); shell CSR con noindex e CSS globale inline.\n`,
 );

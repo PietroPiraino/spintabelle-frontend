@@ -12,7 +12,8 @@
 #    308 verso `/index.csr`. Se il target avesse il `.html`, il 308 finirebbe
 #    su un URL che rimatcha la regola -> LOOP. E' esattamente l'incidente del
 #    12/07/2026 (`/*  /index.csr.html  200`). Verificato in prod: `/index.csr`
-#    risponde 200 con la shell da ~12,7 KB.
+#    risponde 200 con la shell da ~43 KB (~12,7 KB fino al 30/08/2026: da
+#    allora porta il foglio globale inline, vedi scripts/lib/csr-css.mjs).
 #
 # 2. MAI UNA CATCH-ALL `/*`.
 #    Le regole di _redirects sono valutate PRIMA degli asset statici: una

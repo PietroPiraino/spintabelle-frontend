@@ -193,3 +193,21 @@ test('⚠️ la targa arriva davvero nell’HTML, non solo dentro l’aiutante',
   const senza = renderMano(SCHELETRO, { ...MANO, ogImageUrl: '' });
   assert.match(senza, /property="og:image" content="https:\/\/bestfishforever\.it\/og\.png"/);
 });
+
+test('⚠️ il blocco di CSS inline della shell sopravvive INTATTO al render', () => {
+  // Dal 30/08/2026 `index.csr.html` porta il foglio globale inline (~27,7 kB,
+  // vedi scripts/lib/csr-css.mjs). Le chirurgie sulla testa — `impostaMeta`,
+  // `impostaCanonical`, `inserisciNellaTesta` — girano su TUTTO il documento
+  // con delle regex, quindi da oggi girano anche su quei 27,7 kB. Oggi e'
+  // sicuro (il foglio non contiene nemmeno un `<`), ma e' una proprieta' da
+  // BLOCCARE, non da ricordare: il giorno in cui il CSS contenesse qualcosa che
+  // somiglia a un tag, una di quelle regex lo mangerebbe in silenzio e la
+  // pagina uscirebbe senza stili.
+  const CSS = ':root{--x:1}h1{font-size:2rem}.container{max-width:1180px}';
+  const BLOCCO = `<style data-bff-css-inline="styles-ABC.css">${CSS}</style>`;
+  const conCss = SCHELETRO.replace('</head>', `${BLOCCO}\n</head>`);
+
+  const html = renderMano(conCss, MANO);
+  assert.ok(html.includes(BLOCCO), 'il blocco di CSS inline e\' stato alterato dal render');
+  assert.equal((html.match(/data-bff-css-inline/g) || []).length, 1, 'blocco duplicato o perso');
+});

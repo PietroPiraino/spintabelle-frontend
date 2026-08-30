@@ -1,9 +1,11 @@
 # Deindicizzazione delle rotte NON prerenderizzate (RenderMode.Client).
 #
 # PERCHE' ESISTE. Queste rotte ricevono tutte la stessa shell CSR
-# (`/index.csr`, ~13 KB) tramite le riscritture 200 di `_redirects`. Quella
-# shell dichiara come canonical la HOME e non ha nulla di proprio da offrire a
-# un motore. Fino al 17/08/2026 erano tenute fuori con dei `Disallow` in
+# (`/index.csr`, ~43 KB dal 30/08/2026: porta il foglio globale inline, vedi
+# scripts/lib/csr-css.mjs) tramite le riscritture 200 di `_redirects`. Quella
+# shell non ha nulla di proprio da offrire a un motore (fino al 19/08/2026
+# dichiarava come canonical la HOME: lo toglie scripts/inject-csr-noindex.mjs).
+# Fino al 17/08/2026 erano tenute fuori con dei `Disallow` in
 # robots.txt, che pero' vietano la SCANSIONE: Google le scopriva dai link
 # interni, non poteva scaricarle, e quindi non poteva leggere nessuna
 # direttiva — le indicizzava «nude» e non c'era piu' modo di farle uscire

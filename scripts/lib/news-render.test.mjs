@@ -983,3 +983,32 @@ test('deriva: il taglio dell estratto combacia con news-detail.component.ts', ()
     "news-detail.component.ts non taglia piu' a 152: vedi sopra.",
   );
 });
+
+test('⚠️ il blocco di CSS inline della shell sopravvive INTATTO al render', () => {
+  // Stessa cintura di hand-render.test.mjs, e per la stessa ragione: dal
+  // 30/08/2026 `index.csr.html` porta il foglio globale inline, e le chirurgie
+  // sulla testa (`impostaMeta`, `impostaCanonical`, `togliNoindex`,
+  // `impostaJsonLd`, `inserisciNellaTesta`) girano con delle regex su TUTTO il
+  // documento — quindi anche su quei ~27,7 kB di CSS. Oggi e' sicuro; e' una
+  // proprieta' da bloccare, non da ricordare.
+  //
+  // ⚠️ Lo scheletro di questo file e' `src/index.html` + iniezione, dove il
+  // `<link rel=stylesheet>` NON esiste (lo aggiunge il builder): il blocco va
+  // quindi montato a mano qui, non chiamando `inserisciCssInline`, che
+  // giustamente lancerebbe.
+  const CSS = ':root{--x:1}h1{font-size:2rem}.container{max-width:1180px}';
+  const BLOCCO = `<style data-bff-css-inline="styles-ABC.css">${CSS}</style>`;
+  const conCss = scheletro.replace('</head>', `${BLOCCO}\n</head>`);
+
+  for (const [nome, html] of [
+    ['articolo', renderArticolo(conCss, ARTICOLO)],
+    ['indice', renderIndice(conCss, [ARTICOLO])],
+  ]) {
+    assert.ok(html.includes(BLOCCO), `${nome}: il blocco di CSS inline e' stato alterato`);
+    assert.equal(
+      (html.match(/data-bff-css-inline/g) || []).length,
+      1,
+      `${nome}: blocco duplicato o perso`,
+    );
+  }
+});
