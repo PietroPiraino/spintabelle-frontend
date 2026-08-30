@@ -1,7 +1,26 @@
-.header {
+// ⚠️ LO STICKY STA SULL'HOST, NON SU `.header`. E non e' una preferenza.
+// `<app-header>` e' un elemento vero nel DOM ed e' un flex item di `app-root`
+// (`app.component.scss` `:host`, flex column). `.header` gli sta DENTRO, e un
+// elemento sticky puo' scorrere soltanto dentro la scatola del PROPRIO
+// genitore: quella scatola e' alta quanto l'header, ~67px. Percio' `position:
+// sticky` su `.header` era dichiarato, veniva calcolato (`getComputedStyle`
+// diceva `sticky`) ed era completamente INERTE.
+// Misurato in produzione il 30/08/2026 su /guide/push-fold-spin-and-go/: in
+// fondo alla pagina l'header stava a `top: -7659px` su mobile e -4377px su
+// desktop, cioe' era scorso via del tutto e il menu era irraggiungibile senza
+// risalire. Segnalato dall'owner, non da una guardia: nessun test guarda dove
+// si trova un elemento dopo uno scroll.
+// ⚠️ `overflow-x: hidden` su `body` (`_reset.scss`) NON c'entra, ed era il
+// sospetto piu' ovvio: `html` ha `overflow-x: visible`, quindi quella
+// dichiarazione propaga al viewport e `body` resta `visible`. Verificato.
+:host {
+  display: block;
   position: sticky;
   top: 0;
   z-index: 50;
+}
+
+.header {
   border-bottom: 1px solid var(--line);
 }
 
