@@ -152,7 +152,19 @@ export const appConfig: ApplicationConfig = {
       let lastId = 0;
       let restoredId = 0;
       let popstate = false;
-      let lastPath = '';
+      // ⚠️ Seminato con il percorso CORRENTE, non con la stringa vuota.
+      // Con `''` la prima navigazione della sessione sembrava sempre un
+      // cambio di pagina, e faceva risalire in cima anche quando cambiavano
+      // solo i query param. Si vedeva su /simulatore-varianza: il PRIMO clic
+      // su «Simula» (che chiama `syncUrl`) riportava in cima, i successivi no.
+      // Misurato il 30/08/2026: scrollY 700 -> 0 al primo clic, 700 -> 700 al
+      // secondo. Difetto vecchio, segnalato dall'owner.
+      // La barra finale va tolta da entrambe le parti: le pagine
+      // prerenderizzate sono servite come `/guide/x/` mentre il router
+      // produce `/guide/x`, e senza normalizzare il confronto fallirebbe
+      // sempre — cioe' la correzione non correggerebbe niente, in silenzio.
+      const senzaBarra = (p: string) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
+      let lastPath = senzaBarra(location.pathname);
       let yAtEnd = 0;
       inject(Router).events.subscribe((e) => {
         if (e instanceof NavigationStart) {
@@ -168,7 +180,7 @@ export const appConfig: ApplicationConfig = {
             'urlAfterRedirects' in e.routerEvent
               ? e.routerEvent.urlAfterRedirects
               : e.routerEvent.url;
-          const path = url.split('?')[0];
+          const path = senzaBarra(url.split('?')[0]);
           const position = popstate ? store[restoredId] : null;
           if (position) {
             // il contenuto (es. la matrice) può arrivare DOPO il NavigationEnd
