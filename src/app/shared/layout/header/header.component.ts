@@ -23,9 +23,11 @@ interface NavGroup {
   children: NavLink[];
 }
 
+import { IconComponent } from '../../ui/icon/icon.component';
+
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, IconComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

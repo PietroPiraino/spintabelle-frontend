@@ -163,6 +163,22 @@ const MASCHERE = [
   ['fiori', 'club'],
 ];
 
+/**
+ * La firma geometrica di una sagoma: ogni <circle> e ogni <path>, in ordine.
+ * Serve a confrontare due scritture della stessa figura in due linguaggi che
+ * non possono importarsi (SCSS e TypeScript), qualunque sia la costruzione.
+ * Torna `null` se non trova nulla, così la guardia può dire «sto leggendo il
+ * file sbagliato» invece di confrontare due stringhe vuote e passare verde.
+ */
+function forme(testo) {
+  const pezzi = [];
+  const cerchio = /<circle[^>]*cx=['"]([^'"]+)['"][^>]*cy=['"]([^'"]+)['"][^>]*r=['"]([^'"]+)['"]/g;
+  for (const m of testo.matchAll(cerchio)) pezzi.push(`circle:${m[1]},${m[2]},${m[3]}`);
+  const tracciato = /<path[^>]*\sd=['"]([^'"]+)['"]/g;
+  for (const m of testo.matchAll(tracciato)) pezzi.push(`path:${m[1].replace(/\s+/g, ' ').trim()}`);
+  return pezzi.length ? pezzi.join('|') : null;
+}
+
 test('deriva: le maschere CSS e le icone dei semi sono le STESSE sagome', () => {
   // Le due vivono in due linguaggi che non possono importarsi (SCSS e
   // TypeScript), quindi il tracciato è scritto due volte. Due picche diverse
@@ -172,17 +188,26 @@ test('deriva: le maschere CSS e le icone dei semi sono le STESSE sagome', () => 
   const scss = readFileSync(TOKEN, 'utf8');
 
   for (const [seme, icona] of MASCHERE) {
-    const ramo = ts.slice(ts.indexOf(`@case ('${icona}')`));
-    const daIcona = /d="([^"]+)"/.exec(ramo)?.[1];
+    // ⚠️ Si confrontano TUTTE le forme, non il primo `d` che capita. Dal
+    // 30/08/2026 il fiori è fatto di tre <circle> più un <path>: leggendo solo
+    // il primo `d` la guardia confrontava il gambo con il gambo e passava
+    // verde anche se i tre cerchi divergevano — cioè restava cieca proprio
+    // sulla metà nuova della sagoma.
+    // ⚠️ E il ramo va delimitato alla sua parentesi: senza, lo slice di
+    // `spade` prosegue dentro `heart` e la guardia legge la sagoma sbagliata.
+    const inizio = ts.indexOf(`@case ('${icona}')`);
+    const ramo = ts.slice(inizio, ts.indexOf('\n      }', inizio));
+    const daIcona = forme(ramo);
     assert.ok(
       daIcona,
-      `il ramo ${icona} di app-icon non ha più un attributo d: la guardia sta leggendo il file sbagliato.`,
+      `il ramo ${icona} di app-icon non ha più una sagoma: la guardia sta leggendo il file sbagliato.`,
     );
 
-    const daMaschera = new RegExp(`--mask-${seme}:[\\s\\S]*?path d='([^']+)'`).exec(scss)?.[1];
+    const grezza = new RegExp(`--mask-${seme}: url\\("([^"]+)"\\)`).exec(scss)?.[1];
+    const daMaschera = grezza && forme(decodeURIComponent(grezza));
     assert.ok(
       daMaschera,
-      `--mask-${seme} non è più in _tokens.scss, o non contiene più un tracciato.`,
+      `--mask-${seme} non è più in _tokens.scss, o non contiene più una sagoma.`,
     );
 
     assert.equal(

@@ -7,6 +7,12 @@ import {
   inject,
   signal,
 } from '@angular/core';
+// ⚠️ Import di SOLO TIPO: lega `core/services/` a `shared/ui/icon/` in
+// compilazione e in nient'altro (nessuna dipendenza a runtime, nessun peso nel
+// bundle). Il guadagno e' che un refuso nel nome di un'icona diventa un errore
+// di compilazione invece di un <svg> VUOTO renderizzato in silenzio — che e' il
+// modo in cui `app-icon` fallisce quando il nome non ha il suo ramo @case.
+import type { IconName } from '../../shared/ui/icon/icon.component';
 
 export type Theme = 'light' | 'tramonto' | 'dark';
 
@@ -15,14 +21,21 @@ const STORAGE_KEY = 'bff-theme';
 export interface ThemeOption {
   value: Theme;
   name: string;
-  icon: string;
+  icon: IconName;
 }
 
 /** i temi disponibili, nell'ordine del menù */
+// ⚠️ Erano tre CARATTERI (U+2600, U+1F307, U+263E) e ora sono tre icone del
+// set. I font del sito sono sottoinsiemi latini e non contengono nessuno dei
+// tre: li disegnava il sistema operativo, con forma e peso diversi su ogni
+// piattaforma. Il tramonto era per giunta un'emoji, quindi ignorava
+// `currentColor` in tutti e quattro gli stati del pulsante e portava dentro
+// arancio e blu — l'unico colore che il tema Tramonto ha eliminato.
+// Stessa conclusione, e stesso rimedio, dei semi delle carte.
 const OPTIONS: ThemeOption[] = [
-  { value: 'light', name: 'Ghiaccio', icon: '☀' },
-  { value: 'tramonto', name: 'Tramonto', icon: '🌇' },
-  { value: 'dark', name: 'Notte', icon: '☾' },
+  { value: 'light', name: 'Ghiaccio', icon: 'sun' },
+  { value: 'tramonto', name: 'Tramonto', icon: 'sunset' },
+  { value: 'dark', name: 'Notte', icon: 'moon' },
 ];
 
 /** colore della cornice browser (meta theme-color) per ogni tema */
@@ -48,8 +61,11 @@ export class ThemeService {
   readonly theme = signal<Theme>(this.initialTheme());
 
   /** icona del tema attivo (trigger del menù) */
-  readonly icon = computed(
-    () => OPTIONS.find((o) => o.value === this.theme())?.icon ?? '☀',
+  readonly icon = computed<IconName>(
+    // ⚠️ Il ripiego e' un NOME del set, non un carattere: con `icon: IconName`
+    // una stringa qualunque qui non compilerebbe piu'. Scatta solo con un
+    // `data-theme` sconosciuto, cioe' quasi mai, cioe' quando nessuno guarda.
+    () => OPTIONS.find((o) => o.value === this.theme())?.icon ?? 'sun',
   );
 
   constructor() {

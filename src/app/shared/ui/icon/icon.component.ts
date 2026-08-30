@@ -75,6 +75,15 @@ export const ICON_NAMES = [
   'heart',
   'diamond',
   'club',
+  // i tre temi del sito: erano ☀ U+2600, 🌇 U+1F307 e ☾ U+263E, cioe' tre
+  // glifi che i font del sito NON contengono (i sottoinsiemi sono latini) e
+  // che quindi disegnava il sistema operativo, con forma e peso diversi su
+  // ogni piattaforma. Il tramonto per giunta era un'emoji: ignorava
+  // `currentColor` in tutti e quattro gli stati del pulsante, e portava
+  // dentro arancio e blu — l'unico colore che il tema Tramonto ha eliminato.
+  'sun',
+  'sunset',
+  'moon',
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];
@@ -411,12 +420,65 @@ export type IconName = (typeof ICON_NAMES)[number];
       @case ('diamond') {
         <path fill="currentColor" stroke="none" d="M12 2.4 19.4 12 12 21.6 4.6 12z" />
       }
+      <!--
+        ⚠️ TRE CERCHI E UN GAMBO, non un path unico — ed e' la correzione di un
+        difetto arrivato in produzione il 23/08/2026. Il path unico partiva da
+        M12 2.4 e la sua ultima curva atterrava a x=10.2: la z chiudeva con
+        un segmento DRITTO di 1,8 unita' proprio sulla sommita' del lobo alto,
+        cioe' una PUNTA dove il fiori deve essere tondo. Misurato con
+        getPointAtLength sul path senza la z, non dedotto.
+        Con tre cerchi quel difetto non e' piu' esprimibile: un cerchio non ha
+        estremi da far combaciare. La simmetria e' per costruzione (i due lobi
+        bassi a 7.1 e 16.9 sono speculari su x=12) invece che affidata a
+        numeri da tenere allineati a mano.
+        ⚠️ I cerchi DEVONO sovrapporsi: a r 4.3 la distanza fra i centri del
+        lobo alto e di uno basso e' 7.75 contro 8.6 di somma dei raggi. Con
+        raggi piu' piccoli restano tre palle staccate — provato, si vede.
+        ⚠️ Il gambo parte a y=10, cioe' DENTRO i lobi: nascendo da un punto piu'
+        in basso lasciava due spicchi bianchi ai lati. La sua z chiude un
+        segmento orizzontale, ma quel segmento e' coperto dai lobi.
+      -->
       @case ('club') {
+        <circle cx="12" cy="7.3" r="4.3" fill="currentColor" stroke="none" />
+        <circle cx="7.1" cy="13.3" r="4.3" fill="currentColor" stroke="none" />
+        <circle cx="16.9" cy="13.3" r="4.3" fill="currentColor" stroke="none" />
         <path
           fill="currentColor"
           stroke="none"
-          d="M12 2.4c-2.1 0-3.8 1.7-3.8 3.8 0 .8.2 1.5.6 2.1-.5-.2-1-.3-1.6-.3-2.1 0-3.8 1.7-3.8 3.8s1.7 3.8 3.8 3.8c1.4 0 2.6-.7 3.3-1.8-.2 2.1-1 3.6-2.4 4.4-.5.3-.3.9.2.9h5.6c.5 0 .7-.6.2-.9-1.4-.8-2.2-2.3-2.4-4.4.7 1.1 1.9 1.8 3.3 1.8 2.1 0 3.8-1.7 3.8-3.8s-1.7-3.8-3.8-3.8c-.6 0-1.1.1-1.6.3.4-.6.6-1.3.6-2.1 0-2.1-1.7-3.8-3.8-3.8z"
+          d="M10.6 10c.4 4.4-.6 7.6-3 9.8-.5.5-.2 1.2.5 1.2h7.8c.7 0 1-.7.5-1.2-2.4-2.2-3.4-5.4-3-9.8z"
         />
+      }
+      @case ('sun') {
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2" />
+        <path d="M12 20v2" />
+        <path d="m4.93 4.93 1.41 1.41" />
+        <path d="m17.66 17.66 1.41 1.41" />
+        <path d="M2 12h2" />
+        <path d="M20 12h2" />
+        <path d="m6.34 17.66-1.41 1.41" />
+        <path d="m19.07 4.93-1.41 1.41" />
+      }
+      <!--
+        ⚠️ FORMA MISTA, l'unica del set: la cupola e' PIENA (con l'override
+        esplicito di fill e stroke) e le due righe dell'orizzonte sono a
+        tratto. E' la massa piena a renderla riconoscibile accanto al
+        sole a 16px — a quella misura il dettaglio non si legge, il peso si'.
+        Provata a video sui tre fondali prima di sceglierla: la variante col
+        chevron era illeggibile (sembrava un uccello sopra una collina) e
+        quella a disco mezzo pieno si confondeva con la falce della luna,
+        due caselle piu' in la' nella stessa riga.
+        ⚠️ Essendo mista NON entra nella spec delle forme piene (che pretende
+        l'override su OGNI path): ha una sua asserzione dedicata in
+        icon.component.spec.ts.
+      -->
+      @case ('sunset') {
+        <path d="M5 15a7 7 0 0 1 14 0Z" fill="currentColor" stroke="none" />
+        <path d="M2 15h20" />
+        <path d="M7 19h10" />
+      }
+      @case ('moon') {
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
       }
     }
   </svg>`,

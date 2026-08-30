@@ -286,10 +286,18 @@
     background: rgba(255, 106, 31, 0.1);
     font-weight: 600;
 
-    &::after {
-      content: '✓';
+    // ⚠️ La spunta NON e' piu' uno pseudo-elemento. Era `content: '¹3'`, il
+    // quarto glifo di sistema di questa riga: U+2713 e' fuori dai sottoinsiemi
+    // dei font del sito esattamente come erano sole, tramonto e luna.
+    // La strada ovvia — una `mask` CSS con la sagoma della spunta — avrebbe
+    // creato una SECONDA copia di un disegno che il set gia' contiene
+    // (`app-icon name="check"`), da tenere allineata a mano e con una guardia
+    // di deriva, come e' gia' successo per i semi delle carte. Qui la copia non
+    // serve: l'icona vera sta nel template, dietro un @if.
+    .header__theme-check {
       margin-left: auto;
       color: var(--copper-600);
+      display: inline-flex;
     }
   }
 }

@@ -92,7 +92,11 @@
           aria-label="Scegli il tema"
           title="Tema"
         >
-          <span aria-hidden="true">{{ themeService.icon() }}</span>
+          <!-- ⚠️ `[size]` esplicito: il default di app-icon e' 20px, ma il
+               pulsante e' un cerchio da 36 e il glifo qui era disegnato a 16.
+               Senza, l'icona e' semplicemente piu' grossa del dovuto — niente
+               si rompe, e non lo segnala nessun test. -->
+          <app-icon [name]="themeService.icon()" [size]="18" />
         </button>
         <div class="header__menu header__theme-menu" role="menu" aria-label="Tema">
           @for (t of themeService.options; track t.value) {
@@ -104,8 +108,14 @@
               [class.is-active]="t.value === themeService.theme()"
               (click)="setTheme(t.value)"
             >
-              <span class="header__theme-icon" aria-hidden="true">{{ t.icon }}</span>
+              <!-- ⚠️ 16 e non il default: il box e' largo 1.2em di 0.88rem,
+                   cioe' ~16,9px. A 20px l'icona sborda e su telefono, dove le
+                   tre voci diventano pillole in `flex: 1`, le deforma. -->
+              <span class="header__theme-icon"><app-icon [name]="t.icon" [size]="16" /></span>
               {{ t.name }}
+              @if (t.value === themeService.theme()) {
+                <span class="header__theme-check"><app-icon name="check" [size]="14" /></span>
+              }
             </button>
           }
         </div>
