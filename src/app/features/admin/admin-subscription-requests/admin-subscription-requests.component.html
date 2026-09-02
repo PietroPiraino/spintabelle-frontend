@@ -68,6 +68,30 @@
               · {{ req.createdAt | date: 'dd MMM yyyy HH:mm' }}
             }
           </span>
+          <!--
+            ⚠️ Prima di questa riga la coda non mostrava ALCUN importo: ne'
+            listino, ne' scontato, ne' i buoni. Con una quota pagabile in punti
+            l'owner non ha piu' modo di dedurre quanto aspettarsi sul conto, e
+            approverebbe un pagamento diverso da quello ricevuto.
+          -->
+          @if (daIncassare(req) !== null) {
+            <span class="admin-item__meta">
+              <strong>Da incassare: €{{ daIncassare(req) }}</strong>
+              @if (req.listPriceEur != null && req.listPriceEur !== daIncassare(req)) {
+                · listino €{{ req.listPriceEur }}
+              }
+              @for (c of req.discountCodes ?? []; track c) { · buono {{ c }} }
+              @if (req.pointsSpent) {
+                · {{ fmtPunti(req.pointsSpent) }} pt
+                @if (req.pointsDiscountEur) { (−€{{ req.pointsDiscountEur }}) }
+              }
+            </span>
+          }
+          @if (req.refundedPoints) {
+            <span class="admin-item__meta">
+              Punti restituiti: {{ fmtPunti(req.refundedPoints) }}
+            </span>
+          }
           @if (req.status === 'approved' && req.resultingExpiresAt) {
             <span class="admin-item__meta">
               Attivo fino al {{ req.resultingExpiresAt | date: 'dd MMM yyyy' }}

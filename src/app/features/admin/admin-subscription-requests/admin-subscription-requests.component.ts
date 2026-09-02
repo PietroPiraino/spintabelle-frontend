@@ -142,7 +142,20 @@ export class AdminSubscriptionRequestsComponent {
   protected methodLabel(m: string): string {
     if (m === 'skrill') return 'Skrill';
     if (m === 'manuale') return 'Concesso da admin';
+    // ⚠️ Senza questo ramo una richiesta pagata in punti compariva come
+    // «PayPal»: il default silenzioso e' il modo piu' rapido di mostrare una
+    // cosa falsa senza che niente si rompa.
+    if (m === 'punti') return 'Punti BFF';
     return 'PayPal';
+  }
+
+  protected fmtPunti(n: number): string {
+    return new Intl.NumberFormat('it-IT').format(n);
+  }
+
+  /** Euro da incassare davvero (snapshot al netto di buoni e punti). */
+  protected daIncassare(r: SubscriptionRequest): number | null {
+    return r.discountedPriceEur ?? r.listPriceEur ?? null;
   }
 
   protected statusLabel(s: SubscriptionRequestStatus): string {

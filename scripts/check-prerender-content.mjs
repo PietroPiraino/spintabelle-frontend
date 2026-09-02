@@ -96,6 +96,28 @@ const NOINDEX_ATTESO = new Set([
   '/affiliazioni',
 ]);
 
+// Stringhe che NON devono comparire nell'HTML indicizzabile di una pagina, con
+// la loro motivazione. Non e' stile: e' l'art. 9 DL 87/2018, lo stesso vincolo
+// per cui /negozio tiene i prezzi in punti dietro il login e /affiliazioni non
+// nomina nessuna sala.
+//
+// ⚠️ Il pattern cerca la FORMA del tasso (un numero seguito da "punti"), non la
+// parola: "punti di forza" in una frase e' prosa legittima, "1.000 punti" e' un
+// tasso di conversione punti↔euro. Una guardia che grida al lupo e' una guardia
+// che qualcuno spegne.
+const VIETATE = new Map([
+  [
+    '/abbonati',
+    {
+      pattern: /\d[\d.]*\s*punti/i,
+      motivo:
+        'un tasso di conversione punti↔euro nell\'HTML indicizzabile e\' un ' +
+        'incentivo (art. 9 DL 87/2018). Il selettore dei punti deve restare ' +
+        'dentro il pannello, che vive solo dietro login.',
+    },
+  ],
+]);
+
 const errori = [];
 const nota = (m) => errori.push(m);
 
@@ -302,6 +324,23 @@ for (const file of pagine.sort()) {
   // sparisce da Google senza rompere niente di visibile, e finora nessun
   // controllo la guardava. Il verso opposto serve a non perdere in silenzio un
   // vincolo legale (/affiliazioni, art. 9 DL 87/2018).
+  // (e) stringhe vietate. Misurato il 02/09/2026: /abbonati usciva con ZERO
+  // occorrenze, ed e' la baseline che questo controllo difende.
+  const vietata = VIETATE.get(rotta);
+  if (vietata) {
+    const main = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+    const corpo = (main ? main[1] : html)
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ');
+    const trovata = corpo.match(vietata.pattern);
+    if (trovata)
+      nota(
+        `${rotta} — nell'HTML indicizzabile compare "${trovata[0].trim()}": ` +
+          vietata.motivo,
+      );
+  }
+
   const deveEssereNoindex = NOINDEX_ATTESO.has(rotta);
   if (noindex && !deveEssereNoindex)
     nota(

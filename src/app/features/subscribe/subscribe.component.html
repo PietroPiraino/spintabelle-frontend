@@ -47,6 +47,14 @@
               }
             </p>
           }
+          @if (p.pointsSpent) {
+            <p class="subscribe__muted">
+              Hai usato <strong>{{ fmtPunti(p.pointsSpent) }} punti</strong>
+              @if (p.pointsDiscountEur) { (−€{{ p.pointsDiscountEur }}) }
+              su questa richiesta: sono già stati scalati dal saldo e tornano
+              indietro se la richiesta viene rifiutata o ritirata.
+            </p>
+          }
           @if (submitError()) {
             <div class="form-feedback is-error" role="alert">{{ submitError() }}</div>
           }
@@ -62,7 +70,7 @@
           </div>
           <p class="subscribe__muted">
             Ritirando la richiesta potrai inviarne una nuova; eventuali buoni
-            riservati tornano disponibili.
+            riservati tornano disponibili e i punti usati tornano nel saldo.
           </p>
         </div>
       } @else {
@@ -155,17 +163,24 @@
                   mostra (i campi stanno dentro `@if (effectivePrice() !== 0)`).
                 -->
                 <li>
-                  Con questi buoni l'abbonamento è
-                  <strong>in omaggio</strong>:
-                  <s class="subscribe__strike">€{{ selectedPrice() }}</s>
-                  <strong>€0</strong>, nessun pagamento richiesto.
+                  @if (pointsToSpend() > 0) {
+                    Coprendo tutto coi punti non c'è
+                    <strong>niente da pagare</strong>:
+                    <s class="subscribe__strike">€{{ selectedPrice() }}</s>
+                    <strong>€0</strong>.
+                  } @else {
+                    Con questi buoni l'abbonamento è
+                    <strong>in omaggio</strong>:
+                    <s class="subscribe__strike">€{{ selectedPrice() }}</s>
+                    <strong>€0</strong>, nessun pagamento richiesto.
+                  }
                 </li>
                 <li>Invia la richiesta: la approveremo a breve.</li>
               } @else {
                 <li>Scegli il metodo di pagamento.</li>
                 <li>
                   Invia
-                  @if (discounts()) {
+                  @if (discounts() || pointsToSpend() > 0) {
                     <s class="subscribe__strike">€{{ selectedPrice() }}</s>
                   }
                   <strong>€{{ effectivePrice() }}</strong> all'indirizzo qui
@@ -205,7 +220,7 @@
                   }
                 </div>
                 @if (discounts(); as d) {
-                  @if (effectivePrice() === 0) {
+                  @if (d.discountedPriceEur === 0) {
                     <p class="subscribe__muted">{{ d.message }}</p>
                   } @else {
                     <p class="subscribe__muted">
@@ -277,6 +292,83 @@
                 </button>
               </div>
             </div>
+
+            <!--
+              ⚠️ VINCOLO LEGALE (art. 9 DL 87/2018), non stile: /abbonati è
+              pubblica e prerenderizzata, e nell'HTML indicizzabile non può
+              comparire alcun tasso di conversione punti↔euro. Questo blocco sta
+              dentro `@if (selectedTier())`, che è raggiungibile solo da chi ha
+              fatto l'accesso — un anonimo che tocca «Scegli» va al login. Una
+              spec del componente lo pinna sul ramo anonimo: se un giorno questo
+              blocco risalisse fuori dal pannello, quel test diventa rosso.
+
+              ⚠️ E sta nella colonna dei BUONI, non in una quarta colonna: il
+              pannello è `auto-fit minmax(min(300px,100%),1fr)` su ~1.127px
+              utili, cioè tre tracce — un quarto blocco finirebbe da solo in
+              seconda riga con due celle vuote accanto. Del resto punti e buoni
+              sono i due comandi che abbassano lo stesso numero.
+            -->
+            @if (canUsePoints()) {
+              <div class="field subscribe__points">
+                <span class="subscribe__label">Usa i tuoi punti BFF</span>
+                <p class="subscribe__muted subscribe__points-balance">
+                  Saldo: <strong>{{ fmtPunti(pointsBalance()) }}</strong> punti
+                </p>
+
+                <div class="row subscribe__points-stepper">
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm subscribe__points-step"
+                    (click)="stepPunti(-1)"
+                    [disabled]="pointsToSpend() <= 0 || applying()"
+                    aria-label="Usa meno punti"
+                  >−</button>
+                  <output class="subscribe__points-value" aria-live="polite">
+                    <strong>{{ fmtPunti(pointsToSpend()) }}</strong> pt
+                    @if (pointsToSpend() > 0) {
+                      <span class="subscribe__points-eur">
+                        −€{{ pointsDiscountEur() }}
+                      </span>
+                    }
+                  </output>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm subscribe__points-step"
+                    (click)="stepPunti(1)"
+                    [disabled]="pointsToSpend() >= maxPoints() || applying()"
+                    aria-label="Usa più punti"
+                  >+</button>
+                </div>
+
+                <div class="row subscribe__points-quick">
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="usaMassimoPunti()"
+                    [disabled]="pointsToSpend() >= maxPoints() || applying()"
+                  >Usa il massimo ({{ fmtPunti(maxPoints()) }} pt)</button>
+                  @if (pointsToSpend() > 0) {
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      (click)="azzeraPunti()"
+                      [disabled]="applying()"
+                    >Non usarli</button>
+                  }
+                </div>
+
+                <!--
+                  Va detto, e prima dell'invio: i punti si scalano subito, e una
+                  richiesta in attesa non scade da sola — l'unica via di rientro
+                  è il ritiro. Senza questa riga il saldo cala e non lo spiega
+                  nessuno.
+                -->
+                <p class="subscribe__muted subscribe__points-note">
+                  I punti vengono scalati all'invio della richiesta e tornano nel
+                  tuo saldo se la rifiutiamo o se la ritiri.
+                </p>
+              </div>
+            }
             </div>
 
             <div class="subscribe__pay-col">

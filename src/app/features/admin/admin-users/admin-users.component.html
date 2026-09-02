@@ -239,6 +239,17 @@
                 <label [attr.for]="'gn-' + user.id">Nota (facoltativa)</label>
                 <input [id]="'gn-' + user.id" type="text" class="input" [formControl]="grantNoteControl" maxlength="300" placeholder="es. omaggio promozionale" />
               </div>
+              <!--
+                ⚠️ Concedere a mano non chiude la richiesta in attesa: i punti
+                che l'iscritto ha gia' impegnato resterebbero addebitati senza
+                contropartita, e approvandola dopo il periodo raddoppierebbe.
+                Senza la spunta il server risponde 409 dicendolo.
+              -->
+              <label class="admin-panel__check" style="margin: 0.6rem 0 0">
+                <input type="checkbox" [formControl]="grantSostituisciControl" />
+                Sostituisci la richiesta in attesa (la chiude e restituisce i
+                punti eventualmente usati)
+              </label>
               <div class="row admin-panel__actions">
                 <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel() || !grantDateControl.value" (click)="saveGrant(user)">
                   {{ savingPanel() ? 'Salvataggio…' : 'Concedi' }}
@@ -428,6 +439,7 @@
                         {{ r.tierLabel }} · {{ r.paymentMethod }}
                         @if (r.discountCode) { · sconto {{ r.discountCode }} }
                         @if (r.discountedPriceEur != null) { (€{{ r.discountedPriceEur }}) }
+                        @if (r.pointsSpent) { · {{ r.pointsSpent }} pt }
                         · {{ r.createdAt | date: 'dd MMM yyyy' }}
                         @if (r.decisionNote) { — {{ r.decisionNote }} }
                       </li>

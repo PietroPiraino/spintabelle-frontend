@@ -58,10 +58,21 @@ export class AdminUsersService {
     tier: SubscriptionTier,
     expiresAt: string,
     note?: string,
+    sostituisciRichiestaInAttesa?: boolean,
   ): Observable<AdminUser> {
     return this.http.post<AdminUser>(
       `${API}/admin/users/${id}/grant-subscription`,
-      { tier, expiresAt, ...(note ? { note } : {}) },
+      {
+        tier,
+        expiresAt,
+        ...(note ? { note } : {}),
+        // Solo se true: un `false` mandato sempre farebbe fallire l'INTERA
+        // chiamata (400 da `forbidNonWhitelisted`) contro un backend piu'
+        // vecchio, cioe' anche la concessione normale.
+        ...(sostituisciRichiestaInAttesa
+          ? { sostituisciRichiestaInAttesa: true }
+          : {}),
+      },
     );
   }
 

@@ -272,3 +272,62 @@
     text-decoration: underline;
   }
 }
+
+// ── Punti BFF ──────────────────────────────────────────────────────────────
+// Vive nella colonna dei buoni: sono i due comandi che abbassano lo stesso
+// numero, e una quarta colonna non entrerebbe (vedi il commento nel template).
+.subscribe__points {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+}
+
+.subscribe__points-balance {
+  margin: 0.2rem 0 0.6rem;
+
+  strong {
+    color: var(--copper-600);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.subscribe__points-stepper {
+  align-items: center;
+  gap: 0.6rem;
+}
+
+// ⚠️ I 44px si DICHIARANO: un `.btn--sm` nudo sta sui 38 e i quattro mancanti
+// non arrivano da soli (stesso precedente di `_news-share.scss`).
+.subscribe__points-step {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.subscribe__points-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  // Larghezza stabile: senza, ogni scatto sposta i due pulsanti sotto il dito.
+  min-width: 9.5rem;
+  text-align: center;
+
+  strong { color: var(--copper-600); }
+}
+
+.subscribe__points-eur {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.subscribe__points-quick {
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.subscribe__points-note {
+  margin-top: 0.6rem;
+  font-size: 0.82rem;
+}

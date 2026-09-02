@@ -88,6 +88,15 @@ export class AdminUsersComponent {
   protected readonly grantNoteControl = new FormControl('', {
     nonNullable: true,
   });
+  /**
+   * ⚠️ Concedere a mano NON chiude la richiesta eventualmente in attesa: senza
+   * questa spunta il server risponde 409 nominando i punti impegnati. E' voluto
+   * che la scelta sia esplicita — solo chi concede sa se sta adempiendo quella
+   * richiesta o facendo un omaggio a parte.
+   */
+  protected readonly grantSostituisciControl = new FormControl(false, {
+    nonNullable: true,
+  });
 
   // ── Modifica profilo ──
   protected readonly emailControl = new FormControl('', { nonNullable: true });
@@ -224,6 +233,7 @@ export class AdminUsersComponent {
           this.toDateInput(this.addDays(new Date(), 30)),
         );
         this.grantNoteControl.reset('');
+        this.grantSostituisciControl.setValue(false);
         break;
       case 'profile':
         this.emailControl.setValue(user.email);
@@ -410,6 +420,7 @@ export class AdminUsersComponent {
         this.grantTierControl.value,
         this.dateInputToIso(date),
         this.grantNoteControl.value.trim() || undefined,
+        this.grantSostituisciControl.value,
       )
       .subscribe({
         next: (updated) => {

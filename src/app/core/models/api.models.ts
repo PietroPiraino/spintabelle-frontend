@@ -147,7 +147,12 @@ export interface AdminUser {
 /** I due tier acquistabili (sottoinsieme di Role). */
 export type SubscriptionTier = 'PESCE_ROSSO' | 'SQUALO';
 /** 'manuale' = concessione admin (mai selezionabile dall'utente). */
-export type PaymentMethod = 'paypal' | 'skrill' | 'manuale';
+/**
+ * ⚠️ `punti` c'è anche lato client: lo scrive il server su una richiesta coperta
+ * interamente dai punti BFF, e senza di lui l'etichetta cade nel ramo di default
+ * — che è «PayPal».
+ */
+export type PaymentMethod = 'paypal' | 'skrill' | 'manuale' | 'punti';
 export type SubscriptionRequestStatus = 'pending' | 'approved' | 'rejected';
 
 /** Richiesta di abbonamento come esposta a client/admin. */
@@ -166,7 +171,14 @@ export interface SubscriptionRequest {
   discountCodes?: string[];
   /** prezzo di listino e scontato (snapshot in euro) */
   listPriceEur?: number;
+  /** Euro effettivamente dovuti: al netto dei buoni E dei punti. */
   discountedPriceEur?: number;
+  /** Punti BFF addebitati (0 se nessuno). */
+  pointsSpent: number;
+  /** Euro coperti dai punti, congelati al tasso del momento. */
+  pointsDiscountEur?: number;
+  /** Valorizzato quando i punti sono stati restituiti (rifiuto/ritiro). */
+  refundedPoints?: number;
   status: SubscriptionRequestStatus;
   decidedAt?: string;
   decisionNote?: string;
@@ -188,6 +200,18 @@ export interface PaymentInfo {
   tiers: { tier: SubscriptionTier; label: string; priceEur: number }[];
   receivers: { paypal: string; skrill: string };
   durationDays: number;
+  /**
+   * Parametri del pagamento in punti. ⚠️ Arrivano da `payment-info`, che è
+   * autenticato, e NON da `plans()`, che è pubblico e finisce nell'HTML
+   * prerenderizzato di /abbonati: lì un tasso punti↔euro non può comparire.
+   *
+   * ⚠️ OPZIONALE per due ragioni vere, non per prudenza: la pagina costruisce un
+   * `PaymentInfo` sintetico dalla risposta PUBBLICA di `plans()` mentre aspetta
+   * la sessione — e quella risposta non ha (e non deve avere) questi parametri —
+   * e fra il deploy del backend e quello del frontend il campo può non esserci
+   * ancora.
+   */
+  punti?: { tasso: number; passo: number };
 }
 
 /** Dati PUBBLICI per le card di /abbonati: prezzi + durata, senza receivers. */
@@ -201,6 +225,8 @@ export interface CreateSubscriptionRequest {
   tier: SubscriptionTier;
   paymentMethod: PaymentMethod;
   paymentReference?: string;
+  /** Punti BFF da usare (multipli di `punti.passo`, o l'importo che azzera). */
+  pointsSpent?: number;
   /** codice sconto opzionale (legacy, singolo) */
   discountCode?: string;
   /** codici sconto cumulati (ri-validati lato server) */
@@ -212,8 +238,23 @@ export interface DiscountsValidation {
   valid: true;
   codes: { code: string; kind: DiscountKind; value: number }[];
   listPriceEur: number;
+  /** Prezzo dopo i soli buoni: i punti li sottrae il client (vedi `punti`). */
   discountedPriceEur: number;
   message: string;
+  /**
+   * Tutto ciò che serve al selettore dei punti. ⚠️ Il selettore NON richiama la
+   * rete a ogni scatto: quella rotta ha un limite di 20 chiamate al minuto per
+   * IP e uno stepper lo sfonderebbe, con un 429 che la pagina mostrerebbe come
+   * «buono non valido». Qui arrivano tetto e prezzo in punti; la sottrazione è
+   * locale e su interi, e l'autorità resta il server all'invio.
+   */
+  punti?: {
+    saldo: number;
+    tasso: number;
+    passo: number;
+    prezzoInPunti: number;
+    massimo: number;
+  };
 }
 
 // ----- Codici sconto -----

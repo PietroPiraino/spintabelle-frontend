@@ -106,6 +106,8 @@ export class SubscribeComponent {
   protected readonly ownedVouchers = signal<MyVoucher[]>([]);
   protected readonly applying = signal(false);
   protected readonly discountError = signal<string | null>(null);
+  /** Contatore delle validazioni in volo: vince solo l'ultima partita. */
+  private discountSeq = 0;
   /** Input libero per digitare un codice promo. */
   protected readonly discountControl = new FormControl<string>('', {
     nonNullable: true,
@@ -118,6 +120,54 @@ export class SubscribeComponent {
       (v) => v.status === 'available' && !applied.includes(v.code),
     );
   });
+
+  // ── Punti BFF ──
+  /**
+   * Punti che l'utente ha deciso di usare. ⚠️ Cambiando piano o togliendo un
+   * buono il prezzo si alza e questo valore può finire fuori regola: viene
+   * ri-clampato a ogni cambio (`clampPunti`), altrimenti l'invio prenderebbe un
+   * 400 DOPO che l'utente ha già pagato fuori sito.
+   */
+  protected readonly pointsToSpend = signal(0);
+
+  /** Saldo punti dell'utente: il server lo riconferma sull'anteprima. */
+  protected readonly pointsBalance = computed(
+    () => this.discounts()?.punti?.saldo ?? this.auth.points(),
+  );
+
+  /** Taglio dello scatto (arriva dal server, default prudente). */
+  protected readonly pointsStep = computed(
+    () => this.discounts()?.punti?.passo ?? this.info()?.punti?.passo ?? 1000,
+  );
+
+  private readonly pointsRate = computed(
+    () => this.discounts()?.punti?.tasso ?? this.info()?.punti?.tasso ?? 1000,
+  );
+
+  /**
+   * Il prezzo dopo i buoni, espresso in punti. Tutto il conto locale sta su
+   * INTERI: sottrarre euro da euro rimetterebbe in gioco l'errore in virgola
+   * mobile proprio sul caso che i punti servono a chiudere (un buono del 41%
+   * su Pesce Rosso dà €32,45, e `32.45 * 1000` non fa 32450).
+   */
+  private readonly priceInPoints = computed(() => {
+    const d = this.discounts();
+    if (d?.punti) return d.punti.prezzoInPunti;
+    const eur = this.selectedPrice();
+    return eur == null ? 0 : Math.round(eur * this.pointsRate());
+  });
+
+  /** Tetto del selettore e valore di «usa il massimo». */
+  protected readonly maxPoints = computed(() =>
+    Math.max(0, Math.min(this.pointsBalance(), this.priceInPoints())),
+  );
+
+  /** Euro coperti dai punti scelti. */
+  protected readonly pointsDiscountEur = computed(
+    () => Math.round((this.pointsToSpend() / this.pointsRate()) * 100) / 100,
+  );
+
+  protected readonly canUsePoints = computed(() => this.maxPoints() > 0);
 
   protected readonly method = new FormControl<PaymentMethod>('paypal', {
     nonNullable: true,
@@ -159,10 +209,26 @@ export class SubscribeComponent {
     return info.tiers.find((t) => t.tier === tier)?.label ?? '';
   });
 
-  /** Prezzo effettivo da inviare: scontato se uno o più buoni sono applicati. */
-  protected readonly effectivePrice = computed(() => {
+  /** Prezzo dopo i soli buoni (i punti non sono uno sconto: sono un pagamento). */
+  protected readonly priceAfterVouchers = computed(() => {
     const d = this.discounts();
     return d?.discountedPriceEur ?? this.selectedPrice();
+  });
+
+  /**
+   * Quanto c'è davvero da pagare: dopo i buoni E dopo i punti.
+   * ⚠️ I punti DEVONO entrare qui: il ramo «omaggio» del template si apre su
+   * `=== 0`, e senza questa sottrazione un abbonamento coperto interamente dai
+   * punti continuerebbe a dire «Invia €125 via PayPal».
+   */
+  protected readonly effectivePrice = computed(() => {
+    const dopoBuoni = this.priceAfterVouchers();
+    if (dopoBuoni == null) return null;
+    const punti = this.pointsToSpend();
+    if (punti <= 0) return dopoBuoni;
+    // Sottrazione su interi, poi ritorno in euro: vedi `priceInPoints`.
+    const resto = Math.max(0, this.priceInPoints() - punti);
+    return Math.round((resto / this.pointsRate()) * 100) / 100;
   });
 
   constructor() {
@@ -235,6 +301,13 @@ export class SubscribeComponent {
     this.submitError.set(null);
     // i buoni sono validati per uno specifico tier: cambiando piano si azzerano
     this.clearDiscounts();
+    // Cambiando piano cambia il prezzo, quindi cambia il tetto dei punti: il
+    // valore scelto sul piano precedente sarebbe fuori regola e prenderebbe un
+    // 400 all'invio, cioè dopo il pagamento off-site.
+    this.pointsToSpend.set(0);
+    // Il prezzo del piano nuovo va chiesto al server anche senza buoni: è da lì
+    // che arrivano saldo e tetto dei punti.
+    this.revalidate();
   }
 
   /**
@@ -303,10 +376,9 @@ export class SubscribeComponent {
   protected removeCode(code: string): void {
     this.appliedCodes.update((codes) => codes.filter((c) => c !== code));
     this.discountError.set(null);
-    if (this.appliedCodes().length === 0) {
-      this.discounts.set(null);
-      return;
-    }
+    // ⚠️ Anche senza più codici si richiama il server: togliendo un buono il
+    // prezzo SALE, quindi cambia il tetto dei punti — e la vecchia uscita
+    // anticipata lasciava il selettore tarato sul prezzo scontato.
     this.revalidate();
   }
 
@@ -320,24 +392,39 @@ export class SubscribeComponent {
     const tier = this.selectedTier();
     const codes = this.appliedCodes();
     if (!tier) return;
-    if (codes.length === 0) {
-      this.discounts.set(null);
-      this.discountError.set(null);
-      return;
-    }
+    // ⚠️ Si chiama SEMPRE, anche senza buoni: è questa risposta a portare saldo,
+    // tetto e prezzo-in-punti del selettore. Uscendo prima (com'era) il caso
+    // «solo punti, nessun buono» — quello maggioritario — non avrebbe mai
+    // parlato col server.
+    if (!this.auth.isAuthenticated()) return;
+    // Guardia anti-risposte fuori ordine: due input (buoni e piano) pilotano la
+    // stessa chiamata e i bottoni dei piani non sono disabilitati mentre una
+    // validazione viaggia. Senza, una risposta in ritardo riscrive un prezzo
+    // già corretto. (Idioma di shop.component.ts.)
+    const seq = ++this.discountSeq;
     this.applying.set(true);
     this.discountError.set(null);
     this.subs.validateDiscounts(codes, tier).subscribe({
       next: (res) => {
+        if (seq !== this.discountSeq) return;
         this.applying.set(false);
         this.discounts.set(res);
+        this.clampPunti();
       },
       error: (err: unknown) => {
+        if (seq !== this.discountSeq) return;
         this.applying.set(false);
         // niente prezzo scontato valido: azzera il cumulo per non mostrare un
         // prezzo incoerente con i codici applicati.
         this.discounts.set(null);
-        this.discountError.set(apiErrorMessage(err, 'Buono non valido.'));
+        // Senza codici in gioco un errore non parla di buoni: è il prezzo che
+        // non è arrivato. Accusare il buono sbagliato manda a cercare il guasto
+        // dove non è (ed è ciò che farebbe un 429 sullo stepper).
+        this.discountError.set(
+          this.appliedCodes().length
+            ? apiErrorMessage(err, 'Buono non valido.')
+            : apiErrorMessage(err, 'Non riesco a calcolare il prezzo.'),
+        );
         // rollback del codice appena aggiunto: non resta bloccato
         if (justAdded) {
           this.appliedCodes.update((c) => c.filter((x) => x !== justAdded));
@@ -346,7 +433,59 @@ export class SubscribeComponent {
     });
   }
 
+  // ── Punti BFF ──
+
+  /**
+   * Riporta i punti scelti dentro le regole correnti: multiplo dello scatto,
+   * mai oltre il tetto. ⚠️ Va chiamata a ogni cambio di prezzo (buono tolto o
+   * aggiunto, piano cambiato, anteprima ricevuta): il tetto scende quando il
+   * prezzo scende, e un valore rimasto sopra fallisce solo all'invio.
+   */
+  private clampPunti(): void {
+    const max = this.maxPoints();
+    const passo = this.pointsStep();
+    const scelti = this.pointsToSpend();
+    if (scelti <= 0) return;
+    if (scelti <= max && (scelti % passo === 0 || scelti === max)) return;
+    // Il valore che azzera il dovuto è ammesso anche se non è un multiplo:
+    // con un buono percentuale il prezzo ha i centesimi e «tutto» è l'unico
+    // modo di non lasciare fuori qualche spicciolo.
+    const clamped = Math.min(scelti, max);
+    this.pointsToSpend.set(
+      clamped === max ? max : Math.floor(clamped / passo) * passo,
+    );
+  }
+
+  /** Aumenta/diminuisce di uno scatto, restando dentro il tetto. */
+  protected stepPunti(delta: number): void {
+    const passo = this.pointsStep();
+    const max = this.maxPoints();
+    const attuali = this.pointsToSpend();
+    // Dall'ultimo scatto pieno si sale al tetto esatto (che può avere i
+    // centesimi), non oltre; e scendendo si torna sul multiplo.
+    const grezzo =
+      delta > 0
+        ? Math.min(max, Math.floor(attuali / passo) * passo + passo)
+        : Math.max(0, Math.floor((attuali - 1) / passo) * passo);
+    this.pointsToSpend.set(grezzo);
+  }
+
+  protected usaMassimoPunti(): void {
+    this.pointsToSpend.set(this.maxPoints());
+  }
+
+  protected azzeraPunti(): void {
+    this.pointsToSpend.set(0);
+  }
+
+  protected fmtPunti(n: number): string {
+    return new Intl.NumberFormat('it-IT').format(n);
+  }
+
   protected clearDiscounts(): void {
+    // ⚠️ Il contatore si alza anche qui: azzerare lo stato senza invalidare le
+    // risposte in volo lascerebbe che la prossima ad arrivare lo ripopoli.
+    this.discountSeq++;
     this.appliedCodes.set([]);
     this.discounts.set(null);
     this.discountError.set(null);
@@ -362,12 +501,17 @@ export class SubscribeComponent {
 
     const reference = this.reference.value.trim();
     const codes = this.appliedCodes();
+    const punti = this.pointsToSpend();
     this.subs
       .createRequest({
         tier,
         paymentMethod: this.method.value,
         paymentReference: reference || undefined,
         discountCodes: codes.length ? codes : undefined,
+        // Solo se > 0: un `pointsSpent: 0` inviato sempre farebbe fallire
+        // l'INTERA chiamata (400 da `forbidNonWhitelisted`) contro un backend
+        // più vecchio, portandosi dietro anche il flusso dei buoni.
+        ...(punti > 0 ? { pointsSpent: punti } : {}),
       })
       .subscribe({
         next: (request) => {
@@ -375,6 +519,10 @@ export class SubscribeComponent {
           this.selectedTier.set(null);
           this.reference.reset('');
           this.clearDiscounts();
+          this.pointsToSpend.set(0);
+          // I punti sono già stati scalati: senza questa riga il gettone in
+          // header resterebbe al valore vecchio finché non si ricarica.
+          this.auth.loadMe().subscribe({ error: () => undefined });
           // riflette subito la richiesta pending senza un altro giro di rete
           const base = this.me();
           this.me.set({
@@ -409,6 +557,10 @@ export class SubscribeComponent {
         this.selectedTier.set(null);
         this.reference.reset('');
         this.clearDiscounts();
+        this.pointsToSpend.set(0);
+        // Ritirando, i punti impegnati tornano nel saldo: il gettone deve
+        // rifletterlo subito.
+        this.auth.loadMe().subscribe({ error: () => undefined });
         this.subs.mySubscription().subscribe({
           next: (me) => this.me.set(me),
           error: () => undefined,
