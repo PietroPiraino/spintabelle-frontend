@@ -52,8 +52,25 @@ describe('AdminLessonsComponent (pager + errori espliciti)', () => {
 
     fixture = TestBed.createComponent(AdminLessonsComponent);
     http = TestBed.inject(HttpTestingController);
-    http.expectOne(`${API}/lessons/tags`).flush([]);
+    consumaReload();
   });
+
+  /**
+   * Le chiamate accessorie di ogni `reload()`: i tag del picker e il sommario
+   * delle categorie.
+   *
+   * ⚠️ Esiste perché `afterEach(http.verify())` fa fallire OGNI spec del file su
+   * una richiesta non consumata, con un messaggio che nomina l'URL ma non la
+   * spec — cioè manda a cercare il difetto nel posto sbagliato. Aggiungendo una
+   * chiamata al `reload()` del componente, va aggiunta anche qui.
+   */
+  const consumaReload = () => {
+    http.expectOne(`${API}/lessons/tags`).flush([]);
+    http.expectOne(`${API}/lessons/sommario`).flush({
+      categorie: [],
+      senzaCategoria: 0,
+    });
+  };
 
   afterEach(() => http.verify());
 
@@ -144,7 +161,7 @@ describe('AdminLessonsComponent (pager + errori espliciti)', () => {
         25,
       ),
     );
-    http.expectOne(`${API}/lessons/tags`).flush([]);
+    consumaReload();
     await fixture.whenStable();
     fixture.detectChanges();
     expect(el.textContent).not.toContain('Pagina 2');

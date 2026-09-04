@@ -268,6 +268,14 @@
 
               <div class="row admin-panel__row">
                 <div class="field" style="margin: 0; min-width: 12rem">
+                  <label [attr.for]="'pc-' + s.id">Categoria</label>
+                  <select [id]="'pc-' + s.id" class="input" formControlName="categoria">
+                    @for (c of categorie; track c) {
+                      <option [value]="c">{{ categoryLabels[c] }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="field" style="margin: 0; min-width: 12rem">
                   <label [attr.for]="'ps-' + s.id">Accesso</label>
                   <select [id]="'ps-' + s.id" class="input" formControlName="stakes">
                     <option value="LOW">Low stakes — Pesce Rosso</option>

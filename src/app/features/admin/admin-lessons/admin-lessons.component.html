@@ -52,6 +52,26 @@
         }
       </div>
 
+      <!-- ⚠️ SOPRA «Stakes»: prima si dice di che cosa parla la lezione, poi a
+           chi è riservata. Sono due domande diverse e l'ordine le distingue. -->
+      <div class="field">
+        <label for="categoria">Categoria</label>
+        <select
+          id="categoria"
+          class="input"
+          formControlName="categoria"
+          [class.is-invalid]="form.controls.categoria.touched && form.controls.categoria.invalid"
+        >
+          <option value="">— scegli una categoria —</option>
+          @for (c of categorie; track c) {
+            <option [value]="c">{{ categoryLabels[c] }}</option>
+          }
+        </select>
+        @if (form.controls.categoria.touched && form.controls.categoria.invalid) {
+          <span class="field-error">Scegli la categoria della lezione.</span>
+        }
+      </div>
+
       <div class="field">
         <label for="stakes">Stakes</label>
         <select id="stakes" class="input" formControlName="stakes">
@@ -105,8 +125,33 @@
       @if (page(); as p) {
         <span class="admin-item__meta">
           {{ p.total }} {{ p.total === 1 ? 'lezione' : 'lezioni' }}
+          <!-- ⚠️ È LA CODA DI LAVORO della migrazione, e questo è l'unico
+               posto del sito che la mostra: il backfill classifica dai tag
+               quello che può, il resto lo smista una persona. Se nessuno
+               guarda questo numero, la funzione resta a metà in silenzio. -->
+          @if (sommario(); as s) {
+            @if (s.senzaCategoria > 0) {
+              · <strong>{{ s.senzaCategoria }} da classificare</strong>
+            }
+          }
         </span>
       }
+    </div>
+
+    <div class="field">
+      <label for="filtro-cat">Filtra per categoria</label>
+      <select
+        id="filtro-cat"
+        class="input"
+        (change)="setFiltroCategoria($any($event.target).value)"
+      >
+        <option value="">Tutte le categorie</option>
+        @for (c of categorie; track c) {
+          <option [value]="c">{{ categoryLabels[c] }}</option>
+        }
+        <!-- la sentinella: `NESSUNA` è un valore di query, mai di campo -->
+        <option [value]="NESSUNA">Senza categoria</option>
+      </select>
     </div>
     @if (listError()) {
       <div class="form-feedback is-error" role="alert">{{ listError() }}</div>
@@ -131,8 +176,22 @@
               @if (lesson.visibility === 'USER') {
                 <span class="badge badge--tag">Gratis</span>
               }
+              @if (lesson.categoria) {
+                <span class="badge badge--tag">{{ categoryLabels[lesson.categoria] }}</span>
+              }
             </div>
             <span class="admin-item__meta">
+              <!--
+                ⚠️ Il «da fare» sta nella riga META e NON è un badge, ed è
+                l'idioma di «Senza copertina» nel tab News: la fila di badge
+                porta i FATTI della lezione (stakes, gratis, categoria), e un
+                badge oro accanto a quelli si legge come un'etichetta positiva
+                — cioè il segnale opposto a quello che serve.
+              -->
+              @if (!lesson.categoria) {
+                <strong class="admin-lessons__da-classificare">Da classificare</strong>
+                ·
+              }
               @if (lesson.videoDate) {
                 {{ lesson.videoDate | date: 'dd MMM yyyy' }}
               }

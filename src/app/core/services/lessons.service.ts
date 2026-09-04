@@ -4,12 +4,14 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   Lesson,
+  LessonCategoriaFiltro,
   LessonPayload,
   LessonStakes,
   LessonViewSummary,
   LessonViewer,
   LessonViewsRow,
   LessonVisibility,
+  LessonsSommario,
   Paginated,
 } from '../models/api.models';
 import { SKIP_REFRESH } from './auth.service';
@@ -27,6 +29,8 @@ export interface LessonListOpts {
   visibility?: LessonVisibility;
   /** sezione stakes (Low/High) */
   stakes?: LessonStakes;
+  /** categoria, o la sentinella `NESSUNA` = non ancora classificate */
+  categoria?: LessonCategoriaFiltro;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -42,11 +46,28 @@ export class LessonsService {
     if (opts.tags?.length) params = params.set('tags', opts.tags.join(','));
     if (opts.visibility) params = params.set('visibility', opts.visibility);
     if (opts.stakes) params = params.set('stakes', opts.stakes);
+    if (opts.categoria) params = params.set('categoria', opts.categoria);
     return this.http.get<Paginated<Lesson>>(`${API}/lessons`, { params });
   }
 
-  getTags(): Observable<string[]> {
-    return this.http.get<string[]>(`${API}/lessons/tags`);
+  /**
+   * Tag distinti; con una categoria si restringono a quelli usati lì dentro.
+   *
+   * ⚠️ Senza categoria l'URL deve restare `/lessons/tags` NUDO: il `beforeEach`
+   * delle spec di /lezioni fa `expectOne('${API}/lessons/tags')`, che confronta
+   * `urlWithParams` — un `?categoria=` vuoto farebbe fallire NOVE spec, e il
+   * messaggio non nominerebbe questa riga.
+   */
+  getTags(categoria?: LessonCategoriaFiltro): Observable<string[]> {
+    const opts = categoria
+      ? { params: new HttpParams().set('categoria', categoria) }
+      : {};
+    return this.http.get<string[]>(`${API}/lessons/tags`, opts);
+  }
+
+  /** Conteggi per categoria + la coda da classificare (pillole e pannello admin). */
+  sommario(): Observable<LessonsSommario> {
+    return this.http.get<LessonsSommario>(`${API}/lessons/sommario`);
   }
 
   /**

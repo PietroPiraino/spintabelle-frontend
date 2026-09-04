@@ -56,6 +56,50 @@ export type LessonVisibility = 'USER' | 'PESCE_ROSSO' | 'SQUALO';
 /** Livello stakes: guida le due sezioni Low/High della libreria. */
 export type LessonStakes = 'LOW' | 'HIGH';
 
+/**
+ * Le sette categorie delle lezioni, nell'ordine del programma di studio.
+ *
+ * ⚠️ È lo SPECCHIO di `backend/src/lessons/lessons.types.ts` e non c'è alcuna
+ * guardia che confronti le due copie: una deriva (una categoria aggiunta di là
+ * e non di qua) si manifesta come una pillola che non compare mai, senza
+ * errori. È lo stesso debito già in essere per le otto categorie delle news.
+ */
+export const LESSON_CATEGORIES = [
+  'fondamentali',
+  '3-max',
+  'heads-up',
+  'review',
+  'leak-finder',
+  'mental-coaching',
+  'sessioni-live',
+] as const;
+export type LessonCategory = (typeof LESSON_CATEGORIES)[number];
+
+export const LESSON_CATEGORY_LABELS: Record<LessonCategory, string> = {
+  fondamentali: 'Fondamentali',
+  '3-max': '3-max',
+  'heads-up': 'Heads-up',
+  review: 'Hand Review',
+  'leak-finder': 'Leak finder',
+  'mental-coaching': 'Mental coaching',
+  'sessioni-live': 'Sessioni dal vivo',
+};
+
+/**
+ * Sentinella «non ancora classificate» del filtro admin.
+ * ⚠️ Valore di QUERY, mai valore di campo: non entra in `LESSON_CATEGORIES`.
+ */
+export const LESSON_CATEGORIA_NESSUNA = 'NESSUNA';
+export type LessonCategoriaFiltro =
+  | LessonCategory
+  | typeof LESSON_CATEGORIA_NESSUNA;
+
+/** Quante lezioni per categoria, più la coda da classificare. */
+export interface LessonsSommario {
+  categorie: { categoria: LessonCategory; count: number }[];
+  senzaCategoria: number;
+}
+
 export interface Lesson {
   id: string;
   title: string;
@@ -72,6 +116,8 @@ export interface Lesson {
   /** data del video (ISO); chiave di ordinamento della lista */
   videoDate?: string;
   createdAt?: string;
+  /** asse primario del catalogo; assente = non ancora classificata */
+  categoria?: LessonCategory;
 }
 
 export interface LessonPayload {
@@ -85,6 +131,13 @@ export interface LessonPayload {
   freePreview?: boolean;
   /** data del video in formato YYYY-MM-DD (obbligatoria alla creazione) */
   videoDate: string;
+  /**
+   * Categoria: opzionale finché la triage dell'archivio non è finita.
+   * ⚠️ Diventerà obbligatoria (fase A4), e da lì il form admin dovrà
+   * dichiarare `Validators.required` lato client — o il primo salvataggio col
+   * select sul valore vuoto prende un 400 che parla in inglese.
+   */
+  categoria?: LessonCategory;
 }
 
 // ----- Documenti / Risorse (libreria file scaricabili, pagina /docs) -----
@@ -479,6 +532,8 @@ export interface PublishRecordingPayload {
   stakes?: LessonStakes;
   freePreview?: boolean;
   videoDate?: string;
+  /** categoria della lezione che nasce dalla VOD; il ripiego lo mette il backend */
+  categoria?: LessonCategory;
   /** false = niente avviso Discord e niente email agli abbonati */
   notify?: boolean;
 }
@@ -1080,6 +1135,17 @@ export interface DrillAnswerResult {
   correctSoFar: number;
   avgEvLoss: number;
   finished: boolean;
+}
+
+/**
+ * Una configurazione salvata dallo studente. È esattamente un
+ * `DrillConfigPayload` più un nome e un id — e non per pigrizia: «valida da
+ * salvare» e «valida da avviare» devono restare la stessa cosa, o si finisce
+ * con un preset che si salva e non si avvia.
+ */
+export interface DrillPreset extends DrillConfigPayload {
+  id: string;
+  nome: string;
 }
 
 export interface DrillStatsBucket {

@@ -255,3 +255,11 @@
     color: var(--text-muted);
   }
 }
+
+// Marcatore «questa riga aspetta ancora qualcosa» negli elenchi admin.
+// ⚠️ Copper e non oro, e non un badge: la fila di badge porta i fatti della
+// riga, e un badge in più lì dentro si legge come un'etichetta positiva.
+// Stesso trattamento di `.admin-news__senza-copertina`.
+.admin-lessons__da-classificare {
+  color: var(--copper-600);
+}

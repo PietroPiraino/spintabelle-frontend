@@ -124,8 +124,110 @@
     </div>
   </section>
 } @else {
+<!--
+  RAMO AUTENTICATO. Ordine, dall'alto: testata (h1 + ricerca) → sezioni stakes +
+  contatore → argomenti → intestazione dei risultati → chip dei filtri attivi →
+  card in evidenza → griglia.
+
+  ⚠️ I FILTRI STANNO SOPRA LA CARD IN EVIDENZA, e non è indifferente: l'evidenza
+  sparisce appena si tocca un filtro, e la ricerca la fa sparire ~300 ms dopo
+  l'ultima battuta di tastiera — cioè mentre si stanno già leggendo i risultati.
+  Con i controlli sotto, ogni filtro li spingerebbe su di ~400 px. Sopra, non si
+  muove niente: cambia solo ciò che sta dopo. Su un sito che ha portato il CLS
+  di questa pagina da 0,719 a 0,007 è il vincolo che decide l'ordine dei blocchi.
+  Effetto collaterale buono: `.section-head` resta intatta, con dentro tutto ciò
+  che ci stava prima.
+-->
 <section class="section">
   <div class="container">
+    <!--
+      ⚠️ Il blocco media (bloccata / player / poster) è scritto UNA volta e
+      consumato sia dalla card in evidenza sia da quelle in griglia.
+      È IL PUNTO DI MONTAGGIO DELL'IFRAME BUNNY, cioè la condotta su cui poggia
+      l'esimente dell'art. 122 Codice Privacy: il player scrive in localStorage
+      già al caricamento dell'iframe, non al play, quindi l'iframe non deve
+      esistere finché l'utente non chiede il video. Con due copie ci sarebbero
+      due punti da tenere allineati e la spec ne guarderebbe uno solo.
+      ⚠️ Il clic NON è consenso ex art. 7: è la richiesta esplicita del servizio.
+      Non scriverlo da nessuna parte.
+    -->
+    <ng-template #media let-lesson>
+      <div class="lesson-card__media">
+        @if (lesson.locked) {
+          <div class="lesson-card__locked">
+            @if (lesson.thumbnailUrl) {
+              <img
+                class="lesson-card__thumb lesson-card__thumb--dim"
+                [src]="lesson.thumbnailUrl"
+                alt=""
+                loading="lazy"
+                referrerpolicy="origin"
+                (error)="onThumbError($event)"
+              />
+            }
+            <span class="lesson-card__lock" aria-hidden="true">🂠</span>
+            <p class="lesson-card__locked-title">Riservata agli abbonati</p>
+            <p class="lesson-card__locked-sub">
+              Sblocca tutte le lezioni della scuola con un abbonamento.
+            </p>
+            <a routerLink="/abbonati" class="btn btn--primary btn--sm">
+              Scopri come abbonarti
+            </a>
+          </div>
+        } @else if (playingId() === lesson.id && lesson.bunnyEmbedUrl) {
+          <app-bunny-player
+            [url]="lesson.bunnyEmbedUrl"
+            [videoTitle]="lesson.title"
+            (progress)="onProgress(lesson.id, $event)"
+          />
+        } @else {
+          <button
+            type="button"
+            class="lesson-card__poster"
+            [class.has-thumb]="lesson.thumbnailUrl"
+            (click)="play(lesson.id)"
+          >
+            @if (lesson.thumbnailUrl) {
+              <img
+                class="lesson-card__thumb"
+                [src]="lesson.thumbnailUrl"
+                alt=""
+                loading="lazy"
+                referrerpolicy="origin"
+                (error)="onThumbError($event)"
+              />
+            }
+            <span class="lesson-card__play" aria-hidden="true">▶</span>
+            <span class="visually-hidden">Guarda {{ lesson.title }}</span>
+          </button>
+        }
+      </div>
+    </ng-template>
+
+    <!--
+      La fila degli argomenti, scritta una volta e usata sia nuda sia dentro il
+      `<details>`: le due forme devono restare lo stesso markup, o la spec che
+      clicca `.lessons__tags button` proverebbe solo una delle due.
+    -->
+    <ng-template #filaTag>
+      <div class="row lessons__tags" role="group" aria-label="Filtra per argomento">
+        @for (tag of tagVisibili(); track tag) {
+          <button
+            type="button"
+            class="badge badge--tag"
+            [class.is-active]="selectedTags().includes(tag)"
+            [attr.aria-pressed]="selectedTags().includes(tag)"
+            (click)="toggleTag(tag)"
+          >{{ tag }}</button>
+        }
+        @if (tagVisibili().length === 0) {
+          <span class="lessons__nessun-tag">
+            Nessun argomento corrisponde a «{{ filtroTag() }}».
+          </span>
+        }
+      </div>
+    </ng-template>
+
     <div class="section-head">
       <span class="eyebrow">Studio</span>
       <div class="spread">
@@ -141,27 +243,82 @@
         />
       </div>
 
+      <!--
+        ⚠️ LE CATEGORIE SONO L'ASSE PRIMARIO, e si vede: stato attivo FORTE
+        (`is-active--forte`, il gradiente pieno) contro il livello tenue di
+        stakes e argomenti. Due assi con lo stesso identico stato attivo si
+        appiattiscono, ed è precisamente il «confusionario» da cui questo lotto
+        nasce.
+        ⚠️ Una categoria a ZERO non produce alcuna pillola: la riga dice quanto
+        catalogo c'è davvero, mai quanto ne era stato immaginato. È il server a
+        filtrarle (`sommario`), non il template.
+      -->
+      @if (sommario(); as som) {
+        @if (som.categorie.length > 0) {
+          <div
+            class="row lessons__cats"
+            role="radiogroup"
+            aria-label="Filtra per categoria"
+            (keydown)="onCategorieKeydown($event)"
+          >
+            <button
+              type="button"
+              class="badge badge--tag"
+              role="radio"
+              [class.is-active]="categoria() === null"
+              [class.is-active--forte]="categoria() === null"
+              [attr.aria-checked]="categoria() === null"
+              [attr.tabindex]="categoria() === null ? 0 : -1"
+              (click)="setCategoria(null)"
+            >
+              Tutte
+              <span class="lessons__cats-n">{{ totaleCatalogo() }}</span>
+            </button>
+            @for (c of som.categorie; track c.categoria) {
+              <button
+                type="button"
+                class="badge badge--tag"
+                role="radio"
+                [class.is-active]="categoria() === c.categoria"
+                [class.is-active--forte]="categoria() === c.categoria"
+                [attr.aria-checked]="categoria() === c.categoria"
+                [attr.tabindex]="categoria() === c.categoria ? 0 : -1"
+                (click)="setCategoria(c.categoria)"
+              >
+                {{ categoryLabels[c.categoria] }}
+                <span class="lessons__cats-n">{{ c.count }}</span>
+              </button>
+            }
+          </div>
+        }
+      }
+
       @if (lessons()) {
         <div class="spread lessons__toolbar">
-          <div class="row lessons__levels" role="group" aria-label="Filtra per stakes">
-            <button
-              type="button"
-              class="badge badge--tag"
-              [class.is-active]="stakesFilter() === 'all'"
-              (click)="setStakes('all')"
-            >Tutte</button>
-            <button
-              type="button"
-              class="badge badge--tag"
-              [class.is-active]="stakesFilter() === 'LOW'"
-              (click)="setStakes('LOW')"
-            >Low stakes</button>
-            <button
-              type="button"
-              class="badge badge--tag"
-              [class.is-active]="stakesFilter() === 'HIGH'"
-              (click)="setStakes('HIGH')"
-            >High stakes</button>
+          <!--
+            ⚠️ Scelta ESCLUSIVA, quindi `radiogroup`/`radio`/`aria-checked` e
+            non `aria-pressed` (che è la grammatica dei toggle, cioè quella
+            degli argomenti qui sotto). Il roving tabindex non è un di più: il
+            ruolo promette le frecce, e un ruolo che promette e non mantiene è
+            peggio di nessun ruolo.
+          -->
+          <div
+            class="row lessons__levels"
+            role="radiogroup"
+            aria-label="Filtra per stakes"
+            (keydown)="onStakesKeydown($event)"
+          >
+            @for (s of sezioniStakes; track s.valore) {
+              <button
+                type="button"
+                class="badge badge--tag"
+                role="radio"
+                [class.is-active]="stakesFilter() === s.valore"
+                [attr.aria-checked]="stakesFilter() === s.valore"
+                [attr.tabindex]="stakesFilter() === s.valore ? 0 : -1"
+                (click)="setStakes(s.valore)"
+              >{{ s.etichetta }}</button>
+            }
           </div>
           <span class="lessons__count">
             {{ total() }} {{ total() === 1 ? 'lezione' : 'lezioni' }}
@@ -170,16 +327,48 @@
       }
 
       @if (tags().length > 0) {
-        <div class="row lessons__tags" role="group" aria-label="Filtra per tag">
-          @for (tag of tags(); track tag) {
-            <button
-              type="button"
-              class="badge badge--tag"
-              [class.is-active]="selectedTags().includes(tag)"
-              (click)="toggleTag(tag)"
-            >{{ tag }}</button>
-          }
-        </div>
+        @if (mostraDisclosureTag()) {
+          <!--
+            ⚠️ `<details>` NATIVO e mai un `@if`: il ramo falso di un `@if` non
+            emette markup, quindi i bottoni sparirebbero dal DOM — e con loro la
+            spec che ne clicca uno. Le classi sono quelle GLOBALI di
+            `styles/_utilities.scss`: la ricetta del chevron a 44px esiste già,
+            e riscriverla qui sarebbe la terza copia.
+            ⚠️ `[open]` è legato a un signal scritto dall'evento `toggle`, NON a
+            `selectedTags().length > 0`: derivandolo dalla selezione, togliendo
+            l'ultimo argomento il pannello si richiuderebbe in faccia a chi lo
+            sta usando. Che un filtro acceso resti visibile lo garantiscono i
+            chip qui sotto, che stanno fuori dal pannello ed esistono apposta.
+          -->
+          <details
+            class="seo-more lessons__argomenti"
+            [open]="tagAperti()"
+            (toggle)="onTagToggle($event)"
+          >
+            <summary class="seo-more__sum">
+              Filtra per argomento ({{ tags().length }})
+            </summary>
+            @if (mostraCercaTag()) {
+              <!--
+                ⚠️ `type="text"` e MAI `type="search"`: una spec cerca
+                `input[type="search"]` e deve continuare a trovare quello della
+                testata, che è un altro campo e fa un'altra cosa.
+              -->
+              <input
+                type="text"
+                class="input lessons__cerca-tag"
+                placeholder="Cerca un argomento…"
+                aria-label="Cerca fra gli argomenti"
+                maxlength="40"
+                [value]="filtroTag()"
+                (input)="onFiltroTag($event)"
+              />
+            }
+            <ng-container [ngTemplateOutlet]="filaTag" />
+          </details>
+        } @else {
+          <ng-container [ngTemplateOutlet]="filaTag" />
+        }
       }
     </div>
 
@@ -209,60 +398,88 @@
         </div>
       }
     } @else {
-      <div class="grid grid--2">
-        @for (lesson of lessons()!; track lesson.id; let i = $index) {
-          <!-- delay relativo al batch caricato, non all'indice assoluto -->
-          <article class="card card--hover lesson-card rise" [style.animation-delay.ms]="(i % pageSize) * 60">
-            <div class="lesson-card__media">
-              @if (lesson.locked) {
-                <div class="lesson-card__locked">
-                  @if (lesson.thumbnailUrl) {
-                    <img
-                      class="lesson-card__thumb lesson-card__thumb--dim"
-                      [src]="lesson.thumbnailUrl"
-                      alt=""
-                      loading="lazy"
-                      referrerpolicy="origin"
-                      (error)="onThumbError($event)"
-                    />
-                  }
-                  <span class="lesson-card__lock" aria-hidden="true">🂠</span>
-                  <p class="lesson-card__locked-title">Riservata agli abbonati</p>
-                  <p class="lesson-card__locked-sub">
-                    Sblocca tutte le lezioni della scuola con un abbonamento.
-                  </p>
-                  <a routerLink="/abbonati" class="btn btn--primary btn--sm">
-                    Scopri come abbonarti
-                  </a>
-                </div>
-              } @else if (playingId() === lesson.id && lesson.bunnyEmbedUrl) {
-                <app-bunny-player
-                  [url]="lesson.bunnyEmbedUrl"
-                  [videoTitle]="lesson.title"
-                  (progress)="onProgress(lesson.id, $event)"
-                />
+      <div class="lessons__risultati">
+        <h2>{{ titoloRisultati() }}</h2>
+        @if (hasFilters()) {
+          <div class="row lessons__attivi">
+            @for (c of filtriAttivi(); track c.tipo + '|' + c.chiave) {
+              <button
+                type="button"
+                class="badge badge--tag is-active lessons__chip"
+                [attr.aria-label]="'Togli il filtro ' + c.etichetta"
+                (click)="rimuoviFiltro(c)"
+              >
+                {{ c.etichetta }}
+                <app-icon name="x" [size]="13" />
+              </button>
+            }
+            <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilters()">
+              Azzera i filtri
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (inEvidenza(); as evidenza) {
+        <article class="card lesson-card lesson-card--hero">
+          <ng-container
+            [ngTemplateOutlet]="media"
+            [ngTemplateOutletContext]="{ $implicit: evidenza }"
+          />
+          <div class="lesson-card__body">
+            <span class="lesson-card__eyebrow">L'ultima lezione</span>
+            <!-- ⚠️ `<h2>` e mai un secondo `<h1>`: la guardia di build ne
+                 pretende esattamente uno per pagina. -->
+            <h2>{{ evidenza.title }}</h2>
+            <div class="row" style="gap: 0.35rem">
+              @if (evidenza.stakes === 'HIGH') {
+                <span class="badge badge--premium">High stakes</span>
               } @else {
-                <button
-                  type="button"
-                  class="lesson-card__poster"
-                  [class.has-thumb]="lesson.thumbnailUrl"
-                  (click)="play(lesson.id)"
-                >
-                  @if (lesson.thumbnailUrl) {
-                    <img
-                      class="lesson-card__thumb"
-                      [src]="lesson.thumbnailUrl"
-                      alt=""
-                      loading="lazy"
-                      referrerpolicy="origin"
-                      (error)="onThumbError($event)"
-                    />
-                  }
-                  <span class="lesson-card__play" aria-hidden="true">▶</span>
-                  <span class="visually-hidden">Guarda {{ lesson.title }}</span>
-                </button>
+                <span class="badge badge--free">Low stakes</span>
+              }
+              @if (evidenza.visibility === 'USER') {
+                <span class="badge badge--tag">Gratis</span>
+              }
+              @if (isNuova(evidenza)) {
+                <span class="badge badge--tag">Nuova</span>
+              }
+              @if (!evidenza.locked && isViewed(evidenza.id)) {
+                <span class="badge badge--tag" title="L'hai già aperta">✓ Vista</span>
               }
             </div>
+            @if (evidenza.videoDate) {
+              <span class="lesson-card__date">{{ evidenza.videoDate | date: 'dd MMM yyyy' }}</span>
+            }
+            <!-- qui la descrizione è INTERA: in griglia è troncata a tre righe -->
+            <p class="lesson-card__desc">{{ evidenza.description }}</p>
+            @if (evidenza.tags.length > 0) {
+              <div class="row lesson-card__taglist">
+                @for (tag of evidenza.tags; track tag) {
+                  <button
+                    type="button"
+                    class="badge badge--tag"
+                    [class.is-active]="selectedTags().includes(tag)"
+                    [attr.aria-pressed]="selectedTags().includes(tag)"
+                    (click)="toggleTag(tag)"
+                  >{{ tag }}</button>
+                }
+              </div>
+            }
+          </div>
+        </article>
+      }
+
+      <div class="grid grid--2">
+        @for (lesson of inGriglia()!; track lesson.id; let i = $index) {
+          <!-- ⚠️ Il ritardo è relativo al BATCH, non all'indice di griglia:
+               con la card in evidenza fuori dall'elenco gli indici scalano di
+               uno, e `.rise` ha `animation-fill-mode: both` — cioè il ritardo
+               è tempo passato a `opacity: 0`. Vedi `ritardoRise`. -->
+          <article class="card card--hover lesson-card rise" [style.animation-delay.ms]="ritardoRise(i)">
+            <ng-container
+              [ngTemplateOutlet]="media"
+              [ngTemplateOutletContext]="{ $implicit: lesson }"
+            />
 
             <div class="lesson-card__body">
               <div class="spread">
@@ -276,6 +493,9 @@
                   @if (lesson.visibility === 'USER') {
                     <span class="badge badge--tag">Gratis</span>
                   }
+                  @if (isNuova(lesson)) {
+                    <span class="badge badge--tag">Nuova</span>
+                  }
                   @if (!lesson.locked && isViewed(lesson.id)) {
                     <span class="badge badge--tag" title="L'hai già aperta">✓ Vista</span>
                   }
@@ -287,13 +507,21 @@
               <p class="lesson-card__desc">{{ lesson.description }}</p>
               @if (lesson.tags.length > 0) {
                 <div class="row lesson-card__taglist">
-                  @for (tag of lesson.tags; track tag) {
+                  @for (tag of tagCard(lesson); track tag) {
                     <button
                       type="button"
                       class="badge badge--tag"
                       [class.is-active]="selectedTags().includes(tag)"
+                      [attr.aria-pressed]="selectedTags().includes(tag)"
                       (click)="toggleTag(tag)"
                     >{{ tag }}</button>
+                  }
+                  @if (tagNascosti(lesson).length > 0) {
+                    <!-- `<span>` e non `<button>`: non è un filtro, quindi non
+                         deve alzarsi a 44px (`button.badge--tag` lo farebbe). -->
+                    <span class="badge lesson-card__tag-piu" [title]="tagNascosti(lesson).join(', ')">
+                      +{{ tagNascosti(lesson).length }}
+                    </span>
                   }
                 </div>
               }

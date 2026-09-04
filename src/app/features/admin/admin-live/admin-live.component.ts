@@ -8,6 +8,9 @@ import {
 import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
+  LESSON_CATEGORIES,
+  LESSON_CATEGORY_LABELS,
+  LessonCategory,
   LessonStakes,
   LiveMode,
   LiveSession,
@@ -46,6 +49,10 @@ export class AdminLiveComponent {
       [Validators.required, Validators.minLength(3), Validators.maxLength(200)],
     ],
     description: ['', [Validators.maxLength(2000)]],
+    // ⚠️ Precompilata su «Sessioni dal vivo» ma modificabile: è la categoria in
+    // cui gli studenti cercano una registrazione, anche quando la sessione
+    // parlava di preflop. Il backend applica lo stesso ripiego se non arriva.
+    categoria: ['sessioni-live' as LessonCategory, Validators.required],
     stakes: ['LOW' as LessonStakes, Validators.required],
     startsAt: ['', Validators.required],
     durationMin: [60],
@@ -109,6 +116,7 @@ export class AdminLiveComponent {
     this.form.patchValue({
       title: session.title,
       description: session.description ?? '',
+      categoria: 'sessioni-live',
       stakes: session.stakes,
       startsAt: this.toLocalInput(session.startsAt),
       durationMin: session.durationMin ?? 60,
@@ -228,6 +236,8 @@ export class AdminLiveComponent {
 
   /** Sessione con il pannello di pubblicazione aperto (una alla volta). */
   protected readonly publishPanelId = signal<string | null>(null);
+  protected readonly categorie = LESSON_CATEGORIES;
+  protected readonly categoryLabels = LESSON_CATEGORY_LABELS;
   protected readonly knownTags = signal<string[]>([]);
   protected readonly selectedTags = signal<string[]>([]);
 
@@ -237,6 +247,10 @@ export class AdminLiveComponent {
       [Validators.required, Validators.minLength(3), Validators.maxLength(200)],
     ],
     description: ['', [Validators.maxLength(2000)]],
+    // ⚠️ Precompilata su «Sessioni dal vivo» ma modificabile: è la categoria in
+    // cui gli studenti cercano una registrazione, anche quando la sessione
+    // parlava di preflop. Il backend applica lo stesso ripiego se non arriva.
+    categoria: ['sessioni-live' as LessonCategory, Validators.required],
     stakes: ['LOW' as LessonStakes, Validators.required],
     freePreview: [false],
     videoDate: ['', Validators.required],
@@ -250,6 +264,7 @@ export class AdminLiveComponent {
     this.publishForm.reset({
       title: session.title,
       description: session.description ?? '',
+      categoria: 'sessioni-live',
       stakes: session.stakes,
       freePreview: false,
       // data della live: nella grande maggioranza dei casi è già quella giusta
@@ -286,6 +301,7 @@ export class AdminLiveComponent {
       .publishRecording(session.id, {
         title: v.title.trim(),
         description: v.description.trim() || undefined,
+        categoria: v.categoria,
         stakes: v.stakes,
         freePreview: v.freePreview,
         videoDate: v.videoDate,

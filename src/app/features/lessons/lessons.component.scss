@@ -96,7 +96,7 @@
   border-radius: 50%;
   font-size: 1.3rem;
   padding-left: 4px;
-  color: #2a1404;
+  color: var(--ink-on-copper);
   background: linear-gradient(135deg, var(--copper-500), var(--gold));
   box-shadow: 0 0 28px rgba(255, 106, 31, 0.65);
   transition: transform var(--t-med), box-shadow var(--t-med);
@@ -176,4 +176,196 @@
 .lesson-card__taglist {
   gap: 0.4rem;
   margin-top: auto;
+}
+
+// ── Intestazione dei risultati e chip dei filtri attivi ──────────────────────
+
+.lessons__risultati {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-bottom: 1.4rem;
+
+  // ⚠️ Dimensione DICHIARATA: l'`h2` globale è `clamp(1.7rem, 3.6vw, 2.6rem)`,
+  // cioè fino a 41,6px — qui serve un'etichetta di sezione, non una testata,
+  // e senza questa riga sovrasterebbe l'`h1` «Lezioni» che le sta sopra.
+  h2 {
+    font-size: 1.05rem;
+    letter-spacing: 0;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+}
+
+.lessons__attivi {
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+// Il chip di un filtro acceso: etichetta + la ✕ che spegne QUEL filtro.
+// Nasce già `is-active`, quindi eredita il livello tenue di `_cards.scss`.
+.lessons__chip app-icon {
+  opacity: 0.75;
+}
+
+// ── Pannello degli argomenti ────────────────────────────────────────────────
+
+.lessons__argomenti {
+  margin-top: 0.6rem;
+
+  // il `<details>` globale porta il proprio ritmo di prosa: qui è un controllo
+  .lessons__tags {
+    margin-top: 0.2rem;
+  }
+}
+
+.lessons__cerca-tag {
+  max-width: 260px;
+  margin: 0.2rem 0 0.6rem;
+}
+
+.lessons__nessun-tag {
+  font-size: 0.85rem;
+  color: var(--text-faint);
+}
+
+// ── Card in evidenza ────────────────────────────────────────────────────────
+
+.lesson-card--hero {
+  // ⚠️ `.lesson-card` è `display: flex; flex-direction: column`: qui serve una
+  // griglia a due colonne, e va ridichiarata (non basta cambiare `direction`,
+  // perché il poster deve restare 16:9 dentro una colonna a larghezza fissa).
+  display: grid;
+  grid-template-columns: minmax(0, 44%) 1fr;
+  align-items: stretch;
+  margin-bottom: 1.6rem;
+  border-color: var(--line-strong);
+
+  // ⚠️ Il poster deve riempire la colonna, non tenere il proprio 16:9: la
+  // colonna è alta quanto il testo accanto, e con `aspect-ratio` fisso restava
+  // una fascia di fondo card scoperta sotto l'immagine — visibile solo
+  // guardando la pagina, nessun test la vede.
+  .lesson-card__media {
+    display: grid;
+    border-bottom: none;
+    border-right: 1px solid var(--line);
+  }
+
+  .lesson-card__poster,
+  .lesson-card__locked {
+    aspect-ratio: auto;
+    height: 100%;
+    // ...e un pavimento, o con un testo corto il poster si schiaccerebbe
+    min-height: 260px;
+  }
+
+  .lesson-card__body {
+    justify-content: center;
+    padding: 1.6rem 1.8rem;
+  }
+
+  // il titolo dell'evidenza: più grande della griglia, molto meno dell'h2 globale
+  h2 {
+    font-size: clamp(1.3rem, 3vw, 1.9rem);
+  }
+
+  // qui la descrizione è intera: è l'unico posto della pagina in cui si legge
+  .lesson-card__desc {
+    display: block;
+    -webkit-line-clamp: none;
+    overflow: visible;
+  }
+
+  // ⚠️ Sotto 760px torna una card normale, poster sopra e testo sotto: due
+  // colonne su un telefono darebbero un poster da 170px, cioè un francobollo.
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
+
+    .lesson-card__media {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lesson-card__body {
+      padding: 1.2rem 1.4rem 1.4rem;
+    }
+  }
+}
+
+.lesson-card__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--copper-600);
+}
+
+// ⚠️ In griglia la descrizione si ferma a tre righe: senza, una descrizione
+// lunga alza la sua card e lascia un buco accanto a quella corta (le due
+// colonne di `.grid--2` si allineano per riga).
+.lesson-card__desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+// Il «+2» dei tag tagliati: un'ETICHETTA, non un filtro — resta a 26px.
+.lesson-card__tag-piu {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+// ⚠️ Su un telefono da 390px il campo restava a 320px e sembrava riempito a
+// metà: la `.spread` va a capo, ma il `max-width` sopra continua a valere.
+@media (max-width: 640px) {
+  .lessons__search {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
+// ── Categorie: l'asse primario ──────────────────────────────────────────────
+
+.lessons__cats {
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+}
+
+// Il conteggio dentro la pillola: `.badge` è già `inline-flex` con `gap`,
+// quindi due figli entrano senza una riga di layout nuova.
+.lessons__cats-n {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.72;
+}
+
+// ⚠️ Su un telefono nove pillole con il conteggio fanno quattro righe da 44px,
+// cioè 176px di cromatura prima della prima lezione. Diventano UNA riga che
+// scorre, con un velo sfumato a destra che dichiara «c'è dell'altro».
+// ⚠️ È un pattern NUOVO per questo progetto — zero `scroll-snap-*` in tutto
+// `src/`. Il precedente strutturale è `.pf__steps` di /tabelle (flex +
+// `overflow-x: auto`); il velo è già risolto due volte con `mask-image`.
+// Va provato su un telefono vero: uno scorrimento orizzontale dentro una
+// pagina che scorre in verticale è la cosa più fragile di questo lotto.
+@media (max-width: 720px) {
+  .lessons__cats {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    padding-bottom: 0.2rem;
+    mask-image: linear-gradient(90deg, #000 88%, transparent);
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    > .badge {
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+    }
+  }
 }

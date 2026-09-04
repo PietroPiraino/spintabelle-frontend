@@ -2,8 +2,14 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
+  LESSON_CATEGORIA_NESSUNA,
+  LESSON_CATEGORIES,
+  LESSON_CATEGORY_LABELS,
   Lesson,
+  LessonCategoriaFiltro,
+  LessonCategory,
   LessonStakes,
+  LessonsSommario,
   Paginated,
 } from '../../../core/models/api.models';
 import { LessonsService } from '../../../core/services/lessons.service';
@@ -29,6 +35,20 @@ export class AdminLessonsComponent {
   /** Errore di caricamento della lista (distinto dall'errore del form). */
   protected readonly listError = signal<string | null>(null);
   protected readonly knownTags = signal<string[]>([]);
+  /**
+   * Conteggi per categoria e — la parte che conta qui — quante lezioni restano
+   * da classificare. È la coda di lavoro della migrazione, e questa schermata è
+   * l'unico posto che la rende visibile.
+   * ⚠️ Best-effort: contro un backend vecchio `/lessons/sommario` cade su
+   * `@Get(':id')` e torna 404. Il pannello deve continuare a funzionare.
+   */
+  protected readonly sommario = signal<LessonsSommario | null>(null);
+  /** Filtro della lista per categoria; `null` = tutte. */
+  protected readonly filtroCategoria = signal<LessonCategoriaFiltro | null>(null);
+
+  protected readonly categorie = LESSON_CATEGORIES;
+  protected readonly categoryLabels = LESSON_CATEGORY_LABELS;
+  protected readonly NESSUNA = LESSON_CATEGORIA_NESSUNA;
   protected readonly selectedTags = signal<string[]>([]);
   protected readonly editingId = signal<string | null>(null);
   protected readonly saving = signal(false);
@@ -49,6 +69,12 @@ export class AdminLessonsComponent {
         ),
       ],
     ],
+    // ⚠️ `required` QUI perché il campo è obbligatorio ANCHE là: un obbligo
+    // solo lato client mentirebbe sul contratto, uno solo lato server darebbe
+    // un 400 in inglese al primo salvataggio. Le due righe si toccano insieme.
+    // ⚠️ È anche il meccanismo che porta a termine la triage: una lezione
+    // legacy senza categoria non si può ri-salvare senza classificarla.
+    categoria: ['' as LessonCategory | '', Validators.required],
     stakes: ['LOW' as LessonStakes, Validators.required],
     // anteprima gratuita: la lezione resta visibile a tutti i registrati
     freePreview: [false],
@@ -68,7 +94,11 @@ export class AdminLessonsComponent {
     this.listLoading.set(true);
     this.listError.set(null);
     this.lessonsApi
-      .getLessons({ page: this.currentPage(), limit: PAGE_SIZE })
+      .getLessons({
+        page: this.currentPage(),
+        limit: PAGE_SIZE,
+        categoria: this.filtroCategoria() ?? undefined,
+      })
       .subscribe({
         next: (page) => {
           this.page.set(page);
@@ -91,6 +121,18 @@ export class AdminLessonsComponent {
     this.lessonsApi.getTags().subscribe({
       next: (tags) => this.knownTags.set(tags),
     });
+    this.lessonsApi.sommario().subscribe({
+      next: (s) => this.sommario.set(s),
+      // best-effort: senza il sommario il pannello perde il contatore, non la lista
+      error: () => undefined,
+    });
+  }
+
+  /** Cambia il filtro per categoria e riparte dalla prima pagina. */
+  protected setFiltroCategoria(value: string): void {
+    this.filtroCategoria.set((value || null) as LessonCategoriaFiltro | null);
+    this.currentPage.set(1);
+    this.load();
   }
 
   protected goToPage(n: number): void {
@@ -108,6 +150,7 @@ export class AdminLessonsComponent {
       title: lesson.title,
       description: lesson.description,
       bunnyEmbedUrl: lesson.bunnyEmbedUrl ?? '',
+      categoria: lesson.categoria ?? '',
       stakes: lesson.stakes ?? 'LOW',
       // stato "gratis" corrente: dedotto dalla visibilità USER
       freePreview: lesson.visibility === 'USER',
@@ -119,7 +162,7 @@ export class AdminLessonsComponent {
 
   protected cancelEdit(): void {
     this.editingId.set(null);
-    this.form.reset({ stakes: 'LOW', freePreview: false });
+    this.form.reset({ stakes: 'LOW', freePreview: false, categoria: '' });
     this.selectedTags.set([]);
     this.error.set(null);
   }
@@ -133,8 +176,15 @@ export class AdminLessonsComponent {
     this.error.set(null);
     this.feedback.set(null);
 
-    const { title, description, bunnyEmbedUrl, stakes, freePreview, videoDate } =
-      this.form.getRawValue();
+    const {
+      title,
+      description,
+      bunnyEmbedUrl,
+      categoria,
+      stakes,
+      freePreview,
+      videoDate,
+    } = this.form.getRawValue();
     const payload = {
       title,
       description,
@@ -143,6 +193,11 @@ export class AdminLessonsComponent {
       freePreview,
       videoDate,
       tags: this.selectedTags(),
+      // ⚠️ La chiave si omette quando è vuota, non si manda `''`: il DTO ha
+      // `@IsIn(LESSON_CATEGORIES)` e una stringa vuota è un 400, non un
+      // «nessuna categoria». È anche ciò che permette di ri-salvare una lezione
+      // non ancora classificata senza doverla classificare adesso.
+      ...(categoria ? { categoria } : {}),
     };
 
     const id = this.editingId();
