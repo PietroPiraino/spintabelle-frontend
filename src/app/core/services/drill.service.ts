@@ -8,6 +8,7 @@ import {
   DrillHistory,
   DrillNextQuestion,
   DrillOptions,
+  DrillPreset,
   DrillQuestion,
   DrillSessionsPage,
   DrillSessionView,
@@ -88,6 +89,30 @@ export class DrillService {
   }
 
   /** Combinazioni allenabili (per disabilitare le selezioni impossibili nel config). */
+  // ── Preset: le configurazioni salvate dallo studente ──────────────────────
+  //
+  // ⚠️ Salvataggio e cancellazione rispondono con l'ELENCO aggiornato, non con
+  // la riga toccata: il client ridisegna la sezione con quello che arriva,
+  // invece di tenere un proprio ordinamento accanto a quello del server.
+
+  getPresets(): Observable<DrillPreset[]> {
+    return this.http.get<DrillPreset[]>(`${API}/drills/presets`);
+  }
+
+  savePreset(
+    nome: string,
+    config: DrillConfigPayload,
+  ): Observable<DrillPreset[]> {
+    return this.http.post<DrillPreset[]>(`${API}/drills/presets`, {
+      nome,
+      ...config,
+    });
+  }
+
+  deletePreset(id: string): Observable<DrillPreset[]> {
+    return this.http.delete<DrillPreset[]>(`${API}/drills/presets/${id}`);
+  }
+
   getOptions(): Observable<DrillOptions> {
     return this.http.get<DrillOptions>(`${API}/drills/options`);
   }

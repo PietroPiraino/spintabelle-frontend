@@ -74,7 +74,12 @@ export const SPOT_TYPE_LABELS: Record<DrillSpotType, string> = {
   VS_OPEN: 'Risposta all’apertura',
   VS_3BET: 'Risposta al 3-bet',
   VS_4BET_PLUS: '4-bet e oltre',
-  LIMPED: 'Piatto limpato',
+  // ⚠️ NON «Piatto limpato», che è falso sulla maggioranza dei casi. `spotTypeOf`
+  // classifica LIMPED ogni percorso senza raise, e su 1.533 nodi di questo tipo
+  // **904 non contengono nemmeno un call** (misurato sui dati importati,
+  // 04/09/2026): lì nessuno ha limpato, semplicemente qualcuno ha passato e il
+  // piatto è arrivato aperto solo dai bui. «Non aperto» è vero su tutti e 1.533.
+  LIMPED: 'Piatto non aperto',
 };
 
 export const DIFFICULTY_LABELS: Record<DrillDifficulty, string> = {

@@ -138,6 +138,17 @@
         </details>
       </section>
     } @else {
+    <!--
+      RAMO AUTENTICATO. Ordine: contesto (gioco, varianti, durata) → percorsi
+      pronti → «Personalizza l'allenamento», chiuso.
+
+      ⚠️ I SEI `<fieldset>` DI CHIP NON SONO SPARITI: sono scesi dentro il
+      disclosure. Restavano ~65 bottoni sulla prima schermata — 9 formati, fino
+      a 42 profondità (misurate: `spin` ne ha 42), 3 posizioni, 5 situazioni, 4
+      difficoltà, 3 durate — e su un telefono la CTA cadeva molto sotto la
+      piega. Chi vuole comporsi la sessione a mano trova tutto dov'era, in un
+      clic; chi vuole allenarsi parte da un percorso senza scegliere niente.
+    -->
     <div class="dc__head-row">
       <button class="btn btn--ghost btn--sm" (click)="viewResults()">
         I miei risultati
@@ -153,96 +164,140 @@
   } @else if (!meta()) {
     <div class="spinner"></div>
   } @else {
-    <!-- formati -->
-    <fieldset class="dc__group">
-      <legend class="dc__legend">Formato</legend>
-      <div class="dc__chips">
-        @for (f of formatOptions(); track f.format) {
-          <button
-            type="button"
-            class="dc__chip"
-            [class.dc__chip--on]="selectedFormats().has(f.format)"
-            (click)="toggleFormat(f.format)"
-          >
-            {{ f.label }}
-          </button>
-        }
-      </div>
-    </fieldset>
 
-    <!-- profondità -->
-    @if (availableDepths().length) {
-      <fieldset class="dc__group">
-        <legend class="dc__legend">
-          Profondità (stack)
-          <span class="dc__hint">vuoto = tutte</span>
-        </legend>
-        <div class="dc__chips">
-          @for (d of availableDepths(); track d.display) {
-            <button
-              type="button"
-              class="dc__chip dc__chip--sm"
-              [class.dc__chip--on]="selectedDepths().has(d.display)"
-              (click)="toggleDepth(d.display)"
-            >
-              {{ d.display }} bb
-            </button>
+
+    <!-- ── Il costruttore: da qui si compone la situazione ─────────────── -->
+<!--
+      ⚠️ QUATTRO TENDINE al posto dei quattro `<fieldset>` di chip, ed è la
+      richiesta dell'owner («una select con scelta multipla») eseguita nel
+      solo modo che in HTML funzioni davvero: vedi il commento in testa a
+      `multi-select.component.ts` per perché non è una `<select multiple>`.
+      Difficoltà resta a chip: tre-quattro valori dietro una tendina sono
+      peggio di tre-quattro bottoni, e non è un asse della *situazione*.
+    -->
+    <div class="dc__assi">
+      <app-multi-select
+        etichetta="Formato"
+        idPannello="ms-formato"
+        nomePlurale="formati"
+        invito="scegli almeno un formato"
+        [tuttiLabel]="null"
+        [opzioni]="opzioniFormato()"
+        [selezione]="selectedFormats()"
+        (selezioneChange)="setFormati($event)"
+      />
+
+      <app-multi-select
+        etichetta="Profondità"
+        idPannello="ms-profondita"
+        nomePlurale="profondità"
+        tuttiLabel="tutte le profondità"
+        [compatta]="true"
+        [opzioni]="opzioniProfondita()"
+        [valoreTesto]="testoProf()"
+        [selezione]="selectedDepths()"
+        (selezioneChange)="setProfondita($event)"
+      >
+        <!--
+          ⚠️ Tre livelli, ed è la risposta esatta dell'owner: «fascia
+          contigua, ma voglio poter fare eccezioni». Le fasce sono due
+          clic, l'intervallo è la forma in cui un giocatore pensa
+          («allenami fra 8 e 15 bb»), le caselle qui sotto conservano gli
+          insiemi sparsi che un intervallo da solo perderebbe. Tutti e tre
+          scrivono lo STESSO insieme.
+        -->
+        <div msTesta class="dc__prof-testa">
+          <div class="row dc__chips">
+            @for (f of fasce; track f.id) {
+              <button
+                type="button"
+                class="dc__chip dc__chip--sm"
+                (click)="applicaFascia(f)"
+              >{{ f.etichetta }}</button>
+            }
+          </div>
+          @if (availableDepths().length) {
+            <div class="row dc__intervallo">
+              <label for="dc-da">da</label>
+              <select
+                id="dc-da"
+                class="input"
+                (change)="setEstremo('da', $any($event.target).value)"
+              >
+                @for (d of availableDepths(); track d.display) {
+                  <option [value]="d.display" [selected]="d.display === estremo('da')">
+                    {{ d.display }} bb
+                  </option>
+                }
+              </select>
+              <label for="dc-a">a</label>
+              <select
+                id="dc-a"
+                class="input"
+                (change)="setEstremo('a', $any($event.target).value)"
+              >
+                @for (d of availableDepths(); track d.display) {
+                  <option [value]="d.display" [selected]="d.display === estremo('a')">
+                    {{ d.display }} bb
+                  </option>
+                }
+              </select>
+            </div>
           }
+          <p class="dc__prof-nota">
+            Oppure spunta le profondità una per una qui sotto.
+          </p>
         </div>
-      </fieldset>
+      </app-multi-select>
+
+      <!-- ⚠️ «La tua» resta: in un tre-max «posizione» da sola è ambigua. -->
+      <app-multi-select
+        etichetta="La tua posizione"
+        idPannello="ms-posizione"
+        nomePlurale="posizioni"
+        tuttiLabel="tutte le posizioni"
+        [opzioni]="opzioniPosizione()"
+        [selezione]="selectedPositions()"
+        (selezioneChange)="setPosizioni($event)"
+      />
+
+      <app-multi-select
+        etichetta="Situazione"
+        idPannello="ms-situazione"
+        nomePlurale="situazioni"
+        tuttiLabel="tutte le situazioni"
+        [opzioni]="opzioniSituazione()"
+        [selezione]="selectedSpotTypes()"
+        (selezioneChange)="setSituazioni($event)"
+      />
+    </div>
+
+    <!--
+      ⚠️ La potatura ora PARLA. Prima toglieva in silenzio, e coi chip a
+      schermo si vedeva comunque; chiusa dentro una tendina sarebbe
+      diventata invisibile — cioè il redesign avrebbe peggiorato il difetto.
+    -->
+    @if (avvisoPotatura(); as avviso) {
+      <p class="form-feedback is-info dc__avviso" role="status">
+        {{ avviso }}
+        <button type="button" class="btn btn--ghost btn--sm" (click)="chiudiAvviso()">
+          Ho capito
+        </button>
+      </p>
     }
 
-    <!-- posizione -->
-    <fieldset class="dc__group">
-      <legend class="dc__legend">
-        Posizione di Hero
-        <span class="dc__hint">vuoto = tutte</span>
-      </legend>
-      <div class="dc__chips">
-        @for (p of positions; track p) {
-          <button
-            type="button"
-            class="dc__chip"
-            [class.dc__chip--on]="selectedPositions().has(p)"
-            [disabled]="!availablePositions().has(p)"
-            (click)="togglePosition(p)"
-          >
-            {{ p }}
-          </button>
-        }
-      </div>
-    </fieldset>
-
-    <!-- tipo di spot -->
-    <fieldset class="dc__group">
-      <legend class="dc__legend">
-        Tipo di spot
-        <span class="dc__hint">vuoto = tutti</span>
-      </legend>
-      <div class="dc__chips">
-        @for (s of spotTypes; track s) {
-          <button
-            type="button"
-            class="dc__chip"
-            [class.dc__chip--on]="selectedSpotTypes().has(s)"
-            [disabled]="!availableSpotTypes().has(s)"
-            (click)="toggleSpot(s)"
-          >
-            {{ spotLabels[s] }}
-          </button>
-        }
-      </div>
-    </fieldset>
-
-    <!-- difficoltà -->
+    <!-- difficoltà: resta a chip, è un asse diverso dalla situazione -->
     <fieldset class="dc__group">
       <legend class="dc__legend">Difficoltà</legend>
-      <div class="dc__chips">
+      <div class="dc__chips" role="radiogroup" aria-label="Difficoltà">
         @for (d of difficulties; track d) {
           <button
             type="button"
             class="dc__chip"
+            role="radio"
             [class.dc__chip--on]="difficulty() === d"
+            [attr.aria-checked]="difficulty() === d"
+            [attr.tabindex]="difficulty() === d ? 0 : -1"
             (click)="setDifficulty(d)"
           >
             {{ difficultyLabels[d] }}
@@ -252,38 +307,221 @@
       <p class="dc__note">{{ difficultyHints[difficulty()] }}</p>
     </fieldset>
 
-    <!-- numero di mani -->
+    <!--
+      ⚠️ La durata è TORNATA qui dentro il 04/09/2026. Era salita nella riga di
+      contesto quando i percorsi erano l'elemento principale — lì aveva senso,
+      perché vale per qualunque percorso. Ora che il costruttore è l'elemento
+      principale, tenerla fuori vorrebbe dire spezzare in due la costruzione
+      della sessione: quattro assi qui e una risposta là.
+      ⚠️ Resta comunque quella usata dai percorsi: `avviaPercorso` legge
+      `questions()`, non un valore proprio.
+    -->
     <fieldset class="dc__group">
       <legend class="dc__legend">Numero di mani</legend>
-      <div class="dc__chips">
+      <div
+        class="dc__chips"
+        role="radiogroup"
+        aria-label="Numero di mani"
+        (keydown)="onDurataKeydown($event)"
+      >
         @for (n of questionCounts; track n) {
           <button
             type="button"
             class="dc__chip"
+            role="radio"
             [class.dc__chip--on]="questions() === n"
+            [attr.aria-checked]="questions() === n"
+            [attr.tabindex]="questions() === n ? 0 : -1"
             (click)="setQuestions(n)"
-          >
-            {{ n }}
-          </button>
+          >{{ n }}</button>
         }
       </div>
     </fieldset>
 
-    <div class="dc__cta">
-      <button class="btn btn--primary" [disabled]="!canStart()" (click)="start()">
-        Inizia l'allenamento
-      </button>
-      @if (!canStart()) {
-        <span class="dc__cta-hint">
-          @if (!selectedFormats().size) {
-            Scegli almeno un formato.
-          } @else {
-            Nessuno spot per questa combinazione: cambia posizione o tipo di
-            spot.
+    <!--
+      Il riepilogo: dice ad alta voce che cosa sta per succedere. È la
+      stringa più letta della pagina, compare a ogni configurazione.
+    -->
+    <div class="card card--pad dc__riepilogo">
+      @if (canStart()) {
+        <p class="dc__frase">{{ frase() }}</p>
+      } @else if (troppePronfondita()) {
+        <p class="dc__frase">
+          Hai scelto troppe profondità insieme per una sola sessione:
+          restringi l'intervallo, oppure togli un formato.
+        </p>
+      } @else if (!selectedFormats().size) {
+        <p class="dc__frase">Scegli almeno un formato per cominciare.</p>
+      } @else {
+        <p class="dc__frase">{{ fraseVuota() }}</p>
+      }
+
+      <!--
+        ⚠️ «situazioni diverse» e non «allenabili»: `matchedCount` conta
+        COMBINAZIONI (formato × profondità × posizione × situazione), non
+        mani e non nodi. E si mostra solo se il conteggio è NOTO: con
+        `/drills/options` caduta varrebbe 0, e la pagina direbbe «nessuna
+        situazione» accanto a un bottone perfettamente funzionante.
+      -->
+      @if (conteggioNoto()) {
+        <p class="dc__conteggio-riga" aria-live="polite">
+          <span class="dc__conteggio" [title]="spiegaConteggio">
+            {{ matchedCount() }} situazioni diverse
+          </span>
+        </p>
+      }
+      <div class="row dc__riepilogo-azioni">
+        <button
+          class="btn btn--primary"
+          [disabled]="!canStart()"
+          (click)="start()"
+        >
+          Inizia l'allenamento
+        </button>
+        <!--
+          ⚠️ Si salva solo una configurazione che si potrebbe far partire: un
+          preset che non si avvia sarebbe una trappola conservata.
+        -->
+        <!-- ⚠️ Stessa taglia del pulsante accanto (niente `btn--sm`): sono due
+             azioni sulla stessa configurazione, sulla stessa riga. La gerarchia
+             la fa il PIENO contro il fantasma, non l'altezza. -->
+        @if (canStart() && !salvataggioAperto()) {
+          <button class="btn btn--ghost" (click)="apriSalvataggio()">
+            Salva questa configurazione
+          </button>
+        }
+      </div>
+
+      <!--
+        ⚠️ Modulo IN LINEA e non un `prompt()`: il progetto non ha alcun dialog,
+        e in zoneless focus-trap, `Esc` e scroll-lock andrebbero scritti a mano.
+        Il nome arriva già proposto — un campo vuoto su un telefono fa chiudere
+        e riaprire.
+      -->
+      @if (salvataggioAperto()) {
+        <div class="dc__salva">
+          <label for="dc-nome-preset">Nome della configurazione</label>
+          <div class="row dc__salva-riga">
+            <input
+              id="dc-nome-preset"
+              type="text"
+              class="input"
+              maxlength="60"
+              [value]="nomePreset()"
+              (input)="onNomePreset($event)"
+            />
+            <button class="btn btn--primary btn--sm" (click)="salvaPreset()">
+              Salva
+            </button>
+            <button class="btn btn--ghost btn--sm" (click)="chiudiSalvataggio()">
+              Annulla
+            </button>
+          </div>
+          @if (erroreSalvataggio(); as e) {
+            <span class="field-error">{{ e }}</span>
           }
-        </span>
+        </div>
       }
     </div>
+
+    <!-- ── I preset dello studente ──────────────────────────────────────── -->
+    <!--
+      ⚠️ Compare SOLO se ne esiste almeno uno: una sezione vuota con un invito
+      sarebbe rumore per chi apre la pagina la prima volta, che è esattamente
+      chi ha meno bisogno di rumore. Le scorciatoie fisse qui sotto restano per
+      lui, e le due sezioni convivono (decisione owner).
+    -->
+    @if (preset().length > 0) {
+      <h2 class="dc__h2">I tuoi allenamenti salvati</h2>
+      <ul class="dc__percorsi">
+        @for (p of preset(); track p.id) {
+          <li class="dc__riga">
+            <div class="dc__riga-testo">
+              <span class="dc__riga-titolo">{{ p.nome }}</span>
+              <span class="dc__dettaglio">{{ p.questionsPerSession }} mani</span>
+            </div>
+            @if (presetDaCancellare() === p.id) {
+              <!-- conferma in linea, l'idioma del sito: niente `confirm()` -->
+              <div class="row dc__riga-azione">
+                <button
+                  class="btn btn--danger btn--sm"
+                  (click)="cancellaPreset(p.id)"
+                >Cancella</button>
+                <button
+                  class="btn btn--ghost btn--sm"
+                  (click)="confermaCancella(null)"
+                >No</button>
+              </div>
+            } @else {
+              <div class="row dc__riga-azione">
+                <!-- ⚠️ «Carica» e non «Inizia»: applicare un preset SCRIVE il
+                     costruttore e si ferma lì. È la tua configurazione, e
+                     rivederla prima di partire è il caso normale. -->
+                <button
+                  class="btn btn--ghost btn--sm"
+                  (click)="applicaPreset(p)"
+                >Carica</button>
+                <button
+                  class="btn btn--ghost btn--sm"
+                  [attr.aria-label]="'Cancella ' + p.nome"
+                  (click)="confermaCancella(p.id)"
+                >✕</button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    <!-- ── Scorciatoie ──────────────────────────────────────────────────── -->
+    <!--
+      ⚠️ SOTTO il costruttore e senza card in evidenza, dal 04/09/2026. Prima
+      stavano in cima con una hero card, e sopra c'era una riga «Gioco /
+      Varianti / Durata» che scriveva lo STESSO signal della tendina Formato —
+      due controlli sullo stesso dato, e toccare «Gioco» collassava in silenzio
+      una selezione multipla a un formato solo.
+      Quella riga era nata prima che la tendina esistesse, per non mostrare
+      nove chip in prima schermata: risolto quel problema in un altro modo, era
+      rimasta senza motivo. Tolta, resta una domanda sola — costruttore o
+      percorsi come elemento principale — e la risposta dell'owner è il
+      costruttore. Qui i percorsi sono quello che sono davvero: scorciatoie per
+      chi non sa da dove cominciare.
+    -->
+    @if (percorsiRisolti(); as elenco) {
+      <h2 class="dc__h2">Oppure parti da qui</h2>
+      <ul class="dc__percorsi">
+        @for (r of elenco; track r.p.id) {
+          <li class="dc__riga" [class.is-vuoto]="r.vuoto">
+            <div class="dc__riga-testo">
+              <span class="dc__riga-titolo">{{ r.p.titolo }}</span>
+              <span class="dc__dettaglio">
+                {{ r.dettaglio }}
+                @if (r.conteggio >= 0) {
+                  <span class="dc__conteggio" [title]="spiegaConteggio">
+                    · {{ r.conteggio }} situazioni
+                  </span>
+                }
+              </span>
+              <!-- ⚠️ Solo se la riga NON porta già il proprio motivo: sul
+                   percorso costruito sullo storico questo generico sarebbe
+                   anche falso (non manca il materiale, manca lo storico). -->
+              @if (r.vuoto && !r.motivoProprio) {
+                <span class="dc__vuoto">
+                  Nessuna situazione di questo tipo nel formato scelto.
+                </span>
+              }
+            </div>
+            <!-- ⚠️ Una voce senza materiale resta VISIBILE e disabilitata, col
+                 motivo scritto: una voce che scompare fa cercare un guasto. -->
+            <button
+              class="btn btn--ghost btn--sm dc__riga-azione"
+              [disabled]="r.vuoto"
+              (click)="avviaPercorso(r.p)"
+            >Inizia</button>
+          </li>
+        }
+      </ul>
+    }
   }
     }
   </div>

@@ -21,6 +21,11 @@
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  // ⚠️ Il margine sta QUI e non come `margin-top` su `.dc__assi`: questa riga
+  // è la sola cosa fra la testata e il costruttore, e senza si appoggiava
+  // direttamente sulla prima tendina. Messo sull'altro lato, sparirebbe il
+  // giorno in cui la riga non c'è (stato di errore, spinner).
+  margin-bottom: 1.4rem;
 }
 
 .dc__group {
@@ -99,7 +104,7 @@
 .dc__chip--on {
   border-color: transparent;
   background: linear-gradient(135deg, var(--copper-500), var(--gold));
-  color: #2a1404;
+  color: var(--ink-on-copper);
   box-shadow: var(--glow-copper);
 }
 
@@ -109,15 +114,222 @@
   color: var(--text-muted);
 }
 
-.dc__cta {
+.dc__h2 {
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  margin: 2.2rem 0 0.6rem;
+}
+
+.dc__percorsi {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dc__riga {
   display: flex;
   align-items: center;
   gap: 1rem;
-  flex-wrap: wrap;
-  margin-top: 2.2rem;
+  padding: 0.8rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  min-height: 44px;
+
+  &:first-child {
+    border-top: 1px solid var(--line);
+  }
+
+  // Un percorso senza materiale resta VISIBILE: una voce che sparisce fa
+  // cercare un guasto che non c'è.
+  &.is-vuoto {
+    opacity: 0.6;
+  }
 }
 
-.dc__cta-hint {
-  font-size: 0.85rem;
+.dc__riga-testo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dc__riga-titolo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.dc__riga-azione {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+// La riga generata che dice che cosa sta per partire. Mai scritta a mano.
+.dc__dettaglio {
+  margin: 0;
+  font-size: 0.82rem;
   color: var(--text-faint);
+}
+
+.dc__conteggio {
+  font-family: var(--font-mono);
+}
+
+// Sotto i 640px la riga si impila: titolo e dettaglio sopra, azione a piena
+// larghezza. Un elenco a due colonne su un telefono tronca il titolo a metà.
+@media (max-width: 640px) {
+  .dc__riga {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+
+  .dc__riga-azione {
+    margin-left: 0;
+  }
+
+}
+
+// ── I quattro assi ──────────────────────────────────────────────────────────
+
+// ⚠️ Il pannello delle tendine GALLEGGIA (`position: absolute`, vedi
+// `multi-select.component.scss`): aprendone una, nulla si muove — né la cella
+// sorella né le due righe sotto. La prima stesura lo teneva in flusso e la
+// pagina saltava di ~380px a ogni apertura.
+// ⚠️ `align-items: start` resta e serve ancora: tiene ogni cella alta quanto il
+// proprio trigger. Con lo `stretch` di default, un valore che va a capo in una
+// cella allungherebbe la scatola della sorella senza allungarne il bottone,
+// lasciandoci sotto un vuoto.
+.dc__assi {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  align-items: start;
+  gap: 0.9rem;
+  margin-bottom: 1.4rem;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// La testa del pannello profondità: fasce rapide + intervallo.
+.dc__prof-testa {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.2rem;
+
+  // Le tre fasce stanno su una riga sola: sono un colpo d'occhio, non un menu.
+  // ⚠️ Si stringe il PADDING, mai il `min-height`: sono bersagli di tocco e i
+  // 44px sono una regola del progetto, non una preferenza. A far stare le tre
+  // fasce su una riga bastano le etichette corte.
+  .dc__chip {
+    flex: 1 1 auto;
+    padding: 0.5rem 0.55rem;
+  }
+}
+
+.dc__intervallo {
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+
+  label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  // ⚠️ `width: auto` esplicito: `select.input` è a piena larghezza per default,
+  // e due select a piena larghezza dentro un pannello da 300px si impilano.
+  select {
+    width: auto;
+    flex: 1 1 6.5rem;
+    min-width: 0;
+  }
+}
+
+.dc__prof-nota {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+// ⚠️ La matrice compatta delle profondità NON si stila da qui: una regola come
+// `app-multi-select ... .ms__list` sarebbe INERTE, perché l'incapsulamento
+// Angular la lega all'attributo di QUESTO componente e `.ms__list` vive nel
+// figlio, che quell'attributo non ce l'ha. Sta dentro il primitivo, dietro
+// l'input `[compatta]`. (È la stessa lezione di `_prose.scss` e
+// `_news-share.scss`, dove il rimedio era invece promuovere nel globale.)
+
+.dc__avviso {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.2rem;
+}
+
+// ── Riepilogo e partenza ────────────────────────────────────────────────────
+
+.dc__riepilogo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 1.6rem;
+}
+
+.dc__frase {
+  margin: 0;
+  max-width: 62ch;
+}
+
+.dc__conteggio-riga {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-faint);
+}
+
+.dc__riepilogo-cta {
+  // ⚠️ `align-self` sul SOLO bottone e mai `align-items` sulla card: la frase
+  // sopra deve restare larga quanto la colonna. È il difetto che /live ha già
+  // pagato una volta.
+  align-self: flex-start;
+  margin-top: 0.2rem;
+}
+
+// ── Salvataggio di una configurazione ───────────────────────────────────────
+
+.dc__riepilogo-azioni {
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  align-items: center;
+  // ⚠️ `align-self` sulla RIGA e non `align-items` sulla card: la frase sopra
+  // deve restare larga quanto la colonna. È il difetto che /live ha già pagato.
+  align-self: flex-start;
+  margin-top: 0.2rem;
+}
+
+.dc__salva {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line);
+
+  label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+}
+
+.dc__salva-riga {
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+
+  // ⚠️ `.input` è a piena larghezza per default: senza questo, il campo occupa
+  // la riga e i due pulsanti finiscono sotto anche su desktop.
+  .input {
+    flex: 1 1 14rem;
+    min-width: 0;
+  }
 }

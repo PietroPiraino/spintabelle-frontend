@@ -1,0 +1,78 @@
+<button
+  type="button"
+  class="ms__trigger"
+  [attr.aria-expanded]="aperto()"
+  [attr.aria-controls]="idPannello()"
+  (click)="apriChiudi()"
+>
+  <span class="ms__label">{{ etichetta() }}</span>
+  <span class="ms__valore">
+    {{ valore() }}
+    <!-- ⚠️ « · 2 di 3 disponibili» compare SOLO quando qualcosa è spento:
+         scritto sempre sarebbe rumore, e a tendina chiusa è l'unico modo di
+         sapere che l'asse è vincolato da un'altra scelta. -->
+    @if (disponibili() < opzioni().length) {
+      <span class="ms__vincolo">
+        · {{ disponibili() }} di {{ opzioni().length }} disponibili
+      </span>
+    }
+  </span>
+  <span class="ms__caret" aria-hidden="true"></span>
+</button>
+
+<!--
+  ⚠️ `[hidden]` e non un `@if`: con `@if` l'ultimo Tab in avanti rimuoverebbe il
+  pannello MENTRE il fuoco lo sta attraversando, e il fuoco finirebbe su
+  `<body>`. Nascosto, i campi non sono focusabili e la tabulazione li salta.
+-->
+<div
+  class="ms__panel"
+  [id]="idPannello()"
+  [hidden]="!aperto()"
+  role="group"
+  [attr.aria-label]="etichetta()"
+>
+  <!-- Testa opzionale: le fasce rapide e l'intervallo delle profondità -->
+  <ng-content select="[msTesta]" />
+
+  @if (tuttiLabel(); as tutti) {
+    <label class="ms__opt ms__opt--tutte">
+      <!--
+        ⚠️ `[indeterminate]` è una PROPRIETÀ del DOM: `[attr.indeterminate]`
+        compila e non fa niente. È lo stato «una parte» della riga «tutte», e
+        senza di esso la casella direbbe «nessuna» avendo una selezione attiva.
+      -->
+      <input
+        type="checkbox"
+        [checked]="selezione().size === 0"
+        [indeterminate]="parziale()"
+        (change)="tutte()"
+      />
+      <span>{{ tutti }}</span>
+    </label>
+    <hr class="ms__sep" />
+  }
+
+  <div class="ms__list" [class.ms__list--fitta]="compatta()">
+    @for (o of opzioni(); track o.valore) {
+      <!--
+        ⚠️ Una voce non disponibile resta AL SUO POSTO, spenta, col motivo
+        scritto sotto: mai riordinata e mai rimossa. Una voce che sparisce fa
+        cercare un guasto, e una spenta senza motivo fa chiedere perché.
+      -->
+      <label class="ms__opt" [class.is-off]="o.disabilitata">
+        <input
+          type="checkbox"
+          [checked]="scelta(o.valore)"
+          [disabled]="!!o.disabilitata"
+          [attr.aria-describedby]="o.disabilitata && o.motivo ? idMotivo(o.valore) : null"
+          (change)="toggle(o)"
+        />
+        <span>{{ o.etichetta }}</span>
+      </label>
+      @if (o.disabilitata && o.motivo) {
+        <span class="ms__motivo" [id]="idMotivo(o.valore)">{{ o.motivo }}</span>
+      }
+    }
+  </div>
+</div>

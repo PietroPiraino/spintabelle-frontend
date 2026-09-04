@@ -1,0 +1,189 @@
+:host {
+  display: block;
+  position: relative;
+}
+
+// ⚠️ 44px DICHIARATI e `display: flex`. Un `<button>` con `padding: .5rem` sta
+// sui ~35px: è la stessa nota già scritta per `.dc__chip`, e i 44 non arrivano
+// mai da soli. Senza `flex` il `min-height` alza la scatola e lascia il testo
+// in alto.
+.ms__trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 2.2rem 0.5rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: var(--btn-ghost-bg);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color var(--t-fast),
+    background-color var(--t-fast);
+
+  &:hover {
+    border-color: var(--copper-500);
+  }
+}
+
+.ms__label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+// Il valore corrente in chiaro: è la ragione per cui questa tendina esiste al
+// posto di una fila di chip — chiusa, deve dire che cosa si sta per allenare.
+.ms__valore {
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.ms__vincolo {
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+// Chevron in CSS puro, stessa ricetta di `.aff-row__caret` (/affiliazioni).
+// ⚠️ `transform: rotate` e non la proprietà `rotate`: è la forma già in uso, e
+// due ricette per lo stesso chevron sono già tre di troppo su questo sito.
+.ms__caret {
+  position: absolute;
+  right: 0.95rem;
+  top: 1.15rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid var(--text-faint);
+  border-bottom: 2px solid var(--text-faint);
+  transform: rotate(45deg);
+  transition: transform var(--t-fast);
+}
+
+.ms__trigger[aria-expanded='true'] .ms__caret {
+  transform: rotate(225deg);
+  top: 1.35rem;
+}
+
+// ⚠️ IN OVERLAY, non in flusso — e la prima stesura era il contrario.
+// In flusso il pannello allungava la propria cella della griglia, quindi
+// aprendo una tendina della prima riga TUTTO ciò che sta sotto (l'altra riga
+// di assi, difficoltà, numero di mani, riepilogo) scendeva di colpo di ~380px:
+// un salto di layout che l'owner ha visto subito e che nessuna guardia misura,
+// perché avviene dopo un clic e non al caricamento.
+//
+// ⚠️ Il prezzo dell'overlay è pagato in TRE righe e non una: `z-index` sopra
+// le celle sorelle, uno sfondo **opaco** (senza, il contenuto sotto si legge
+// attraverso) e la `box-shadow` forte. È la stessa terna di
+// `my-hands.component.scss`: a mancarne una il difetto è muto.
+//
+// ⚠️ 10 e non 50: sopra i contenuti di pagina (che in tutto il progetto non
+// superano il 5) e **sotto l'header**, che sta a 50 ed è `fixed`. Un pannello
+// che scavalca l'header è un pannello che copre la navigazione.
+.ms__panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-pop);
+  max-height: min(52vh, 380px);
+  overflow-y: auto;
+  // senza, lo scorrimento del pannello prosegue sulla pagina quando finisce
+  overscroll-behavior: contain;
+  animation: ms-apre 140ms var(--ease-out);
+
+  // ⚠️ `display: none` e non `visibility: hidden`, che pure sarebbe
+  // transizionabile e permetterebbe anche l'animazione di CHIUSURA: un elemento
+  // solo invisibile resta nel layout, e quattro pannelli assoluti alti 380px
+  // allungherebbero l'area scorribile della pagina **da chiusi**. L'apertura si
+  // anima lo stesso, perché un'animazione CSS riparte da capo ogni volta che un
+  // elemento torna da `display: none` — la chiusura resta istantanea, come in
+  // una tendina nativa.
+  &[hidden] {
+    display: none;
+  }
+}
+
+@keyframes ms-apre {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ms__panel {
+    animation: none;
+  }
+}
+
+.ms__sep {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 0.45rem 0;
+}
+
+.ms__list {
+  display: grid;
+  gap: 0.1rem;
+}
+
+// Matrice per l'asse con decine di voci brevi (le profondità).
+// ⚠️ `tabular-nums` non è cosmesi: è l'unico elenco in cui le cifre stanno in
+// colonna, e senza, «10 bb» e «10,5 bb» non si allineano fra loro.
+.ms__list--fitta {
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  font-variant-numeric: tabular-nums;
+}
+
+// ⚠️ 44px anche qui: è una riga che si tocca, e su un telefono è LA riga che si
+// tocca. La checkbox nativa eredita `accent-color: var(--copper-500)` dal
+// foglio globale dei form.
+.ms__opt {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0 0.3rem;
+  border-radius: calc(var(--radius) / 2);
+  cursor: pointer;
+  font-size: 0.92rem;
+
+  &:hover {
+    background: color-mix(in srgb, var(--copper-500) 7%, transparent);
+  }
+
+  &.is-off {
+    cursor: not-allowed;
+    color: var(--text-faint);
+  }
+}
+
+.ms__opt--tutte {
+  font-weight: 600;
+}
+
+.ms__motivo {
+  display: block;
+  padding: 0 0.3rem 0.35rem 1.9rem;
+  margin-top: -0.2rem;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-faint);
+}
