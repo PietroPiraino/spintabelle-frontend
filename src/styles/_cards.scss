@@ -105,12 +105,58 @@ button.badge--tag {
   cursor: pointer;
   transition: border-color var(--t-fast), color var(--t-fast), background-color var(--t-fast), box-shadow var(--t-fast);
 
-  &:hover,
+  // ⚠️ HOVER E ATTIVO SONO DUE REGOLE, e fino al 04/09/2026 erano UNA SOLA
+  // (`&:hover, &.is-active` con lo stesso identico corpo). Conseguenza: su
+  // desktop «questo filtro è acceso» e «ci sto passando sopra col mouse» erano
+  // lo stesso pixel — su /lezioni, /docs, la /news pubblica, /replayer e dentro
+  // `app-tag-picker`. Chi guardava una fila di tag non poteva sapere quale
+  // fosse selezionato senza prima togliere il mouse dallo schermo.
+  //
+  // ⚠️ E l'arancio non è più scritto a mano: `rgba(255, 106, 31, …)` è il
+  // `--copper-500` del tema chiaro, ma in Tramonto quel token è ROSA
+  // (`#f43f7f`) — quindi lo stato attivo usciva fuori palette proprio nel tema
+  // in cui si nota di più. `color-mix` è l'idioma già in uso in dieci fogli.
+  &:hover {
+    border-color: var(--copper-500);
+    color: var(--copper-600);
+    background: color-mix(in srgb, var(--copper-500) 8%, transparent);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--copper-500) 25%, transparent);
+  }
+
+  // Livello TENUE dello stato attivo: il fondo più pieno e il bordo raddoppiato
+  // sono ciò che si legge anche col mouse fermo sopra la pillola.
+  //
+  // ⚠️ Il bordo si ingrossa con un `inset` e NON con `border-width`, e il peso
+  // del carattere non si tocca: entrambi cambierebbero la SCATOLA, e queste
+  // pillole stanno in una riga che va a capo — una pillola che si allarga
+  // spinge le sorelle su un'altra riga. Su un sito che ha portato il CLS di
+  // /lezioni da 0,719 a 0,007 non è un dettaglio, è il difetto principale.
   &.is-active {
     border-color: var(--copper-500);
     color: var(--copper-600);
-    background: rgba(255, 106, 31, 0.08);
-    box-shadow: 0 0 10px rgba(255, 106, 31, 0.25);
+    background: color-mix(in srgb, var(--copper-500) 20%, transparent);
+    box-shadow:
+      inset 0 0 0 1px var(--copper-500),
+      0 0 10px color-mix(in srgb, var(--copper-500) 25%, transparent);
+  }
+
+  // Livello FORTE: il gradiente pieno rame→oro, cioè la stessa ricetta di
+  // `.btn--primary` e di `.dc__chip--on` (/allenamento), che fino a oggi ogni
+  // foglio che la voleva si riscriveva in casa.
+  //
+  // ⚠️ Serve SOLO dove in una schermata convivono DUE assi di filtro e uno dei
+  // due è primario (le categorie di /lezioni sopra i tag): due assi con lo
+  // stesso stato attivo si appiattiscono, ed è precisamente la confusione da
+  // cui nasce questo lotto. Usarlo su un asse solo non lo rende più importante,
+  // lo rende più rumoroso.
+  //
+  // ⚠️ Va DOPO `&.is-active`: hanno la stessa specificità (0-2-0) e a decidere
+  // è l'ordine nel file. Si applica insieme a `is-active`, non al suo posto.
+  &.is-active--forte {
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--copper-500), var(--gold));
+    color: var(--ink-on-copper);
+    box-shadow: var(--glow-copper);
   }
 }
 

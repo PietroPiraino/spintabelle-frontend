@@ -61,11 +61,23 @@
   --halo: rgba(247, 245, 240, 0.95); // alone di protezione testo hero
 
   // ⚠️ Substrato dei loghi di terzi (piastrella delle sale in /affiliazioni).
-  // È l'UNICO token che vale lo stesso in tutti e tre i temi, e non è una
-  // dimenticanza: i marchi degli operatori sono disegnati per il bianco e non
-  // si ricolorano mai. Non è un colore di marca nostro, è la carta su cui si
-  // stampa quello altrui — se cambia col tema, cambia il logo che ci sta sopra.
+  // È uno dei due soli token COLORE che valgono lo stesso in tutti e tre i temi
+  // (l'altro è `--ink-on-copper` qui sotto), e non è una dimenticanza: i marchi
+  // degli operatori sono disegnati per il bianco e non si ricolorano mai. Non è
+  // un colore di marca nostro, è la carta su cui si stampa quello altrui — se
+  // cambia col tema, cambia il logo che ci sta sopra.
   --logo-plate: #ffffff;
+
+  // ⚠️ L'inchiostro che sta SOPRA il gradiente rame→oro, e vale lo stesso nei
+  // tre temi perché il gradiente stesso è sempre chiaro: in Tramonto parte da
+  // rosa (`--copper-500: #f43f7f`) invece che da arancio, ma arriva comunque a
+  // `--gold`, e un testo quasi-nero è leggibile su entrambi.
+  //
+  // Fino al 04/09/2026 questo valore era scritto a mano in OTTO punti su sette
+  // file — `styles/_buttons.scss` compreso, cioè il bottone primario di tutto
+  // il sito — e non c'era modo di trovarli se non cercando il letterale. Con un
+  // token il colore dell'inchiostro sul rame è una decisione sola.
+  --ink-on-copper: #2a1404;
 
   // Tipografia
   --font-display: 'Bricolage Grotesque', 'Segoe UI', sans-serif;

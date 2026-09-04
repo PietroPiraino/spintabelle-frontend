@@ -150,7 +150,7 @@
 
 .pt__seat--hero .pt__plate {
   background: linear-gradient(135deg, var(--copper-500), var(--copper-600));
-  color: #2a1404;
+  color: var(--ink-on-copper);
   border-color: transparent;
   box-shadow: var(--glow-copper);
 }
@@ -213,7 +213,7 @@
 
 .pt__action--turn {
   background: var(--gold);
-  color: #2a1404;
+  color: var(--ink-on-copper);
   animation: pt-pulse 1.4s var(--ease-out) infinite;
 }
 

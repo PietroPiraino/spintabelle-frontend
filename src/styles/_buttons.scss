@@ -33,7 +33,7 @@
 // CTA principale: neon arancio→oro
 .btn--primary {
   background: linear-gradient(135deg, var(--copper-500), var(--gold));
-  color: #2a1404;
+  color: var(--ink-on-copper);
   box-shadow: var(--glow-copper);
 
   &:hover:not(:disabled) {
