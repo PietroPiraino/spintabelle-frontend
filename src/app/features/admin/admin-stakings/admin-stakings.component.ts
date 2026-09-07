@@ -17,6 +17,7 @@ import {
 } from '../../../core/models/api.models';
 import { AdminStakingsService } from '../../../core/services/admin-stakings.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { ModalComponent } from '../../../shared/ui/modal/modal.component';
 import {
   formattaCent,
@@ -37,7 +38,7 @@ type FiltroStato = StakingStato | 'TUTTI';
  */
 @Component({
   selector: 'app-admin-stakings',
-  imports: [ReactiveFormsModule, DatePipe, ModalComponent],
+  imports: [ReactiveFormsModule, DatePipe, ModalComponent, IconComponent],
   templateUrl: './admin-stakings.component.html',
   styleUrls: [
     '../admin-shared.scss',

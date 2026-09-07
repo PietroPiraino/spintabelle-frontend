@@ -48,7 +48,11 @@ describe('IconComponent', () => {
    * modo silenzioso di sbagliarli — rende *qualcosa*, quindi la spec qui sopra
    * resterebbe verde. Precedente identico dei rami `record` e `square`.
    */
-  for (const marchio of ['whatsapp', 'telegram', 'facebook', 'spade', 'heart', 'diamond', 'club'] as const) {
+  // ⚠️ Questo elenco e' SCRITTO A MANO: un'icona piena nuova non ci entra da
+  // sola, e senza la sua riga qui l'override fill/stroke resta senza rete —
+  // il difetto piu' muto del componente. `more-vertical` e' stata aggiunta il
+  // 07/09/2026 insieme all'icona.
+  for (const marchio of ['whatsapp', 'telegram', 'facebook', 'spade', 'heart', 'diamond', 'club', 'more-vertical'] as const) {
     it(`"${marchio}" è una forma piena: ogni path ha fill=currentColor e stroke=none`, () => {
       // ⚠️ TUTTE le forme, non solo i <path>: `record` usa un <circle> e dal
       // 30/08/2026 anche il fiori. Interrogando i soli path, una forma piena

@@ -75,6 +75,13 @@ export const ICON_NAMES = [
   'heart',
   'diamond',
   'club',
+  // il comando di riga delle tabelle admin: apre la scheda dell'iscritto o
+  // dello staking. Tre pallini VERTICALI e non orizzontali perche' e' l'ultima
+  // cella di una riga alta 44px: in orizzontale i tre punti occupano la
+  // direzione in cui la colonna e' gia' stretta, e sotto i 720px finirebbero
+  // accanto al badge del ruolo sulla stessa linea, dove si leggerebbero come
+  // un'ellissi di testo troncato invece che come un comando.
+  'more-vertical',
   // i tre temi del sito: erano ☀ U+2600, 🌇 U+1F307 e ☾ U+263E, cioe' tre
   // glifi che i font del sito NON contengono (i sottoinsiemi sono latini) e
   // che quindi disegnava il sistema operativo, con forma e peso diversi su
@@ -479,6 +486,19 @@ export type IconName = (typeof ICON_NAMES)[number];
       }
       @case ('moon') {
         <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+      }
+      <!--
+        ⚠️ Tre cerchi PIENI in un set a contorno: senza
+        \`fill="currentColor" stroke="none"\` il root li disegna come ANELLI da
+        2px di tratto, e a 18px di resa tre anelli non si leggono come tre
+        punti — si leggono come una macchia. Idioma di \`record\` e \`club\`.
+        Raggio 1,75 e non 1: e' un cerchio riempito, non stirato da un tratto,
+        quindi deve arrivare da solo al peso visivo delle altre icone.
+      -->
+      @case ('more-vertical') {
+        <circle cx="12" cy="5" r="1.75" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="12" r="1.75" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="19" r="1.75" fill="currentColor" stroke="none" />
       }
     }
   </svg>`,

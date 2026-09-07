@@ -30,6 +30,7 @@ import { AffiliationsService } from '../../../core/services/affiliations.service
 import { AuthService } from '../../../core/services/auth.service';
 import { PointsService } from '../../../core/services/points.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { ModalComponent } from '../../../shared/ui/modal/modal.component';
 import { actionLabel } from '../action-labels';
 import { ROLE_LABELS } from '../role-labels';
@@ -44,7 +45,7 @@ import { ROLE_LABELS } from '../role-labels';
  */
 @Component({
   selector: 'app-admin-users',
-  imports: [ReactiveFormsModule, DatePipe, ModalComponent],
+  imports: [ReactiveFormsModule, DatePipe, ModalComponent, IconComponent],
   templateUrl: './admin-users.component.html',
   styleUrls: [
     '../admin-shared.scss',

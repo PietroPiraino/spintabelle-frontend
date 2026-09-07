@@ -49,8 +49,12 @@ describe('AdminStakingsComponent', () => {
   };
 
   const apri = async (r = riga()) => {
+    // ⚠️ Per NOME ACCESSIBILE e non per classe: dal 07/09/2026 il comando di
+    // riga è solo-icona e `textContent` è vuoto. Un selettore di classe
+    // rimetterebbe il test verde lasciando l'etichetta senza alcuna rete.
     const b = [...fixture.nativeElement.querySelectorAll('button')].find(
-      (x: HTMLButtonElement) => x.textContent?.trim() === 'Apri',
+      (x: HTMLButtonElement) =>
+        x.getAttribute('aria-label')?.startsWith('Apri la scheda di'),
     ) as HTMLButtonElement;
     b.click();
     http

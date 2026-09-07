@@ -220,14 +220,64 @@ describe('AdminUsersComponent', () => {
     });
   });
 
+  /**
+   * ⚠️ Il comando di riga si cerca per NOME ACCESSIBILE e non per classe, ed è
+   * una scelta contro la corrente: dal 07/09/2026 quel pulsante è solo-icona,
+   * quindi `textContent` è vuoto e il vecchio `find` per testo schiantava con
+   * un TypeError che non nomina la causa. La riparazione naturale sarebbe
+   * `querySelector('.admin-table__ico')` — e da lì in poi nel repo non
+   * resterebbe UNA SOLA riga che nomina l'etichetta del comando principale di
+   * questa tabella. Cercandolo per `aria-label` il test resta una rete: se il
+   * nome sparisce, il rosso torna.
+   */
+  const comandoRiga = (i = 0): HTMLButtonElement =>
+    [...fixture.nativeElement.querySelectorAll('button')].filter(
+      (b: HTMLButtonElement) =>
+        b.getAttribute('aria-label')?.startsWith('Gestisci '),
+    )[i] as HTMLButtonElement;
+
+  describe('il comando di riga', () => {
+    it('⚠️ è solo-icona, quindi il suo nome accessibile NOMINA la riga', async () => {
+      // Prima erano 25 pulsanti che annunciavano tutti «Gestisci»: il difetto
+      // c'era già, e togliendo la parola sarebbe diventato totale — `app-icon`
+      // porta `aria-hidden` sull'host, quindi un bottone senza etichetta è
+      // anonimo e basta. Nessun'altra spec del pannello admin guarda un nome
+      // accessibile: questa è l'unica rete.
+      await rispondi(
+        pagina([
+          utente(),
+          utente({ id: 'u2', email: 'lucia@bff.it', nickname: 'Lucia' }),
+        ]),
+      );
+      const a = comandoRiga(0).getAttribute('aria-label');
+      const b = comandoRiga(1).getAttribute('aria-label');
+      expect(a).toBe('Gestisci Mario');
+      expect(b).toBe('Gestisci Lucia');
+      // Il punto non è che l'etichetta esista: è che due righe si distinguano.
+      expect(a).not.toBe(b);
+      // E che non ci sia testo visibile a sostituirla.
+      expect(comandoRiga(0).textContent?.trim()).toBe('');
+    });
+
+    it('dichiara che apre un dialog, non un menu', async () => {
+      // ⚠️ I tre puntini in giro per il mondo aprono un MENU. Qui si apre una
+      // scheda modale: senza `aria-haspopup="dialog"` la promessa dell'icona e
+      // quello che succede davvero non coincidono.
+      await rispondi(pagina([utente()]));
+      expect(comandoRiga(0).getAttribute('aria-haspopup')).toBe('dialog');
+    });
+
+    it('senza nickname ripiega sull’email, mai su un nome vuoto', async () => {
+      await rispondi(pagina([utente({ nickname: undefined })]));
+      expect(comandoRiga(0).getAttribute('aria-label')).toBe(
+        'Gestisci mario@bff.it',
+      );
+    });
+  });
+
   describe('la modale', () => {
     const apri = async () => {
-      const gestisci = [
-        ...fixture.nativeElement.querySelectorAll('button'),
-      ].find((b: HTMLButtonElement) =>
-        b.textContent?.includes('Gestisci'),
-      ) as HTMLButtonElement;
-      gestisci.click();
+      comandoRiga().click();
       await rispondiModale();
     };
 
@@ -328,12 +378,7 @@ describe('AdminUsersComponent', () => {
       });
 
       const apriConSale = async (sale: unknown[]) => {
-        const gestisci = [
-          ...fixture.nativeElement.querySelectorAll('button'),
-        ].find((b: HTMLButtonElement) =>
-          b.textContent?.includes('Gestisci'),
-        ) as HTMLButtonElement;
-        gestisci.click();
+        comandoRiga().click();
         await rispondiModale('u1', sale);
       };
 

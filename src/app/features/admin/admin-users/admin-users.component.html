@@ -123,12 +123,30 @@
               </td>
               <td class="is-num admin-table__solo-largo">{{ user.points ?? 0 }}</td>
               <td class="admin-table__c-ultimo">
+              <!--
+                ⚠️ Comando solo-icona, e per questo il nome accessibile NOMINA
+                LA RIGA. Non e' pedanteria: prima erano 25 bottoni che
+                annunciavano tutti «Gestisci», senza alcun modo di distinguerli
+                — il difetto c'era gia', e l'icona lo renderebbe totale
+                (`app-icon` ha `aria-hidden` sull'host, quindi un bottone senza
+                etichetta e' anonimo e basta).
+                ⚠️ `aria-haspopup="dialog"` perche' i tre puntini in giro per il
+                mondo aprono un MENU: qui si apre una scheda modale, e dirlo e'
+                l'unica cosa che colma quella distanza.
+                Il `title` e' il tooltip: nel progetto e' sempre l'attributo
+                nativo, non esiste alcun componente tooltip.
+              -->
                 <button
                   type="button"
-                  class="btn btn--ghost btn--sm"
+                  class="admin-table__ico"
+                  aria-haspopup="dialog"
+                  [attr.aria-label]="
+                    'Gestisci ' + (user.nickname || user.email)
+                  "
+                  title="Gestisci"
                   (click)="apri(user)"
                 >
-                  Gestisci
+                  <app-icon name="more-vertical" [size]="18" />
                 </button>
               </td>
             </tr>
