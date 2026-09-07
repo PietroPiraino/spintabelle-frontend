@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   inject,
   signal,
@@ -14,6 +15,7 @@ import {
   HandVetrinaOrdine,
   HandView,
 } from '../../core/models/api.models';
+import { roleSatisfies } from '../../core/models/roles';
 import { AuthService } from '../../core/services/auth.service';
 import { HandsService, formatBui, formatImporto } from '../../core/services/hands.service';
 import { SeoService } from '../../core/services/seo.service';
@@ -75,6 +77,23 @@ interface FileInCoda {
 })
 export class ReplayerComponent {
   protected readonly auth = inject(AuthService);
+
+  /**
+   * ⚠️ Chi ha gia' il tetto massimo non deve leggere «Alza il limite».
+   *
+   * Sopra Squalo non c'e' niente da comprare, e Stakato e Coach — che hanno lo
+   * STESSO rango — cliccando arriverebbero su /abbonati, dove ogni pulsante e'
+   * spento perche' il server rifiuta comunque l'acquisto. Mandare qualcuno a
+   * comprare una cosa che non esiste e' peggio che non dirgli niente.
+   *
+   * ⚠️ Rango e non uguaglianza (`role === 'SQUALO'`): la quota lato server la
+   * decide `roleSatisfies(ruolo, SQUALO)`, e con l'uguaglianza i due ruoli a
+   * rango pari — cioe' esattamente il caso che questo blocco esiste per
+   * coprire — ricadrebbero nel ramo sbagliato.
+   */
+  protected readonly tettoMassimo = computed(() =>
+    roleSatisfies(this.auth.user()?.role, 'SQUALO'),
+  );
   private readonly router = inject(Router);
   private readonly hands = inject(HandsService);
   private readonly seo = inject(SeoService);

@@ -142,8 +142,19 @@
               @if (a.importabili < a.maniNuove) {
                 <li class="rc__avviso">
                   Ne entrano <strong>{{ a.importabili }}</strong>: hai raggiunto il
-                  tuo limite. <a routerLink="/abbonati">Alza il limite</a> oppure
-                  fai spazio nella libreria.
+                  tuo limite.
+                  <!--
+                    ⚠️ «Alza il limite» solo a chi un limite più alto può
+                    davvero comprarlo: sopra Squalo non c'è niente, e Stakato e
+                    Coach — stesso rango — atterrerebbero su /abbonati con ogni
+                    pulsante spento.
+                  -->
+                  @if (tettoMassimo()) {
+                    È il limite più alto previsto: fai spazio nella libreria.
+                  } @else {
+                    <a routerLink="/abbonati">Alza il limite</a> oppure fai
+                    spazio nella libreria.
+                  }
                 </li>
               }
             </ul>
