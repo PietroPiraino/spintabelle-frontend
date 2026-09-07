@@ -7,6 +7,15 @@
       aria-label="Cerca codici sconto"
       [formControl]="searchControl"
     />
+    <select
+      class="input"
+      aria-label="Filtra per stato"
+      [formControl]="statoControl"
+    >
+      <option value="TUTTI">Tutti</option>
+      <option value="ATTIVI">Solo attivi</option>
+      <option value="DISATTIVATI">Solo disattivati</option>
+    </select>
     <button type="button" class="btn btn--primary btn--sm" (click)="openCreate()">
       + Nuovo codice
     </button>
@@ -176,6 +185,15 @@
               <span class="admin-item__meta">
                 {{ tiersLabel(c) }}
                 · Usato {{ c.redeemedCount }}{{ c.maxRedemptions != null ? '/' + c.maxRedemptions : '' }} volte
+                @if (c.redeemedCount > 0) {
+                  <!--
+                    ⚠️ La ragione per cui «Elimina» non c'è deve stare SULLA
+                    RIGA. Prima viveva solo dentro il `confirm()`, cioè spariva
+                    nell'istante in cui la si leggeva: chi tornava sulla pagina
+                    trovava un codice che non si cancella e nessuna spiegazione.
+                  -->
+                  · non eliminabile: lo citano le richieste che l'hanno usato
+                }
                 @if (c.audience === 'RESTRICTED') {
                   · {{ c.eligibleCount ?? 0 }} utenti ammessi
                 }
@@ -193,9 +211,33 @@
                   Utenti ({{ c.eligibleCount ?? 0 }})
                 </button>
               }
-              <button type="button" class="btn btn--danger btn--sm" (click)="remove(c)">
-                {{ c.redeemedCount > 0 ? 'Disattiva' : 'Elimina' }}
+              <!--
+                ⚠️ DUE comandi, e prima era uno solo con l'etichetta legata a
+                `redeemedCount`: su un codice già riscattato diceva «Disattiva»
+                PER SEMPRE, anche una volta disattivato, perché il conteggio
+                degli usi non cambia spegnendolo. Ora l'etichetta segue
+                `active`, cioè lo STATO della riga, ed è l'unica cosa che la
+                rende leggibile.
+              -->
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="toggleAttivo(c)"
+              >
+                {{ c.active ? 'Disattiva' : 'Riattiva' }}
               </button>
+              @if (c.redeemedCount === 0) {
+                <!--
+                  ⚠️ «Elimina» compare SOLO su un codice mai riscattato: il
+                  server cancella davvero solo in quel caso e altrimenti
+                  degrada a spegnimento. Un pulsante che promette una
+                  cancellazione che non avverrà è una bugia con l'aria di un
+                  guasto.
+                -->
+                <button type="button" class="btn btn--danger btn--sm" (click)="remove(c)">
+                  Elimina
+                </button>
+              }
             </div>
           </div>
 

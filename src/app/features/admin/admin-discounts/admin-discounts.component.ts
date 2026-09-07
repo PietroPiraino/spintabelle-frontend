@@ -41,6 +41,18 @@ export class AdminDiscountsComponent {
   private readonly query = signal('');
   private readonly currentPage = signal(1);
 
+  /**
+   * ⚠️ Un codice gia' riscattato NON si puo' cancellare (lo riferiscono le
+   * richieste e gli ordini che l'hanno usato), quindi «non mi serve piu'» si
+   * risolve disattivandolo — ma senza questo filtro la riga restava nella
+   * griglia per sempre, e disattivare non toglieva niente di mezzo. Il
+   * backend accetta gia' `active` come booleano: nessuna modifica lato server.
+   */
+  protected readonly statoControl = new FormControl<
+    'TUTTI' | 'ATTIVI' | 'DISATTIVATI'
+  >('TUTTI', { nonNullable: true });
+  private readonly stato = signal<'TUTTI' | 'ATTIVI' | 'DISATTIVATI'>('TUTTI');
+
   // ── Form crea/modifica ──
   protected readonly formOpen = signal(false);
   /** null = creazione; id = modifica. */
@@ -110,6 +122,14 @@ export class AdminDiscountsComponent {
         this.currentPage.set(1);
         this.load();
       });
+    this.statoControl.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((v) => {
+        this.stato.set(v);
+        // Ogni filtro riporta alla prima pagina, o lo stato vuoto mente.
+        this.currentPage.set(1);
+        this.load();
+      });
     // Un codice riutilizzabile non ammette un tetto: disabilita il campo di conseguenza.
     this.reusableControl.valueChanges
       .pipe(takeUntilDestroyed())
@@ -126,6 +146,9 @@ export class AdminDiscountsComponent {
     this.api
       .list({
         q: this.query() || undefined,
+        // `undefined` = nessun filtro: la chiave non viene proprio scritta.
+        active:
+          this.stato() === 'TUTTI' ? undefined : this.stato() === 'ATTIVI',
         page: this.currentPage(),
         limit: PAGE_SIZE,
       })
@@ -290,13 +313,55 @@ export class AdminDiscountsComponent {
     });
   }
 
+  /**
+   * Accende e spegne il codice.
+   *
+   * ⚠️ Prima questa cosa non esisteva e la faceva il pulsante rosso: quello
+   * chiamava la DELETE, che sul server DEGRADA a `active:false` quando il
+   * codice e' gia' stato riscattato. Funzionava — ma la sua etichetta era
+   * legata a `redeemedCount`, cioe' a QUANTE VOLTE E' STATO USATO, non allo
+   * stato della riga: su un codice riscattato diceva «Disattiva» per sempre,
+   * anche dopo averlo disattivato. Chi lo premeva vedeva il pulsante identico
+   * e concludeva che non fosse successo niente, e ripremendolo rifaceva lo
+   * stesso spegnimento a vuoto.
+   *
+   * ⚠️ Nessuna conferma, ed e' voluto: e' l'unica azione REVERSIBILE della
+   * riga, e chiedere conferma per qualcosa che si annulla con un secondo clic
+   * insegna a rispondere «sì» senza leggere — poi la stessa abitudine arriva
+   * sulla cancellazione, che invece non torna indietro.
+   */
+  protected toggleAttivo(c: DiscountCode): void {
+    this.error.set(null);
+    this.feedback.set(null);
+    this.api.update(c.id, { active: !c.active }).subscribe({
+      next: (saved) => {
+        this.feedback.set(
+          saved.active
+            ? `Codice ${c.code} riattivato.`
+            : `Codice ${c.code} disattivato: non è più spendibile.`,
+        );
+        this.load();
+      },
+      error: (err: unknown) =>
+        this.error.set(apiErrorMessage(err, 'Aggiornamento non riuscito.')),
+    });
+  }
+
+  /**
+   * ⚠️ Il pulsante che chiama questo metodo compare SOLO su un codice mai
+   * riscattato: il server cancella davvero solo in quel caso, e offrire
+   * «Elimina» su una riga che il server non cancellera' mai e' una promessa
+   * che non puo' mantenere.
+   *
+   * ⚠️ Il ramo `softDeleted` resta comunque, e non e' codice morto: fra il
+   * caricamento dell'elenco e il clic qualcuno puo' aver speso il codice. In
+   * quel caso il server degrada a spegnimento e il messaggio lo DICE, invece
+   * di annunciare una cancellazione che non c'e' stata.
+   */
   protected remove(c: DiscountCode): void {
     if (
       !confirm(
-        `Eliminare il codice ${c.code}?` +
-          (c.redeemedCount > 0
-            ? ' È già stato usato: verrà solo disattivato.'
-            : ''),
+        `Eliminare il codice ${c.code}? Non è mai stato usato, quindi sparisce del tutto.`,
       )
     ) {
       return;
@@ -307,7 +372,7 @@ export class AdminDiscountsComponent {
       next: (res) => {
         this.feedback.set(
           res.softDeleted
-            ? `Codice ${c.code} disattivato.`
+            ? `Codice ${c.code} usato nel frattempo: l'ho solo disattivato.`
             : `Codice ${c.code} eliminato.`,
         );
         if (this.detailId() === c.id) this.closeDetail();
