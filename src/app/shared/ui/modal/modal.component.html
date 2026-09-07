@@ -1,0 +1,69 @@
+<!--
+  ⚠️ `(cancel)` è l'evento di Escape, consegnato PRIMA della chiusura: è lì che
+  si può fermarla quando c'è del testo non salvato.
+  ⚠️ `(close)` NON emette `chiusa`: il ciclo è al contrario — è il chiamante a
+  distruggere il componente, e la distruzione chiude il dialog. Emettere anche
+  da qui produrrebbe due giri.
+-->
+<dialog
+  #dlg
+  class="mo"
+  [class.mo--larga]="larga()"
+  [attr.aria-labelledby]="idTitolo"
+  [attr.aria-describedby]="idSottotitolo()"
+  (cancel)="onCancel($event)"
+  (mousedown)="onGiu($event)"
+  (click)="onClic($event)"
+>
+  <div class="mo__box" tabindex="-1">
+    <header class="mo__testa">
+      <div class="mo__titoli">
+        <h2 [id]="idTitolo" class="mo__titolo">{{ titolo() }}</h2>
+        @if (sottotitolo(); as sub) {
+          <p [id]="idSottotitolo()" class="mo__sub">{{ sub }}</p>
+        }
+      </div>
+      <button
+        type="button"
+        class="mo__chiudi"
+        aria-label="Chiudi"
+        (click)="chiudi()"
+      >
+        <app-icon name="x" [size]="18" />
+      </button>
+    </header>
+
+    <div class="mo__corpo">
+      <ng-content />
+    </div>
+
+    @if (confermaUscita()) {
+      <!--
+        ⚠️ Riga IN LINEA e non un secondo <dialog>: due dialog modali
+        sovrapposti sono una fila di top-layer da smontare nell'ordine giusto, e
+        il progetto non ha mai avuto nemmeno il primo. Qui basta una riga che
+        prende il fuoco.
+      -->
+      <div class="mo__conferma" role="alert">
+        <p>Hai modifiche non salvate. Vuoi chiudere e perderle?</p>
+        <div class="row mo__conferma-azioni">
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            autofocus
+            (click)="resta()"
+          >
+            Continua a modificare
+          </button>
+          <button
+            type="button"
+            class="btn btn--danger btn--sm"
+            (click)="chiudi()"
+          >
+            Chiudi senza salvare
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</dialog>

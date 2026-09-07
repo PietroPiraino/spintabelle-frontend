@@ -148,6 +148,43 @@
           </tbody>
         </table>
       </div>
+
+      <!--
+        ⚠️ Riga a parte e non un'altra riga della tabella qui sopra: queste
+        persone entrano come un abbonato ma non hanno comprato niente e non
+        hanno una scadenza, quindi nelle colonne «In regola», «Senza scadenza»
+        e «Da declassare» non avrebbero un valore vero da mostrare — e in
+        «Senza scadenza», che è una colonna di ANOMALIA, comparirebbero tutte,
+        accendendo per sempre un allarme che serve a segnalare tutt'altro.
+        Compare solo se esiste davvero qualcuno.
+      -->
+      @if (s.abbonati.accessoNonAbbonato.length) {
+        <div class="admin-stats__scroll" style="margin-top: 0.8rem">
+          <table class="admin-stats__table">
+            <caption class="visually-hidden">
+              Accesso completo senza abbonamento
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Accesso senza abbonamento</th>
+                <th scope="col" class="is-num">Persone</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of s.abbonati.accessoNonAbbonato; track r.ruolo) {
+                <tr>
+                  <th scope="row">{{ roleLabel(r.ruolo) }}</th>
+                  <td class="is-num">{{ n(r.utenti) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="admin-stats__note">
+          Hanno accesso pieno ai contenuti, non hanno una scadenza e non hanno
+          portato un euro: non sono sommati né agli abbonati né agli incassi.
+        </p>
+      }
     </section>
 
     <!-- ── 2) Incasso abbonamenti ──────────────────────────────────────── -->

@@ -1,0 +1,156 @@
+// ── Sezioni dentro una modale del pannello admin ───────────────────────────
+//
+// Una modale sola per riga, con dentro N sezioni richiudibili. ⚠️ Sono
+// `<details>` NATIVI e non un accordion a signal: lo stato aperto/chiuso è del
+// browser, quindi non c'è nulla da azzerare quando la modale si distrugge, e
+// `Ctrl+F` del browser trova il testo anche a sezione chiusa.
+//
+// Foglio condiviso (iscritti, stakings): sta in `features/admin/` e non in
+// `admin-shared.scss`, che è importato da nove tab che una modale non ce
+// l'hanno.
+
+.admin-modale {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-modale__sez {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+
+  &[open] {
+    border-color: var(--line-strong);
+  }
+}
+
+.admin-modale__sum {
+  // ⚠️ Il padding sta sul <summary> e non sul <details>: il bersaglio che apre
+  // è il summary, e col padding sul genitore resterebbe una fascia che sembra
+  // cliccabile e non lo è (precedente `.faq__item`).
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  // 44px dichiarati: un bersaglio di tocco non arriva da solo.
+  min-height: 44px;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  // Il chevron: ruota all'apertura.
+  &::after {
+    content: '';
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid var(--copper-600);
+    border-bottom: 2px solid var(--copper-600);
+    transform: rotate(45deg);
+    transition: transform var(--t-fast);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--copper-500);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.admin-modale__sez[open] > .admin-modale__sum::after {
+  transform: rotate(225deg);
+}
+
+.admin-modale__corpo {
+  padding: 0 0.9rem 0.9rem;
+}
+
+// La sezione distruttiva si distingue prima di essere aperta: è l'unica da cui
+// non si torna indietro.
+.admin-modale__sez--rischio {
+  border-color: color-mix(in srgb, var(--act-allin) 40%, var(--line));
+
+  > .admin-modale__sum {
+    color: var(--act-allin);
+
+    &::after {
+      border-color: var(--act-allin);
+    }
+  }
+}
+
+// La riga d'anagrafica in testa alla modale: date e stato, non modificabili.
+.admin-modale__anagrafica {
+  margin: 0 0 0.2rem;
+}
+
+// ── Densità dei controlli dentro la modale ─────────────────────────────────
+//
+// ⚠️ La primitiva `.input` è tarata sui form PUBBLICI (registrazione, richiesta
+// di abbonamento): 54,5px di altezza e 16px di carattere, cioè un controllo che
+// deve farsi notare in mezzo a una pagina. Qui è l'opposto — sono moduli di
+// servizio, fitti, e affiancati a pulsanti da 38,1px producevano una riga con
+// due altezze diverse (misurato: input 54,5 · pulsante 38,1).
+//
+// Tutto converge a 44px, e il numero non è scelto a caso: è l'altezza che in
+// questa stessa modale hanno già le intestazioni di sezione, ed è quella delle
+// righe della tabella dietro. È anche il minimo per un bersaglio di tocco, che
+// in questo progetto si DICHIARA e non si eredita — e questa modale a schermo
+// stretto diventa una schermata intera.
+.admin-modale {
+  .input {
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    // 0,875rem contro l'1rem della primitiva: un campo di servizio non deve
+    // gridare più forte dell'etichetta che lo descrive.
+    font-size: 0.875rem;
+  }
+
+  select.input {
+    // La freccetta segue il padding ridotto, o resta staccata dal bordo.
+    background-position: right 0.7rem center;
+    padding-right: 2rem;
+  }
+
+  textarea.input {
+    // ⚠️ `min-height` e non `height`: una textarea a 44px non conterrebbe una
+    // riga di testo più il padding. Restano tre righe, non le sei della
+    // primitiva pubblica.
+    min-height: 5.5rem;
+    padding-top: 0.55rem;
+  }
+
+  // I pulsanti salgono a incontrare i campi invece di lasciarli scendere: a
+  // 38px sarebbero sotto il bersaglio minimo di tocco.
+  .btn {
+    min-height: 44px;
+  }
+
+  // ⚠️ 0,75rem e non meno: due campi affiancati portano ognuno la propria
+  // etichetta sopra, e sotto i ~12px di distanza le due etichette si leggono
+  // come una frase sola invece che come due nomi di campo.
+  .admin-panel__row {
+    gap: 0.75rem;
+  }
+
+  .admin-panel__actions {
+    margin-top: 0.7rem;
+  }
+}
+
+// ⚠️ Sotto i 560px la modale è a schermo intero e i campi si toccano col dito:
+// il carattere torna a 16px perché iOS INGRANDISCE la pagina quando il fuoco
+// entra in un campo con meno di 16px, e da quello zoom non si torna indietro da
+// soli. L'altezza resta 44.
+@media (max-width: 560px) {
+  .admin-modale .input {
+    font-size: 1rem;
+  }
+}

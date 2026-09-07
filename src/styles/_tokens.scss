@@ -111,6 +111,14 @@
   --shadow-card: 0 14px 40px rgba(22, 34, 63, 0.08);
   --shadow-pop: 0 22px 60px rgba(22, 34, 63, 0.14);
 
+  // Fondale della modale (`::backdrop`).
+  // ⚠️ Dichiarato QUI, su :root, e non sul `<dialog>`: nelle implementazioni
+  // precedenti al 2024 lo pseudo-elemento `::backdrop` NON eredita
+  // dall'elemento che lo origina, quindi un `var()` definito sul dialog vi
+  // arriverebbe irrisolto — cioè fondale TRASPARENTE. Una modale che sembra
+  // funzionare finché non ci si accorge che la pagina dietro si legge tutta.
+  --scrim: rgba(22, 34, 63, 0.45);
+
   // Transizioni
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --t-fast: 160ms var(--ease-out);
@@ -215,6 +223,9 @@
   --shadow-card: 0 14px 40px rgba(70, 33, 60, 0.1);
   --shadow-pop: 0 22px 60px rgba(70, 33, 60, 0.16);
 
+  // Fondale della modale (vedi `:root`).
+  --scrim: rgba(70, 33, 60, 0.45);
+
   color-scheme: light;
 
   // Feltro del replayer (vedi `:root`).
@@ -281,6 +292,10 @@
   --glow-cyan: 0 0 0 3px rgba(46, 230, 230, 0.3);
   --shadow-card: 0 18px 50px rgba(4, 7, 16, 0.55);
   --shadow-pop: 0 24px 70px rgba(4, 7, 16, 0.75);
+
+  // Fondale della modale (vedi `:root`). Più denso che nei temi chiari: su un
+  // fondo già scuro un velo leggero non separa niente.
+  --scrim: rgba(2, 4, 10, 0.68);
 
   color-scheme: dark;
 

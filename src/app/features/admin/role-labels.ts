@@ -13,6 +13,17 @@ export const ROLE_LABELS: Record<Role, string> = {
   USER: 'Iscritto',
   PESCE_ROSSO: 'Pesce Rosso',
   SQUALO: 'Squalo',
+  // ⚠️ «Stakato» e non «Finanziato»: è il termine che i giocatori italiani
+  // usano davvero, ed è coerente con la sezione che si chiama già «Stakings».
+  // Regge come etichetta di un badge; nella PROSA si scrive «in staking», che
+  // non chiede l'accordo di genere che un template non può fare.
+  STAKATO: 'Stakato',
+  // ⚠️ «Coach» e non «Allenatore»/«Istruttore»: è la parola che il prodotto
+  // usa già ovunque — il token della sala conia `role: 'coach'`, il messaggio
+  // d'errore dice «Solo il coach può gestire la stanza», i comandi si chiamano
+  // «Controlli sessione del coach». Un secondo nome qui farebbe chiamare la
+  // stessa persona in due modi fra il pannello e la sala.
+  COACH: 'Coach',
   ADMIN: 'Admin',
 };
 

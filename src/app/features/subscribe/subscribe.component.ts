@@ -282,6 +282,28 @@ export class SubscribeComponent {
     return this.info()?.tiers.find((t) => t.tier === tier)?.priceEur ?? null;
   }
 
+  /**
+   * Perché questo utente non può abbonarsi, o null se può.
+   *
+   * ⚠️ Il server rifiuta con un 409 chi ha già accesso pieno senza aver
+   * comprato niente (admin, coach, giocatori in staking). Senza questa riga la
+   * pagina offriva loro «Scegli Squalo», il pannello di pagamento e le
+   * istruzioni PayPal: il rifiuto sarebbe arrivato DOPO che l'utente ha pagato
+   * fuori sito, che è l'unico momento in cui non si può più rimediare.
+   * ⚠️ Vive nel ramo autenticato (`me()` è null per un anonimo), quindi non
+   * raggiunge mai l'HTML prerenderizzato di questa pagina, che è pubblica.
+   */
+  protected readonly bloccoAbbonamento = computed(() => {
+    const role = this.me()?.role;
+    if (role === 'ADMIN')
+      return 'Come amministratore hai già accesso a tutto: non serve un abbonamento.';
+    if (role === 'COACH')
+      return 'Come coach hai già accesso completo ai contenuti: non serve un abbonamento.';
+    if (role === 'STAKATO')
+      return 'Sei in staking con la scuola: hai già accesso completo e senza scadenza, non serve un abbonamento.';
+    return null;
+  });
+
   protected labelFor(tier: SubscriptionTier): string {
     return this.info()?.tiers.find((t) => t.tier === tier)?.label ?? '';
   }

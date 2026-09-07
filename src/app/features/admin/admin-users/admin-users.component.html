@@ -5,24 +5,24 @@
       class="input admin-users__search"
       placeholder="Cerca per email o nickname…"
       aria-label="Cerca iscritti"
-      [formControl]="searchControl"
+      [formControl]="ricerca"
     />
     <select
-      #roleSel
+      #ruoloSel
       class="input admin-user__role"
       aria-label="Filtra per ruolo"
-      (change)="setRoleFilter(roleSel.value)"
+      (change)="impostaFiltroRuolo(ruoloSel.value)"
     >
       <option value="">Tutti i ruoli</option>
-      @for (r of roles; track r) {
-        <option [value]="r">{{ roleLabels[r] }}</option>
+      @for (r of ruoli; track r) {
+        <option [value]="r">{{ etichetteRuolo[r] }}</option>
       }
     </select>
     <select
-      #expSel
+      #scadSel
       class="input admin-user__role"
       aria-label="Filtra per scadenza"
-      (change)="setExpiringFilter(expSel.value)"
+      (change)="impostaFiltroScadenza(scadSel.value)"
     >
       <option value="">Scadenza: tutte</option>
       <option value="7">In scadenza ≤ 7 giorni</option>
@@ -45,448 +45,726 @@
   @if (!page() && loading()) {
     <div class="spinner" role="status" aria-label="Caricamento iscritti"></div>
   } @else if (page(); as p) {
-    @if (p.items.length === 0) {
-      <div class="empty-state">
-        <p>Nessun iscritto trovato.</p>
-      </div>
-    } @else {
-      <div class="admin-list">
-        @for (user of p.items; track user.id) {
-          <div class="card admin-item">
-            <div class="admin-item__info">
-              <div class="row admin-user__line">
-                <strong>{{ user.email }}</strong>
-                @if (user.nickname) {
-                  <span class="admin-user__nick">{{ '@' + user.nickname }}</span>
-                }
-                @if (user.verified) {
-                  <span class="badge badge--free">Verificato</span>
-                } @else {
-                  <span class="badge badge--premium">Da verificare</span>
-                }
-                @if (isSelf(user)) {
-                  <span class="badge badge--tag">Tu</span>
-                }
-              </div>
-              <span class="admin-item__meta">
-                Iscritto {{ user.createdAt | date: 'dd MMM yyyy' }} · Ultimo accesso
-                {{ user.lastActiveAt ? (user.lastActiveAt | date: 'dd MMM yyyy') : '—' }}
-                · Punti: {{ user.points ?? 0 }}
-                @if (user.subscriptionExpiresAt) {
-                  · Abbonato fino al {{ user.subscriptionExpiresAt | date: 'dd MMM yyyy' }}
-                }
-              </span>
-            </div>
+    <!--
+      ⚠️ Sotto i 720px l'elenco mostra solo nome e stato, e questa riga dice
+      dove sono finiti gli altri dati. Compare SOLO sullo stretto (regola in
+      `admin-table.scss`): un dato che sparisce senza spiegazione fa cercare un
+      guasto che non c'è.
+    -->
+    <p class="admin-item__meta admin-table__nota-mobile">
+      Sale affiliate, scadenza e punti sono nella scheda di ogni iscritto.
+    </p>
 
-            <div class="row admin-user__actions">
-              <label class="visually-hidden" [attr.for]="'role-' + user.id">Ruolo</label>
-              <select
-                [id]="'role-' + user.id"
-                class="input admin-user__role"
-                [disabled]="isSelf(user) || savingRoleId() === user.id"
-                (change)="onRoleSelect(user, $event)"
-              >
-                @for (r of roles; track r) {
-                  <option [value]="r" [selected]="r === pendingRole(user)">{{ roleLabels[r] }}</option>
+    <div class="admin-table__scroll">
+      <table class="admin-table">
+        <caption class="visually-hidden">
+          Iscritti al sito
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="admin-table__c-primo">Iscritto</th>
+            <th scope="col">Stato</th>
+            <th scope="col" class="admin-table__solo-largo">Sale</th>
+            <th scope="col" class="admin-table__solo-largo">Scadenza</th>
+            <th scope="col" class="is-num admin-table__solo-largo">Punti</th>
+            <th scope="col" class="admin-table__c-ultimo">
+              <span class="visually-hidden">Azioni</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of p.items; track user.id) {
+            <tr>
+              <th scope="row" class="admin-table__c-primo">
+                <span class="admin-table__ident">
+                  <strong>{{ user.email }}</strong>
+                  @if (user.nickname) {
+                    <span class="admin-user__nick">{{ '@' + user.nickname }}</span>
+                  }
+                  @if (!user.verified) {
+                    <span class="badge badge--premium">Da verificare</span>
+                  }
+                  @if (sonoIo(user)) {
+                    <span class="badge badge--tag">Tu</span>
+                  }
+                </span>
+              </th>
+              <td>
+                <span class="badge badge--tag">{{ etichetteRuolo[user.role] }}</span>
+              </td>
+              <!--
+                ⚠️ Tre stati distinti, e nessuno dei tre è una cella vuota: una
+                cella vuota si legge come «dato non arrivato» e manda a cercare
+                un guasto. «Nessuna» è un fatto; il tratteggio è un'attesa.
+              -->
+              <td class="admin-table__multi admin-table__solo-largo" [title]="saleTesto(user)">
+                @if (!p.affiliazioniPerUtente) {
+                  <span class="admin-table__skel" aria-label="Caricamento"></span>
+                } @else if (sale(user).length === 0) {
+                  <span class="is-vuota">Nessuna</span>
+                } @else {
+                  @for (s of sale(user); track s.roomId) {
+                    <span class="admin-table__chip" [class.is-attesa]="s.daVerificare">
+                      {{ s.roomName }}:
+                      <code>{{ s.roomUsername || '—' }}</code>
+                      @if (s.daVerificare) {
+                        <span class="visually-hidden">(da verificare)</span>
+                      }
+                    </span>
+                  }
                 }
-              </select>
-              @if (isRoleDirty(user)) {
-                <button
-                  type="button"
-                  class="btn btn--primary btn--sm"
-                  [disabled]="savingRoleId() === user.id"
-                  (click)="saveRole(user)"
-                >
-                  {{ savingRoleId() === user.id ? 'Salvataggio…' : 'Salva' }}
-                </button>
+              </td>
+              <td class="admin-table__solo-largo">
+                @if (scadenzaTesto(user); as testo) {
+                  <span class="is-vuota">{{ testo }}</span>
+                } @else {
+                  {{ user.subscriptionExpiresAt | date: 'dd MMM yyyy' }}
+                }
+              </td>
+              <td class="is-num admin-table__solo-largo">{{ user.points ?? 0 }}</td>
+              <td class="admin-table__c-ultimo">
                 <button
                   type="button"
                   class="btn btn--ghost btn--sm"
-                  [disabled]="savingRoleId() === user.id"
-                  (click)="cancelRole(user)"
+                  (click)="apri(user)"
                 >
-                  Annulla
+                  Gestisci
                 </button>
-              }
-              @if (!isSelf(user)) {
-                <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'expiry')">
-                  Scadenza
-                </button>
-                @if (user.role !== 'ADMIN') {
-                  <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'grant')">
-                    Concedi
-                  </button>
-                }
-                <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'discount')">
-                  Codice sconto
-                </button>
-                <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'profile')">
-                  Dati
-                </button>
-              }
-              <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'history')">
-                Storico
-              </button>
-              <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'partecipazione')">
-                Partecipazione
-              </button>
-              <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'affiliazioni')">
-                Affiliazioni
-              </button>
-              @if (!user.verified) {
-                <button type="button" class="btn btn--ghost btn--sm" (click)="resend(user)">
-                  Reinvia verifica
-                </button>
-              }
-              <button type="button" class="btn btn--ghost btn--sm" (click)="openPanel(user, 'points')">
-                Punti
-              </button>
-              <button
-                type="button"
-                class="btn btn--danger btn--sm"
-                [disabled]="isSelf(user)"
-                (click)="remove(user)"
-              >
-                Elimina
-              </button>
-            </div>
-          </div>
-
-          <!-- ── Pannelli inline ── -->
-          @if (isPanel(user, 'points')) {
-            <div class="card card--pad admin-panel">
-              <h3>Punti di {{ user.email }} — saldo {{ user.points ?? 0 }}</h3>
-              <div class="row admin-panel__row">
-                <div class="field" style="margin: 0">
-                  <label [attr.for]="'delta-' + user.id">Variazione (+ accredito / − storno)</label>
-                  <input
-                    [id]="'delta-' + user.id"
-                    type="number"
-                    class="input"
-                    [formControl]="deltaControl"
-                    placeholder="es. 100 oppure -50"
-                  />
-                </div>
-                <div class="field" style="margin: 0; flex: 1; min-width: 12rem">
-                  <label [attr.for]="'reason-' + user.id">Motivo</label>
-                  <input
-                    [id]="'reason-' + user.id"
-                    type="text"
-                    class="input"
-                    [formControl]="reasonControl"
-                    maxlength="200"
-                    placeholder="es. bonus di benvenuto"
-                  />
-                </div>
-                <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel()" (click)="applyAdjust(user)">
-                  {{ savingPanel() ? 'Applico…' : 'Applica' }}
-                </button>
-                <button type="button" class="btn btn--ghost btn--sm" [disabled]="savingPanel()" (click)="closePanel()">
-                  Annulla
-                </button>
-              </div>
-            </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="admin-table__vuota">
+                Nessun iscritto trovato.
+              </td>
+            </tr>
           }
+        </tbody>
+      </table>
+    </div>
 
-          @if (isPanel(user, 'expiry')) {
-            <div class="card card--pad admin-panel">
-              <h3>Scadenza abbonamento — {{ user.email }}</h3>
-              <div class="row admin-panel__row">
-                <div class="field" style="margin: 0">
-                  <label [attr.for]="'exp-' + user.id">Valida fino al</label>
-                  <input [id]="'exp-' + user.id" type="date" class="input" [formControl]="expiryDateControl" />
-                </div>
-                <button type="button" class="btn btn--ghost btn--sm" (click)="addToExpiry(user, 30)">+30 giorni</button>
-                <button type="button" class="btn btn--ghost btn--sm" (click)="addToExpiry(user, 365)">+1 anno</button>
-              </div>
-              <label class="row admin-panel__check">
-                <input type="checkbox" [formControl]="notifyControl" /> Notifica l'utente via email
-              </label>
-              <div class="row admin-panel__actions">
-                <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel() || !expiryDateControl.value" (click)="saveExpiry(user)">
-                  {{ savingPanel() ? 'Salvataggio…' : 'Salva scadenza' }}
-                </button>
-                @if (user.subscriptionExpiresAt) {
-                  <button type="button" class="btn btn--ghost btn--sm" [disabled]="savingPanel()" (click)="removeExpiry(user)">
-                    Rimuovi scadenza
-                  </button>
-                }
-                <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Annulla</button>
-              </div>
-            </div>
-          }
-
-          @if (isPanel(user, 'grant')) {
-            <div class="card card--pad admin-panel">
-              <h3>Concedi abbonamento — {{ user.email }}</h3>
-              <div class="row admin-panel__row">
-                <div class="field" style="margin: 0">
-                  <label [attr.for]="'gt-' + user.id">Piano</label>
-                  <select [id]="'gt-' + user.id" class="input" [formControl]="grantTierControl">
-                    @for (t of tiers; track t) {
-                      <option [value]="t">{{ roleLabels[t] }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="field" style="margin: 0">
-                  <label [attr.for]="'gd-' + user.id">Scade il</label>
-                  <input [id]="'gd-' + user.id" type="date" class="input" [formControl]="grantDateControl" />
-                </div>
-                <button type="button" class="btn btn--ghost btn--sm" (click)="addToGrant(30)">+30 giorni</button>
-                <button type="button" class="btn btn--ghost btn--sm" (click)="addToGrant(365)">+1 anno</button>
-              </div>
-              <div class="field" style="margin: 0.6rem 0 0">
-                <label [attr.for]="'gn-' + user.id">Nota (facoltativa)</label>
-                <input [id]="'gn-' + user.id" type="text" class="input" [formControl]="grantNoteControl" maxlength="300" placeholder="es. omaggio promozionale" />
-              </div>
-              <!--
-                ⚠️ Concedere a mano non chiude la richiesta in attesa: i punti
-                che l'iscritto ha gia' impegnato resterebbero addebitati senza
-                contropartita, e approvandola dopo il periodo raddoppierebbe.
-                Senza la spunta il server risponde 409 dicendolo.
-              -->
-              <label class="admin-panel__check" style="margin: 0.6rem 0 0">
-                <input type="checkbox" [formControl]="grantSostituisciControl" />
-                Sostituisci la richiesta in attesa (la chiude e restituisce i
-                punti eventualmente usati)
-              </label>
-              <div class="row admin-panel__actions">
-                <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel() || !grantDateControl.value" (click)="saveGrant(user)">
-                  {{ savingPanel() ? 'Salvataggio…' : 'Concedi' }}
-                </button>
-                <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Annulla</button>
-              </div>
-            </div>
-          }
-
-          @if (isPanel(user, 'profile')) {
-            <div class="card card--pad admin-panel">
-              <h3>Modifica dati — {{ user.email }}</h3>
-              <div class="field" style="margin: 0 0 0.6rem">
-                <label [attr.for]="'pe-' + user.id">Email</label>
-                <input [id]="'pe-' + user.id" type="email" class="input" [formControl]="emailControl" />
-                <p class="admin-item__meta">
-                  Cambiare l'email riporta l'account a "da verificare" (a meno di forzare "verificato" qui sotto).
-                </p>
-              </div>
-              <div class="field" style="margin: 0 0 0.6rem">
-                <label [attr.for]="'pn-' + user.id">Nickname</label>
-                <input [id]="'pn-' + user.id" type="text" class="input" [formControl]="nickControl" maxlength="40" />
-              </div>
-              <label class="row admin-panel__check">
-                <input type="checkbox" [formControl]="verifiedControl" /> Account verificato
-              </label>
-              <div class="row admin-panel__actions">
-                <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel()" (click)="saveProfile(user)">
-                  {{ savingPanel() ? 'Salvataggio…' : 'Salva dati' }}
-                </button>
-                <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Annulla</button>
-              </div>
-            </div>
-          }
-
-          @if (isPanel(user, 'discount')) {
-            <div class="card card--pad admin-panel">
-              <h3>Assegna codice sconto — {{ user.email }}</h3>
-              @if (discountCodes() === null) {
-                <div class="spinner" role="status" aria-label="Caricamento codici"></div>
-              } @else if (discountCodes()!.length === 0) {
-                <p class="admin-item__meta">
-                  Nessun codice "riservato" disponibile. Creane uno dalla tab Sconti.
-                </p>
-              } @else {
-                <div class="row admin-panel__row">
-                  <div class="field" style="margin: 0; min-width: 14rem">
-                    <label [attr.for]="'dc-' + user.id">Codice</label>
-                    <select [id]="'dc-' + user.id" class="input" [formControl]="selectedCodeId">
-                      <option value="">— scegli —</option>
-                      @for (c of discountCodes()!; track c.id) {
-                        <option [value]="c.id">
-                          {{ c.code }} ({{ c.kind === 'PERCENT' ? c.value + '%' : '€' + c.value }})
-                        </option>
-                      }
-                    </select>
-                  </div>
-                  <button type="button" class="btn btn--primary btn--sm" [disabled]="savingPanel() || !selectedCodeId.value" (click)="assignDiscount(user)">
-                    {{ savingPanel() ? 'Assegno…' : 'Assegna' }}
-                  </button>
-                  <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Annulla</button>
-                </div>
-              }
-            </div>
-          }
-
-          @if (isPanel(user, 'partecipazione')) {
-            <div class="card card--pad admin-panel">
-              <h3>Partecipazione — {{ user.email }}</h3>
-              @if (participationLoading()) {
-                <div class="spinner" role="status" aria-label="Caricamento partecipazione"></div>
-              } @else {
-                <h4 class="admin-panel__h4">Lezioni live seguite</h4>
-                @if ((liveAttendance() ?? []).length === 0) {
-                  <p class="admin-item__meta">
-                    Nessuna partecipazione registrata. Le lezioni su Zoom o Discord
-                    si svolgono fuori dal sito e non lasciano traccia qui.
-                  </p>
-                } @else {
-                  <ul class="admin-history">
-                    @for (a of liveAttendance()!; track a.sessionId) {
-                      <li>
-                        {{ a.primoIngresso | date: 'dd MMM yyyy' }} ·
-                        <strong>{{ a.titolo }}</strong>
-                        · {{ a.minuti }} min
-                        @if (a.ingressi > 1) { · {{ a.ingressi }} ingressi }
-                      </li>
-                    }
-                  </ul>
-                }
-                <h4 class="admin-panel__h4">Video-lezioni aperte</h4>
-                @if ((lessonViews() ?? []).length === 0) {
-                  <p class="admin-item__meta">Nessuna lezione aperta.</p>
-                } @else {
-                  <ul class="admin-history">
-                    @for (v of lessonViews()!; track v.lessonId) {
-                      <li>
-                        @if (v.ultimaAperturaAt) {
-                          {{ v.ultimaAperturaAt | date: 'dd MMM yyyy' }} ·
-                        }
-                        <strong>{{ v.titolo }}</strong>
-                        · {{ v.aperture }} {{ v.aperture === 1 ? 'apertura' : 'aperture' }}
-                        @if (v.percentualeMax != null) {
-                          · <strong>{{ v.percentualeMax }}%</strong> visto
-                        }
-                      </li>
-                    }
-                  </ul>
-                  <p class="admin-item__meta">
-                    "Aperture" = quante volte ha aperto il video sul sito. La
-                    percentuale è il punto più avanzato raggiunto ed è una stima
-                    per difetto (si aggiorna al massimo una volta al minuto).
-                  </p>
-                }
-                <div class="row admin-panel__actions">
-                  <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Chiudi</button>
-                </div>
-              }
-            </div>
-          }
-
-          <!-- ⚠️ FRATELLO della card, mai dentro .admin-item__meta: quello è uno
-               <span>, e un blocco così dentro un inline è markup invalido -->
-          @if (isPanel(user, 'affiliazioni')) {
-            <div class="card card--pad admin-panel">
-              <h3>Affiliazioni — {{ user.email }}</h3>
-              @if (affiliationsLoading()) {
-                <div class="spinner" role="status" aria-label="Caricamento affiliazioni"></div>
-              } @else {
-                @if ((userAffiliations() ?? []).length === 0) {
-                  <p class="admin-item__meta">Nessuna richiesta di affiliazione.</p>
-                } @else {
-                  <ul class="admin-history">
-                    @for (a of userAffiliations()!; track a.id) {
-                      <li>
-                        <span class="badge badge--tag">{{ a.statusLabel }}</span>
-                        <strong>{{ a.roomName }}</strong>
-                        · <code>{{ a.refCode }}</code>
-                        @if (a.roomUsername) {
-                          · username dichiarato: <strong>{{ a.roomUsername }}</strong>
-                        }
-                        @if (a.decidedAt) {
-                          · deciso il {{ a.decidedAt | date: 'dd MMM yyyy' }}
-                        } @else if (a.datiInviatiAt) {
-                          · dati inviati il {{ a.datiInviatiAt | date: 'dd MMM yyyy' }}
-                        } @else if (a.richiestoAt) {
-                          · richiesta del {{ a.richiestoAt | date: 'dd MMM yyyy' }}
-                        }
-                        @if (a.riaperture) {
-                          · {{ a.riaperture }}
-                          {{ a.riaperture === 1 ? 'riapertura' : 'riaperture' }}
-                        }
-                        @if (a.decisionNote) { — {{ a.decisionNote }} }
-                        @if (a.adminNote) {
-                          <span class="admin-item__meta"> · nota interna: {{ a.adminNote }}</span>
-                        }
-                      </li>
-                    }
-                  </ul>
-                  <p class="admin-item__meta">
-                    Il codice è il numero di pratica dell'utente, non un codice
-                    da dare alla sala. Le decisioni (approva, rifiuta, revoca) si
-                    prendono nella tab Affiliazioni.
-                  </p>
-                }
-                <div class="row admin-panel__actions">
-                  <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Chiudi</button>
-                </div>
-              }
-            </div>
-          }
-
-          @if (isPanel(user, 'history')) {
-            <div class="card card--pad admin-panel">
-              <h3>Storico — {{ user.email }}</h3>
-              @if (historyLoading()) {
-                <div class="spinner" role="status" aria-label="Caricamento storico"></div>
-              } @else {
-                <h4 class="admin-panel__h4">Richieste abbonamento</h4>
-                @if ((historyReqs() ?? []).length === 0) {
-                  <p class="admin-item__meta">Nessuna richiesta.</p>
-                } @else {
-                  <ul class="admin-history">
-                    @for (r of historyReqs()!; track r.id) {
-                      <li>
-                        <span class="badge badge--tag">{{ r.status }}</span>
-                        {{ r.tierLabel }} · {{ r.paymentMethod }}
-                        @if (r.discountCode) { · sconto {{ r.discountCode }} }
-                        @if (r.discountedPriceEur != null) { (€{{ r.discountedPriceEur }}) }
-                        @if (r.pointsSpent) { · {{ r.pointsSpent }} pt }
-                        · {{ r.createdAt | date: 'dd MMM yyyy' }}
-                        @if (r.decisionNote) { — {{ r.decisionNote }} }
-                      </li>
-                    }
-                  </ul>
-                }
-                <h4 class="admin-panel__h4">Azioni admin</h4>
-                @if ((historyAudit() ?? []).length === 0) {
-                  <p class="admin-item__meta">Nessuna azione registrata.</p>
-                } @else {
-                  <ul class="admin-history">
-                    @for (a of historyAudit()!; track a.id) {
-                      <li>
-                        {{ a.createdAt | date: 'dd MMM yyyy, HH:mm' }} ·
-                        <strong>{{ actionLabel(a.action) }}</strong>
-                        @if (a.adminEmail) { · {{ a.adminEmail }} }
-                        @if (a.reason) { — {{ a.reason }} }
-                      </li>
-                    }
-                  </ul>
-                }
-                <div class="row admin-panel__actions">
-                  <button type="button" class="btn btn--ghost btn--sm" (click)="closePanel()">Chiudi</button>
-                </div>
-              }
-            </div>
-          }
-        }
+    @if (p.totalPages > 1) {
+      <div class="row admin-users__pager">
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm"
+          [disabled]="p.page <= 1"
+          (click)="vaiAPagina(p.page - 1)"
+        >
+          ← Precedenti
+        </button>
+        <span class="admin-item__meta">Pagina {{ p.page }} di {{ p.totalPages }}</span>
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm"
+          [disabled]="p.page >= p.totalPages"
+          (click)="vaiAPagina(p.page + 1)"
+        >
+          Successivi →
+        </button>
       </div>
-
-      @if (p.totalPages > 1) {
-        <div class="row admin-users__pager">
-          <button
-            type="button"
-            class="btn btn--ghost btn--sm"
-            [disabled]="p.page <= 1"
-            (click)="goToPage(p.page - 1)"
-          >← Precedenti</button>
-          <span class="admin-item__meta">Pagina {{ p.page }} di {{ p.totalPages }}</span>
-          <button
-            type="button"
-            class="btn btn--ghost btn--sm"
-            [disabled]="p.page >= p.totalPages"
-            (click)="goToPage(p.page + 1)"
-          >Successivi →</button>
-        </div>
-      }
     }
   }
 </div>
+
+<!--
+  ⚠️ La modale vive fuori da `.admin-users` e si CREA E DISTRUGGE con l'`@if`:
+  `app-modal` chiama `showModal()` alla nascita e ripulisce (blocco dello
+  scorrimento, ritorno del fuoco) alla distruzione.
+  ⚠️ La condizione è `utenteAperto()` e non `apertoId()`: se l'iscritto sparisce
+  dall'elenco — cancellato, o uscito dalla pagina dopo un ricaricamento — la
+  modale si chiude da sola invece di restare aperta su un fantasma.
+-->
+@if (utenteAperto(); as u) {
+  <app-modal
+    [titolo]="'Gestisci ' + (u.nickname || u.email)"
+    [sottotitolo]="u.email"
+    [sporco]="sporco()"
+    [larga]="true"
+    (chiusa)="chiudi()"
+  >
+    <div [formGroup]="form" class="admin-modale">
+      <!--
+        ⚠️ Iscrizione e ultimo accesso NON sono in tabella — sei colonne sono
+        già il tetto leggibile — ma non possono sparire: sono le due date con
+        cui si capisce se un account è nuovo o abbandonato, ed erano nella riga
+        prima di questa riscrittura.
+      -->
+      <p class="admin-item__meta admin-modale__anagrafica">
+        Iscritto {{ u.createdAt | date: 'dd MMM yyyy' }} · Ultimo accesso
+        {{ u.lastActiveAt ? (u.lastActiveAt | date: 'dd MMM yyyy') : 'mai' }}
+        @if (u.verified) { · account verificato } @else { · da verificare }
+      </p>
+
+      @if (sonoIo(u)) {
+        <p class="form-feedback is-error" role="note">
+          Questo è il tuo account: i comandi che lo modificano sono disattivati.
+          Serve un altro amministratore.
+        </p>
+      }
+
+      <!-- ── Ruolo ─────────────────────────────────────────────────────── -->
+      <details class="admin-modale__sez" open>
+        <summary class="admin-modale__sum">Ruolo e accesso</summary>
+        <div class="admin-modale__corpo">
+          <div class="row admin-panel__row">
+            <div class="field" style="margin: 0">
+              <label for="mod-ruolo">Ruolo</label>
+              <select
+                id="mod-ruolo"
+                class="input"
+                formControlName="ruolo"
+                [attr.disabled]="sonoIo(u) ? '' : null"
+              >
+                @for (r of ruoli; track r) {
+                  <option [value]="r" [disabled]="ruoloVietato(r) && r !== u.role">
+                    {{ etichetteRuolo[r] }}
+                  </option>
+                }
+              </select>
+            </div>
+            <button
+              type="button"
+              class="btn btn--primary btn--sm"
+              [disabled]="!ruoloCambiato(u) || salvando() || sonoIo(u)"
+              (click)="salvaRuolo(u)"
+            >
+              {{ salvando() ? 'Salvataggio…' : 'Salva ruolo' }}
+            </button>
+          </div>
+          <p class="admin-item__meta">
+            Pesce Rosso e Squalo non si assegnano da qui: servono anche una data
+            di scadenza e una riga nello storico. Usa «Concedi abbonamento» più
+            sotto.
+          </p>
+        </div>
+      </details>
+
+      <!-- ── Scadenza ──────────────────────────────────────────────────── -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Scadenza abbonamento</summary>
+        <div class="admin-modale__corpo">
+          <div class="row admin-panel__row">
+            <div class="field" style="margin: 0">
+              <label for="mod-scad">Valida fino al</label>
+              <input
+                id="mod-scad"
+                type="date"
+                class="input"
+                formControlName="scadenza"
+              />
+            </div>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="sommaAScadenza(u, 30)"
+            >
+              +30 giorni
+            </button>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="sommaAScadenza(u, 365)"
+            >
+              +1 anno
+            </button>
+          </div>
+          <label class="row admin-panel__check">
+            <input type="checkbox" formControlName="avvisa" />
+            Notifica l'iscritto via email
+          </label>
+          <div class="row admin-panel__actions">
+            <button
+              type="button"
+              class="btn btn--primary btn--sm"
+              [disabled]="salvando() || sonoIo(u) || !form.controls.scadenza.value"
+              (click)="salvaScadenza(u)"
+            >
+              Salva scadenza
+            </button>
+            @if (u.subscriptionExpiresAt) {
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                [disabled]="salvando() || sonoIo(u)"
+                (click)="rimuoviScadenza(u)"
+              >
+                Rimuovi scadenza
+              </button>
+            }
+          </div>
+          @if (scadenzaTesto(u) === 'Mai') {
+            <p class="admin-item__meta">
+              Questo ruolo non ha scadenza: il server rifiuta una data.
+            </p>
+          }
+        </div>
+      </details>
+
+      <!-- ── Concessione ───────────────────────────────────────────────── -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Concedi abbonamento</summary>
+        <div class="admin-modale__corpo">
+          <div class="row admin-panel__row">
+            <div class="field" style="margin: 0">
+              <label for="mod-tier">Piano</label>
+              <select id="mod-tier" class="input" formControlName="concediTier">
+                @for (t of tiers; track t) {
+                  <option [value]="t">{{ etichetteRuolo[t] }}</option>
+                }
+              </select>
+            </div>
+            <div class="field" style="margin: 0">
+              <label for="mod-concdata">Scade il</label>
+              <input
+                id="mod-concdata"
+                type="date"
+                class="input"
+                formControlName="concediData"
+              />
+            </div>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="sommaAConcessione(30)"
+            >
+              +30 giorni
+            </button>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="sommaAConcessione(365)"
+            >
+              +1 anno
+            </button>
+          </div>
+          <div class="field" style="margin: 0.6rem 0 0">
+            <label for="mod-concnota">Nota (facoltativa)</label>
+            <input
+              id="mod-concnota"
+              type="text"
+              class="input"
+              formControlName="concediNota"
+              maxlength="300"
+              placeholder="es. omaggio promozionale"
+            />
+          </div>
+          <!--
+            ⚠️ Concedere a mano non chiude la richiesta in attesa: i punti che
+            l'iscritto ha già impegnato resterebbero addebitati senza
+            contropartita, e approvandola dopo il periodo raddoppierebbe. Senza
+            la spunta il server risponde 409 dicendolo.
+          -->
+          <label class="admin-panel__check" style="margin: 0.6rem 0 0">
+            <input type="checkbox" formControlName="concediSostituisci" />
+            Sostituisci la richiesta in attesa (la chiude e restituisce i punti
+            eventualmente usati)
+          </label>
+          <div class="row admin-panel__actions">
+            <button
+              type="button"
+              class="btn btn--primary btn--sm"
+              [disabled]="
+                salvando() || sonoIo(u) || !form.controls.concediData.value
+              "
+              (click)="concedi(u)"
+            >
+              Concedi
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <!-- ── Punti ─────────────────────────────────────────────────────── -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">
+          Punti BFF — saldo {{ u.points ?? 0 }}
+        </summary>
+        <div class="admin-modale__corpo">
+          <div class="row admin-panel__row">
+            <div class="field" style="margin: 0">
+              <label for="mod-delta">Variazione</label>
+              <input
+                id="mod-delta"
+                type="number"
+                class="input"
+                formControlName="delta"
+                placeholder="es. 100 oppure -50"
+              />
+            </div>
+            <div class="field" style="margin: 0; flex: 1; min-width: 12rem">
+              <label for="mod-motivo">Motivo</label>
+              <input
+                id="mod-motivo"
+                type="text"
+                class="input"
+                formControlName="motivo"
+                maxlength="200"
+                placeholder="es. bonus di benvenuto"
+              />
+            </div>
+            <button
+              type="button"
+              class="btn btn--primary btn--sm"
+              [disabled]="salvando()"
+              (click)="applicaPunti(u)"
+            >
+              {{ salvando() ? 'Applico…' : 'Applica' }}
+            </button>
+          </div>
+          <!--
+            ⚠️ Il significato del segno sta QUI e non nell'etichetta: come
+            «Variazione (+ accredito / − storno)» era così lunga da arrivare a
+            ridosso dell'etichetta del campo accanto, e le due si leggevano come
+            una frase sola. Stessa forma della riga di aiuto che il registro
+            degli staking ha già sotto il proprio importo.
+          -->
+          <p class="admin-item__meta">
+            Un valore <strong>positivo</strong> accredita punti, uno
+            <strong>negativo</strong> li storna.
+          </p>
+        </div>
+      </details>
+
+      <!-- ── Dati ──────────────────────────────────────────────────────── -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Dati dell'account</summary>
+        <div class="admin-modale__corpo">
+          <div class="field" style="margin: 0 0 0.6rem">
+            <label for="mod-email">Email</label>
+            <input
+              id="mod-email"
+              type="email"
+              class="input"
+              formControlName="email"
+            />
+            <p class="admin-item__meta">
+              Cambiare l'email riporta l'account a "da verificare" (a meno di
+              forzare "verificato" qui sotto).
+            </p>
+          </div>
+          <div class="field" style="margin: 0 0 0.6rem">
+            <label for="mod-nick">Nickname</label>
+            <input
+              id="mod-nick"
+              type="text"
+              class="input"
+              formControlName="nickname"
+              maxlength="40"
+            />
+          </div>
+          <label class="row admin-panel__check">
+            <input type="checkbox" formControlName="verificato" />
+            Account verificato
+          </label>
+          <div class="row admin-panel__actions">
+            <button
+              type="button"
+              class="btn btn--primary btn--sm"
+              [disabled]="salvando() || sonoIo(u)"
+              (click)="salvaProfilo(u)"
+            >
+              Salva dati
+            </button>
+            @if (!u.verified) {
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="reinviaVerifica(u)"
+              >
+                Reinvia verifica
+              </button>
+            }
+          </div>
+        </div>
+      </details>
+
+      <!-- ── Codice sconto ─────────────────────────────────────────────── -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Assegna codice sconto</summary>
+        <div class="admin-modale__corpo">
+          @if (codiciSconto() === null) {
+            <div class="spinner" role="status" aria-label="Caricamento codici"></div>
+          } @else if (codiciSconto()!.length === 0) {
+            <p class="admin-item__meta">
+              Nessun codice "riservato" disponibile. Creane uno dalla sezione
+              Sconti.
+            </p>
+          } @else {
+            <div class="row admin-panel__row">
+              <div class="field" style="margin: 0; min-width: 14rem">
+                <label for="mod-codice">Codice</label>
+                <select id="mod-codice" class="input" formControlName="codiceSconto">
+                  <option value="">— scegli —</option>
+                  @for (c of codiciSconto()!; track c.id) {
+                    <option [value]="c.id">
+                      {{ c.code }}
+                      ({{ c.kind === 'PERCENT' ? c.value + '%' : '€' + c.value }})
+                    </option>
+                  }
+                </select>
+              </div>
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                [disabled]="salvando() || !form.controls.codiceSconto.value"
+                (click)="assegnaCodice(u)"
+              >
+                Assegna
+              </button>
+            </div>
+          }
+        </div>
+      </details>
+
+      <!-- ── Affiliazioni ──────────────────────────────────────────────── -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Affiliazioni</summary>
+        <div class="admin-modale__corpo">
+          @if (affiliazioni() === null) {
+            <div class="spinner" role="status" aria-label="Caricamento affiliazioni"></div>
+          } @else if (affiliazioni()!.length === 0) {
+            <p class="admin-item__meta">Nessuna richiesta di affiliazione.</p>
+          } @else {
+            <ul class="admin-history">
+              @for (a of affiliazioni()!; track a.id) {
+                <li>
+                  <span class="badge badge--tag">{{ a.statusLabel }}</span>
+                  @if (a.origine === 'ADMIN') {
+                    <!--
+                      ⚠️ Va detto: su questa riga le dichiarazioni dell'utente
+                      non sono state prestate, e a distanza di mesi è
+                      un'informazione che non si ricostruisce a memoria.
+                    -->
+                    <span class="badge badge--tag">Registrata da te</span>
+                  }
+                  <strong>{{ a.roomName }}</strong>
+                  · <code>{{ a.refCode }}</code>
+                  @if (a.roomUsername) {
+                    · username dichiarato: <strong>{{ a.roomUsername }}</strong>
+                  }
+                  @if (a.decidedAt) {
+                    · deciso il {{ a.decidedAt | date: 'dd MMM yyyy' }}
+                  } @else if (a.datiInviatiAt) {
+                    · dati inviati il {{ a.datiInviatiAt | date: 'dd MMM yyyy' }}
+                  } @else if (a.richiestoAt) {
+                    · richiesta del {{ a.richiestoAt | date: 'dd MMM yyyy' }}
+                  }
+                  @if (a.riaperture) {
+                    · {{ a.riaperture }}
+                    {{ a.riaperture === 1 ? 'riapertura' : 'riaperture' }}
+                  }
+                  @if (a.decisionNote) { — {{ a.decisionNote }} }
+                  @if (a.adminNote) {
+                    <span class="admin-item__meta"> · nota interna: {{ a.adminNote }}</span>
+                  }
+                </li>
+              }
+            </ul>
+            <p class="admin-item__meta">
+              Il codice è il numero di pratica dell'iscritto, non un codice da
+              dare alla sala. Le decisioni (approva, rifiuta, revoca) si prendono
+              nella sezione Affiliazioni.
+            </p>
+          }
+
+          <!--
+            ⚠️ Serve a REGISTRARE un'affiliazione che esiste già fuori dal sito,
+            non a crearne una nuova: è il recupero degli storici, cioè di chi era
+            collegato alla scuola prima che il programma fosse pubblicato.
+          -->
+          <h4 class="admin-panel__h4">Registra un'affiliazione esistente</h4>
+          @if (saleDisponibili() === null) {
+            <div class="spinner" role="status" aria-label="Caricamento sale"></div>
+          } @else if (saleSelezionabili().length === 0) {
+            <p class="admin-item__meta">
+              Nessuna sala disponibile: o non ne è configurata nessuna, o
+              l'iscritto è già tracciato su tutte.
+            </p>
+          } @else {
+            <div class="row admin-panel__row">
+              <div class="field" style="margin: 0; min-width: 11rem">
+                <label for="aff-sala">Sala</label>
+                <select id="aff-sala" class="input" formControlName="affSala">
+                  <option value="">— scegli —</option>
+                  @for (s of saleSelezionabili(); track s.id) {
+                    <option [value]="s.id">
+                      {{ s.name }}@if (!s.active) { (non in vetrina) }
+                    </option>
+                  }
+                </select>
+              </div>
+              <div class="field" style="margin: 0; flex: 1; min-width: 11rem">
+                <label for="aff-user">Username sulla sala</label>
+                <input
+                  id="aff-user"
+                  type="text"
+                  class="input"
+                  formControlName="affUsername"
+                  maxlength="60"
+                  placeholder="es. FishKiller91"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="field" style="margin: 0; min-width: 9rem">
+                <label for="aff-userid">Codice utente</label>
+                <input
+                  id="aff-userid"
+                  type="text"
+                  class="input"
+                  formControlName="affUserId"
+                  maxlength="60"
+                  placeholder="facoltativo"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+            <label class="row admin-panel__check">
+              <input type="checkbox" formControlName="affApprova" />
+              Segnala come già verificata (nasce tracciata)
+            </label>
+            <p class="admin-item__meta">
+              ⚠️ L'iscritto non ha dichiarato qui che l'account è suo e non ha
+              accettato i termini dal sito: la pratica resta marcata come
+              registrata da te. <strong>Non parte alcuna email</strong>, ma la
+              vedrà nella sua pagina Affiliazioni e potrà annullarla.
+            </p>
+            <div class="row admin-panel__actions">
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                [disabled]="
+                  salvando() ||
+                  !form.controls.affSala.value ||
+                  !form.controls.affUsername.value.trim()
+                "
+                (click)="inserisciAffiliazione(u)"
+              >
+                Registra affiliazione
+              </button>
+            </div>
+          }
+        </div>
+      </details>
+
+      <!-- ── Partecipazione ────────────────────────────────────────────── -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Partecipazione</summary>
+        <div class="admin-modale__corpo">
+          <h4 class="admin-panel__h4">Lezioni live seguite</h4>
+          @if (presenzeLive() === null) {
+            <div class="spinner" role="status" aria-label="Caricamento presenze"></div>
+          } @else if (presenzeLive()!.length === 0) {
+            <p class="admin-item__meta">
+              Nessuna partecipazione registrata. Le lezioni su Zoom o Discord si
+              svolgono fuori dal sito e non lasciano traccia qui.
+            </p>
+          } @else {
+            <ul class="admin-history">
+              @for (a of presenzeLive()!; track a.sessionId) {
+                <li>
+                  {{ a.primoIngresso | date: 'dd MMM yyyy' }} ·
+                  <strong>{{ a.titolo }}</strong>
+                  · {{ a.minuti }} min
+                  @if (a.ingressi > 1) { · {{ a.ingressi }} ingressi }
+                </li>
+              }
+            </ul>
+          }
+          <h4 class="admin-panel__h4">Video-lezioni aperte</h4>
+          @if (visteLezioni() === null) {
+            <div class="spinner" role="status" aria-label="Caricamento viste"></div>
+          } @else if (visteLezioni()!.length === 0) {
+            <p class="admin-item__meta">Nessuna lezione aperta.</p>
+          } @else {
+            <ul class="admin-history">
+              @for (v of visteLezioni()!; track v.lessonId) {
+                <li>
+                  @if (v.ultimaAperturaAt) {
+                    {{ v.ultimaAperturaAt | date: 'dd MMM yyyy' }} ·
+                  }
+                  <strong>{{ v.titolo }}</strong>
+                  · {{ v.aperture }}
+                  {{ v.aperture === 1 ? 'apertura' : 'aperture' }}
+                  @if (v.percentualeMax != null) {
+                    · <strong>{{ v.percentualeMax }}%</strong> visto
+                  }
+                </li>
+              }
+            </ul>
+            <p class="admin-item__meta">
+              "Aperture" = quante volte ha aperto il video sul sito. La
+              percentuale è il punto più avanzato raggiunto ed è una stima per
+              difetto (si aggiorna al massimo una volta al minuto).
+            </p>
+          }
+        </div>
+      </details>
+
+      <!-- ── Storico ───────────────────────────────────────────────────── -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Storico</summary>
+        <div class="admin-modale__corpo">
+          <h4 class="admin-panel__h4">Richieste abbonamento</h4>
+          @if (storicoRichieste() === null) {
+            <div class="spinner" role="status" aria-label="Caricamento richieste"></div>
+          } @else if (storicoRichieste()!.length === 0) {
+            <p class="admin-item__meta">Nessuna richiesta.</p>
+          } @else {
+            <ul class="admin-history">
+              @for (r of storicoRichieste()!; track r.id) {
+                <li>
+                  <span class="badge badge--tag">{{ r.status }}</span>
+                  {{ r.tierLabel }} · {{ r.paymentMethod }}
+                  @if (r.discountCode) { · sconto {{ r.discountCode }} }
+                  @if (r.discountedPriceEur != null) { (€{{ r.discountedPriceEur }}) }
+                  @if (r.pointsSpent) { · {{ r.pointsSpent }} pt }
+                  · {{ r.createdAt | date: 'dd MMM yyyy' }}
+                  @if (r.decisionNote) { — {{ r.decisionNote }} }
+                </li>
+              }
+            </ul>
+          }
+          <h4 class="admin-panel__h4">Azioni admin</h4>
+          @if (storicoAudit() === null) {
+            <div class="spinner" role="status" aria-label="Caricamento azioni"></div>
+          } @else if (storicoAudit()!.length === 0) {
+            <p class="admin-item__meta">Nessuna azione registrata.</p>
+          } @else {
+            <ul class="admin-history">
+              @for (a of storicoAudit()!; track a.id) {
+                <li>
+                  {{ a.createdAt | date: 'dd MMM yyyy, HH:mm' }} ·
+                  <strong>{{ actionLabel(a.action) }}</strong>
+                  @if (a.adminEmail) { · {{ a.adminEmail }} }
+                  @if (a.reason) { — {{ a.reason }} }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </details>
+
+      <!-- ── Eliminazione ──────────────────────────────────────────────── -->
+      <details class="admin-modale__sez admin-modale__sez--rischio">
+        <summary class="admin-modale__sum">Elimina account</summary>
+        <div class="admin-modale__corpo">
+          <p class="admin-item__meta">
+            Cancella l'account e tutti i dati collegati. L'operazione è
+            irreversibile.
+          </p>
+          <div class="row admin-panel__actions">
+            <button
+              type="button"
+              class="btn btn--danger btn--sm"
+              [disabled]="sonoIo(u)"
+              (click)="elimina(u)"
+            >
+              Elimina definitivamente
+            </button>
+          </div>
+        </div>
+      </details>
+    </div>
+  </app-modal>
+}

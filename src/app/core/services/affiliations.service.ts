@@ -214,6 +214,27 @@ export class AffiliationsService {
    * `admin-users.service.ts` sarebbe la stessa rotta con due tipi da tenere
    * allineati a mano.
    */
+  /**
+   * Registra a mano un'affiliazione già esistente fuori dal sito (recupero
+   * degli storici).
+   *
+   * ⚠️ Il corpo NON porta le due dichiarazioni dell'utente, e non è una
+   * dimenticanza: il server le rifiuterebbe comunque. Sono dichiarazioni
+   * dell'interessato e la riga resta marcata come inserita dall'amministratore.
+   */
+  inserisciManuale(body: {
+    userId: string;
+    roomId: string;
+    roomUsername: string;
+    roomUserId?: string;
+    approva?: boolean;
+  }): Observable<AffiliationAdmin> {
+    return this.http.post<AffiliationAdmin>(
+      `${API}/admin/affiliations/manuale`,
+      body,
+    );
+  }
+
   forUser(userId: string): Observable<AffiliationAdmin[]> {
     return this.http.get<AffiliationAdmin[]>(
       `${API}/admin/users/${userId}/affiliations`,

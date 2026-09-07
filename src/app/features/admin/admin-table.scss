@@ -1,0 +1,419 @@
+// ── Tabella condivisa del pannello admin ───────────────────────────────────
+//
+// ⚠️ File NUOVO e non un'aggiunta ad `admin-shared.scss`: quel foglio è
+// importato da nove tab (audit, partecipazione, affiliazioni, live, lezioni,
+// news, negozio, sconti, fonti) che di tabelle non ne hanno, e ogni riga
+// aggiunta là viaggia con tutte.
+//
+// ⚠️ Il prefisso è `.admin-table` e NON `.admin-tab`: in questo pannello «tab»
+// significa già *sezione* (`admin-tab-compat.guard.ts`, i `?tab=` storici,
+// `ADMIN_NAV`). Due significati per lo stesso prefisso è un modo per leggere
+// male il proprio CSS sei mesi dopo.
+//
+// Consumatori: /admin/iscritti, e in seguito /admin/stakings. La forma è
+// quella già misurata in `features/replayer/my-hands/my-hands.component.scss`
+// (scorrimento orizzontale + prima colonna bloccata), non un secondo disegno.
+
+.admin-table__scroll {
+  overflow-x: auto;
+  // Le ombre a gradiente che dicono «di là continua»: i due strati `local`
+  // coprono il bordo, i due `scroll` sono l'ombra. Idioma di
+  // `admin-stats.component.scss`.
+  background-image:
+    linear-gradient(to right, var(--surface-1) 55%, transparent),
+    linear-gradient(to left, var(--surface-1) 55%, transparent),
+    linear-gradient(to right, var(--text-faint), transparent),
+    linear-gradient(to left, var(--text-faint), transparent);
+  background-position:
+    0 0,
+    100% 0,
+    0 0,
+    100% 0;
+  background-size:
+    46px 100%,
+    46px 100%,
+    24px 100%,
+    24px 100%;
+  background-repeat: no-repeat;
+  background-attachment: local, local, scroll, scroll;
+}
+
+.admin-table {
+  width: 100%;
+  // ⚠️ `separate` e NON `collapse`: con i bordi fusi una cella `position:
+  // sticky` perde il proprio bordo (i bordi collassati appartengono alla
+  // tabella, non alla cella, e non viaggiano con lei). Con `border-spacing: 0`
+  // il risultato visivo è identico.
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.85rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.3rem 0.6rem;
+    // ⚠️ I 44px sono DICHIARATI, una volta sola: su una riga di tabella
+    // `height` si comporta da altezza minima e ogni comando dentro la cella
+    // eredita quell'altezza. Senza, una riga sta sui ~30px e nessun bersaglio
+    // di tocco arriva al minimo.
+    height: 44px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+    // Niente va a capo: una riga che si sdoppia distrugge la densità, che è
+    // l'unica ragione per cui questa tabella esiste al posto delle card.
+    white-space: nowrap;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--copper-600);
+    height: 36px;
+    // ⚠️ Sfondo OPACO: l'intestazione è `sticky` e senza di esso il contenuto
+    // le scorrerebbe sotto restando leggibile.
+    background: var(--surface-1);
+    border-bottom-color: var(--line-strong);
+  }
+
+  tbody tr:hover td,
+  tbody tr:hover th {
+    background: var(--surface-2);
+  }
+
+  .is-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Una cella che porta un dato assente o non ancora arrivato: mai vuota.
+  .is-vuota {
+    color: var(--text-faint);
+  }
+}
+
+// ── La prima colonna resta ferma ───────────────────────────────────────────
+// ⚠️ Servono TRE cose insieme e a mancarne una il difetto è muto: `position:
+// sticky`, uno sfondo OPACO (senza, il contenuto che scorre si legge sotto) e
+// uno `z-index` che tenga la colonna sopra le celle sorelle.
+// ⚠️ Il selettore è innestato sotto `.admin-table` per SPECIFICITÀ: scritto
+// sciolto varrebbe (0,1,0) contro lo (0,1,1) di `.admin-table th`, quindi
+// padding e sfondo non passerebbero — e il difetto si vede solo scorrendo, che
+// è esattamente ciò che fa un telefono.
+.admin-table {
+  .admin-table__c-primo {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface-1);
+  }
+
+  // L'angolo in alto a sinistra è insieme intestazione e colonna ferma: deve
+  // stare sopra entrambe.
+  thead .admin-table__c-primo {
+    z-index: 4;
+  }
+
+  tbody tr:hover .admin-table__c-primo {
+    background: var(--surface-2);
+  }
+
+  // ⚠️ ANCHE l'ultima colonna resta ferma, ed è la correzione di un difetto
+  // misurato su un telefono: a 390px la tabella è larga 807px, quindi il
+  // pulsante di riga — che è l'azione PRINCIPALE di ogni riga — cominciava 339px
+  // oltre il bordo destro. Chi apriva l'elenco dal telefono non vedeva alcun
+  // comando e non aveva motivo di sospettare che ce ne fosse uno a destra.
+  // Con identità a sinistra e comando a destra fermi, in mezzo scorre il
+  // dettaglio: si vede sempre CHI e si può sempre AGIRE.
+  .admin-table__c-ultimo {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--surface-1);
+    // ⚠️ NIENTE filetto di congelamento, ed è un precedente già pagato in
+    // `my-hands.component.scss`: quella linea annuncia «di qua è fermo, di là
+    // scorre», ma su un desktop la tabella entra intera e non scorre niente —
+    // si legge come un divisorio fra Punti e il comando, cioè annuncia un
+    // comportamento che non c'è. Lo sfondo opaco basta ad ancorare la colonna
+    // nell'unica fascia in cui serve davvero (fra i 720px e la larghezza piena).
+  }
+
+  thead .admin-table__c-ultimo {
+    z-index: 4;
+  }
+
+  tbody tr:hover .admin-table__c-ultimo {
+    background: var(--surface-2);
+  }
+}
+
+// ── Schermi stretti: la tabella smette di essere una tabella ───────────────
+//
+// ⚠️ Sotto i 720px ogni riga diventa un BLOCCO impilato, e non è una rifinitura:
+// è il rifacimento di una forma sbagliata. Misurato a 390px sulla versione a
+// scorrimento orizzontale: la tabella era larga 807px in 350 disponibili, il
+// pulsante di riga cominciava 339px oltre il bordo, e la colonna d'identità da
+// sola ne occupava 380 — cioè più del viewport. Con un tetto e l'ellissi
+// diventava peggio, non meglio: spariva l'INIZIO dell'email, che è la parte che
+// identifica la persona.
+//
+// ⚠️ Il ripiegamento è tutto in CSS, con lo stesso markup: due template
+// separati vorrebbero dire due elenchi da tenere allineati, e in zoneless anche
+// un `matchMedia` da ascoltare e ripulire. Qui a decidere è il foglio di stile,
+// che è l'unico a sapere quanto spazio c'è — stessa scelta già fatta per le due
+// geometrie del tavolo nel replayer.
+@media (max-width: 720px) {
+  .admin-table__scroll {
+    // Niente più scorrimento orizzontale: non c'è niente da far scorrere, e le
+    // ombre a gradiente annuncerebbero un «di là continua» che è falso.
+    overflow-x: visible;
+    background-image: none;
+  }
+
+  .admin-table {
+    display: block;
+
+    // Le intestazioni non hanno senso senza colonne sotto. ⚠️ `display: none` e
+    // non `visually-hidden`: lette da uno screen reader in un elenco di blocchi
+    // sarebbero cinque parole sciolte prima del primo iscritto. Ogni blocco si
+    // legge da sé, perché ogni valore porta con sé la propria etichetta.
+    thead {
+      display: none;
+    }
+
+    tbody {
+      display: block;
+    }
+
+    tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.6rem;
+      margin-bottom: 0.5rem;
+      padding: 0.7rem 0.85rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface-1);
+    }
+
+    th,
+    td {
+      display: block;
+      height: auto;
+      padding: 0;
+      border: 0;
+      white-space: normal;
+    }
+
+    // Lo sticky non ha più senso e va SPENTO: una cella `position: sticky`
+    // dentro un blocco flex resta ancorata a un contenitore che non scorre più,
+    // e si sovrappone alle sorelle.
+    .admin-table__c-primo,
+    .admin-table__c-ultimo {
+      position: static;
+      max-width: none;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    // L'identità prende la riga intera: l'email si legge per esteso, e se non
+    // ci sta va a capo invece di essere tagliata.
+    .admin-table__c-primo {
+      flex: 1 1 100%;
+    }
+
+    // Il comando resta a destra, sulla seconda riga del blocco.
+    .admin-table__c-ultimo {
+      margin-left: auto;
+    }
+
+    tbody tr:hover td,
+    tbody tr:hover th,
+    tbody tr:hover .admin-table__c-primo,
+    tbody tr:hover .admin-table__c-ultimo {
+      background: transparent;
+    }
+
+    // ⚠️ Le colonne di dettaglio spariscono, e da qualche parte va DETTO dove
+    // sono finite: `.admin-table__nota-mobile` sotto l'elenco lo dice una volta
+    // sola. Un dato che sparisce senza spiegazione fa cercare un guasto.
+    .admin-table__solo-largo {
+      display: none;
+    }
+
+    .admin-table__vuota {
+      flex: 1 1 100%;
+      padding: 1rem 0;
+    }
+  }
+
+  .admin-table__ident {
+    // A capo, mai tagliata: qui lo spazio c'è, è la riga intera.
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+}
+
+// La nota che dice dove sono finite le colonne nascoste: solo sullo stretto.
+.admin-table__nota-mobile {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .admin-table__nota-mobile {
+    display: block;
+    margin: 0.2rem 0 0.6rem;
+  }
+}
+
+// La riga «nessun risultato»: una tabella con la sola intestazione si legge
+// come un caricamento mai finito.
+.admin-table__vuota {
+  padding: 1.4rem 0.7rem;
+  text-align: center;
+  color: var(--text-faint);
+  white-space: normal;
+}
+
+// Segnaposto mentre un dato accessorio della riga sta ancora arrivando.
+// ⚠️ Uno scheletro e non un trattino: un trattino è un'informazione («non ce
+// n'è»), e vederlo diventare un valore un attimo dopo è una bugia che
+// sfarfalla.
+.admin-table__skel {
+  display: inline-block;
+  width: 5.5rem;
+  height: 0.7rem;
+  border-radius: var(--radius-sm);
+  background: var(--line);
+  animation: admin-table-skel 1.2s ease-in-out infinite;
+}
+
+@keyframes admin-table-skel {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-table__skel {
+    animation: none;
+  }
+}
+
+// ── Celle tipizzate ────────────────────────────────────────────────────────
+
+// La cella d'identità: nome, contatto e i badge che lo qualificano, su una riga
+// sola. È sempre la prima colonna, cioè quella che resta ferma scorrendo.
+.admin-table__ident {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+
+  strong {
+    color: var(--cream-100);
+  }
+}
+
+// Una cella che porta PIÙ valori (le sale di un iscritto, per esempio).
+// ⚠️ `white-space` torna a `normal` qui dentro perché i chip vanno a capo, ma
+// la cella resta larga al massimo quanto una colonna: senza il tetto, un
+// iscritto su otto sale allargherebbe la tabella oltre lo schermo e le altre
+// colonne diventerebbero illeggibili.
+.admin-table__multi {
+  white-space: normal;
+  max-width: 22rem;
+  line-height: 1.5;
+}
+
+.admin-table__chip {
+  display: inline-block;
+  margin: 0.1rem 0.3rem 0.1rem 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+
+  code {
+    font-family: var(--font-mono);
+    color: var(--text);
+  }
+
+  // ⚠️ Dichiarato ma NON verificato: l'identificativo c'è e nessuno l'ha ancora
+  // confermato. Senza questa distinzione la cella mostrerebbe un nome non
+  // controllato con lo stesso aspetto di uno approvato, e su questa colonna la
+  // differenza è tutto il significato. Il colore da solo non basta: il testo
+  // per lo screen reader sta nel markup.
+  &.is-attesa {
+    opacity: 0.72;
+
+    code {
+      color: var(--copper-600);
+      border-bottom: 1px dashed currentColor;
+    }
+  }
+}
+
+// ── Barra dei filtri sopra una tabella ─────────────────────────────────────
+//
+// ⚠️ Stesso difetto della modale, e qui più vistoso perché i controlli sono
+// AFFIANCATI: misurato a 390px, il campo di ricerca era alto 52,5px con
+// carattere da 16px e le due tendine 36,5px con carattere da 13,6px — sedici
+// pixel di differenza sulla stessa riga.
+//
+// ⚠️ Vive in questo foglio e non in `admin-shared.scss`: là `.admin-users__head`
+// è condivisa da altre quattro sezioni (log, partecipazione, affiliazioni) che
+// una tabella non ce l'hanno, e la loro barra non è in discussione.
+.admin-users__head {
+  .input {
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  select.input {
+    background-position: right 0.7rem center;
+  }
+
+  // La tendina compatta della barra ha un padding suo, che deve seguire.
+  .admin-user__role {
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-users__head {
+    // ⚠️ Incolonnamento DELIBERATO invece del ritorno a capo spontaneo: a 390px
+    // il flusso naturale metteva ricerca e primo filtro sulla stessa riga e il
+    // secondo da solo sotto, lasciando mezza riga vuota. Ora: ricerca sopra a
+    // tutta larghezza, i due filtri si dividono la riga seguente, il conteggio
+    // in fondo.
+    .admin-users__search {
+      flex: 1 1 100%;
+      max-width: none;
+    }
+
+    .admin-user__role {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .admin-users__count {
+      flex: 1 1 100%;
+    }
+
+    // Sotto i 16px iOS ingrandisce la pagina quando il fuoco entra nel campo, e
+    // da quello zoom non si torna indietro da soli.
+    .input {
+      font-size: 1rem;
+    }
+  }
+}

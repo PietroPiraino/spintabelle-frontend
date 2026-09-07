@@ -74,6 +74,11 @@
           </p>
         </div>
       } @else {
+        @if (bloccoAbbonamento(); as motivo) {
+          <div class="card card--pad subscribe__status">
+            <p>{{ motivo }}</p>
+          </div>
+        }
         @if (me()?.tier; as t) {
           <div class="card card--pad subscribe__status">
             <p>
@@ -131,6 +136,7 @@
               <button
                 type="button"
                 class="btn btn--primary"
+                [disabled]="bloccoAbbonamento() !== null"
                 (click)="selectedTier() === tier ? vaiAlPagamento() : choose(tier)"
               >
                 {{ selectedTier() === tier ? 'Vai al pagamento' : 'Scegli ' + labelFor(tier) }}

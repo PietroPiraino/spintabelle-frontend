@@ -22,6 +22,8 @@
       <h2>Abbonamento</h2>
       @if (isAdmin()) {
         <p class="text-muted">Hai accesso completo come amministratore.</p>
+      } @else if (accessoSenzaAbbonamento(); as motivo) {
+        <p class="text-muted">{{ motivo }}</p>
       } @else if (planLabel(); as plan) {
         <p>
           Piano attivo: <strong>{{ plan }}</strong>

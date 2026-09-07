@@ -105,7 +105,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     id: 'finanze',
     label: 'Finanze',
     items: [
-      { path: 'stakings', label: 'Stakings', icon: 'hand-coins', soon: true },
+      { path: 'stakings', label: 'Stakings', icon: 'hand-coins' },
       {
         path: 'conteggi-mensili',
         label: 'Conteggi mensili',

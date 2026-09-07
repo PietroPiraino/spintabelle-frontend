@@ -1,0 +1,68 @@
+// ── Registro degli staking ─────────────────────────────────────────────────
+
+// La colonna EV. ⚠️ Il debito NON è scritto col meno: `testoEv` lo mostra come
+// quantità positiva più la parola «da recuperare», perché un «−340,00 €» in
+// una colonna di numeri si legge come una perdita di cassa. Qui resta solo il
+// colore, che è il segnale ridondante — mai l'unico.
+.stk__ev {
+  color: var(--text-muted);
+
+  &.is-debito {
+    color: var(--copper-600);
+  }
+}
+
+// I due saldi in testa alla modale: la risposta alla prima domanda che si fa
+// aprendola, senza dover leggere lo storico.
+.stk__saldi {
+  gap: 1.4rem;
+  flex-wrap: wrap;
+  padding: 0.2rem 0 0.6rem;
+}
+
+.stk__saldo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+
+  strong {
+    font-size: 1.15rem;
+    font-variant-numeric: tabular-nums;
+
+    &.is-debito {
+      color: var(--copper-600);
+    }
+  }
+}
+
+.stk__anteprima {
+  margin-top: 0.4rem;
+
+  strong {
+    color: var(--text);
+  }
+}
+
+.stk__mov {
+  strong.is-debito {
+    color: var(--copper-600);
+  }
+
+  strong {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// ⚠️ Sotto i 720px le intestazioni di colonna spariscono (la tabella diventa
+// blocchi impilati), e «500,00 €» da solo non dice se sono fondi o EV. L'EV si
+// spiega da sé — `testoEv` scrive «In pari» o «… da recuperare» — mentre i
+// fondi sono una cifra nuda: qui e solo qui prendono l'etichetta.
+@media (max-width: 720px) {
+  .admin-table .stk__fondi::before {
+    content: 'Fondi ';
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+  }
+}

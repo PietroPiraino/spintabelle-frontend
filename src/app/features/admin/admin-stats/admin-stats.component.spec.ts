@@ -41,6 +41,7 @@ const statsView = (over: Partial<AdminStatsView> = {}): AdminStatsView => ({
         daDeclassare: 0,
       },
     ],
+    accessoNonAbbonato: [],
   },
   incassoAbbonamenti: {
     ultimi30Eur: 500,
@@ -241,6 +242,45 @@ describe('AdminStatsComponent', () => {
     expect(text()).toContain('I due numeri coincidono');
   });
 
+  it('staking e coach: riga propria, mai sommata agli abbonati', async () => {
+    // ⚠️ I `limiti[]` che la pagina stampa VERBATIM rimandano a questa riga
+    // («lo trovi contato a parte, sotto»). Senza il blocco che la disegna,
+    // l'owner leggerebbe un rimando a qualcosa che non esiste — e i due ruoli
+    // sparirebbero da «chi sta usando la scuola» senza che nulla lo dica.
+    const s = statsView({
+      abbonati: {
+        conAbbonamentoValido: 40,
+        hannoAccessoOra: 40,
+        perTier: [
+          {
+            tier: 'SQUALO',
+            conAbbonamentoValido: 40,
+            hannoAccessoOra: 40,
+            senzaScadenza: 0,
+            daDeclassare: 0,
+          },
+        ],
+        accessoNonAbbonato: [
+          { ruolo: 'STAKATO', utenti: 3 },
+          { ruolo: 'COACH', utenti: 1 },
+        ],
+      },
+    });
+    await flushAll(s);
+    expect(text()).toContain('Accesso senza abbonamento');
+    expect(text()).toContain('Stakato');
+    expect(text()).toContain('Coach');
+    // I due numeri di testata restano quelli degli abbonati veri: 40, non 44.
+    expect(text()).not.toContain('44');
+  });
+
+  it('senza staking né coach la riga non compare affatto', async () => {
+    // Una tabella vuota intitolata «Accesso senza abbonamento» inviterebbe a
+    // cercare un dato che non c'è: a zero non si mostra nulla.
+    await flushAll(statsView());
+    expect(text()).not.toContain('Accesso senza abbonamento');
+  });
+
   it('accesso senza abbonamento: spiega che sono accessi dati a mano', async () => {
     const s = statsView({
       abbonati: {
@@ -255,6 +295,7 @@ describe('AdminStatsComponent', () => {
             daDeclassare: 1,
           },
         ],
+        accessoNonAbbonato: [],
       },
     });
     await flushAll(s);

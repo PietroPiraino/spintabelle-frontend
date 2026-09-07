@@ -705,3 +705,19 @@
   color: var(--text-muted);
   line-height: 1.7;
 }
+
+// ── Blocco dello scorrimento mentre una modale è aperta ─────────────────────
+//
+// ⚠️ Sta QUI e non nel foglio di `app-modal`: gli stili di componente sono
+// compilati con l'incapsulamento Angular, che li lega a un attributo che
+// `<html>` non ha — la regola sarebbe inerte, e in modo muto.
+//
+// ⚠️ E sta su `html` benché sia `body` a portare `overflow-x: hidden` in
+// `_reset.scss`. La propagazione al viewport parte dall'elemento radice: finché
+// `html` è `visible` i valori si leggono dal `body` (ed è così che quell'
+// `overflow-x` funziona), ma appena `html` dichiara un overflow diverso da
+// `visible` è lui a decidere. È misurato da una spec di `app-modal`, non
+// dedotto: la stessa riga scritta su `body` non bloccherebbe niente.
+html.is-modale {
+  overflow: hidden;
+}

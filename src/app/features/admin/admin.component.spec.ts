@@ -98,20 +98,23 @@ describe('AdminComponent (shell dashboard)', () => {
     return link?.querySelector('.admin-shell__badge')?.textContent?.trim() ?? null;
   };
 
-  it('rende le 18 voci raggruppate, con i chip "Presto" sui placeholder', async () => {
+  it('rende le 18 voci raggruppate, col chip "Presto" sul solo placeholder rimasto', async () => {
     await flushPending(0, 0);
 
     expect(el().querySelectorAll('.admin-shell__link').length).toBe(18);
     for (const label of ['Contenuti', 'Vendite', 'Utenti', 'Finanze', 'Analisi']) {
       expect(text()).toContain(label);
     }
-    // i chip stanno SULLE due voci placeholder, non altrove
+    // Il chip sta SULLA voce placeholder, non altrove.
+    // ⚠️ «Stakings» non è più un segnaposto: la sezione esiste. Il chip lasciato
+    // su una voce che funziona è peggio di un chip mancante — dice all'owner di
+    // non aprirla.
     const soon = Array.from(el().querySelectorAll('.admin-shell__soon')).map(
       (chip) => chip.closest('.admin-shell__link')?.textContent ?? '',
     );
-    expect(soon.length).toBe(2);
-    expect(soon.some((t) => t.includes('Stakings'))).toBeTrue();
+    expect(soon.length).toBe(1);
     expect(soon.some((t) => t.includes('Conteggi mensili'))).toBeTrue();
+    expect(soon.some((t) => t.includes('Stakings'))).toBeFalse();
   });
 
   it('mostra i badge coi conteggi, ognuno sulla SUA voce', async () => {

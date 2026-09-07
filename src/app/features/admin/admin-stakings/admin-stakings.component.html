@@ -1,0 +1,342 @@
+<div class="admin-users">
+  <div class="admin-users__head">
+    <div class="row" role="group" aria-label="Filtra per stato" style="gap: 0.5rem; flex-wrap: wrap">
+      <button
+        type="button"
+        class="badge badge--tag"
+        [class.is-active]="filtro() === 'APERTO'"
+        (click)="impostaFiltro('APERTO')"
+      >
+        In corso
+      </button>
+      <button
+        type="button"
+        class="badge badge--tag"
+        [class.is-active]="filtro() === 'CHIUSO'"
+        (click)="impostaFiltro('CHIUSO')"
+      >
+        Chiusi
+      </button>
+      <button
+        type="button"
+        class="badge badge--tag"
+        [class.is-active]="filtro() === 'TUTTI'"
+        (click)="impostaFiltro('TUTTI')"
+      >
+        Tutti
+      </button>
+    </div>
+    @if (page(); as p) {
+      <span class="admin-users__count">
+        {{ p.total }} {{ p.total === 1 ? 'giocatore' : 'giocatori' }}
+      </span>
+    }
+  </div>
+
+  @if (feedback()) {
+    <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
+  }
+  @if (error()) {
+    <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (!page() && loading()) {
+    <div class="spinner" role="status" aria-label="Caricamento registro"></div>
+  } @else if (page(); as p) {
+    <div class="admin-table__scroll">
+      <table class="admin-table">
+        <caption class="visually-hidden">
+          Registro degli staking
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="admin-table__c-primo">Giocatore</th>
+            <th scope="col">Stato</th>
+            <th scope="col" class="is-num">Fondi</th>
+            <th scope="col">EV da recuperare</th>
+            <th scope="col" class="admin-table__c-ultimo">
+              <span class="visually-hidden">Azioni</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of p.items; track r.id) {
+            <tr>
+              <th scope="row" class="admin-table__c-primo">
+                <span class="admin-table__ident">
+                  <strong>{{ chi(r) }}</strong>
+                  @if (r.userNickname && r.userEmail) {
+                    <span class="admin-user__nick">{{ r.userEmail }}</span>
+                  }
+                  @if (r.anonimizzato) {
+                    <span class="badge badge--tag">Anonimizzato</span>
+                  }
+                </span>
+              </th>
+              <td>
+                @if (r.stato === 'APERTO') {
+                  <span class="badge badge--free">In corso</span>
+                } @else {
+                  <span class="badge badge--tag">
+                    Chiuso
+                    @if (r.chiusoAt) { il {{ r.chiusoAt | date: 'dd MMM yyyy' }} }
+                  </span>
+                }
+              </td>
+              <td class="is-num stk__fondi">{{ formattaCent(r.saldoFondiCent) }}</td>
+              <!--
+                ⚠️ Zero NON resta vuoto: «In pari» è un'informazione, il vuoto è
+                un dubbio. E il debito si mostra come quantità positiva con la
+                parola che lo spiega: un «−340,00 €» in una colonna di numeri si
+                confonde con una perdita di cassa.
+              -->
+              <td class="stk__ev" [class.is-debito]="r.saldoEvCent < 0">
+                {{ testoEv(r.saldoEvCent) }}
+              </td>
+              <td class="admin-table__c-ultimo">
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="apri(r)"
+                >
+                  Apri
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="admin-table__vuota">
+                @if (filtro() === 'APERTO') {
+                  Nessuno staking in corso. Le righe compaiono qui quando
+                  assegni il ruolo «Stakato» a un iscritto dalla sezione
+                  Iscritti.
+                } @else {
+                  Nessuna riga con questo filtro.
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (p.totalPages > 1) {
+      <div class="row admin-users__pager">
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm"
+          [disabled]="p.page <= 1"
+          (click)="vaiAPagina(p.page - 1)"
+        >
+          ← Precedenti
+        </button>
+        <span class="admin-item__meta">Pagina {{ p.page }} di {{ p.totalPages }}</span>
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm"
+          [disabled]="p.page >= p.totalPages"
+          (click)="vaiAPagina(p.page + 1)"
+        >
+          Successivi →
+        </button>
+      </div>
+    }
+  }
+</div>
+
+@if (rigaAperta(); as r) {
+  <app-modal
+    [titolo]="'Staking di ' + chi(r)"
+    [sottotitolo]="r.userEmail ?? null"
+    [sporco]="sporco()"
+    [larga]="true"
+    (chiusa)="chiudiModale()"
+  >
+    <div [formGroup]="form" class="admin-modale">
+      <div class="row stk__saldi">
+        <div class="stk__saldo">
+          <span class="admin-item__meta">Fondi a disposizione</span>
+          <strong>{{ formattaCent(r.saldoFondiCent) }}</strong>
+        </div>
+        <div class="stk__saldo">
+          <span class="admin-item__meta">EV</span>
+          <strong [class.is-debito]="r.saldoEvCent < 0">
+            {{ testoEv(r.saldoEvCent) }}
+          </strong>
+        </div>
+      </div>
+
+      <!-- ── Nuovo movimento ───────────────────────────────────────────── -->
+      <details class="admin-modale__sez" open>
+        <summary class="admin-modale__sum">Registra un movimento</summary>
+        <div class="admin-modale__corpo">
+          @if (r.stato !== 'APERTO') {
+            <p class="admin-item__meta">
+              Questo registro è chiuso: riaprilo per registrare un movimento.
+            </p>
+          } @else {
+            <div class="row admin-panel__row">
+              <div class="field" style="margin: 0">
+                <label for="stk-tipo">Asse</label>
+                <select id="stk-tipo" class="input" formControlName="tipo">
+                  <option value="FONDI">Fondi</option>
+                  <option value="EV">EV da recuperare</option>
+                </select>
+              </div>
+              <div class="field" style="margin: 0">
+                <label for="stk-importo">Importo in €</label>
+                <input
+                  id="stk-importo"
+                  type="text"
+                  inputmode="decimal"
+                  class="input"
+                  formControlName="importo"
+                  placeholder="es. 250 oppure -80,50"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="field" style="margin: 0; flex: 1; min-width: 12rem">
+                <label for="stk-causale">Causale</label>
+                <input
+                  id="stk-causale"
+                  type="text"
+                  class="input"
+                  formControlName="causale"
+                  maxlength="300"
+                  placeholder="es. anticipo di maggio"
+                />
+              </div>
+            </div>
+
+            <p class="admin-item__meta">
+              @if (form.controls.tipo.value === 'EV') {
+                Un valore <strong>negativo</strong> peggiora l'EV da recuperare,
+                uno <strong>positivo</strong> lo recupera. Non può salire sopra
+                zero.
+              } @else {
+                Un valore <strong>positivo</strong> aggiunge fondi, uno
+                <strong>negativo</strong> li toglie.
+              }
+            </p>
+
+            @if (bloccoMovimento(); as motivo) {
+              <p class="form-feedback is-error" role="alert">{{ motivo }}</p>
+            } @else if (anteprima(); as dopo) {
+              <p class="admin-item__meta stk__anteprima">
+                Dopo questo movimento:
+                <strong>{{ dopo }}</strong>
+              </p>
+            }
+
+            <div class="row admin-panel__actions">
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                [disabled]="!puoRegistrare() || salvando()"
+                (click)="registra(r)"
+              >
+                {{ salvando() ? 'Registro…' : 'Registra movimento' }}
+              </button>
+            </div>
+          }
+        </div>
+      </details>
+
+      <!-- ── Storico ───────────────────────────────────────────────────── -->
+      <details class="admin-modale__sez" open>
+        <summary class="admin-modale__sum">Movimenti</summary>
+        <div class="admin-modale__corpo">
+          @if (movimenti() === null) {
+            <div class="spinner" role="status" aria-label="Caricamento movimenti"></div>
+          } @else if (movimenti()!.length === 0) {
+            <p class="admin-item__meta">
+              Nessun movimento registrato: il registro è appena stato aperto.
+            </p>
+          } @else {
+            <ul class="admin-history stk__mov">
+              @for (m of movimenti()!; track m.id) {
+                <li>
+                  <span class="badge badge--tag">
+                    {{ m.tipo === 'EV' ? 'EV' : 'Fondi' }}
+                  </span>
+                  <strong [class.is-debito]="m.importoCent < 0">
+                    {{ m.importoCent > 0 ? '+' : '' }}{{ formattaCent(m.importoCent) }}
+                  </strong>
+                  · {{ m.causale }}
+                  @if (m.createdAt) {
+                    · {{ m.createdAt | date: 'dd MMM yyyy, HH:mm' }}
+                  }
+                  @if (m.createdByAdminEmail) { · {{ m.createdByAdminEmail }} }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </details>
+
+      <!-- ── Nota ──────────────────────────────────────────────────────── -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Nota interna</summary>
+        <div class="admin-modale__corpo">
+          <div class="field" style="margin: 0">
+            <label for="stk-nota">Nota</label>
+            <textarea
+              id="stk-nota"
+              class="input"
+              rows="3"
+              formControlName="nota"
+              maxlength="2000"
+            ></textarea>
+            <p class="admin-item__meta">
+              Non esce da nessuna schermata dell'iscritto e da nessuna email.
+            </p>
+          </div>
+          <div class="row admin-panel__actions">
+            <button
+              type="button"
+              class="btn btn--primary btn--sm"
+              [disabled]="salvando()"
+              (click)="salvaNota(r)"
+            >
+              Salva nota
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <!-- ── Stato del registro ────────────────────────────────────────── -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Stato del registro</summary>
+        <div class="admin-modale__corpo">
+          <p class="admin-item__meta">
+            Il registro si apre e si chiude da solo quando assegni o togli il
+            ruolo «Stakato» dalla sezione Iscritti. Da qui puoi forzarlo, per
+            esempio per sospendere temporaneamente i movimenti senza toccare il
+            ruolo.
+          </p>
+          <div class="row admin-panel__actions">
+            @if (r.stato === 'APERTO') {
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                [disabled]="salvando()"
+                (click)="chiudiRiga(r)"
+              >
+                Chiudi registro
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                [disabled]="salvando()"
+                (click)="riapriRiga(r)"
+              >
+                Riapri registro
+              </button>
+            }
+          </div>
+        </div>
+      </details>
+    </div>
+  </app-modal>
+}

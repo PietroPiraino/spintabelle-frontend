@@ -13,6 +13,7 @@ import {
 } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthResponse, RegisterPayload, User } from '../models/api.models';
+import { roleSatisfies } from '../models/roles';
 
 /** Marca le richieste che non devono innescare il refresh automatico sul 401. */
 export const SKIP_REFRESH = new HttpContextToken<boolean>(() => false);
@@ -39,16 +40,27 @@ export class AuthService {
   // in app.config.ts, sempre in background.
 
   readonly isAuthenticated = computed(() => this.user() !== null);
-  /** Abbonato di qualunque tier (Pesce Rosso o Squalo) — o admin. */
-  readonly isSubscriber = computed(() => {
-    const role = this.user()?.role;
-    return role === 'PESCE_ROSSO' || role === 'SQUALO' || role === 'ADMIN';
-  });
-  /** Tier Squalo (accesso pieno, incluso high stakes) — o admin. */
-  readonly isSqualo = computed(() => {
-    const role = this.user()?.role;
-    return role === 'SQUALO' || role === 'ADMIN';
-  });
+  /**
+   * Ha accesso ai contenuti a pagamento (Pesce Rosso in su): i due tier, chi è
+   * in staking, i coach, gli admin.
+   *
+   * ⚠️ Rank-based e non un elenco di uguaglianze: erano tre `===` scritti a
+   * mano e un ruolo nuovo li lasciava validi, quindi Stakato e Coach — che
+   * accedono a tutto — avrebbero visto l'upsell «Abbonati» su ogni pagina.
+   * Nessun errore, nessun test rosso: solo la proposta sbagliata alla persona
+   * sbagliata.
+   */
+  readonly isSubscriber = computed(() =>
+    roleSatisfies(this.user()?.role, 'PESCE_ROSSO'),
+  );
+  /** Accesso pieno, high stakes compreso. */
+  readonly isSqualo = computed(() => roleSatisfies(this.user()?.role, 'SQUALO'));
+  /**
+   * ⚠️ Uguaglianza STRETTA e non `roleSatisfies(..., 'ADMIN')`, benché
+   * darebbero lo stesso risultato: è l'unico punto in cui il rango non aggiunge
+   * nulla e l'uguaglianza è più difficile da allentare per sbaglio. Stessa
+   * forma di `roleGuard(['ADMIN'])` in app.routes.ts.
+   */
   readonly isAdmin = computed(() => this.user()?.role === 'ADMIN');
   /** Scadenza dell'abbonamento corrente (ISO) o null. */
   readonly subscriptionExpiresAt = computed(

@@ -89,6 +89,22 @@ export class AccountComponent {
     if (role === 'PESCE_ROSSO') return 'Pesce Rosso';
     return null;
   });
+  /**
+   * Accesso pieno che non passa da un abbonamento: staking e coach.
+   *
+   * ⚠️ È l'unica superficie rivolta all'UTENTE toccata dai due ruoli nuovi, e
+   * senza questo ramo la pagina direbbe loro «Non hai un abbonamento attivo» +
+   * «Scopri gli abbonamenti» — a due persone che hanno accesso a tutto e a cui
+   * il server rifiuta l'acquisto con un 409. Niente pulsante: non c'è nulla da
+   * comprare e nulla da rinnovare.
+   */
+  protected readonly accessoSenzaAbbonamento = computed(() => {
+    const role = this.user()?.role;
+    if (role === 'STAKATO')
+      return 'Hai accesso completo a tutti i contenuti: sei in staking con la scuola.';
+    if (role === 'COACH') return 'Hai accesso completo come coach.';
+    return null;
+  });
   protected readonly subExpires = computed(
     () => this.user()?.subscriptionExpiresAt ?? null,
   );

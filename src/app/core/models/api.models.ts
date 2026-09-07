@@ -2,8 +2,20 @@
  * Ruoli in scala: ADMIN ≥ SQUALO ≥ PESCE_ROSSO ≥ USER.
  * I due tier a pagamento (Pesce Rosso = low stakes, Squalo = tutto) gateano i
  * contenuti tramite il rango, come lato backend (roles.enum.ts).
+ *
+ * `STAKATO` (giocatore finanziato dalla scuola: come Squalo, ma senza scadenza)
+ * e `COACH` (conduce le live; accesso pieno ai contenuti, mai alla dashboard
+ * admin) condividono il rango di Squalo. La scala e le sue liste vivono in
+ * `core/models/roles.ts` — qui c'è solo il tipo, perché è ciò che l'intera
+ * cartella `models` consuma.
  */
-export type Role = 'USER' | 'PESCE_ROSSO' | 'SQUALO' | 'ADMIN';
+export type Role =
+  | 'USER'
+  | 'PESCE_ROSSO'
+  | 'SQUALO'
+  | 'STAKATO'
+  | 'COACH'
+  | 'ADMIN';
 
 export interface User {
   id: string;
@@ -198,6 +210,81 @@ export interface AdminUser {
 // ----- Abbonamenti -----
 
 /** I due tier acquistabili (sottoinsieme di Role). */
+/**
+ * Una sala su cui l'iscritto ha un identificativo vivo — la colonna «Sale»
+ * dell'elenco. ⚠️ Ci sono solo le righe che rivendicano davvero un username
+ * (in verifica o approvate): una colonna così intitolata che mostrasse un
+ * username rifiutato direbbe una cosa falsa.
+ */
+export interface AffiliazioneCompatta {
+  roomId: string;
+  roomName: string;
+  roomUsername?: string;
+  roomUserId?: string;
+  /** Dichiarato ma non ancora confermato da nessuno. */
+  daVerificare: boolean;
+}
+
+/**
+ * L'elenco iscritti: la pagina più le sale di ciascuno.
+ *
+ * ⚠️ Le affiliazioni viaggiano SULL'ENVELOPE e non dentro ogni `AdminUser`:
+ * quel tipo è condiviso da sei rotte, e appenderci un campo che solo questa
+ * popola lo renderebbe opzionale ovunque. Il server garantisce una chiave per
+ * OGNI utente della pagina, anche vuota.
+ */
+export interface AdminUsersPage extends Paginated<AdminUser> {
+  affiliazioniPerUtente: Record<string, AffiliazioneCompatta[]>;
+}
+
+// ── Registro degli staking (/admin/stakings) ────────────────────────────────
+
+export type StakingStato = 'APERTO' | 'CHIUSO';
+export type StakingTipo = 'FONDI' | 'EV';
+
+/**
+ * Una riga del registro: i fondi messi a disposizione di un giocatore e l'EV
+ * che deve ancora recuperare.
+ *
+ * ⚠️ Gli importi sono in CENTESIMI INTERI, come sul filo: gli euro esistono
+ * solo al momento di mostrarli (`staking-format.ts`). Con la conversione in due
+ * punti, i due dovrebbero concordare su un fattore 100.
+ * ⚠️ `saldoEvCent` è SEMPRE ≤ 0 (0 = in pari): il vincolo è imposto dal server
+ * dentro la scrittura, non qui.
+ */
+export interface StakingRow {
+  id: string;
+  /** `null` su una riga anonimizzata: l'account è stato cancellato. */
+  userId: string | null;
+  userEmail?: string;
+  userNickname?: string;
+  stato: StakingStato;
+  saldoFondiCent: number;
+  saldoEvCent: number;
+  chiusoAt?: string;
+  nota?: string;
+  anonimizzato: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StakingMovimento {
+  id: string;
+  tipo: StakingTipo;
+  /** Positivo = accredito, negativo = addebito. In centesimi. */
+  importoCent: number;
+  causale: string;
+  saldoFondiDopoCent: number;
+  saldoEvDopoCent: number;
+  createdByAdminEmail?: string;
+  createdAt?: string;
+}
+
+export interface StakingDettaglio {
+  riga: StakingRow;
+  movimenti: StakingMovimento[];
+}
+
 export type SubscriptionTier = 'PESCE_ROSSO' | 'SQUALO';
 /** 'manuale' = concessione admin (mai selezionabile dall'utente). */
 /**
@@ -1379,6 +1466,13 @@ export interface AdminStatsView {
       /** Scaduti con una data vera, che il cron declasserà. */
       daDeclassare: number;
     }>;
+    /**
+     * Accesso pieno che NON è un abbonamento: staking e coach.
+     * ⚠️ Mai sommato ai due numeri qui sopra né agli incassi — sono persone che
+     * entrano come un abbonato senza aver comprato niente e senza una scadenza.
+     * Vuoto finché nessuno ha uno dei due ruoli.
+     */
+    accessoNonAbbonato: Array<{ ruolo: Role; utenti: number }>;
   };
 
   /** Incasso dei soli ABBONAMENTI: i gadget in euro non sono qui (vedi limiti). */
@@ -1766,6 +1860,13 @@ export interface AffiliationResendResult {
 /** La riga come la vede l'ADMIN: aggiunge i campi interni. */
 export interface AffiliationAdmin extends MyAffiliation {
   userId: string;
+  /**
+   * Chi ha aperto la pratica. `ADMIN` = inserita a mano dal pannello per
+   * recuperare un'affiliazione preesistente: su quelle righe le dichiarazioni
+   * dell'utente NON sono state prestate, e il pannello lo dice invece di
+   * lasciarlo dedurre.
+   */
+  origine?: 'UTENTE' | 'ADMIN';
   userEmail: string;
   userNickname?: string;
   /**

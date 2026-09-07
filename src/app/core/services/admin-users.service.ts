@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   AdminActionLogEntry,
   AdminUser,
+  AdminUsersPage,
   LessonViewSummary,
   Paginated,
   Role,
@@ -26,14 +27,14 @@ export class AdminUsersService {
     expiring?: number;
     page?: number;
     limit?: number;
-  }): Observable<Paginated<AdminUser>> {
+  }): Observable<AdminUsersPage> {
     let params = new HttpParams();
     if (filters?.q) params = params.set('q', filters.q);
     if (filters?.role) params = params.set('role', filters.role);
     if (filters?.expiring) params = params.set('expiring', filters.expiring);
     if (filters?.page) params = params.set('page', filters.page);
     if (filters?.limit) params = params.set('limit', filters.limit);
-    return this.http.get<Paginated<AdminUser>>(`${API}/admin/users`, { params });
+    return this.http.get<AdminUsersPage>(`${API}/admin/users`, { params });
   }
 
   updateRole(id: string, role: Role): Observable<AdminUser> {

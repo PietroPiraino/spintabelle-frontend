@@ -1,0 +1,143 @@
+.mo {
+  // ⚠️ PORTANTE: regge il riconoscimento del fondale in `onClic`
+  // (`e.target === dialog`). Con un padding, un clic sul padding del dialog
+  // conterebbe come clic fuori e chiuderebbe la modale.
+  padding: 0;
+  border: 0;
+  // Il fondo lo porta `.mo__box`: qui serve trasparente perché il dialog è solo
+  // il contenitore posizionato.
+  background: transparent;
+  // ⚠️ Il foglio di stile del browser impone `color: canvastext` sul <dialog>:
+  // senza questa riga, in tema Notte il testo esce NERO su fondo scuro.
+  color: var(--text);
+  max-width: none;
+  max-height: none;
+  width: min(100vw - 2rem, 720px);
+  // ⚠️ `margin: auto` RIPRISTINATO, e senza questa riga la modale finisce
+  // nell'angolo in alto a sinistra. Il browser centra un `<dialog>` proprio con
+  // `margin: auto` sul suo `inset: 0`, ma il reset globale del progetto azzera
+  // il margine di ogni elemento e lo cancella. Il difetto è muto: la modale si
+  // apre, intrappola il fuoco, oscura la pagina e passa ogni test — sta solo
+  // nel posto sbagliato. Misurato, non dedotto.
+  margin: auto;
+
+  &.mo--larga {
+    width: min(100vw - 2rem, 960px);
+  }
+
+  // `--scrim` è dichiarato su :root in _tokens.scss — vedi il commento lì:
+  // `::backdrop` non eredita dall'elemento originante.
+  &::backdrop {
+    background: var(--scrim);
+  }
+}
+
+.mo__box {
+  display: flex;
+  flex-direction: column;
+  // dvh e non vh: su iOS la barra dell'indirizzo cambia l'altezza utile.
+  max-height: min(100dvh - 2rem, 820px);
+  background: var(--surface-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pop);
+
+  // Riceve il fuoco all'apertura ma non è un comando: l'anello lo farebbe
+  // sembrare selezionabile.
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.mo__testa,
+.mo__conferma {
+  flex: none;
+}
+
+.mo__testa {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem 0.8rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.mo__titoli {
+  min-width: 0;
+}
+
+.mo__titolo {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.mo__sub {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+
+.mo__chiudi {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  // 44px dichiarati: un bersaglio di tocco non arriva da solo.
+  width: 44px;
+  height: 44px;
+  margin: -0.4rem -0.5rem 0 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--copper-500) 10%, transparent);
+  }
+}
+
+.mo__corpo {
+  flex: 1 1 auto;
+  padding: 1rem 1.2rem 1.2rem;
+  overflow-y: auto;
+  // ⚠️ È QUESTA riga a rispondere a «scorre la modale o la pagina»: senza,
+  // finito lo scorrimento del corpo la ruota continua sulla pagina dietro.
+  overscroll-behavior: contain;
+}
+
+.mo__conferma {
+  padding: 0.8rem 1.2rem 1rem;
+  border-top: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--copper-500) 8%, var(--surface-1));
+
+  p {
+    margin: 0 0 0.6rem;
+    font-size: 0.9rem;
+  }
+}
+
+.mo__conferma-azioni {
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+// 390px: la modale diventa una schermata intera, non una finestrella.
+@media (max-width: 560px) {
+  .mo,
+  .mo.mo--larga {
+    width: 100vw;
+  }
+
+  .mo__box {
+    height: 100dvh;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+}

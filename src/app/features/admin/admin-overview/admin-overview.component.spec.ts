@@ -36,6 +36,7 @@ const statsView = (over: Partial<AdminStatsView> = {}): AdminStatsView => ({
         daDeclassare: 0,
       },
     ],
+    accessoNonAbbonato: [],
   },
   incassoAbbonamenti: {
     ultimi30Eur: 500,

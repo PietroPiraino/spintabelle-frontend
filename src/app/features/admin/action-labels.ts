@@ -57,6 +57,14 @@ export const ACTION_LABELS: Record<string, string> = {
   // Sorgenti dell'ingest (Fase 2): dichiarate nella union AdminAction ma non
   // ancora scritte da nessun call-site — l'etichetta c'è perché il giorno in cui
   // lo saranno il log non debba mostrare uno slug.
+  // Registro degli staking. ⚠️ Le stesse quattro stringhe, VERBATIM, sono la
+  // union `AdminAction` del backend: divergendo, il tab Log, lo storico
+  // per-iscritto e la Panoramica stamperebbero lo slug grezzo — e il backend
+  // non se ne accorgerebbe, perché la union la soddisfa lui.
+  'add-staking-movement': 'Movimento di staking registrato',
+  'close-staking': 'Registro staking chiuso',
+  'reopen-staking': 'Registro staking riaperto',
+  'note-staking': 'Nota interna staking',
   'create-news-source': 'Fonte news aggiunta',
   'update-news-source': 'Fonte news modificata',
   'delete-news-source': 'Fonte news rimossa',

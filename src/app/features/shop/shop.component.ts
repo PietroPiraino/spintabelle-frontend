@@ -25,6 +25,7 @@ import {
   ShopVoucherType,
   SubscriptionTier,
 } from '../../core/models/api.models';
+import { roleSatisfies } from '../../core/models/roles';
 import { RouterLink } from '@angular/router';
 import { IconComponent, IconName } from '../../shared/ui/icon/icon.component';
 import { AuthService } from '../../core/services/auth.service';
@@ -36,18 +37,6 @@ import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.compon
 /** Gadget per pagina: griglia → batch coerente con /docs e /lezioni. */
 const PAGE_SIZE = 24;
 
-/** Rango ruoli per bloccare downgrade lato client (il server riconferma). */
-const ROLE_RANK: Record<Role, number> = {
-  USER: 0,
-  PESCE_ROSSO: 1,
-  SQUALO: 2,
-  ADMIN: 3,
-};
-
-const TIER_RANK: Record<SubscriptionTier, number> = {
-  PESCE_ROSSO: 1,
-  SQUALO: 2,
-};
 
 @Component({
   selector: 'app-shop',
@@ -192,16 +181,23 @@ export class ShopComponent {
   }
 
   /**
-   * Un acquisto abbonamento è bloccato se è un downgrade rispetto al tier
-   * pagato corrente; il pari tier è consentito (rinnovo). Il server riapplica
-   * comunque la stessa logica.
+   * True quando comprare questo tier non darebbe niente: l'utente ha già un
+   * accesso pari o superiore. Il tier PARI resta acquistabile — è il rinnovo.
+   *
+   * ⚠️ Una riga sola, ed è la STESSA regola del server
+   * (`assertPointsPurchaseAllowed`): «lo soddisfa già ma non è esattamente
+   * quello». Copre da sé anche chi ha accesso pieno senza aver comprato niente
+   * — admin, coach, giocatori in staking — che con la vecchia tabella di
+   * ranghi locale sarebbero caduti nel confronto `3 > 3` = false: la card
+   * «Squalo» sarebbe rimasta acquistabile, e il rifiuto sarebbe arrivato dal
+   * server DOPO il clic di conferma.
+   * ⚠️ E il rango non è più scritto qui: era una seconda tabella, 0-based
+   * mentre quella di `AuthService` era 1-based, e nessuno le teneva allineate.
    */
   protected isDowngrade(tier: SubscriptionTier): boolean {
     const role = this.auth.user()?.role;
     if (!role) return false;
-    // ADMIN ha già accesso pieno: ogni acquisto sarebbe un downgrade.
-    if (role === 'ADMIN') return true;
-    return ROLE_RANK[role] > TIER_RANK[tier];
+    return role !== tier && roleSatisfies(role, tier);
   }
 
   /**
