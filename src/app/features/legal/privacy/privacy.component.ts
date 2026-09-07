@@ -11,5 +11,5 @@ import { RouterLink } from '@angular/router';
 export class PrivacyComponent {
   // ⚠️ Da bumpare a OGNI modifica del testo: un'informativa cambiata senza
   // data nuova è un difetto legale silenzioso (l'utente non può accorgersene).
-  protected readonly aggiornata = '25 agosto 2026';
+  protected readonly aggiornata = '7 settembre 2026';
 }
