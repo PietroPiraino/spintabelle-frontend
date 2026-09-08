@@ -1,11 +1,13 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   LESSON_CATEGORIES,
@@ -20,12 +22,32 @@ import { LessonsService } from '../../../core/services/lessons.service';
 import { LiveService } from '../../../core/services/live.service';
 import { TagPickerComponent } from '../../../shared/ui/tag-picker/tag-picker.component';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
+import {
+  orologio,
+  quandoManca,
+  statoSessione,
+  StatoSessione,
+} from '../../../shared/live/stato-sessione';
 
 @Component({
   selector: 'app-admin-live',
-  imports: [ReactiveFormsModule, DatePipe, RouterLink, TagPickerComponent],
+  imports: [
+    ReactiveFormsModule,
+    DatePipe,
+    NgTemplateOutlet,
+    RouterLink,
+    TagPickerComponent,
+    IconComponent,
+    ModalComponent,
+  ],
   templateUrl: './admin-live.component.html',
-  styleUrl: '../admin-shared.scss',
+  styleUrls: [
+    '../admin-shared.scss',
+    '../admin-table.scss',
+    '../admin-modale.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminLiveComponent {
@@ -36,6 +58,59 @@ export class AdminLiveComponent {
   protected readonly sessions = signal<LiveSession[] | null>(null);
   protected readonly listLoading = signal(false);
   protected readonly listError = signal<string | null>(null);
+
+  /** L'orologio condiviso con la pagina pubblica. */
+  private readonly adesso = orologio();
+
+  protected stato(s: LiveSession): StatoSessione {
+    return statoSessione(s, this.adesso());
+  }
+
+  protected quando(s: LiveSession): string {
+    return quandoManca(s, this.adesso());
+  }
+
+  /**
+   * Le sessioni in programma e in corso, dalla più IMMINENTE.
+   *
+   * ⚠️ Il server ordina `{startsAt: -1}` quando l'admin chiede `includePast`,
+   * cioè le passate finivano SOPRA le future: aprendo la sezione si vedeva
+   * l'archivio e bisognava scorrere per trovare la prossima live. Qui l'ordine
+   * si ricompone lato client perché «prima le future crescenti, poi le passate
+   * decrescenti» non è esprimibile in un solo `.sort()` di Mongo — servirebbero
+   * due query o un'aggregazione, per un elenco che il server tronca comunque a
+   * 200 righe.
+   */
+  protected readonly prossime = computed(() =>
+    (this.sessions() ?? [])
+      .filter((s) => this.stato(s) !== 'terminata')
+      .sort(
+        (a, b) =>
+          new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+      ),
+  );
+
+  /**
+   * Le passate, dalla più recente, in un blocco richiudibile.
+   *
+   * ⚠️ Richiuse ma NON nascoste dietro un filtro: è da qui che si pubblicano i
+   * VOD, e con un filtro segmentato una registrazione pronta non si vedrebbe
+   * finché non si cambia vista. Il conteggio nel riassunto è ciò che dice se
+   * vale la pena aprirlo.
+   */
+  protected readonly passate = computed(() =>
+    (this.sessions() ?? [])
+      .filter((s) => this.stato(s) === 'terminata')
+      .sort(
+        (a, b) =>
+          new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime(),
+      ),
+  );
+
+  /** Quante passate hanno una registrazione pronta da pubblicare. */
+  protected readonly daPubblicare = computed(
+    () => this.passate().filter((s) => s.recordingState === 'READY').length,
+  );
 
   protected readonly editingId = signal<string | null>(null);
   protected readonly saving = signal(false);
@@ -64,6 +139,57 @@ export class AdminLiveComponent {
       [Validators.required, Validators.pattern(/^https?:\/\/.+/)],
     ],
   });
+
+  /**
+   * ⚠️ `sporco` da `toSignal(valueChanges)` e mai da un `computed` che legge
+   * `form.value`: un FormGroup non è un signal, quindi quel computed non si
+   * ricalcola mai e resterebbe `false` per sempre — Escape butterebbe via il
+   * digitato, cioè il difetto che l'input previene.
+   */
+  private readonly baseline = signal('');
+  private readonly valori = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue() as Record<string, unknown>,
+  });
+  protected readonly sporco = computed(
+    () => JSON.stringify(this.valori()) !== this.baseline(),
+  );
+
+  /** La modale del form è aperta: `null` chiusa, `''` creazione, id modifica. */
+  protected readonly formAperto = signal<string | null>(null);
+
+  /**
+   * La sessione in modifica e quella in pubblicazione, RILETTE dall'elenco.
+   *
+   * ⚠️ Mai una copia congelata: dopo un salvataggio `load()` sostituisce
+   * l'array, e una copia mostrerebbe lo stato di prima sotto il titolo nuovo —
+   * qui pesa doppio, perché `recordingState` decide quali comandi compaiono.
+   */
+  protected readonly sessioneAperta = computed(() => {
+    const id = this.editingId();
+    if (!id) return null;
+    return this.sessions()?.find((s) => s.id === id) ?? null;
+  });
+
+  protected readonly sessionePub = computed(() => {
+    const id = this.publishPanelId();
+    if (!id) return null;
+    return this.sessions()?.find((s) => s.id === id) ?? null;
+  });
+
+  protected creaNuova(): void {
+    this.editingId.set(null);
+    this.form.reset({
+      stakes: 'LOW',
+      durationMin: 60,
+      mode: 'EXTERNAL',
+      recordingEnabled: false,
+    });
+    this.setJoinUrlValidators('EXTERNAL');
+    this.error.set(null);
+    this.feedback.set(null);
+    this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.formAperto.set('');
+  }
 
   constructor() {
     this.load();
@@ -126,10 +252,15 @@ export class AdminLiveComponent {
       joinUrl: session.joinUrl ?? '',
     });
     this.setJoinUrlValidators(session.mode);
-    scrollTo({ top: 0, behavior: 'smooth' });
+    // ⚠️ La baseline si scrive DOPO il patch, o la modale nasce già sporca e
+    // il primo Escape chiede conferma senza che si sia digitato nulla.
+    this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.formAperto.set(session.id);
   }
 
   protected cancelEdit(): void {
+    this.formAperto.set(null);
+    this.confermaElimina.set(false);
     this.editingId.set(null);
     this.form.reset({
       stakes: 'LOW',
@@ -174,8 +305,11 @@ export class AdminLiveComponent {
     request$.subscribe({
       next: () => {
         this.saving.set(false);
-        this.feedback.set(id ? 'Sessione aggiornata.' : 'Sessione creata.');
+        // ⚠️ Prima si chiude, poi si scrive: la banda di successo vive nella
+        // PAGINA, e scriverla col dialog aperto la metterebbe dietro il
+        // fondale (il `<dialog>` è in top layer).
         this.cancelEdit();
+        this.feedback.set(id ? 'Sessione aggiornata.' : 'Sessione creata.');
         this.load();
       },
       error: (err: unknown) => {
@@ -185,16 +319,28 @@ export class AdminLiveComponent {
     });
   }
 
+  /**
+   * ⚠️ Conferma IN LINEA al posto del `confirm()` nativo: quello è un riquadro
+   * di sistema che non si stila, non si legge nel contesto della modale, e su
+   * alcune configurazioni il browser lo sopprime — nel qual caso il ramo
+   * «annulla» non è raggiungibile e la sessione sparisce al primo clic.
+   */
+  protected readonly confermaElimina = signal(false);
+
   protected remove(session: LiveSession): void {
-    if (!confirm(`Eliminare la sessione "${session.title}"?`)) return;
+    this.confermaElimina.set(false);
+    this.saving.set(true);
     this.liveApi.remove(session.id).subscribe({
       next: () => {
+        this.saving.set(false);
+        this.cancelEdit();
         this.feedback.set('Sessione eliminata.');
-        if (this.editingId() === session.id) this.cancelEdit();
         this.load();
       },
-      error: (err: unknown) =>
-        this.error.set(apiErrorMessage(err, 'Eliminazione non riuscita.')),
+      error: (err: unknown) => {
+        this.saving.set(false);
+        this.error.set(apiErrorMessage(err, 'Eliminazione non riuscita.'));
+      },
     });
   }
 

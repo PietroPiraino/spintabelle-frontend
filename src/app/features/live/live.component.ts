@@ -1,9 +1,8 @@
-import { DatePipe, isPlatformBrowser } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  PLATFORM_ID,
   computed,
   effect,
   inject,
@@ -17,16 +16,13 @@ import { LiveService } from '../../core/services/live.service';
 import { SeoService } from '../../core/services/seo.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
 import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
-
-/**
- * Con quanto anticipo la stanza si considera aperta.
- *
- * ⚠️ È lo stesso numero di `LIVE_REMINDER_MINUTES` lato backend (il promemoria
- * Discord «live in arrivo»). Non è una coincidenza da mantenere a mano: è la
- * definizione che il progetto ha già dato di «sta per iniziare», e due anticipi
- * diversi vorrebbero dire che l'avviso arriva quando il sito dice ancora di no.
- */
-const ANTICIPO_APERTURA_MIN = 60;
+import {
+  isLiveNow,
+  orologio,
+  quandoManca,
+  statoSessione,
+  StatoSessione,
+} from '../../shared/live/stato-sessione';
 
 @Component({
   selector: 'app-live',
@@ -41,17 +37,8 @@ export class LiveComponent {
   private readonly seo = inject(SeoService);
   private readonly destroyRef = inject(DestroyRef);
 
-  /**
-   * L'orologio, come SEGNALE.
-   *
-   * ⚠️ Senza, `stato()` verrebbe calcolato una volta al mount e non si
-   * aggiornerebbe mai: chi tiene aperta la pagina vedrebbe per sempre la
-   * situazione del momento in cui è entrato, e una sessione non passerebbe mai
-   * da «imminente» a «in diretta ora» — proprio nei minuti in cui la pagina
-   * serve. Trenta secondi bastano: la soglia più fine che mostriamo è il
-   * minuto.
-   */
-  private readonly adesso = signal(Date.now());
+  /** L'orologio, come SEGNALE. Vedi `orologio()` per il perché. */
+  private readonly adesso = orologio();
 
   protected readonly sessions = signal<LiveSession[] | null>(null);
   protected readonly loading = signal(false);
@@ -85,13 +72,6 @@ export class LiveComponent {
   ];
 
   constructor() {
-    // ⚠️ Solo nel browser: in prerender `setInterval` girerebbe in Node e
-    // terrebbe vivo il processo, impedendo alla pagina di stabilizzarsi.
-    if (isPlatformBrowser(inject(PLATFORM_ID))) {
-      const t = setInterval(() => this.adesso.set(Date.now()), 30_000);
-      this.destroyRef.onDestroy(() => clearInterval(t));
-    }
-
     this.seo.setJsonLd('ld-live-faq', {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
@@ -142,11 +122,7 @@ export class LiveComponent {
    * e non terminata dal coach. Usata per il badge nella lista.
    */
   protected isLiveNow(s: LiveSession): boolean {
-    if (s.ended) return false;
-    const start = new Date(s.startsAt).getTime();
-    const now = this.adesso();
-    const windowMs = (s.durationMin && s.durationMin > 0 ? s.durationMin : 90) * 60_000;
-    return now >= start && now <= start + windowMs;
+    return isLiveNow(s, this.adesso());
   }
 
   /**
@@ -173,24 +149,12 @@ export class LiveComponent {
    * promemoria Discord. Allinearsi a quello, invece di inventare un secondo
    * anticipo che poi diverge.
    */
-  protected stato(s: LiveSession): 'ora' | 'imminente' | 'programmata' | 'terminata' {
-    if (s.ended) return 'terminata';
-    if (this.isLiveNow(s)) return 'ora';
-    const mancano = new Date(s.startsAt).getTime() - this.adesso();
-    if (mancano <= 0) return 'terminata';
-    return mancano <= ANTICIPO_APERTURA_MIN * 60_000 ? 'imminente' : 'programmata';
+  protected stato(s: LiveSession): StatoSessione {
+    return statoSessione(s, this.adesso());
   }
 
-  /** «fra 42 minuti», «fra 3 ore», «domani», «fra 5 giorni». */
   protected quandoManca(s: LiveSession): string {
-    const ms = new Date(s.startsAt).getTime() - this.adesso();
-    if (ms <= 0) return '';
-    const min = Math.round(ms / 60_000);
-    if (min < 60) return `fra ${min} minut${min === 1 ? 'o' : 'i'}`;
-    const ore = Math.round(min / 60);
-    if (ore < 24) return `fra ${ore} or${ore === 1 ? 'a' : 'e'}`;
-    const giorni = Math.round(ore / 24);
-    return giorni === 1 ? 'domani' : `fra ${giorni} giorni`;
+    return quandoManca(s, this.adesso());
   }
 
   /** La sessione da mettere in evidenza: quella in diretta, o la prima futura. */

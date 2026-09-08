@@ -61,9 +61,17 @@ describe('AdminLiveComponent — pubblicazione della registrazione', () => {
 
   afterEach(() => http.verify());
 
-  /** Apre il pannello e risolve la richiesta dei tag esistenti. */
+  /**
+   * Apre la scheda di pubblicazione e risolve la richiesta dei tag esistenti.
+   *
+   * ⚠️ Dall'08/09/2026 il comando di riga è solo-icona e si cerca per NOME
+   * ACCESSIBILE, mai per classe: se l'etichetta sparisce il test torna rosso,
+   * mentre un selettore di classe resterebbe verde su un bottone anonimo.
+   */
   async function openPanel(tags: string[] = ['icm', 'push fold']) {
-    buttonWith(el, 'Pubblica come lezione').click();
+    el.querySelector<HTMLButtonElement>(
+      '[aria-label^="Pubblica la registrazione di"]',
+    )!.click();
     http.expectOne(`${API}/lessons/tags`).flush(tags);
     await fixture.whenStable();
     fixture.detectChanges();
@@ -75,18 +83,26 @@ describe('AdminLiveComponent — pubblicazione della registrazione', () => {
    * riaprirebbe il pannello invece di inviarlo.
    */
   function submitPublish(): void {
+    // Il submit vive nel PIEDE della modale, fuori dal <form>, e ci arriva con
+    // `form="pub-form"`.
     el.querySelector<HTMLButtonElement>(
-      '.admin-panel__actions .btn--primary',
+      '.mo__piede button[type="submit"]',
     )!.click();
   }
 
-  it('i pulsanti della registrazione stanno FUORI dallo span meta', () => {
-    // .admin-item__meta è un inline mono senza gap e Angular scarta i nodi di
-    // solo whitespace: un bottone lì dentro nasce incollato al testo (bug
-    // visto in prod). Il fix li ha spostati in un div.row col suo gap.
-    const publish = buttonWith(el, 'Pubblica come lezione');
-    expect(publish.closest('.admin-item__meta')).toBeNull();
-    expect(publish.closest('.row')).not.toBeNull();
+  it('⚠️ il comando di pubblicazione ha un NOME ACCESSIBILE che nomina la sessione', () => {
+    // Il bottone è solo-icona e `app-icon` porta `aria-hidden` sull'host:
+    // senza etichetta uno screen reader annuncia «pulsante» e basta. E con
+    // un'etichetta fissa sarebbero N bottoni indistinguibili.
+    const publish = el.querySelector<HTMLButtonElement>(
+      '[aria-label^="Pubblica la registrazione di"]',
+    );
+    expect(publish).not.toBeNull();
+    expect(publish!.getAttribute('aria-label')).toContain('Bastogne87');
+    expect(publish!.textContent?.trim()).toBe('');
+    // Sta nell'ultima colonna della tabella, non dentro uno <span> di meta.
+    expect(publish!.closest('.admin-item__meta')).toBeNull();
+    expect(publish!.closest('.admin-table__c-ultimo')).not.toBeNull();
   });
 
   it('il pannello nasce precompilato con i dati della live e il tag "live"', async () => {

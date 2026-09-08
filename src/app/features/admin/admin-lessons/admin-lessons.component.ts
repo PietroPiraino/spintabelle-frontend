@@ -1,5 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   LESSON_CATEGORIA_NESSUNA,
@@ -15,15 +22,21 @@ import {
 import { LessonsService } from '../../../core/services/lessons.service';
 import { TagPickerComponent } from '../../../shared/ui/tag-picker/tag-picker.component';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
 
 /** Lezioni per pagina nel pannello (pager classico, come gli iscritti). */
 const PAGE_SIZE = 25;
 
 @Component({
   selector: 'app-admin-lessons',
-  imports: [ReactiveFormsModule, DatePipe, TagPickerComponent],
+  imports: [ReactiveFormsModule, DatePipe, TagPickerComponent, IconComponent, ModalComponent],
   templateUrl: './admin-lessons.component.html',
-  styleUrl: '../admin-shared.scss',
+  styleUrls: [
+    '../admin-shared.scss',
+    '../admin-table.scss',
+    '../admin-modale.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminLessonsComponent {
@@ -80,6 +93,46 @@ export class AdminLessonsComponent {
     freePreview: [false],
     videoDate: ['', Validators.required],
   });
+
+  private readonly baseline = signal('');
+  private readonly valori = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue() as Record<string, unknown>,
+  });
+  /**
+   * ⚠️ Da `toSignal(valueChanges)` e non da un `computed` su `form.value`: un
+   * FormGroup non è un signal, quindi quel computed non si ricalcolerebbe mai
+   * ed Escape butterebbe via il digitato. I tag scelti contano come sporco:
+   * stanno fuori dal form ma sono parte di quello che si sta scrivendo.
+   */
+  protected readonly sporco = computed(
+    () =>
+      JSON.stringify(this.valori()) !== this.baseline() ||
+      this.selectedTags().join(',') !== this.tagBaseline(),
+  );
+  private readonly tagBaseline = signal('');
+
+  /** La modale è aperta: `null` chiusa, `''` creazione, id modifica. */
+  protected readonly formAperto = signal<string | null>(null);
+  protected readonly confermaElimina = signal(false);
+
+  /** La lezione in modifica, RILETTA dalla pagina (mai una copia congelata). */
+  protected readonly lezioneAperta = computed(() => {
+    const id = this.editingId();
+    if (!id) return null;
+    return this.page()?.items.find((l) => l.id === id) ?? null;
+  });
+
+  private segnaBaseline(): void {
+    this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.tagBaseline.set(this.selectedTags().join(','));
+  }
+
+  protected creaNuova(): void {
+    this.cancelEdit();
+    this.feedback.set(null);
+    this.segnaBaseline();
+    this.formAperto.set('');
+  }
 
   /** Converte una data ISO nel formato YYYY-MM-DD richiesto da input[type=date]. */
   private toDateInput(iso?: string): string {
@@ -157,10 +210,15 @@ export class AdminLessonsComponent {
       videoDate: this.toDateInput(lesson.videoDate),
     });
     this.selectedTags.set([...lesson.tags]);
-    scrollTo({ top: 0, behavior: 'smooth' });
+    // ⚠️ La baseline si scrive DOPO il patch, o la modale nasce già sporca e il
+    // primo Escape chiede conferma senza che si sia digitato nulla.
+    this.segnaBaseline();
+    this.formAperto.set(lesson.id);
   }
 
   protected cancelEdit(): void {
+    this.formAperto.set(null);
+    this.confermaElimina.set(false);
     this.editingId.set(null);
     this.form.reset({ stakes: 'LOW', freePreview: false, categoria: '' });
     this.selectedTags.set([]);
@@ -221,12 +279,19 @@ export class AdminLessonsComponent {
     });
   }
 
+  /**
+   * ⚠️ Conferma IN LINEA al posto del `confirm()` nativo: quello non si stila,
+   * non si legge nel contesto della modale, e su alcune configurazioni il
+   * browser lo sopprime — nel qual caso il ramo «annulla» non è raggiungibile.
+   */
   protected remove(lesson: Lesson): void {
-    if (!confirm(`Eliminare la lezione "${lesson.title}"?`)) return;
+    this.confermaElimina.set(false);
+    this.saving.set(true);
     this.lessonsApi.remove(lesson.id).subscribe({
       next: () => {
+        this.saving.set(false);
+        this.cancelEdit();
         this.feedback.set('Lezione eliminata.');
-        if (this.editingId() === lesson.id) this.cancelEdit();
         // Se era l'ultima della pagina, arretra di una (la pagina non esiste più).
         const p = this.page();
         if (p && p.items.length === 1 && p.page > 1) {
@@ -234,8 +299,10 @@ export class AdminLessonsComponent {
         }
         this.reload();
       },
-      error: (err: unknown) =>
-        this.error.set(apiErrorMessage(err, 'Eliminazione non riuscita.')),
+      error: (err: unknown) => {
+        this.saving.set(false);
+        this.error.set(apiErrorMessage(err, 'Eliminazione non riuscita.'));
+      },
     });
   }
 }

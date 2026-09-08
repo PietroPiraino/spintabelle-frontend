@@ -139,12 +139,27 @@ describe('AdminLessonsComponent (pager + errori espliciti)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    spyOn(window, 'confirm').and.returnValue(true);
+    // ⚠️ Dall'08/09/2026 la cancellazione vive nella scheda, dietro una
+    // conferma IN LINEA: niente più `confirm()` nativo da stubbare — quello è
+    // un riquadro di sistema che su alcune configurazioni il browser sopprime,
+    // e in quel caso il ramo «annulla» non era raggiungibile.
     const el = fixture.nativeElement as HTMLElement;
-    const del = Array.from(el.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Elimina'),
-    );
-    del!.click();
+    el.querySelector<HTMLButtonElement>(
+      '[aria-label^="Modifica "]',
+    )!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const testo = (t: string) =>
+      Array.from(el.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === t,
+      );
+    testo('Elimina')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    testo('Confermo, elimina')!.click();
 
     http
       .expectOne((r) => r.url === `${API}/lessons/ultima`)
