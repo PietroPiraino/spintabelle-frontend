@@ -20,14 +20,14 @@ npm start                                              # ng serve (:4200)
 npm run build                                          # build di produzione
 npx ng test --watch=false --browsers=ChromeHeadless    # Karma headless
 ```
-Dopo modifiche significative: `npx ng build` + Karma.
+Dopo modifiche significative: `npx ng build` + Karma + `npm run test:scripts`. ⚠️ Toccando `admin-table.scss` o la prima cella di una tabella del pannello admin, anche `node scripts/check-admin-tabelle.mjs`: la larghezza di una tabella non si legge dal sorgente — la decide il browser, sul contenuto vero, e nessun test Karma la vede.
 
 ## Convenzioni
 - Stringhe rivolte all'utente **e commenti in ITALIANO**; documentazione in inglese.
 - Token d'accesso in memoria, refresh via cookie httpOnly; le navigazioni a URL del backend (download/token) usano XHR per allegare il Bearer.
 - Per la navigazione: voci/gruppi sono meta-driven in `header.component.ts` (nessun cambio CSS/markup per aggiungere una voce).
 - SEO: meta dinamici via `core/services/seo.service.ts` (utili a Google; per anteprime social per-pagina servirebbe SSR).
-- UI riusabile: icone via **`app-icon`** (`shared/ui/icon/`, **non emoji**), notifiche via **`ToastService`** (`shared/ui/toast/`, montato una volta in `app-root`); utility solo-screen-reader = **`.visually-hidden`/`.sr-only`** (`styles/_utilities.scss`).
+- UI riusabile: icone via **`app-icon`** (`shared/ui/icon/`, **non emoji**), notifiche via **`ToastService`** (`shared/ui/toast/`, montato una volta in `app-root`), modale = **`app-modal`** (`shared/ui/modal/`, `<dialog>` nativo con `showModal()`), schede = **`app-schede`**, filtro esclusivo = **`app-filtro`**; nel pannello admin la tabella è `admin-table.scss`. ⚠️⚠️ **UN TOAST EMESSO CON UNA MODALE APERTA È INVISIBILE**: il `<dialog>` sta nel *top layer* e `<app-toast />` dipinge dietro il fondale. La regola è: esito che CHIUDE la modale → toast; errore con la modale APERTA → banda `.form-feedback` dentro il corpo. Una guardia in `isDevMode()` lo urla in console.  utility solo-screen-reader = **`.visually-hidden`/`.sr-only`** (`styles/_utilities.scss`).
 
 ## Deploy
 Push su `main` → **Cloudflare Pages** auto-deploy (`bestfishforever.it`). **Frontend DOPO il backend**, verificando che le nuove rotte API rispondano (vedi `../backend/AGENTS.md`). ⚠️ **Eccezione**: i **testi legali** vanno pubblicati **prima** del backend che inizia a raccogliere (art. 13.3) → tre push: testi → backend → resto del frontend. Commit/push solo quando l'utente lo chiede.
