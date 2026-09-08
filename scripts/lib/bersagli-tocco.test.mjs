@@ -16,6 +16,12 @@
 // rimando. Questa guardia protegge la stessa cosa senza nascondere la
 // dichiarazione.
 //
+// ⚠️ Dall'08/09/2026 un punto sorveglia il verso OPPOSTO: da quando la cella
+// d'identità sta su due righe, i 44px della riga di tabella non sono più solo
+// dichiarati, sono anche LIMITATI dall'interlinea compressa. Un punto che dice
+// «non superare» in mezzo a sette che dicono «raggiungi» va letto per quello
+// che è, non uniformato agli altri.
+//
 // Non gira nel build (`npm run build`): gira in `npm run test:scripts`.
 
 import { test } from 'node:test';
@@ -83,6 +89,27 @@ const PUNTI = [
     perche:
       'le pillole di filtro, che app-filtro e app-schede riusano: un .badge nudo sta sui 26px. ⚠️ Il selettore è button.badge--tag e non .badge--tag — un\'etichetta <span> alta 44px sarebbe solo un buco',
   },
+  {
+    // ⚠️ Questo punto è l'unico che sorveglia un LIMITE e non una
+    // dichiarazione, ed è il rovescio di tutti gli altri: qui il 44 non va
+    // raggiunto, va NON SUPERATO. La cella d'identità sta su due righe, e ci
+    // sta solo perché l'interlinea è compressa a 1.25: col `line-height: 1.6`
+    // che il body eredita (`src/styles/_reset.scss`) la riga passerebbe da 45 a
+    // ~53px in TUTTE e undici le tabelle del pannello, senza che nulla si
+    // rompa, senza un test rosso e senza che nessuno se ne accorga finché non
+    // mette due sezioni una accanto all'altra.
+    //
+    // ⚠️ La newline iniziale nel selettore non è pedanteria: `blocco()` usa
+    // `indexOf`, e `.admin-table__ident {` compare DUE volte nel file (la
+    // regola di base e quella dentro la @media a 720px, indentata). Senza la
+    // newline la guardia leggerebbe il primo dei due — che oggi è quello
+    // giusto solo per caso, cioè perché sta più su nel file.
+    file: 'src/app/features/admin/admin-table.scss',
+    selettore: '\n.admin-table__ident {',
+    attese: ['line-height: 1.25', 'min-height: 2lh'],
+    perche:
+      'il TETTO della riga di tabella: due righe di testo entrano nei 44px solo con l\'interlinea compressa, e il min-height tiene i titoli allineati anche dove il sotto-testo non c\'è',
+  },
 ];
 
 /** Il corpo del blocco che comincia a `selettore`, bilanciando le graffe. */
@@ -124,5 +151,5 @@ test('⚠️ la guardia sta leggendo davvero qualcosa', () => {
   // Il verso anti-guardia-vuota: se i file si spostassero, ogni `blocco()`
   // tornerebbe null e i test sopra fallirebbero uno per uno — ma se qualcuno
   // svuotasse PUNTI la suite resterebbe verde senza controllare niente.
-  assert.ok(PUNTI.length >= 7, 'l\'elenco dei punti si è accorciato');
+  assert.ok(PUNTI.length >= 8, 'l\'elenco dei punti si è accorciato');
 });

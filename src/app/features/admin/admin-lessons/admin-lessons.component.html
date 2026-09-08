@@ -51,7 +51,7 @@
         <p>Nessuna lezione con questo filtro. Creane una col pulsante «+».</p>
       </div>
     } @else {
-      <p class="admin-item__meta admin-table__nota-mobile">
+      <p class="admin-nota admin-table__nota-mobile">
         Categoria, data del video e argomenti sono nella scheda di ogni lezione.
       </p>
 
@@ -76,10 +76,12 @@
               <tr>
                 <th scope="row" class="admin-table__c-primo">
                   <span class="admin-table__ident">
-                    <strong>{{ lesson.title }}</strong>
+                    <span class="admin-table__ident-riga">
+                      <strong [title]="lesson.title">{{ lesson.title }}</strong>
+                    </span>
                     @if (lesson.tags.length > 0) {
-                      <span class="admin-user__nick">
-                        {{ lesson.tags.join(' · ') }}
+                      <span class="admin-table__sub" [title]="sotto(lesson)">
+                        {{ sotto(lesson) }}
                       </span>
                     }
                   </span>
@@ -272,7 +274,7 @@
         <details class="admin-modale__sez admin-modale__sez--rischio">
           <summary class="admin-modale__sum">Elimina la lezione</summary>
           <div class="admin-modale__corpo">
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Sparisce dal catalogo e dalle statistiche di visione. Il video
               resta su Bunny.
             </p>

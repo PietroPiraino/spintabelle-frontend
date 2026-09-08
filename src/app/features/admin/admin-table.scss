@@ -336,17 +336,98 @@
 
 // ── Celle tipizzate ────────────────────────────────────────────────────────
 
-// La cella d'identità: nome, contatto e i badge che lo qualificano, su una riga
-// sola. È sempre la prima colonna, cioè quella che resta ferma scorrendo.
+// La cella d'identità: DUE RIGHE DICHIARATE — il titolo coi badge che lo
+// qualificano sopra, il sotto-testo sotto — dentro i 44px della riga.
+//
+// ⚠️ Era `inline-flex` su UNA riga, ed era la causa della barra di scorrimento
+// orizzontale di tutto il pannello: la colonna valeva `titolo + sotto-testo`,
+// cioè 818px su 968 disponibili in /admin/lezioni (tabella 1241px, 273 di
+// sfondamento). Impilate: 536px e sfondamento ZERO, a 1024, 1280 e 1440.
+// Misurato nel browser, non dedotto.
+//
+// ⚠️ E NON COSTA DENSITÀ: due righe a `line-height: 1.25` stanno dentro i 44px
+// già dichiarati sulla cella — la riga misura 45px prima e 45px dopo. Era il
+// rischio principale della modifica e non esiste. Ma il margine è sottile: col
+// `line-height: 1.6` del body (`styles/_reset.scss`) la riga andrebbe a ~53px
+// in tutte e 11 le tabelle, in silenzio. Per questo l'1.25 è sorvegliato da
+// `scripts/lib/bersagli-tocco.test.mjs`: qui il 44 non è più solo DICHIARATO
+// su `th, td`, è anche LIMITATO da questa riga.
 .admin-table__ident {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  // ⚠️ `align-items` NON si dichiara qui: deve restare `stretch`. Con
+  // `flex-start` ogni figlio prende larghezza `fit-content`, cioè `max-content`
+  // — il sotto-testo `nowrap` uscirebbe dal tetto invece di ellissizzarsi, e in
+  // un `<th>` sticky il testo debordato viaggia SOPRA le celle sorelle mentre
+  // si scorre. `flex-start` vale solo nel ramo a blocchi, qui sotto.
+  gap: 0;
+  line-height: 1.25;
   min-width: 0;
+  max-width: 26rem;
+  // ⚠️ Due righe di altezza ANCHE quando il sotto-testo non c'è: è condizionale
+  // in cinque tabelle su undici (`@if lesson.tags.length`, `@if user.nickname`,
+  // …). Senza, la pila è alta 34px dove il sotto-testo c'è e 17px dove manca, e
+  // con `vertical-align: middle` i titoli si sfalsano da una riga all'altra —
+  // è la stessa obiezione già scritta più sotto contro `flex-wrap`, applicata
+  // al contenuto opzionale. La riga non cresce: 34px < 44px.
+  min-height: 2lh;
 
   strong {
     color: var(--cream-100);
+    // Il tetto taglia QUI, sull'elemento — mai sulla cella. La ragione sta nel
+    // commento di `.admin-table__multi-corpo`.
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
+}
+
+// La prima riga: titolo e badge restano AFFIANCATI.
+// ⚠️ Non è un involucro di comodo. Impilando anche i badge, /admin/iscritti
+// passa da 45 a 67px — lì la cella porta email + nickname + due badge, cioè
+// quattro righe: la modifica pensata per la densità la distruggerebbe proprio
+// sulla tabella più usata. Misurato.
+// ⚠️ Sciolta e NON annidata sotto `.admin-table__ident`: annidata varrebbe
+// (0,2,0) e gli override della @media qui sotto, che valgono (0,1,0),
+// perderebbero — cioè l'errore di cascata descritto nel commento seguente,
+// ripetuto da capo su un selettore nuovo.
+.admin-table__ident-riga {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+// Il sotto-testo: i tag di una lezione, il nome di un file, la piattaforma di
+// una live, l'email di chi ha fatto la richiesta.
+// ⚠️ Si chiamava `.admin-user__nick` e viveva in `admin-shared.scss`: un nome
+// che dichiarava «il nickname di un utente» per una classe che in nove template
+// su nove — tutti di tabella — porta i tag di una lezione e il nome di un file.
+// I valori (mono, 0.85rem, `--text-muted`) sono gli stessi di prima: cambia il
+// nome e la disposizione, non l'aspetto del testo.
+// ⚠️ Porta il `title` con la stringa INTERA: è l'unica cosa che rende leggibile
+// ciò che l'ellissi taglia, ed è l'idioma del progetto (`[title]="saleTesto()"`
+// — qui il tooltip è sempre l'attributo nativo).
+.admin-table__sub {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+// ⚠️ I badge dentro l'identità perdono il padding VERTICALE. Senza questa riga
+// la riga del titolo è alta 22,6px invece di 15,6, e 22,6 + 17 di sotto-testo +
+// 9,6 di padding di cella fanno 49,2px: una tabella meno densa proprio per la
+// modifica fatta per renderla più densa. Il padding ORIZZONTALE resta — è
+// quello che disegna la pillola.
+.admin-table__ident .badge {
+  padding-block: 0;
 }
 
 // ⚠️ SUBITO DOPO la regola di base, e non nel blocco a 720px che sta più su nel
@@ -361,22 +442,57 @@
 // adiacenti prendono due layout diversi a seconda di quanto è lungo il testo.
 @media (max-width: #{s.$bp-tabella-blocchi}) {
   .admin-table__ident {
-    flex-direction: column;
     align-items: flex-start;
     gap: 0.1rem;
-    max-width: 100%;
+    max-width: none;
+    min-height: 0;
+  }
+
+  // ⚠️ L'ELLISSI SI SPEGNE, ed è la metà che regge la scelta del `title`:
+  // quello è solo hover, e col dito non si apre. Qui il testo deve vedersi
+  // tutto, andando a capo.
+  // ⚠️ E va dichiarato SUL FIGLIO: il `white-space: normal` che il ramo a
+  // blocchi mette su `th, td` arriva per EREDITARIETÀ, e una dichiarazione
+  // propria sull'elemento vince sull'ereditarietà a qualunque specificità —
+  // senza queste due righe il sotto-testo resterebbe `nowrap` e tagliato
+  // proprio dove il tooltip non c'è.
+  // ⚠️ `.admin-table__ident strong` e non `strong` nudo: (0,1,1) contro
+  // (0,0,1), o perde contro la regola di base.
+  .admin-table__sub,
+  .admin-table__ident strong {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
   }
 }
 
-// Una cella che porta PIÙ valori (le sale di un iscritto, per esempio).
-// ⚠️ `white-space` torna a `normal` qui dentro perché i chip vanno a capo, ma
-// la cella resta larga al massimo quanto una colonna: senza il tetto, un
-// iscritto su otto sale allargherebbe la tabella oltre lo schermo e le altre
-// colonne diventerebbero illeggibili.
+// Una cella che porta PIÙ valori: le sale di un iscritto, i dettagli di
+// un'azione nel log.
+//
+// ⚠️ QUI C'ERA UN TETTO CHE NON TENEVA, e il commento che lo accompagnava
+// diceva il falso. Misurato sul «Dettagli» del Log: il `<td>` è largo
+// esattamente i 352px che chiedeva, ma il suo `scrollWidth` è 597 — il testo
+// esce dalla cella, resta visibile e continua ad allargare la tabella. Un tetto
+// su una CELLA limita la scatola, non il contenuto: l'`overflow` di un `<td>`
+// non è onorato in modo affidabile. Il tetto vero è `.admin-table__multi-corpo`
+// qui sotto, e da solo porta il Log da 417px di sfondamento a 127; insieme
+// all'identità impilata, a 0.
 .admin-table__multi {
   white-space: normal;
-  max-width: 22rem;
   line-height: 1.5;
+}
+
+// Il tetto che taglia davvero. ⚠️ Serve TUTTA la terna — `max-width`,
+// `overflow: hidden` e l'ellissi — su un elemento BLOCCO interno alla cella.
+// ⚠️ Nessun override sotto i 720px: entrambe le celle `__multi` del pannello
+// sono anche `__solo-largo`, quindi là sono già `display: none`.
+.admin-table__multi-corpo {
+  display: inline-block;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .admin-table__chip {

@@ -25,7 +25,7 @@
         sotto i 720px spariscono, e detta dopo l'elenco si legge quando si è già
         smesso di cercarle.
       -->
-      <p class="admin-item__meta admin-table__nota-mobile">
+      <p class="admin-nota admin-table__nota-mobile">
         Amministratore e dettagli della modifica sono visibili su schermi più
         larghi.
       </p>
@@ -48,9 +48,15 @@
               <tr>
                 <th scope="row" class="admin-table__c-primo">
                   <span class="admin-table__ident">
-                    <strong>{{ actionLabel(e.action) }}</strong>
+                    <span class="admin-table__ident-riga">
+                      <strong [title]="actionLabel(e.action)">
+                        {{ actionLabel(e.action) }}
+                      </strong>
+                    </span>
                     @if (e.userEmail) {
-                      <span class="admin-user__nick">su {{ e.userEmail }}</span>
+                      <span class="admin-table__sub" [title]="'su ' + e.userEmail">
+                        su {{ e.userEmail }}
+                      </span>
                     }
                   </span>
                 </th>
@@ -63,20 +69,25 @@
                   }
                 </td>
                 <!--
-                  ⚠️ `admin-table__multi` toglie il `white-space: nowrap` della
-                  riga: un riepilogo «prima → dopo» può essere lungo, e su una
-                  sola riga spingerebbe la tabella oltre lo schermo su OGNI
-                  scheda, non solo sulle poche verbose.
+                  ⚠️ Il riepilogo «prima → dopo» può essere lungo, e su una sola
+                  riga spingerebbe la tabella oltre lo schermo su OGNI scheda,
+                  non solo sulle poche verbose: era il caso peggiore del
+                  pannello, 417px di sfondamento.
+                  ⚠️ Il tetto vive sul `<span>` INTERNO e non sulla cella: su un
+                  `<td>` limita la scatola e lascia uscire il testo (misurato:
+                  cella 352px, contenuto 597). Vedi `.admin-table__multi-corpo`.
                 -->
-                <td class="admin-table__multi admin-table__solo-largo">
-                  @if (details(e); as d) {
-                    {{ d }}
-                  } @else {
-                    <span class="is-vuota">—</span>
-                  }
-                  @if (e.reason) {
-                    <em class="admin-item__meta">«{{ e.reason }}»</em>
-                  }
+                <td class="admin-table__multi admin-table__solo-largo" [title]="dettagliTesto(e)">
+                  <span class="admin-table__multi-corpo">
+                    @if (details(e); as d) {
+                      {{ d }}
+                    } @else {
+                      <span class="is-vuota">—</span>
+                    }
+                    @if (e.reason) {
+                      <em class="admin-item__meta">«{{ e.reason }}»</em>
+                    }
+                  </span>
                 </td>
               </tr>
             }

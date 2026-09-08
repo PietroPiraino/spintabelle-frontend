@@ -56,7 +56,7 @@
           <p>Nessun prodotto ancora: creane uno col pulsante «+».</p>
         </div>
       } @else if (prodPage(); as p) {
-        <p class="admin-item__meta admin-table__nota-mobile">
+        <p class="admin-nota admin-table__nota-mobile">
           Prezzo, giacenza e data sono nella scheda di ogni prodotto.
         </p>
 
@@ -80,16 +80,24 @@
               @for (g of p.items; track g.id) {
                 <tr>
                   <th scope="row" class="admin-table__c-primo">
+                    <!--
+                      ⚠️ La miniatura sta dentro `__ident-riga`, non dentro
+                      `__ident`: quello è a COLONNA, e lasciandola lì finirebbe
+                      sopra il titolo — 83px di riga e una colonna larga quanto
+                      l'immagine. Qui resta affiancata al titolo, com'era.
+                    -->
                     <span class="admin-table__ident">
-                      @if (g.imageUrl) {
-                        <img class="shop-thumb" [src]="g.imageUrl" [alt]="g.title" />
-                      } @else {
-                        <span
-                          class="shop-thumb shop-thumb--empty"
-                          aria-hidden="true"
-                        ></span>
-                      }
-                      <strong>{{ g.title }}</strong>
+                      <span class="admin-table__ident-riga">
+                        @if (g.imageUrl) {
+                          <img class="shop-thumb" [src]="g.imageUrl" [alt]="g.title" />
+                        } @else {
+                          <span
+                            class="shop-thumb shop-thumb--empty"
+                            aria-hidden="true"
+                          ></span>
+                        }
+                        <strong [title]="g.title">{{ g.title }}</strong>
+                      </span>
                     </span>
                   </th>
                   <td>
@@ -194,7 +202,7 @@
         <p>Nessun ordine con questo filtro.</p>
       </div>
     } @else if (ordPage(); as p) {
-      <p class="admin-item__meta admin-table__nota-mobile">
+      <p class="admin-nota admin-table__nota-mobile">
         Articolo, indirizzo e note sono nella scheda di ogni ordine.
       </p>
 
@@ -220,15 +228,21 @@
               <tr>
                 <th scope="row" class="admin-table__c-primo">
                   <span class="admin-table__ident">
-                    <strong>{{ o.userNickname || o.userEmail }}</strong>
-                    <span class="admin-user__nick">{{ o.itemLabel }}</span>
+                    <span class="admin-table__ident-riga">
+                      <strong [title]="o.userNickname || o.userEmail">
+                        {{ o.userNickname || o.userEmail }}
+                      </strong>
+                    </span>
+                    <span class="admin-table__sub" [title]="o.itemLabel">
+                      {{ o.itemLabel }}
+                    </span>
                   </span>
                 </th>
                 <td class="admin-table__solo-largo">
                   <span class="badge badge--tag">{{ o.typeLabel }}</span>
                 </td>
                 <td>
-                  <span [class]="statusChipClass(o.status)">
+                  <span class="admin-stato" [attr.data-tono]="tono(o.status)">
                     {{ o.statusLabel }}
                   </span>
                 </td>
@@ -388,7 +402,7 @@
         <details class="admin-modale__sez admin-modale__sez--rischio">
           <summary class="admin-modale__sum">Elimina il prodotto</summary>
           <div class="admin-modale__corpo">
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Sparisce dal catalogo. Gli ordini già fatti restano.
             </p>
             <div class="row admin-panel__actions">
@@ -487,7 +501,7 @@
       </dl>
 
       @if (o.paymentReference) {
-        <p class="admin-item__meta">
+        <p class="admin-nota">
           Rif. pagamento: {{ o.paymentReference }}
         </p>
       }
@@ -505,13 +519,13 @@
         </details>
       }
       @if (o.trackingNote) {
-        <p class="admin-item__meta">Tracking: {{ o.trackingNote }}</p>
+        <p class="admin-nota">Tracking: {{ o.trackingNote }}</p>
       }
       @if (o.decisionNote) {
-        <p class="admin-item__meta">Nota: {{ o.decisionNote }}</p>
+        <p class="admin-nota">Nota: {{ o.decisionNote }}</p>
       }
       @if (o.status === 'ANNULLATO' && o.refundedPoints != null) {
-        <p class="admin-item__meta">Rimborsati: {{ o.refundedPoints }} pt</p>
+        <p class="admin-nota">Rimborsati: {{ o.refundedPoints }} pt</p>
       }
 
       @if (canFulfill(o)) {
@@ -554,7 +568,7 @@
             {{ o.amountEur != null ? 'Annulla ordine' : 'Annulla e rimborsa' }}
           </summary>
           <div class="admin-modale__corpo">
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               @if (o.amountEur != null) {
                 ⚠️ L'ordine è stato pagato in euro fuori dal sito: il rimborso
                 si fa a mano. Qui si liberano solo i buoni usati e la giacenza.

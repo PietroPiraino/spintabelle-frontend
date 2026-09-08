@@ -1,37 +1,26 @@
 <div class="admin-users">
   <div class="admin-barra">
-    <div class="row" role="group" aria-label="Filtra per stato" style="gap: 0.5rem; flex-wrap: wrap">
-      <button
-        type="button"
-        class="badge badge--tag"
-        [class.is-active]="filtro() === 'APERTO'"
-        (click)="impostaFiltro('APERTO')"
-      >
-        In corso
-      </button>
-      <button
-        type="button"
-        class="badge badge--tag"
-        [class.is-active]="filtro() === 'CHIUSO'"
-        (click)="impostaFiltro('CHIUSO')"
-      >
-        Chiusi
-      </button>
-      <button
-        type="button"
-        class="badge badge--tag"
-        [class.is-active]="filtro() === 'TUTTI'"
-        (click)="impostaFiltro('TUTTI')"
-      >
-        Tutti
-      </button>
-    </div>
+    <h2 class="admin-barra__titolo">Registro staking</h2>
     @if (page(); as p) {
       <span class="admin-barra__conta">
         {{ p.total }} {{ p.total === 1 ? 'giocatore' : 'giocatori' }}
       </span>
     }
   </div>
+
+  <!--
+    ⚠️ Erano tre pillole scritte a mano in un `role="group"`, con `is-active` e
+    uno `style=` in linea: nessun `aria-checked`, nessun roving tabindex, cioè
+    un gruppo che PROMETTE una scelta esclusiva e non la mantiene. `app-filtro`
+    esiste apposta e lo usavano già cinque sezioni.
+  -->
+  <app-filtro
+    etichetta="Filtra per stato"
+    [voci]="vociFiltro"
+    [scelto]="filtro()"
+    [inerte]="loading()"
+    (scegli)="impostaFiltro($event)"
+  />
 
   @if (feedback()) {
     <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
@@ -64,12 +53,16 @@
             <tr>
               <th scope="row" class="admin-table__c-primo">
                 <span class="admin-table__ident">
-                  <strong>{{ chi(r) }}</strong>
+                  <span class="admin-table__ident-riga">
+                    <strong [title]="chi(r)">{{ chi(r) }}</strong>
+                    @if (r.anonimizzato) {
+                      <span class="badge badge--tag">Anonimizzato</span>
+                    }
+                  </span>
                   @if (r.userNickname && r.userEmail) {
-                    <span class="admin-user__nick">{{ r.userEmail }}</span>
-                  }
-                  @if (r.anonimizzato) {
-                    <span class="badge badge--tag">Anonimizzato</span>
+                    <span class="admin-table__sub" [title]="r.userEmail">
+                      {{ r.userEmail }}
+                    </span>
                   }
                 </span>
               </th>
@@ -187,7 +180,7 @@
         <summary class="admin-modale__sum">Registra un movimento</summary>
         <div class="admin-modale__corpo">
           @if (r.stato !== 'APERTO') {
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Questo registro è chiuso: riaprilo per registrare un movimento.
             </p>
           } @else {
@@ -224,7 +217,7 @@
               </div>
             </div>
 
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               @if (form.controls.tipo.value === 'EV') {
                 Un valore <strong>negativo</strong> peggiora l'EV da recuperare,
                 uno <strong>positivo</strong> lo recupera. Non può salire sopra
@@ -238,7 +231,7 @@
             @if (bloccoMovimento(); as motivo) {
               <p class="form-feedback is-error" role="alert">{{ motivo }}</p>
             } @else if (anteprima(); as dopo) {
-              <p class="admin-item__meta stk__anteprima">
+              <p class="admin-nota stk__anteprima">
                 Dopo questo movimento:
                 <strong>{{ dopo }}</strong>
               </p>
@@ -265,7 +258,7 @@
           @if (movimenti() === null) {
             <div class="spinner" role="status" aria-label="Caricamento movimenti"></div>
           } @else if (movimenti()!.length === 0) {
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Nessun movimento registrato: il registro è appena stato aperto.
             </p>
           } @else {
@@ -303,7 +296,7 @@
               formControlName="nota"
               maxlength="2000"
             ></textarea>
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Non esce da nessuna schermata dell'iscritto e da nessuna email.
             </p>
           </div>
@@ -324,7 +317,7 @@
       <details class="admin-modale__sez">
         <summary class="admin-modale__sum">Stato del registro</summary>
         <div class="admin-modale__corpo">
-          <p class="admin-item__meta">
+          <p class="admin-nota">
             Il registro si apre e si chiude da solo quando assegni o togli il
             ruolo «Stakato» dalla sezione Iscritti. Da qui puoi forzarlo, per
             esempio per sospendere temporaneamente i movimenti senza toccare il

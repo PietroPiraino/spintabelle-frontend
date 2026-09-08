@@ -248,6 +248,22 @@ export class AdminDiscountsComponent {
       .join(', ');
   }
 
+  /**
+   * Il sotto-testo della cella d'identità: piani, ambito e durata del codice.
+   *
+   * ⚠️ Era composto NEL TEMPLATE con due `@if`, e da lì non si poteva bindare a
+   * un `title`: bisognava riscrivere la stessa composizione una seconda volta,
+   * e due copie divergono al primo ritocco. La divergenza si vedrebbe come un
+   * tooltip che dice qualcosa di diverso dal testo che copre — un difetto muto,
+   * perché nessuno confronta le due stringhe. Una funzione sola, due usi.
+   */
+  protected sotto(c: DiscountCode): string {
+    const parti = [this.tiersLabel(c)];
+    if (c.scope && c.scope !== 'SUBSCRIPTION') parti.push(this.scopeLabel(c.scope));
+    if (c.reusable) parti.push('a vita');
+    return parti.join(' · ');
+  }
+
   // ── Date helper ───────────────────────────────────────────────────────---
 
   private isoToDateInput(iso?: string): string {

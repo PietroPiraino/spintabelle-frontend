@@ -41,7 +41,7 @@
         <p>Nessun materiale ancora: caricane uno col pulsante «+».</p>
       </div>
     } @else {
-      <p class="admin-item__meta admin-table__nota-mobile">
+      <p class="admin-nota admin-table__nota-mobile">
         Categoria, dimensione e download sono nella scheda di ogni materiale.
       </p>
 
@@ -67,8 +67,12 @@
               <tr>
                 <th scope="row" class="admin-table__c-primo">
                   <span class="admin-table__ident">
-                    <strong>{{ doc.title }}</strong>
-                    <span class="admin-user__nick">{{ doc.fileName }}</span>
+                    <span class="admin-table__ident-riga">
+                      <strong [title]="doc.title">{{ doc.title }}</strong>
+                    </span>
+                    <span class="admin-table__sub" [title]="doc.fileName">
+                      {{ doc.fileName }}
+                    </span>
                   </span>
                 </th>
                 <td class="admin-table__solo-largo">
@@ -237,7 +241,7 @@
         <details class="admin-modale__sez admin-modale__sez--rischio">
           <summary class="admin-modale__sum">Elimina il materiale</summary>
           <div class="admin-modale__corpo">
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Il file sparisce dalla libreria e dallo spazio di archiviazione.
               Non si torna indietro.
             </p>

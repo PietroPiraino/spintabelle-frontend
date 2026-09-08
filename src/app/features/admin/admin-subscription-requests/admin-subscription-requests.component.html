@@ -43,7 +43,7 @@
         <p>Nessuna richiesta con questo filtro.</p>
       </div>
     } @else {
-      <p class="admin-item__meta admin-table__nota-mobile">
+      <p class="admin-nota admin-table__nota-mobile">
         Piano e data sono nella scheda di ogni richiesta.
       </p>
 
@@ -69,9 +69,15 @@
               <tr>
                 <th scope="row" class="admin-table__c-primo">
                   <span class="admin-table__ident">
-                    <strong>{{ req.userNickname || req.userEmail }}</strong>
+                    <span class="admin-table__ident-riga">
+                      <strong [title]="req.userNickname || req.userEmail">
+                        {{ req.userNickname || req.userEmail }}
+                      </strong>
+                    </span>
                     @if (req.userNickname) {
-                      <span class="admin-user__nick">{{ req.userEmail }}</span>
+                      <span class="admin-table__sub" [title]="req.userEmail">
+                        {{ req.userEmail }}
+                      </span>
                     }
                   </span>
                 </th>
@@ -206,26 +212,26 @@
               }
             </p>
             @for (c of req.discountCodes ?? []; track c) {
-              <p class="admin-item__meta">Buono applicato: {{ c }}</p>
+              <p class="admin-nota">Buono applicato: {{ c }}</p>
             }
             @if (req.pointsSpent) {
-              <p class="admin-item__meta">
+              <p class="admin-nota">
                 Punti BFF: {{ fmtPunti(req.pointsSpent) }} pt
                 @if (req.pointsDiscountEur) { (−€{{ req.pointsDiscountEur }}) }
               </p>
             }
           } @else {
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Nessun importo registrato su questa richiesta.
             </p>
           }
           @if (req.paymentReference) {
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Riferimento del pagamento: {{ req.paymentReference }}
             </p>
           }
           @if (req.refundedPoints) {
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Punti restituiti: {{ fmtPunti(req.refundedPoints) }}
             </p>
           }
@@ -233,13 +239,13 @@
       </details>
 
       @if (req.status === 'approved' && req.resultingExpiresAt) {
-        <p class="admin-item__meta">
+        <p class="admin-nota">
           Abbonamento attivo fino al
           {{ req.resultingExpiresAt | date: 'dd MMM yyyy' }}
         </p>
       }
       @if (req.status === 'rejected' && req.decisionNote) {
-        <p class="admin-item__meta">Motivo del rifiuto: {{ req.decisionNote }}</p>
+        <p class="admin-nota">Motivo del rifiuto: {{ req.decisionNote }}</p>
       }
 
       @if (req.status === 'pending') {

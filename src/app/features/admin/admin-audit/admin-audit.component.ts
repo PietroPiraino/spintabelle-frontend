@@ -110,6 +110,19 @@ export class AdminAuditComponent {
     return parts.join(' · ');
   }
 
+  /**
+   * La stessa cella «Dettagli», in una stringa sola, per il `title`.
+   *
+   * ⚠️ Il tetto di `.admin-table__multi-corpo` taglia questa cella con
+   * l'ellissi: il tooltip è l'unico modo di leggerla per intero, ed è la stessa
+   * rete che `admin-users` usa da sempre sulla colonna «Sale».
+   */
+  protected dettagliTesto(e: AdminActionLogEntry): string {
+    const d = this.details(e);
+    const motivo = e.reason ? `«${e.reason}»` : '';
+    return [d, motivo].filter(Boolean).join(' ') || '—';
+  }
+
   private fmt(v: unknown): string {
     if (v == null) return '';
     if (typeof v === 'boolean') return v ? 'Sì' : 'No';

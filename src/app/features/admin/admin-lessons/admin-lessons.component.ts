@@ -134,6 +134,19 @@ export class AdminLessonsComponent {
     this.formAperto.set('');
   }
 
+  /**
+   * Il sotto-testo della cella d'identità: gli argomenti della lezione.
+   *
+   * ⚠️ Esiste per essere chiamato DUE volte — una per il testo, una per il
+   * `title` — dallo stesso posto. Componendolo nel template si scriverebbe la
+   * stessa espressione due volte, e il giorno in cui una delle due cambia il
+   * tooltip mostra qualcosa di diverso da quello che c'è scritto: un tooltip
+   * che mente è peggio di un testo tagliato, perché non c'è modo di accorgersene.
+   */
+  protected sotto(lesson: Lesson): string {
+    return lesson.tags.join(' · ');
+  }
+
   /** Converte una data ISO nel formato YYYY-MM-DD richiesto da input[type=date]. */
   private toDateInput(iso?: string): string {
     return iso ? iso.slice(0, 10) : '';

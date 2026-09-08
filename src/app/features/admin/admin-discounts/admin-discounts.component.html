@@ -1,5 +1,6 @@
 <div class="admin-users">
   <div class="admin-barra">
+    <h2 class="admin-barra__titolo">Codici sconto</h2>
     <input
       type="search"
       class="input admin-barra__campo"
@@ -53,7 +54,7 @@
         <p>Nessun codice sconto. Creane uno col pulsante «+».</p>
       </div>
     } @else {
-      <p class="admin-item__meta admin-table__nota-mobile">
+      <p class="admin-nota admin-table__nota-mobile">
         Ambito, validità e utenti ammessi sono nella scheda di ogni codice.
       </p>
 
@@ -79,13 +80,11 @@
               <tr>
                 <th scope="row" class="admin-table__c-primo">
                   <span class="admin-table__ident">
-                    <strong>{{ c.code }}</strong>
-                    <span class="admin-user__nick">
-                      {{ tiersLabel(c) }}
-                      @if (c.scope && c.scope !== 'SUBSCRIPTION') {
-                        · {{ scopeLabel(c.scope) }}
-                      }
-                      @if (c.reusable) { · a vita }
+                    <span class="admin-table__ident-riga">
+                      <strong [title]="c.code">{{ c.code }}</strong>
+                    </span>
+                    <span class="admin-table__sub" [title]="sotto(c)">
+                      {{ sotto(c) }}
                     </span>
                   </span>
                 </th>
@@ -217,7 +216,7 @@
       </div>
 
       @if (audienceControl.value === 'PUBLIC') {
-        <p class="admin-item__meta">
+        <p class="admin-nota">
           Un codice pubblico richiede una data di fine validità (finestra promozionale).
         </p>
       }
@@ -238,7 +237,7 @@
         Riutilizzabile a ogni acquisto (sconto "a vita")
       </label>
       @if (reusableControl.value) {
-        <p class="admin-item__meta">
+        <p class="admin-nota">
           Un codice riutilizzabile può essere usato dallo stesso utente a ogni
           rinnovo/acquisto e non ha tetto di utilizzi.
         </p>
@@ -278,7 +277,7 @@
               ></div>
             } @else if (detail(); as d) {
               @if (d.eligibles.length === 0) {
-                <p class="admin-item__meta">
+                <p class="admin-nota">
                   Nessun utente ammesso. Aggiungili dalla tab Iscritti con
                   «Codice sconto».
                 </p>
@@ -306,7 +305,7 @@
                   }
                 </ul>
               }
-              <p class="admin-item__meta">
+              <p class="admin-nota">
                 Per ammettere altri utenti: tab Iscritti → «Codice sconto».
               </p>
             }
@@ -325,7 +324,7 @@
               quante volte il codice era stato usato: su un codice riscattato
               diceva «Disattiva» per sempre, disattivato compreso.
             -->
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Usato {{ c.redeemedCount
               }}{{ c.maxRedemptions != null ? ' di ' + c.maxRedemptions : '' }}
               volte.

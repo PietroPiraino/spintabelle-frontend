@@ -71,6 +71,20 @@ export class AdminLiveComponent {
   }
 
   /**
+   * Il sotto-testo della cella d'identità: dove si tiene la sessione e quanto
+   * dura.
+   *
+   * ⚠️ Era composto NEL TEMPLATE con due `@if`, e da lì non si poteva bindare a
+   * un `title`: servirebbe riscrivere la stessa composizione una seconda volta,
+   * e due copie divergono al primo ritocco — con il tooltip che finisce per
+   * dire qualcosa di diverso dal testo che copre. Una funzione sola, due usi.
+   */
+  protected sotto(s: LiveSession): string {
+    const dove = s.mode === 'LIVEKIT' ? 'On-site' : s.platform || 'Esterna';
+    return s.durationMin ? `${dove} · ${s.durationMin} min` : dove;
+  }
+
+  /**
    * Le sessioni in programma e in corso, dalla più IMMINENTE.
    *
    * ⚠️ Il server ordina `{startsAt: -1}` quando l'admin chiede `includePast`,

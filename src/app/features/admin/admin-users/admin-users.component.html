@@ -1,5 +1,6 @@
 <div class="admin-users">
   <div class="admin-barra">
+    <h2 class="admin-barra__titolo">Iscritti</h2>
     <input
       type="search"
       class="input admin-barra__campo"
@@ -51,7 +52,7 @@
       `admin-table.scss`): un dato che sparisce senza spiegazione fa cercare un
       guasto che non c'è.
     -->
-    <p class="admin-item__meta admin-table__nota-mobile">
+    <p class="admin-nota admin-table__nota-mobile">
       Sale affiliate, scadenza e punti sono nella scheda di ogni iscritto.
     </p>
 
@@ -77,15 +78,19 @@
             <tr>
               <th scope="row" class="admin-table__c-primo">
                 <span class="admin-table__ident">
-                  <strong>{{ user.email }}</strong>
+                  <span class="admin-table__ident-riga">
+                    <strong [title]="user.email">{{ user.email }}</strong>
+                    @if (!user.verified) {
+                      <span class="badge badge--premium">Da verificare</span>
+                    }
+                    @if (sonoIo(user)) {
+                      <span class="badge badge--tag">Tu</span>
+                    }
+                  </span>
                   @if (user.nickname) {
-                    <span class="admin-user__nick">{{ '@' + user.nickname }}</span>
-                  }
-                  @if (!user.verified) {
-                    <span class="badge badge--premium">Da verificare</span>
-                  }
-                  @if (sonoIo(user)) {
-                    <span class="badge badge--tag">Tu</span>
+                    <span class="admin-table__sub" [title]="'@' + user.nickname">
+                      {{ '@' + user.nickname }}
+                    </span>
                   }
                 </span>
               </th>
@@ -98,21 +103,28 @@
                 un guasto. «Nessuna» è un fatto; il tratteggio è un'attesa.
               -->
               <td class="admin-table__multi admin-table__solo-largo" [title]="saleTesto(user)">
-                @if (!p.affiliazioniPerUtente) {
-                  <span class="admin-table__skel" aria-label="Caricamento"></span>
-                } @else if (sale(user).length === 0) {
-                  <span class="is-vuota">Nessuna</span>
-                } @else {
-                  @for (s of sale(user); track s.roomId) {
-                    <span class="admin-table__chip" [class.is-attesa]="s.daVerificare">
-                      {{ s.roomName }}:
-                      <code>{{ s.roomUsername || '—' }}</code>
-                      @if (s.daVerificare) {
-                        <span class="visually-hidden">(da verificare)</span>
-                      }
-                    </span>
+                <!--
+                  ⚠️ Il tetto sta sul `<span>` interno e non sulla cella: su un
+                  `<td>` limita la scatola e lascia uscire il testo. Il `title`
+                  qui sopra c'era già, ed è la stessa rete del sotto-testo.
+                -->
+                <span class="admin-table__multi-corpo">
+                  @if (!p.affiliazioniPerUtente) {
+                    <span class="admin-table__skel" aria-label="Caricamento"></span>
+                  } @else if (sale(user).length === 0) {
+                    <span class="is-vuota">Nessuna</span>
+                  } @else {
+                    @for (s of sale(user); track s.roomId) {
+                      <span class="admin-table__chip" [class.is-attesa]="s.daVerificare">
+                        {{ s.roomName }}:
+                        <code>{{ s.roomUsername || '—' }}</code>
+                        @if (s.daVerificare) {
+                          <span class="visually-hidden">(da verificare)</span>
+                        }
+                      </span>
+                    }
                   }
-                }
+                </span>
               </td>
               <td class="admin-table__solo-largo">
                 @if (scadenzaTesto(user); as testo) {
@@ -208,7 +220,7 @@
         cui si capisce se un account è nuovo o abbandonato, ed erano nella riga
         prima di questa riscrittura.
       -->
-      <p class="admin-item__meta admin-modale__anagrafica">
+      <p class="admin-nota admin-modale__anagrafica">
         Iscritto {{ u.createdAt | date: 'dd MMM yyyy' }} · Ultimo accesso
         {{ u.lastActiveAt ? (u.lastActiveAt | date: 'dd MMM yyyy') : 'mai' }}
         @if (u.verified) { · account verificato } @else { · da verificare }
@@ -250,7 +262,7 @@
               {{ salvando() ? 'Salvataggio…' : 'Salva ruolo' }}
             </button>
           </div>
-          <p class="admin-item__meta">
+          <p class="admin-nota">
             Pesce Rosso e Squalo non si assegnano da qui: servono anche una data
             di scadenza e una riga nello storico. Usa «Concedi abbonamento» più
             sotto.
@@ -312,7 +324,7 @@
             }
           </div>
           @if (scadenzaTesto(u) === 'Mai') {
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Questo ruolo non ha scadenza: il server rifiuta una data.
             </p>
           }
@@ -437,7 +449,7 @@
             una frase sola. Stessa forma della riga di aiuto che il registro
             degli staking ha già sotto il proprio importo.
           -->
-          <p class="admin-item__meta">
+          <p class="admin-nota">
             Un valore <strong>positivo</strong> accredita punti, uno
             <strong>negativo</strong> li storna.
           </p>
@@ -456,7 +468,7 @@
               class="input"
               formControlName="email"
             />
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Cambiare l'email riporta l'account a "da verificare" (a meno di
               forzare "verificato" qui sotto).
             </p>
@@ -504,7 +516,7 @@
           @if (codiciSconto() === null) {
             <div class="spinner" role="status" aria-label="Caricamento codici"></div>
           } @else if (codiciSconto()!.length === 0) {
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Nessun codice "riservato" disponibile. Creane uno dalla sezione
               Sconti.
             </p>
@@ -542,7 +554,7 @@
           @if (affiliazioni() === null) {
             <div class="spinner" role="status" aria-label="Caricamento affiliazioni"></div>
           } @else if (affiliazioni()!.length === 0) {
-            <p class="admin-item__meta">Nessuna richiesta di affiliazione.</p>
+            <p class="admin-nota">Nessuna richiesta di affiliazione.</p>
           } @else {
             <ul class="admin-history">
               @for (a of affiliazioni()!; track a.id) {
@@ -579,7 +591,7 @@
                 </li>
               }
             </ul>
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Il codice è il numero di pratica dell'iscritto, non un codice da
               dare alla sala. Le decisioni (approva, rifiuta, revoca) si prendono
               nella sezione Affiliazioni.
@@ -595,7 +607,7 @@
           @if (saleDisponibili() === null) {
             <div class="spinner" role="status" aria-label="Caricamento sale"></div>
           } @else if (saleSelezionabili().length === 0) {
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Nessuna sala disponibile: o non ne è configurata nessuna, o
               l'iscritto è già tracciato su tutte.
             </p>
@@ -641,7 +653,7 @@
               <input type="checkbox" formControlName="affApprova" />
               Segnala come già verificata (nasce tracciata)
             </label>
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               ⚠️ L'iscritto non ha dichiarato qui che l'account è suo e non ha
               accettato i termini dal sito: la pratica resta marcata come
               registrata da te. <strong>Non parte alcuna email</strong>, ma la
@@ -673,7 +685,7 @@
           @if (presenzeLive() === null) {
             <div class="spinner" role="status" aria-label="Caricamento presenze"></div>
           } @else if (presenzeLive()!.length === 0) {
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Nessuna partecipazione registrata. Le lezioni su Zoom o Discord si
               svolgono fuori dal sito e non lasciano traccia qui.
             </p>
@@ -693,7 +705,7 @@
           @if (visteLezioni() === null) {
             <div class="spinner" role="status" aria-label="Caricamento viste"></div>
           } @else if (visteLezioni()!.length === 0) {
-            <p class="admin-item__meta">Nessuna lezione aperta.</p>
+            <p class="admin-nota">Nessuna lezione aperta.</p>
           } @else {
             <ul class="admin-history">
               @for (v of visteLezioni()!; track v.lessonId) {
@@ -710,7 +722,7 @@
                 </li>
               }
             </ul>
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               "Aperture" = quante volte ha aperto il video sul sito. La
               percentuale è il punto più avanzato raggiunto ed è una stima per
               difetto (si aggiorna al massimo una volta al minuto).
@@ -727,7 +739,7 @@
           @if (storicoRichieste() === null) {
             <div class="spinner" role="status" aria-label="Caricamento richieste"></div>
           } @else if (storicoRichieste()!.length === 0) {
-            <p class="admin-item__meta">Nessuna richiesta.</p>
+            <p class="admin-nota">Nessuna richiesta.</p>
           } @else {
             <ul class="admin-history">
               @for (r of storicoRichieste()!; track r.id) {
@@ -747,7 +759,7 @@
           @if (storicoAudit() === null) {
             <div class="spinner" role="status" aria-label="Caricamento azioni"></div>
           } @else if (storicoAudit()!.length === 0) {
-            <p class="admin-item__meta">Nessuna azione registrata.</p>
+            <p class="admin-nota">Nessuna azione registrata.</p>
           } @else {
             <ul class="admin-history">
               @for (a of storicoAudit()!; track a.id) {
@@ -767,7 +779,7 @@
       <details class="admin-modale__sez admin-modale__sez--rischio">
         <summary class="admin-modale__sum">Elimina account</summary>
         <div class="admin-modale__corpo">
-          <p class="admin-item__meta">
+          <p class="admin-nota">
             Cancella l'account e tutti i dati collegati. L'operazione è
             irreversibile.
           </p>
