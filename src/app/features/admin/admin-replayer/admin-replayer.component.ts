@@ -160,9 +160,17 @@ export class AdminReplayerComponent {
     }
   }
 
-  /** Il sotto-testo della riga: quando, dove, e in che stato è la mano. */
+  /**
+   * Il sotto-testo della riga: dove si è giocata la mano e in che stato è.
+   *
+   * ⚠️ NON contiene la data: ce l'ha la colonna «Quando», e stamparla due volte
+   * sulla stessa riga rubava ~130px al motivo — che è il testo per cui la riga
+   * esiste, e che infatti usciva troncato. Sotto i 720px quella colonna sparisce
+   * e la data resta nella scheda («Segnalata il …»), come per la data del video
+   * in /admin/lezioni.
+   */
   protected sotto(r: HandReportRow): string {
-    const parti = [this.data(r.createdAt)];
+    const parti: string[] = [];
     if (!r.mano) {
       parti.push('mano non più esistente');
     } else {
