@@ -1,153 +1,76 @@
-// La coda delle segnalazioni. Riusa `admin-shared.scss` per la cornice; qui
-// sotto solo ciò che è proprio di questa schermata.
-
+// La coda delle segnalazioni.
+//
+// ⚠️ Fino all'08/09/2026 la prima riga di questo file diceva «riusa
+// `admin-shared.scss` per la cornice» ed era FALSA: il componente dichiarava
+// `styleUrl` (singolare) col solo foglio locale, quindi `.admin-barra`,
+// `.admin-ico`, `.admin-nota`, `.admin-stato` e la tabella non gli erano
+// nemmeno raggiungibili. Da lì un `h2` più grande dell'`h1` di pagina — la
+// testata usava `.admin-head`, una classe che in tutto il progetto NON ESISTE —
+// e dieci comandi su dodici sotto i 44px. Ora i tre fogli condivisi sono
+// davvero negli `styleUrls`, e qui resta solo ciò che è proprio di questa
+// schermata: cinque regole invece di venti.
+//
 // ⚠️ QUI C'ERA `.ar__filtri`, con `.is-attivo` — un SECONDO nome per lo stato
 // che in tutto il resto del progetto si chiama `is-active`. Due nomi per la
 // stessa cosa non divergono al momento in cui si scrivono: divergono il giorno
 // in cui qualcuno cerca «is-active» per capire come si accende un filtro e
-// questa schermata non compare fra i risultati. Ora il filtro è `app-filtro`,
-// come nelle altre sette sezioni.
+// questa schermata non compare fra i risultati.
+//
+// ⚠️ Sparite con la conversione a tabella: `.ar__lista`, `.ar__riga`,
+// `.ar__sommario`, `.ar__testa`, `.ar__motivo`, `.ar__meta`, `.ar__pannello`,
+// `.ar__contatto`, `.ar__motivo-eti`, `.ar__input`, `.ar__azioni`, `.ar__sep`,
+// `.ar__pager`, `.ar__vuoto`, `.ar__nota` e `.ar__riga--aperta` — quest'ultima
+// nel markup **senza una sola regola CSS**, cioè una riga aperta senza alcun
+// segno visivo. E `.ar__anonimo`, la pastiglia piena «Senza account», che si
+// ripeteva su dodici righe su dodici pur essendo il caso NORMALE, e portava
+// l'unico `#fff` letterale della sezione: un bianco sbagliato nel tema Notte.
 
-.ar__nota {
-  margin: 0 0 1rem;
-  padding: 0.7rem 0.85rem;
-  border-left: 3px solid var(--copper-600);
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
+// La banda d'errore: flex per tenere il messaggio e «Riprova» sulla stessa riga.
+// ⚠️ È `.form-feedback is-error` e non più un riquadro locale col bordo RAME:
+// un errore disegnato color rame si legge come un avviso, non come un guasto.
 .ar__errore {
-  border: 1px solid var(--copper-600);
-  border-radius: var(--radius-md, 10px);
-  padding: 0.8rem;
-}
-
-.ar__vuoto {
-  color: var(--text-muted);
-}
-
-.ar__lista {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.ar__riga {
-  border-top: 1px solid var(--border);
-}
-
-.ar__sommario {
-  display: grid;
-  gap: 0.3rem;
-  width: 100%;
-  min-height: 44px;
-  padding: 0.8rem 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.ar__testa {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
-// ⚠️ In evidenza, perché è il caso che la coda esiste per servire: chi non ha
-// un account è, quasi sempre, il terzo nominato nella mano.
-.ar__anonimo {
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  background: var(--copper-600);
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.ar__motivo {
-  font-weight: 600;
-}
-
-.ar__meta {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.ar__pannello {
-  display: grid;
-  gap: 0.6rem;
-  padding: 0 0 1rem;
-}
-
+// La citazione di chi ha segnalato: è la sua voce, non la nostra.
 .ar__dettaglio {
-  margin: 0;
   font-style: italic;
-  color: var(--text-muted);
 }
 
-.ar__contatto,
-.ar__decisa {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
+// I nomi al tavolo, uno per pastiglia: sono i dati personali di cui si discute,
+// e vanno letti uno per uno prima di decidere.
 .ar__giocatori {
-  margin: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  font-size: 0.88rem;
+  gap: 0.35rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
 
   span {
-    padding: 0.1rem 0.45rem;
-    border: 1px solid var(--border);
-    border-radius: 4px;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
   }
 }
 
-.ar__motivo-eti {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.ar__input {
-  width: 100%;
-  max-width: 34rem;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md, 10px);
-  background: var(--bg);
-  color: var(--text);
-}
-
-.ar__azioni {
+// Il blocco di conferma dell'anonimizzazione.
+// ⚠️ Fino all'08/09/2026 quell'azione — l'unica irreversibile della sezione, e
+// la risposta all'art. 17 — partiva al PRIMO TOCCO, senza alcuna guardia:
+// l'unica del pannello a farlo, su un pulsante che si chiama «irreversibile».
+.ar__conferma {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-// Separa le azioni sulla MANO da quelle sulla SEGNALAZIONE: sono due cose
-// diverse, e un'unica fila di pulsanti le farebbe leggere come alternative.
-.ar__sep {
-  width: 1px;
-  align-self: stretch;
-  background: var(--border);
-  margin: 0 0.3rem;
-}
-
-.ar__pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  font-size: 0.9rem;
-  font-variant-numeric: tabular-nums;
+// L'esito di una segnalazione già decisa.
+.ar__decisa {
+  margin: 0;
 }

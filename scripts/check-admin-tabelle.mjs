@@ -60,6 +60,11 @@ const SEZIONI = [
   'log',
   'iscritti',
   'stakings',
+  // ⚠️ Aggiunta l'08/09/2026: mancava dall'elenco, e per questo la sonda non
+  // aveva mai visto che la sezione non era nemmeno una tabella — non importava
+  // un solo foglio condiviso. Una sonda che non nomina una sezione non la
+  // promuove: non la guarda affatto, che è peggio.
+  'replayer',
 ];
 
 /** Misura ogni `.admin-table__scroll` presente nella pagina. */
@@ -90,6 +95,20 @@ const misura = (page) =>
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+
+// ⚠️ Le risposte fallite si RACCOLGONO, e non è pignoleria: il backend ha un
+// limite globale di 120 richieste al minuto, e questa sonda ne fa quattro giri
+// su tredici sezioni. Quando scatta, la pagina non popola l'elenco e la sonda
+// la classificava fra le «senza tabella per progetto» — cioè annunciava come
+// una scelta di design quello che era un 429. Un conteggio che oscilla senza
+// spiegazione è il primo passo perché nessuno lo guardi più.
+const risposteRotte = new Map();
+page.on('response', (r) => {
+  if (r.status() < 400) return;
+  if (!r.url().includes('/admin/') && !r.url().includes('/api/')) return;
+  const k = `${r.status()} ${new URL(r.url()).pathname}`;
+  risposteRotte.set(k, (risposteRotte.get(k) ?? 0) + 1);
+});
 
 const guasti = [];
 // ⚠️ Le sezioni non misurate si raccolgono su TUTTE le larghezze e si giudicano
@@ -183,6 +202,16 @@ await browser.close();
 
 const senzaTabella = SEZIONI.filter((s) => !conTabella.has(s));
 const senzaRighe = [...conTabella].filter((s) => !conRighe.has(s));
+
+if (risposteRotte.size) {
+  console.log('\n⚠️  L\'API ha rifiutato delle richieste durante il giro:');
+  for (const [k, n] of risposteRotte) console.log(`   ${k} ×${n}`);
+  console.log(
+    '   Una sezione il cui elenco non arriva finisce fra le «senza tabella»,\n' +
+      '   cioè viene scambiata per una scelta di progetto. Se ci sono dei 429 è\n' +
+      '   il limite di 120 richieste al minuto: rilancia più lentamente.',
+  );
+}
 
 if (senzaTabella.length) {
   console.log(`\n·  Senza tabella (card o cruscotto): ${senzaTabella.join(', ')}.`);

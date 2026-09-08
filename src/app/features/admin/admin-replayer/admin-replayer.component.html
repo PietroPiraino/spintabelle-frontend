@@ -1,5 +1,16 @@
-<div class="admin-head">
-  <h2>Segnalazioni sulle mani</h2>
+<div class="admin-users">
+  <div class="admin-barra">
+    <!--
+      ⚠️ Era `.admin-head`, una classe che NON ESISTE: nessuna regola, in nessun
+      foglio del progetto. La testata era letteralmente non stilata, e da lì un
+      `h2` più grande dell'`h1` di pagina.
+    -->
+    <h2 class="admin-barra__titolo">Segnalazioni sulle mani</h2>
+    <span class="admin-barra__conta">
+      {{ total() }} {{ total() === 1 ? 'segnalazione' : 'segnalazioni' }}
+    </span>
+  </div>
+
   <!--
     ⚠️ Erano due `.btn--ghost` con `is-attivo` — un SECONDO nome per lo stato
     che tutto il resto del progetto chiama `is-active` — e nessuna ARIA: due
@@ -13,168 +24,304 @@
     [inerte]="caricando()"
     (scegli)="cambiaFiltro($event)"
   />
+
+  <!--
+    ⚠️ La coda esiste perché chi segnala, nel caso che conta, è un TERZO che si è
+    trovato nominato in una mano: non è un nostro iscritto, non ha altro canale,
+    e non saprà mai se nessuno ha guardato. Una coda non letta trasforma la via
+    di rimozione dell'art. 17 in una cassetta delle lettere murata.
+  -->
+  <p class="admin-nota">
+    Chi segnala spesso <strong>non è iscritto</strong>: è un giocatore che si è
+    trovato nominato in una mano. Le segnalazioni marcate «senza account» sono
+    quelle da guardare per prime.
+  </p>
+
+  @if (errore(); as e) {
+    <div class="form-feedback is-error ar__errore" role="alert">
+      <span>{{ e }}</span>
+      <button type="button" class="btn btn--ghost btn--sm" (click)="carica(page())">
+        Riprova
+      </button>
+    </div>
+  }
+
+  @if (caricando() && !items().length) {
+    <div class="spinner" role="status" aria-label="Caricamento delle segnalazioni"></div>
+  } @else if (!items().length) {
+    <div class="empty-state">
+      <p>
+        @if (stato() === 'APERTA') {
+          Nessuna segnalazione aperta.
+        } @else {
+          Nessuna segnalazione.
+        }
+      </p>
+    </div>
+  } @else {
+    <p class="admin-nota admin-table__nota-mobile">
+      Data, sala e stato della mano sono nella riga; la decisione si prende
+      nella scheda della segnalazione.
+    </p>
+
+    <div class="admin-table__scroll">
+      <table class="admin-table">
+        <caption class="visually-hidden">
+          Segnalazioni sulle mani, dalla più recente
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="admin-table__c-primo">Segnalazione</th>
+            <th scope="col">Stato</th>
+            <th scope="col" class="admin-table__solo-largo">Quando</th>
+            <th scope="col" class="admin-table__c-ultimo">
+              <span class="visually-hidden">Azioni</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of items(); track r.id) {
+            <tr>
+              <th scope="row" class="admin-table__c-primo">
+                <span class="admin-table__ident">
+                  <span class="admin-table__ident-riga">
+                    <strong [title]="etichettaMotivo(r.motivo)">
+                      {{ etichettaMotivo(r.motivo) }}
+                    </strong>
+                  </span>
+                  <span class="admin-table__sub" [title]="sotto(r)">{{ sotto(r) }}</span>
+                </span>
+              </th>
+              <td>
+                <span class="admin-stato" [attr.data-tono]="tono(r.stato)">
+                  {{ etichettaStato(r.stato) }}
+                </span>
+              </td>
+              <td class="admin-table__solo-largo">{{ data(r.createdAt) }}</td>
+              <td class="admin-table__c-ultimo">
+                <button
+                  type="button"
+                  class="admin-ico"
+                  aria-haspopup="dialog"
+                  [attr.aria-label]="'Apri la segnalazione: ' + etichettaMotivo(r.motivo)"
+                  title="Apri la segnalazione"
+                  (click)="apri(r.id)"
+                >
+                  <app-icon name="more-vertical" [size]="18" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="row admin-users__pager">
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm"
+          [disabled]="page() <= 1 || caricando()"
+          (click)="carica(page() - 1)"
+        >
+          ← Precedenti
+        </button>
+        <span class="admin-item__meta">
+          Pagina {{ page() }} di {{ totalPages() }}
+        </span>
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm"
+          [disabled]="page() >= totalPages() || caricando()"
+          (click)="carica(page() + 1)"
+        >
+          Successive →
+        </button>
+      </div>
+    }
+  }
 </div>
 
 <!--
-  ⚠️ La coda esiste perché chi segnala, nel caso che conta, è un TERZO che si è
-  trovato nominato in una mano: non è un nostro iscritto, non ha altro canale, e
-  non saprà mai se nessuno ha guardato. Una coda non letta trasforma la via di
-  rimozione dell'art. 17 in una cassetta delle lettere murata.
+  La SCHEDA della segnalazione: cosa è stato scritto, chi c'era al tavolo, e le
+  cinque decisioni.
+
+  ⚠️ Era una fisarmonica senza una sola ARIA — niente `aria-expanded`, niente
+  `aria-controls`, nessun id sul pannello — e con la classe della riga aperta
+  priva di regole CSS: chi usa uno screen reader sentiva un bottone che non
+  dichiarava di aprire niente, chi guardava non aveva alcun segno che la riga
+  fosse espandibile. Il `<dialog>` quelle cose le dà il browser.
 -->
-<p class="ar__nota">
-  Chi segnala spesso <strong>non è iscritto</strong>: è un giocatore che si è
-  trovato nominato in una mano. Le segnalazioni marcate «senza account» sono
-  quelle da guardare per prime.
-</p>
+@if (scheda(); as r) {
+  <app-modal
+    [titolo]="etichettaMotivo(r.motivo)"
+    [sottotitolo]="etichettaStato(r.stato)"
+    (chiusa)="chiudi()"
+  >
+    <div class="admin-modale">
+      <p class="admin-nota admin-modale__anagrafica">
+        Segnalata il {{ data(r.createdAt) }}
+        @if (r.senzaAccount) { · da chi non è iscritto }
+        @if (r.mano) { · {{ r.mano.roomLabel }} } @else { · mano non più esistente }
+      </p>
 
-@if (errore(); as e) {
-  <div class="ar__errore" role="alert">
-    <p>{{ e }}</p>
-    <button type="button" class="btn btn--ghost btn--sm" (click)="carica(page())">
-      Riprova
-    </button>
-  </div>
-} @else if (caricando() && !items().length) {
-  <p class="ar__vuoto">Carico…</p>
-} @else if (!items().length) {
-  <div class="empty-state">
-    <p>
-      @if (stato() === 'APERTA') {
-        Nessuna segnalazione aperta.
-      } @else {
-        Nessuna segnalazione.
+      @if (r.dettaglio) {
+        <p class="admin-nota ar__dettaglio">«{{ r.dettaglio }}»</p>
       }
-    </p>
-  </div>
-} @else {
-  <ul class="ar__lista">
-    @for (r of items(); track r.id) {
-      <li class="ar__riga" [class.ar__riga--aperta]="aperto() === r.id">
-        <button type="button" class="ar__sommario" (click)="apri(r.id)">
-          <span class="ar__testa">
-            @if (r.senzaAccount) {
-              <span class="ar__anonimo">Senza account</span>
-            }
-            <span class="ar__motivo">{{ etichettaMotivo(r.motivo) }}</span>
-            <span class="badge badge--tag">{{ r.stato }}</span>
-          </span>
-          <span class="ar__meta">
-            {{ data(r.createdAt) }}
-            @if (r.mano) {
-              · {{ r.mano.roomLabel }}
-              @if (r.mano.status === 'RIMOSSA') {
-                · <strong>già rimossa</strong>
-              }
-              @if (r.mano.anonimizzata) {
-                · <strong>già anonimizzata</strong>
-              }
-            } @else {
-              · <strong>mano non più esistente</strong>
-            }
-          </span>
-        </button>
+      @if (r.contatto) {
+        <p class="admin-nota">Recapito lasciato: {{ r.contatto }}</p>
+      }
 
-        @if (aperto() === r.id) {
-          <div class="ar__pannello">
-            @if (r.dettaglio) {
-              <p class="ar__dettaglio">«{{ r.dettaglio }}»</p>
+      @if (r.mano) {
+        <details class="admin-modale__sez" open>
+          <summary class="admin-modale__sum">La mano</summary>
+          <div class="admin-modale__corpo">
+            <p class="ar__giocatori">
+              Al tavolo:
+              @for (g of r.mano.players; track g.nome) {
+                <span>{{ g.posizione }} {{ g.nome }}</span>
+              }
+            </p>
+            @if (r.mano.status === 'RIMOSSA') {
+              <p class="admin-nota">Già rimossa dal pubblico.</p>
             }
-            @if (r.contatto) {
-              <p class="ar__contatto">Recapito lasciato: {{ r.contatto }}</p>
+            @if (r.mano.anonimizzata) {
+              <p class="admin-nota">Già anonimizzata.</p>
             }
-            @if (r.mano) {
-              <p class="ar__giocatori">
-                Al tavolo:
-                @for (p of r.mano.players; track p.nome) {
-                  <span>{{ p.posizione }} {{ p.nome }}</span>
-                }
-              </p>
-              <a
-                class="btn btn--ghost btn--sm"
-                [routerLink]="['/replayer', r.handPublicId]"
-                target="_blank"
-                >Apri la mano</a
+            <a
+              class="btn btn--ghost btn--sm"
+              [routerLink]="['/replayer', r.handPublicId]"
+              target="_blank"
+              >Apri la mano</a
+            >
+          </div>
+        </details>
+      }
+
+      @if (r.stato === 'APERTA') {
+        <div class="field">
+          <label [attr.for]="'ar-m-' + r.id">
+            Motivo della decisione (resta agli atti)
+          </label>
+          <!--
+            ⚠️ `class="input"` e non più `.ar__input`, che era un campo
+            riscritto a mano: stava sui 37px contro i 44 di ogni altro campo del
+            pannello, ed era l'unico input del pannello fuori dal primitivo.
+          -->
+          <input
+            [id]="'ar-m-' + r.id"
+            class="input"
+            type="text"
+            [(ngModel)]="motivo"
+            placeholder="Perché hai deciso così…"
+          />
+        </div>
+
+        <!-- ── Chiudere la segnalazione ─────────────────────────────────── -->
+        <details class="admin-modale__sez" open>
+          <summary class="admin-modale__sum">Chiudi la segnalazione</summary>
+          <div class="admin-modale__corpo">
+            <p class="admin-nota">
+              Chiude la pratica senza toccare la mano: da usare quando la mano è
+              già a posto, o quando la richiesta non è fondata.
+            </p>
+            <div class="row admin-panel__actions">
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm ar__accogli"
+                (click)="accogli(r)"
               >
-            }
+                Chiudi: accolta
+              </button>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm ar__respingi"
+                (click)="respingi(r)"
+              >
+                Chiudi: respinta
+              </button>
+            </div>
+          </div>
+        </details>
 
-            @if (r.stato === 'APERTA') {
-              <label class="ar__motivo-eti" [attr.for]="'ar-m-' + r.id">
-                Motivo della decisione (resta agli atti)
-              </label>
-              <input
-                [id]="'ar-m-' + r.id"
-                class="ar__input"
-                type="text"
-                [(ngModel)]="motivo"
-                placeholder="Perché hai deciso così…"
-              />
+        <!-- ── I dati della mano ────────────────────────────────────────── -->
+        <details class="admin-modale__sez admin-modale__sez--rischio" open>
+          <summary class="admin-modale__sum">Sui dati della mano</summary>
+          <div class="admin-modale__corpo">
+            <!--
+              ⚠️ TRE AZIONI, TRE SIGNIFICATI, e le etichette non si toccano:
+              sono la via con cui un terzo esercita l'art. 17. «Togli i nomi» è
+              la risposta che non distrugge la mano — il terzo esce dal
+              documento e chi studia continua a vederla. «Rimuovi» toglie la
+              pagina ma lascia il nome nel documento: non è una cancellazione, e
+              non va usata quando la richiesta è quella.
+            -->
+            <p class="admin-nota">
+              «Togli i nomi» è la risposta a chi chiede di sparire dal documento:
+              la mano resta studiabile, il nome no. «Rimuovi» toglie solo la
+              pagina — il nome resta scritto dentro, quindi non è una
+              cancellazione.
+            </p>
 
-              <div class="ar__azioni">
-                <!--
-                  ⚠️ TRE AZIONI, TRE SIGNIFICATI. «Togli i nomi» è la risposta
-                  all'art. 17 che non distrugge la mano: il terzo esce dal
-                  documento e chi studia continua a vederla. «Rimuovi» toglie la
-                  pagina ma lascia il nome nel documento — non è una
-                  cancellazione, e non va usata quando la richiesta è quella.
-                -->
+            @if (inConferma('anonimizza:' + r.id)) {
+              <div class="ar__conferma">
+                <p class="admin-nota">
+                  I nickname di tutti i giocatori di questa mano vengono
+                  sostituiti con le posizioni al tavolo. Il testo originale non
+                  si conserva: <strong>non si torna indietro</strong>.
+                </p>
+                <div class="row admin-panel__actions">
+                  <button
+                    type="button"
+                    class="btn btn--danger-solid btn--sm ar__conferma-si"
+                    (click)="anonimizza(r)"
+                  >
+                    Togli i nomi per sempre
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm ar__conferma-no"
+                    (click)="annullaConferma()"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <div class="row admin-panel__actions">
                 <button
                   type="button"
-                  class="btn btn--primary btn--sm"
-                  (click)="anonimizza(r)"
+                  class="btn btn--danger btn--sm ar__anonimizza"
+                  (click)="chiediConferma('anonimizza:' + r.id)"
                 >
                   Togli i nomi (irreversibile)
                 </button>
-                <button type="button" class="btn btn--ghost btn--sm" (click)="rimuovi(r)">
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm ar__rimuovi"
+                  (click)="rimuovi(r)"
+                >
                   Rimuovi la mano
                 </button>
                 <button
                   type="button"
-                  class="btn btn--ghost btn--sm"
+                  class="btn btn--ghost btn--sm ar__ripristina"
                   (click)="ripristina(r)"
                 >
                   Ripristina
                 </button>
-                <span class="ar__sep"></span>
-                <button type="button" class="btn btn--ghost btn--sm" (click)="accogli(r)">
-                  Chiudi: accolta
-                </button>
-                <button type="button" class="btn btn--ghost btn--sm" (click)="respingi(r)">
-                  Chiudi: respinta
-                </button>
               </div>
-            } @else {
-              <p class="ar__decisa">
-                Chiusa come <strong>{{ r.stato }}</strong>
-                @if (r.decisionNote) {
-                  — «{{ r.decisionNote }}»
-                }
-              </p>
             }
           </div>
-        }
-      </li>
-    }
-  </ul>
-
-  @if (totalPages() > 1) {
-    <div class="ar__pager">
-      <button
-        type="button"
-        class="btn btn--ghost btn--sm"
-        [disabled]="page() <= 1"
-        (click)="carica(page() - 1)"
-      >
-        Precedente
-      </button>
-      <span>{{ page() }} di {{ totalPages() }}</span>
-      <button
-        type="button"
-        class="btn btn--ghost btn--sm"
-        [disabled]="page() >= totalPages()"
-        (click)="carica(page() + 1)"
-      >
-        Successiva
-      </button>
+        </details>
+      } @else {
+        <p class="admin-nota ar__decisa">
+          Chiusa come <strong>{{ etichettaStato(r.stato) }}</strong>
+          @if (r.decisionNote) {
+            — «{{ r.decisionNote }}»
+          }
+        </p>
+      }
     </div>
-  }
+  </app-modal>
 }
