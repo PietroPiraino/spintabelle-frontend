@@ -30,7 +30,7 @@
       }
     </div>
 
-    <p class="admin-item__meta">
+    <p class="admin-nota">
       Chi è entrato nella sala, quando e per quanto. Il registro esiste solo per le
       lezioni on-site: le sessioni su Zoom o Discord si svolgono fuori dal sito e
       non lasciano alcuna traccia qui.
@@ -92,11 +92,11 @@
               <div class="form-feedback is-error" role="alert">{{ reportError() }}</div>
             } @else if (report(); as r) {
               @if (r.partecipanti.length === 0) {
-                <p class="admin-item__meta">
+                <p class="admin-nota">
                   Nessun ingresso registrato per questa sessione.
                 </p>
               } @else {
-                <p class="admin-item__meta">
+                <p class="admin-nota">
                   <strong>{{ r.totali.partecipanti }}</strong> partecipanti
                   @if (r.totali.mediaMinuti !== null) {
                     · permanenza media <strong>{{ r.totali.mediaMinuti }} min</strong>
@@ -106,7 +106,7 @@
                   }
                 </p>
                 @if (r.totali.troncato) {
-                  <p class="admin-item__meta">
+                  <p class="admin-nota">
                     ⚠️ Elenco troppo lungo: sono mostrati i primi ingressi registrati.
                   </p>
                 }
@@ -139,7 +139,7 @@
                   }
                 </ul>
 
-                <p class="admin-item__meta">
+                <p class="admin-nota">
                   "Durata stimata" significa che l'avviso di uscita non è mai
                   arrivato (browser chiuso di colpo, rete caduta): il tempo è
                   dedotto, non misurato. Chi cancella il proprio account sparisce
@@ -165,7 +165,7 @@
       }
     </div>
 
-    <p class="admin-item__meta">
+    <p class="admin-nota">
       Qui si contano le <strong>aperture fatte dal sito</strong>, persona per
       persona: questi numeri e quelli del riquadro Video delle statistiche non
       coincidono e non devono coincidere. La percentuale vista è il punto più
@@ -219,7 +219,7 @@
                 <div class="spinner" role="status" aria-label="Caricamento spettatori"></div>
               } @else if (viewers(); as people) {
                 @if (people.length === 0) {
-                  <p class="admin-item__meta">Nessuno l'ha ancora aperta.</p>
+                  <p class="admin-nota">Nessuno l'ha ancora aperta.</p>
                 } @else {
                   <ul class="admin-history">
                     @for (p of people; track p.userId) {

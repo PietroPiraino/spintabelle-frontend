@@ -1,23 +1,18 @@
 <div class="admin-head">
   <h2>Segnalazioni sulle mani</h2>
-  <div class="ar__filtri">
-    <button
-      type="button"
-      class="btn btn--ghost btn--sm"
-      [class.is-attivo]="stato() === 'APERTA'"
-      (click)="cambiaFiltro('APERTA')"
-    >
-      Aperte
-    </button>
-    <button
-      type="button"
-      class="btn btn--ghost btn--sm"
-      [class.is-attivo]="stato() === 'TUTTE'"
-      (click)="cambiaFiltro('TUTTE')"
-    >
-      Tutte
-    </button>
-  </div>
+  <!--
+    ⚠️ Erano due `.btn--ghost` con `is-attivo` — un SECONDO nome per lo stato
+    che tutto il resto del progetto chiama `is-active` — e nessuna ARIA: due
+    bottoni che non dicevano di essere una scelta esclusiva né quale fosse
+    quella attiva.
+  -->
+  <app-filtro
+    etichetta="Filtra le segnalazioni"
+    [voci]="vociFiltro"
+    [scelto]="stato()"
+    [inerte]="caricando()"
+    (scegli)="cambiaFiltro($event)"
+  />
 </div>
 
 <!--

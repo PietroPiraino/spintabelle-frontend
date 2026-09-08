@@ -15,23 +15,20 @@
     </div>
 
     <div class="row admin-stats__controls">
-      <div
-        class="admin-stats__pills"
-        role="group"
-        aria-label="Profondità della serie mensile"
-      >
-        @for (r of mesiRanges; track r) {
-          <button
-            type="button"
-            class="btn btn--ghost btn--sm"
-            [class.is-active]="mesi() === r"
-            [attr.aria-pressed]="mesi() === r"
-            (click)="setMesi(r)"
-          >
-            {{ r }} mesi
-          </button>
-        }
-      </div>
+      <!--
+        ⚠️ Erano bottoni con `aria-pressed` dentro un `role="group"`: la
+        grammatica dei TOGGLE INDIPENDENTI su una scelta ESCLUSIVA. Uno screen
+        reader annunciava «tre interruttori, uno premuto» invece di «radio 2 di
+        3». È lo stesso difetto già corretto su `/admin/news`, rimasto vivo qui
+        perché questa sezione non era nel perimetro di quel lotto.
+      -->
+      <app-filtro
+        etichetta="Profondità della serie mensile"
+        [voci]="vociMesi"
+        [scelto]="mesiScelto()"
+        [inerte]="statsLoading()"
+        (scegli)="setMesiDaFiltro($event)"
+      />
       <button
         type="button"
         class="btn btn--ghost btn--sm"
@@ -696,23 +693,13 @@
     </div>
 
     <div class="row admin-stats__controls">
-      <div
-        class="admin-stats__pills"
-        role="group"
-        aria-label="Finestra dell'andamento giornaliero"
-      >
-        @for (r of giorniRanges; track r) {
-          <button
-            type="button"
-            class="btn btn--ghost btn--sm"
-            [class.is-active]="giorni() === r"
-            [attr.aria-pressed]="giorni() === r"
-            (click)="setGiorni(r)"
-          >
-            {{ r }} giorni
-          </button>
-        }
-      </div>
+      <app-filtro
+        etichetta="Finestra dell'andamento giornaliero"
+        [voci]="vociGiorni"
+        [scelto]="giorniScelto()"
+        [inerte]="videoLoading()"
+        (scegli)="setGiorniDaFiltro($event)"
+      />
       <button
         type="button"
         class="btn btn--ghost btn--sm"

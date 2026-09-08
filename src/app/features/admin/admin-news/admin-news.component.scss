@@ -1,58 +1,25 @@
-// Archivio news: chip di stato, pillole di filtro e blocchi di conferma.
+// Archivio news: pillole di filtro e blocchi di conferma.
 //
-// ⚠️ Locale al tab, come le `.aff-chip` delle affiliazioni: quelle classi sono
-// il MODELLO da copiare, non da importare — un chip condiviso fra due sezioni
-// legherebbe due macchine a stati diverse allo stesso foglio.
-
-// Chip di stato: stesso chrome del badge, un colore per stato. L'etichetta
-// arriva da `NEWS_STATUS_LABELS` (sede unica), qui c'è solo il colore.
-.an-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: 1px solid currentColor;
-  white-space: nowrap;
-}
-
-// Non ancora in gioco.
-.an-chip--bozza {
-  color: var(--text-faint);
-}
-
-// Aspetta una persona: è l'unico stato che ha una coda dedicata.
-.an-chip--in_revisione {
-  color: var(--ember);
-}
-
-// Online.
-.an-chip--pubblicato {
-  color: var(--gold-text);
-}
-
-// Deciso in negativo.
-.an-chip--scartato {
-  color: var(--danger);
-}
-
-// Chiuso dal tempo, non da una persona: muto, ma distinto dalla bozza.
-.an-chip--scaduto {
-  color: var(--text-muted);
-}
-
-// ⚠️ NON è un sesto stato: è la sua ASSENZA (riga storica che la migrazione
-// legacy non ha toccato — il suo catch non rilancia, quindi è uno stato del
-// mondo possibile). Bordo tratteggiato di proposito: con lo stesso chrome degli
-// altri si leggerebbe come uno stato legittimo della macchina, e la riga
-// sembrerebbe decidibile quando non lo è.
-.an-chip--ignoto {
-  color: var(--danger);
-  border-style: dashed;
-}
+// ⚠️ QUI C'ERA `.an-chip`, il chip di stato, e con lui un commento che
+// dichiarava le `.aff-chip` delle affiliazioni «il MODELLO da copiare, non da
+// importare — un chip condiviso fra due sezioni legherebbe due macchine a stati
+// diverse allo stesso foglio». La copia è stata fatta tre volte e il risultato
+// misurato l'08/09/2026: `.an-chip`, `.aff-chip` e `.shop-chip` avevano la
+// dichiarazione base IDENTICA parola per parola, e perfino la stessa
+// corrispondenza stato→colore (faint, ember, oro, danger). Due macchine a stati
+// diverse non producevano due disegni diversi: producevano lo stesso disegno
+// tenuto allineato a mano in tre file.
+//
+// Ora il chrome è `.admin-stato` (in `admin-shared.scss`) e il colore lo decide
+// un `data-tono`, cioè un SIGNIFICATO — «in attesa», «deciso in negativo» —
+// invece di sedici classi modificatrici. La corrispondenza stato→tono vive nel
+// `switch` esaustivo di `tono()` nel componente, dove TypeScript non lascia
+// aggiungere uno stato senza deciderne la resa.
+//
+// ⚠️ Il timore che c'era dietro quel commento resta valido e ha una risposta:
+// i toni del PERCORSO non si mescolano con quelli della SALUTE di
+// `/admin/fonti`, che si chiamano `sana`/`degradata`/`morta` proprio per non
+// costringere la parola «allarme» a valere due colori.
 
 // ⚠️ `.admin-barra__conta` è `nowrap` (nasce per "12 iscritti"): qui la riga
 // porta anche il nome del filtro e su telefono deve poter andare a capo.

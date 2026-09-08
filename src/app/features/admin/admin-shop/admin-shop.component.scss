@@ -1,10 +1,14 @@
 // Chrome extra per la tab Negozio: miniatura prodotto + chip stato ordine.
 // Il resto riusa admin-shared.scss.
 
+// ⚠️ 32px e non i 56 di prima: `height: 44px` su una cella è un MINIMO, quindi
+// un'immagine da 56 più i 9,6 di padding faceva una riga da 66px — la tabella
+// Prodotti era l'unica del pannello a non stare nel passo delle altre dieci, e
+// si vedeva passando da una sezione all'altra. A 32 la riga torna a 44.
 .shop-thumb {
   flex: 0 0 auto;
-  width: 56px;
-  height: 56px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-sm);
   object-fit: cover;
   border: 1px solid var(--line);
@@ -40,33 +44,9 @@
   min-width: 0;
 }
 
-// Chip di stato ordine: stesso chrome del badge ma colore per stato.
-.shop-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: 1px solid currentColor;
-  white-space: nowrap;
-}
-
-.shop-chip--ricevuto {
-  color: var(--gold-text);
-}
-
-.shop-chip--spedito {
-  color: var(--ember);
-}
-
-.shop-chip--consegnato,
-.shop-chip--completed {
-  color: var(--copper-600, var(--copper-400));
-}
-
-.shop-chip--annullato {
-  color: var(--danger);
-}
+// ⚠️ QUI C'ERA `.shop-chip`, e la sua dichiarazione base era identica parola
+// per parola a quelle di `.an-chip` (news) e `.aff-chip` (affiliazioni). Ora il
+// chrome è `.admin-stato` (in `admin-shared.scss`) e il colore lo decide un
+// `data-tono`; la corrispondenza stato→tono sta nel `switch` di `tono()`.
+// ⚠️ «Consegnato» e «Completato» hanno un tono PROPRIO (`concluso`) e non
+// quello di «Ricevuto»: sono la fine del percorso, non il suo inizio.

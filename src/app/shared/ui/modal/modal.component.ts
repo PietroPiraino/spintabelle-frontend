@@ -190,6 +190,14 @@ export class ModalComponent {
   /** La ✕ e «Annulla» sono gesti deliberati: chiudono anche da sporca. */
   protected chiudi(): void {
     this.confermaUscita.set(false);
+    // ⚠️ Il `<dialog>` si chiude SUBITO, prima di emettere. Non è cosmesi: il
+    // chiamante gestisce `(chiusa)` in modo sincrono — spesso mostrando un
+    // toast di conferma — e finché il dialog è aperto quel toast dipinge dietro
+    // il fondale, perché il top layer copre qualunque `position: fixed`. Il
+    // ripiegamento del genitore (`@if` che distrugge il componente) arriva un
+    // ciclo dopo, e un ciclo dopo è già tardi. Il `DestroyRef` fa comunque la
+    // sua parte: chiudere due volte un `<dialog>` è un no-op.
+    this.d?.close();
     this.chiusa.emit();
   }
 

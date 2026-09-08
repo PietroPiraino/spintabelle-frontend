@@ -85,7 +85,9 @@
                 [attr.aria-label]="'Copia il numero di pratica ' + a.refCode"
                 (click)="copy(a.refCode, 'Numero di pratica')"
               ><app-icon name="copy" [size]="15" /></button>
-              <span [class]="chipClass(a.status)">{{ a.statusLabel }}</span>
+              <span class="admin-stato" [attr.data-tono]="tono(a.status)">
+                {{ a.statusLabel }}
+              </span>
               @if (a.riaperture > 0) {
                 <span class="badge">{{ a.riaperture }} riaperture</span>
               }

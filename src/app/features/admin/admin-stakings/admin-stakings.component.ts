@@ -20,6 +20,10 @@ import { apiErrorMessage } from '../../../core/utils/http-error';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { ModalComponent } from '../../../shared/ui/modal/modal.component';
 import {
+  FiltroComponent,
+  VoceFiltro,
+} from '../../../shared/ui/filtro/filtro.component';
+import {
   formattaCent,
   parseImportoInCent,
   testoEv,
@@ -38,7 +42,13 @@ type FiltroStato = StakingStato | 'TUTTI';
  */
 @Component({
   selector: 'app-admin-stakings',
-  imports: [ReactiveFormsModule, DatePipe, ModalComponent, IconComponent],
+  imports: [
+    ReactiveFormsModule,
+    DatePipe,
+    ModalComponent,
+    IconComponent,
+    FiltroComponent,
+  ],
   templateUrl: './admin-stakings.component.html',
   styleUrls: [
     '../admin-shared.scss',
@@ -59,6 +69,13 @@ export class AdminStakingsComponent {
   protected readonly salvando = signal(false);
 
   protected readonly filtro = signal<FiltroStato>('APERTO');
+
+  /** Le tre voci del filtro, per `app-filtro`. */
+  protected readonly vociFiltro: readonly VoceFiltro<FiltroStato>[] = [
+    { valore: 'APERTO', etichetta: 'In corso' },
+    { valore: 'CHIUSO', etichetta: 'Chiusi' },
+    { valore: 'TUTTI', etichetta: 'Tutti' },
+  ];
   private readonly pagina = signal(1);
 
   // ── Modale ───────────────────────────────────────────────────────────────

@@ -31,6 +31,7 @@ import {
 } from '../../../shared/ui/filtro/filtro.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { ModalComponent } from '../../../shared/ui/modal/modal.component';
+import { TonoStato } from '../admin-stato';
 import {
   SchedeComponent,
   VoceScheda,
@@ -453,8 +454,31 @@ export class AdminShopComponent {
     );
   }
 
-  protected statusChipClass(status: ShopOrderStatus): string {
-    return `shop-chip shop-chip--${status.toLowerCase()}`;
+  /**
+   * Il tono della pastiglia di stato (`.admin-stato`, in `admin-shared.scss`).
+   *
+   * ⚠️ Era `statusChipClass()` e componeva il nome di una classe interpolando lo
+   * stato in minuscolo. Un `switch` esaustivo al suo posto è ciò che rende
+   * impossibile aggiungere uno stato e dimenticarne la resa: TypeScript non
+   * compila il caso mancante, mentre l'interpolazione produceva in silenzio una
+   * classe che nessun foglio dichiara — cioè una pastiglia senza colore.
+   *
+   * ⚠️ «Consegnato» e «Completato» NON prendono il tono di «Ricevuto»: sono la
+   * fine del percorso, non il suo inizio, e con lo stesso colore i due passi
+   * diventerebbero uno solo proprio nella colonna che esiste per distinguerli.
+   */
+  protected tono(status: ShopOrderStatus): TonoStato {
+    switch (status) {
+      case 'RICEVUTO':
+        return 'ok';
+      case 'SPEDITO':
+        return 'attesa';
+      case 'CONSEGNATO':
+      case 'COMPLETED':
+        return 'concluso';
+      case 'ANNULLATO':
+        return 'allarme';
+    }
   }
 
   // Nota di tracking inline per "Segna spedito".

@@ -6,6 +6,10 @@ import {
   HandReportRow,
 } from '../../../core/services/admin-hands.service';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
+import {
+  FiltroComponent,
+  VoceFiltro,
+} from '../../../shared/ui/filtro/filtro.component';
 
 /**
  * `/admin/replayer` — la coda delle segnalazioni sulle mani.
@@ -29,7 +33,7 @@ import { ToastService } from '../../../shared/ui/toast/toast.service';
  */
 @Component({
   selector: 'app-admin-replayer',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, FiltroComponent],
   templateUrl: './admin-replayer.component.html',
   styleUrl: './admin-replayer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +47,12 @@ export class AdminReplayerComponent {
   protected readonly page = signal(1);
   protected readonly totalPages = signal(1);
   protected readonly stato = signal<'APERTA' | 'TUTTE'>('APERTA');
+
+  /** Le due voci del filtro, per `app-filtro`. */
+  protected readonly vociFiltro: readonly VoceFiltro<'APERTA' | 'TUTTE'>[] = [
+    { valore: 'APERTA', etichetta: 'Aperte' },
+    { valore: 'TUTTE', etichetta: 'Tutte' },
+  ];
   protected readonly caricando = signal(false);
   protected readonly errore = signal<string | null>(null);
 

@@ -38,11 +38,16 @@
 
 // L'età dei dati sta accanto al titolo, non in un tooltip: la pagina non è live
 // e deve dirlo da sola.
+// ⚠️ Non più monospace. Sono due frasi intere («Calcolate il … alle … · si
+// aggiornano ogni N minuti: non sono in tempo reale»), non un'etichetta da tre
+// parole, e in mono da 11,5px con `letter-spacing` si leggevano come output di
+// un terminale — lo stesso difetto di `.admin-item__meta` usata sui `<p>`, qui
+// travestito da classe locale, quindi invisibile a quella correzione.
 .admin-stats__age {
   margin: 0.3rem 0 0;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  max-width: 74ch;
+  font-size: 0.8rem;
+  line-height: 1.5;
   color: var(--text-faint);
 }
 

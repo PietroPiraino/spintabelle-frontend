@@ -171,7 +171,7 @@ describe('AdminFontiComponent', () => {
       }),
     ]);
 
-    expect(q('.fnt-chip')?.getAttribute('data-tono')).toBe('spenta');
+    expect(q('.admin-stato')?.getAttribute('data-tono')).toBe('spenta');
     expect(q('.fnt-row')?.getAttribute('data-tono')).toBe('spenta');
     expect(testo()).toContain('Spenta');
     expect(testo()).toContain('Ultima valutazione da accesa: Morta — congelata');
@@ -195,8 +195,11 @@ describe('AdminFontiComponent', () => {
       }),
     ]);
 
-    const chip = q('.fnt-chip');
-    expect(chip?.getAttribute('data-tono')).toBe('attesa');
+    const chip = q('.admin-stato');
+    // ⚠️ `incerta` e non `attesa`: i toni della SALUTE hanno parole proprie,
+    // diverse da quelle del PERCORSO (`admin-stato.ts`), perché le stesse tre
+    // parole valevano due colori a seconda della sezione.
+    expect(chip?.getAttribute('data-tono')).toBe('incerta');
     expect(chip?.textContent).toContain('In attesa del primo articolo');
     // ⚠️ «Sotto osservazione», non «accesa»: `osservataDa` non si azzera
     // spegnendo e riaccendendo — vedi la prova dedicata in fondo al file.
@@ -330,7 +333,7 @@ describe('AdminFontiComponent', () => {
     const avvisi = qa('.fnt-row__avvisi li').map((li) => li.textContent ?? '');
     expect(avvisi.join(' ')).toContain('Volume atteso non impostato');
     expect(avvisi.join(' ')).toContain('non darà mai un allarme');
-    expect(q('.fnt-chip')?.getAttribute('data-tono')).toBe('ok');
+    expect(q('.admin-stato')?.getAttribute('data-tono')).toBe('sana');
   });
 
   /**
@@ -805,11 +808,11 @@ describe('AdminFontiComponent', () => {
       fonteOf({ id: 'c', slug: 'c', enabled: false }),
     ]);
 
-    expect(q('[data-voce="ok"]')?.textContent).toContain('1');
+    expect(q('[data-voce="sana"]')?.textContent).toContain('1');
     expect(q('[data-voce="spenta"]')?.textContent).toContain('2');
     // Nessuna degradata, nessuna morta: le voci a zero non compaiono.
-    expect(q('[data-voce="allarme"]')).toBeNull();
-    expect(q('[data-voce="grave"]')).toBeNull();
+    expect(q('[data-voce="degradata"]')).toBeNull();
+    expect(q('[data-voce="morta"]')).toBeNull();
   });
 
   // ── Nessun modale, nessun confirm() nativo ────────────────────────────────

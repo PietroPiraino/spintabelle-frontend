@@ -1,15 +1,12 @@
 // La coda delle segnalazioni. Riusa `admin-shared.scss` per la cornice; qui
 // sotto solo ciò che è proprio di questa schermata.
 
-.ar__filtri {
-  display: flex;
-  gap: 0.4rem;
-
-  .is-attivo {
-    border-color: var(--copper-600);
-    color: var(--copper-600);
-  }
-}
+// ⚠️ QUI C'ERA `.ar__filtri`, con `.is-attivo` — un SECONDO nome per lo stato
+// che in tutto il resto del progetto si chiama `is-active`. Due nomi per la
+// stessa cosa non divergono al momento in cui si scrivono: divergono il giorno
+// in cui qualcuno cerca «is-active» per capire come si accende un filtro e
+// questa schermata non compare fra i risultati. Ora il filtro è `app-filtro`,
+// come nelle altre sette sezioni.
 
 .ar__nota {
   margin: 0 0 1rem;

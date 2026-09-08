@@ -145,16 +145,14 @@
   flex-wrap: wrap;
   gap: 0.6rem;
 
-  // ⚠️ Il rosso arriva SEMPRE da `--danger`, anche velato: il token vale
-  // `#d9442f` in Ghiaccio/Tramonto ma `#ff7a66` in Notte, quindi un rgba()
-  // scritto a mano è il rosso del tema chiaro stampato sul tema scuro — un
-  // errore che non rompe niente e non si vede finché non si guarda il tema
-  // giusto. `color-mix` è l'idioma già usato in sala live.
-  &.is-urgente .rz__deadline {
-    color: var(--danger);
-    border-color: color-mix(in srgb, var(--danger) 45%, transparent);
-    background: color-mix(in srgb, var(--danger) 8%, transparent);
-  }
+  // ⚠️ Il rosso dell'urgenza NON è più qui: la pastiglia è `.admin-stato` e il
+  // suo tono passa da `neutro` ad `allarme`, cioè lo dice una parola invece di
+  // un colore riscritto a mano. La lezione che c'era attaccata resta valida e
+  // vale per tutto il foglio: il rosso arriva SEMPRE da `--danger`, anche
+  // velato — il token vale `#d9442f` in Ghiaccio/Tramonto ma `#ff7a66` in
+  // Notte, quindi un rgba() scritto a mano è il rosso del tema chiaro stampato
+  // sul tema scuro, un errore che non rompe niente e non si vede finché non si
+  // guarda il tema giusto.
 }
 
 .rz__cat {
@@ -162,19 +160,11 @@
   color: var(--copper-600);
 }
 
-.rz__deadline {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.22rem 0.7rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  background: var(--surface-2);
-}
+// ⚠️ QUI C'ERA `.rz__deadline`, ed era la QUINTA pastiglia di stato del
+// pannello — sfuggita a tutti i conteggi perché il suo contenuto è un conto
+// alla rovescia e non il nome di uno stato, mentre il disegno era quello. Ora è
+// `.admin-stato` col `data-tono`, come le altre quattro. A trovarla è stata la
+// guardia `scripts/lib/pastiglia-stato.test.mjs`, non una lettura.
 
 .rz__snoozed {
   font-size: 0.8rem;

@@ -242,14 +242,15 @@ describe('AdminNewsComponent', () => {
 
     // I cinque stati sono TUTTI raggiungibili da qui: è il punto del lotto.
     expect(righe().length).toBe(5);
-    for (const variante of [
-      'an-chip--bozza',
-      'an-chip--in_revisione',
-      'an-chip--pubblicato',
-      'an-chip--scartato',
-      'an-chip--scaduto',
-    ]) {
-      expect(uno(`.an-chip.${variante}`)).withContext(variante).not.toBeNull();
+    // ⚠️ Questo assert leggeva le cinque classi `an-chip--<stato>`, cioè
+    // congelava il MECCANISMO invece dell'intento. Il chip di stato è ora
+    // `.admin-stato` col tono in un attributo, e i toni non sono cinque perché
+    // due stati possono condividerne uno: quello che va pinnato è che ogni
+    // stato ARRIVI a schermo con un tono dichiarato, non quale.
+    for (const tono of ['spento', 'attesa', 'ok', 'allarme', 'neutro']) {
+      expect(uno(`.admin-stato[data-tono="${tono}"]`))
+        .withContext(tono)
+        .not.toBeNull();
     }
 
     // Lo stato è scritto in italiano, non è l'enum del backend.
@@ -299,10 +300,13 @@ describe('AdminNewsComponent', () => {
 
     // Detta in italiano, non lasciata in bianco: una riga senza etichetta si
     // legge come un guasto del pannello.
-    expect(testo(uno('.an-chip', r))).toBe('Senza stato');
-    // ⚠️ Classe DIVERSA dai cinque stati: `an-chip--undefined` non esiste nel
-    // foglio, quindi il chip sarebbe uscito senza colore né bordo.
-    expect(uno('.an-chip.an-chip--ignoto', r)).not.toBeNull();
+    expect(testo(uno('.admin-stato', r))).toBe('Senza stato');
+    // ⚠️ Tono DIVERSO da quelli dei cinque stati: prima il nome della classe
+    // veniva interpolato dallo stato, quindi qui usciva `an-chip--undefined` —
+    // che nessun foglio dichiara, cioè un chip senza colore né bordo. Ora il
+    // `switch` di `tono()` ha un `default`, e il tono `ignoto` si disegna col
+    // bordo tratteggiato: non uno stato in più, la sua assenza.
+    expect(uno('.admin-stato[data-tono="ignoto"]', r)).not.toBeNull();
 
     // Nessun pulsante di ritorno: da «nessuno stato» ogni transizione è un 409
     // (`ALLOWED_TRANSITIONS` non ha una riga per l'assenza di stato).
@@ -312,7 +316,9 @@ describe('AdminNewsComponent', () => {
     expect(testo(r)).toContain('riavvio');
 
     // Le altre righe non sono state travolte: l'elenco è integro.
-    expect(uno('.an-chip.an-chip--pubblicato', riga('Titolo p'))).not.toBeNull();
+    expect(
+      uno('.admin-stato[data-tono="ok"]', riga('Titolo p')),
+    ).not.toBeNull();
   });
 
   // ── 2. La porta che non esisteva ─────────────────────────────────────────
@@ -756,7 +762,7 @@ describe('AdminNewsComponent', () => {
     const vuoto = uno<HTMLElement>('.empty-state')!;
     expect(testo(vuoto)).toContain('Nessuna news in archivio');
     // Con «Tutti» non c'è nessun filtro da togliere: niente invito.
-    expect(uno('.admin-item__meta', vuoto)).toBeNull();
+    expect(uno('.admin-nota', vuoto)).toBeNull();
 
     await clicca(pillola('Scaduto'));
     await rispondi([]);
@@ -768,7 +774,7 @@ describe('AdminNewsComponent', () => {
     expect(testo(vuotoFiltrato)).toContain('Scaduto');
     expect(testo(vuotoFiltrato)).not.toContain('in archivio');
     // …e come uscirne.
-    expect(testo(uno('.admin-item__meta', vuotoFiltrato))).toContain('Tutti');
+    expect(testo(uno('.admin-nota', vuotoFiltrato))).toContain('Tutti');
     expect(testo(uno('.admin-news__conteggio'))).toBe(
       '0 articoli · filtro: Scaduto',
     );

@@ -181,11 +181,11 @@
   color: var(--cream-100);
 }
 
-.fnt__sum[data-voce='allarme'] strong {
+.fnt__sum[data-voce='degradata'] strong {
   color: var(--gold-text);
 }
 
-.fnt__sum[data-voce='grave'] strong {
+.fnt__sum[data-voce='morta'] strong {
   color: var(--danger);
 }
 
@@ -279,19 +279,19 @@
   // ⚠️ Il filo colorato sul bordo sinistro è il "colpo d'occhio": si legge
   // scorrendo, prima di qualunque parola. Una riga SPENTA non ne ha — non è un
   // allarme, ed è la distinzione che questa pagina non può sbagliare.
-  &[data-tono='ok'] {
+  &[data-tono='sana'] {
     border-left: 3px solid var(--felt);
   }
 
-  &[data-tono='attesa'] {
+  &[data-tono='incerta'] {
     border-left: 3px solid var(--neon-cyan);
   }
 
-  &[data-tono='allarme'] {
+  &[data-tono='degradata'] {
     border-left: 3px solid var(--gold);
   }
 
-  &[data-tono='grave'] {
+  &[data-tono='morta'] {
     border-left: 3px solid var(--danger);
   }
 }
@@ -413,43 +413,49 @@
 }
 
 // ── Pastiglia di stato ──────────────────────────────────────────────────────
-
-.fnt-chip {
-  display: inline-flex;
-  align-items: center;
+//
+// ⚠️ Il CHROME non è più qui: è `.admin-stato`, in `admin-shared.scss`, lo
+// stesso di news, affiliazioni e negozio — quattro pastiglie disegnate in
+// quattro posti erano quattro modi di dire la stessa cosa.
+//
+// ⚠️ I TONI invece restano qui, e con parole diverse dalle loro. Là rispondono
+// a «a che punto è?» (spento, attesa, ok, concluso, allarme); qui a
+// «funziona?». I due insiemi si sovrapponevano su tre parole con colori
+// diversi — `allarme` era rosso là e oro qui — e una parola che vale due colori
+// a seconda della sezione non la segnala nessuno. Sana, degradata, morta.
+//
+// ⚠️ `border-color` esplicito su ogni tono: la base usa `currentColor`, che qui
+// non basta perché due toni vogliono un bordo diverso dal testo.
+.admin-stato {
   gap: 0.35rem;
   padding: 0.2rem 0.6rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  border-color: var(--line-strong);
 
   // Spenta: nessun colore. È uno stato normale, non un guasto.
   &[data-tono='spenta'] {
     color: var(--text-faint);
   }
 
-  &[data-tono='ok'] {
+  &[data-tono='sana'] {
     color: var(--felt);
     border-color: var(--felt);
   }
 
-  // Attesa = "non lo so ancora": si distingue dall'allarme, non lo imita.
-  &[data-tono='attesa'] {
+  // Incerta = "non lo so ancora": si distingue dall'allarme, non lo imita.
+  &[data-tono='incerta'] {
     color: var(--text-muted);
     border-color: var(--neon-cyan);
     white-space: normal;
   }
 
-  &[data-tono='allarme'] {
+  &[data-tono='degradata'] {
     color: var(--gold-text);
     border-color: var(--gold);
   }
 
-  &[data-tono='grave'] {
+  &[data-tono='morta'] {
     color: var(--danger);
     border-color: var(--danger);
   }

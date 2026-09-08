@@ -18,6 +18,10 @@ import {
 import { AdminStatsService } from '../../../core/services/admin-stats.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import {
+  FiltroComponent,
+  VoceFiltro,
+} from '../../../shared/ui/filtro/filtro.component';
 import { ROLE_LABELS } from '../role-labels';
 
 /** Profondità della serie mensile (il DTO backend accetta 1..24). */
@@ -177,7 +181,7 @@ function sparkline(valori: number[]): string {
  */
 @Component({
   selector: 'app-admin-stats',
-  imports: [DatePipe, IconComponent],
+  imports: [DatePipe, IconComponent, FiltroComponent],
   templateUrl: './admin-stats.component.html',
   styleUrls: ['../admin-shared.scss', './admin-stats.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -186,6 +190,33 @@ export class AdminStatsComponent {
   private readonly api = inject(AdminStatsService);
 
   protected readonly mesiRanges = MESI_RANGES;
+
+  /**
+   * Le due finestre temporali, per `app-filtro`.
+   *
+   * ⚠️ I valori sono STRINGHE perché `VoceFiltro<T extends string>` lo impone,
+   * e il vincolo non è un capriccio del primitivo: quel valore finisce in un
+   * `data-*` e in un `aria-checked`, cioè attraversa il DOM, dove i numeri non
+   * esistono. Il ritorno a numero sta in una riga sola, qui accanto, invece che
+   * sparso in due template.
+   */
+  protected readonly vociMesi: readonly VoceFiltro<string>[] = MESI_RANGES.map(
+    (r) => ({ valore: String(r), etichetta: `${r} mesi` }),
+  );
+
+  protected readonly vociGiorni: readonly VoceFiltro<string>[] =
+    GIORNI_RANGES.map((r) => ({ valore: String(r), etichetta: `${r} giorni` }));
+
+  /**
+   * Lo stesso valore in stringa, per `[scelto]`.
+   *
+   * ⚠️ E non `String(mesi())` nel template: nei template Angular sono
+   * raggiungibili solo i membri del componente, quindi `String` non esiste e
+   * l'espressione non compila. Un `computed` è anche la forma giusta — si
+   * ricalcola quando il signal cambia, invece di essere rivalutato a ogni giro.
+   */
+  protected readonly mesiScelto = computed(() => String(this.mesi()));
+  protected readonly giorniScelto = computed(() => String(this.giorni()));
   protected readonly giorniRanges = GIORNI_RANGES;
   protected readonly meseLabel = meseLabel;
   protected readonly giornoLabel = giornoLabel;
@@ -252,6 +283,16 @@ export class AdminStatsComponent {
         );
       },
     });
+  }
+
+  /** Il ponte fra il valore-stringa del filtro e il signal numerico. */
+  protected setMesiDaFiltro(v: string): void {
+    this.setMesi(Number(v));
+  }
+
+  /** Il ponte fra il valore-stringa del filtro e il signal numerico. */
+  protected setGiorniDaFiltro(v: string): void {
+    this.setGiorni(Number(v));
   }
 
   protected setMesi(n: number): void {

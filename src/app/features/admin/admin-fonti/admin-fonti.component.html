@@ -8,7 +8,7 @@
   <div class="fnt__head">
     <div>
       <h2>Fonti della redazione</h2>
-      <p class="admin-item__meta">
+      <p class="admin-nota">
         @if (fonti(); as elenco) {
           {{ elenco.length }}
           {{ elenco.length === 1 ? 'fonte configurata' : 'fonti configurate' }}
@@ -206,7 +206,7 @@
     <div class="empty-state">
       <p class="empty-state__suit" aria-hidden="true"></p>
       <p>Nessuna fonte configurata.</p>
-      <p class="admin-item__meta">
+      <p class="admin-nota">
         Finché non ce n'è almeno una accesa, la redazione non riceve niente da
         leggere.
       </p>
@@ -250,7 +250,7 @@
             </div>
 
             <div class="fnt-row__stato">
-              <span class="fnt-chip" [attr.data-tono]="r.stato.tono">
+              <span class="admin-stato" [attr.data-tono]="r.stato.tono">
                 {{ r.stato.etichetta }}
               </span>
               @if (r.stato.nota; as n) {

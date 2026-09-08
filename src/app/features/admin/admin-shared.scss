@@ -128,11 +128,38 @@
   }
 }
 
+// Un'ETICHETTA: due parole accanto a un valore, il nome di un campo, un dato
+// accessorio in linea. Mono, minuscola, spaziata — il carattere di un'etichetta.
+//
+// ⚠️ NON è la classe della prosa, e per un anno lo è stata: 112 usi, di cui 65
+// su un `<p>`. Le descrizioni di sezione di Fonti, Redazione e Partecipazione
+// uscivano in monospace da 11,5px con `letter-spacing`, cioè due righe di
+// italiano che si leggono come l'output di un terminale — e si vede a occhio
+// nudo aprendo `/admin/partecipazione`. Un carattere pensato per far risaltare
+// tre parole diventa illeggibile su trenta.
 .admin-item__meta {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   color: var(--text-faint);
+}
+
+// La PROSA del pannello: la frase che spiega a cosa serve una sezione, che dice
+// dove sono finite le colonne nascoste, che nomina il filtro attivo sopra un
+// elenco vuoto.
+//
+// ⚠️ La regola è la forma, non il contenuto: se è un `<p>`, è prosa e va qui;
+// se è un'etichetta in linea accanto a un valore, resta `.admin-item__meta`. Un
+// confine che si decide guardando il tag non si sbaglia leggendo il testo.
+//
+// ⚠️ `max-width: 74ch` è la colonna di lettura già usata nelle pagine pubbliche
+// (`styles/_utilities.scss`): senza un tetto, una descrizione attraversa i
+// 1180px del contenitore e l'occhio perde la riga tornando a capo.
+.admin-nota {
+  max-width: 74ch;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 // ── Tab iscritti ───────────────────────────────────────────────────────────
@@ -151,6 +178,47 @@
   gap: 0.8rem;
 }
 
+// ⚠️ L'ORDINE È DICHIARATO, non lasciato alla sequenza del markup.
+//
+// Prima lo era solo sotto i 720px, e sopra il `+` stava a destra grazie al
+// `margin-left: auto` — che funziona finché il `+` è l'ULTIMO figlio. Su
+// `/admin/news` non lo è (dopo di lui viene il conteggio), quindi il
+// `justify-content: space-between` lo staccava dal titolo e lo lasciava **in
+// mezzo alla riga**: un comando che in undici sezioni sta a destra e in una no,
+// senza che nulla si rompa e senza che nessuno l'abbia deciso. Dichiararlo
+// chiude quella classe di difetto invece di spostare un bottone in un file, e
+// lascia la sequenza del sorgente libera di essere quella che legge uno screen
+// reader.
+//
+// ⚠️ Il `> *` serve perché non tutti i figli hanno una classe della barra:
+// `/admin/news` avvolge il conteggio in un `<span>` suo, che senza questa riga
+// prenderebbe `order: 0` e scavalcherebbe il titolo.
+//
+// ⚠️⚠️ E LE TRE REGOLE SPECIFICHE SONO SCRITTE COL COMBINATORE, non sciolte.
+// In CSS puro `.admin-barra > *` e `.admin-barra__titolo` valgono entrambe
+// (0,1,0) e basterebbe l'ordine nel file. Ma questo foglio è compilato con
+// l'INCAPSULAMENTO di Angular, che riscrive i selettori aggiungendo un
+// attributo A OGNI parte:
+//
+//     .admin-barra > *        →  .admin-barra[_ngcontent-x] > [_ngcontent-x]
+//     .admin-barra__titolo    →  .admin-barra__titolo[_ngcontent-x]
+//
+// cioè (0,3,0) contro (0,2,0): il catch-all diventa PIÙ specifico di ciascuna
+// regola specifica, e vince a prescindere dall'ordine. Misurato in pagina: i
+// tre figli della barra di `/admin/news` uscivano tutti a `order: 3` e il `+`
+// restava in mezzo — la modifica non faceva niente e sembrava fatta.
+//
+// Scritte col combinatore le due forme tornano confrontabili (0,4,0 contro
+// 0,3,0) e il senso torna quello che si legge. È una trappola che esiste SOLO
+// dentro un foglio di componente: la stessa riga in `styles/` funzionerebbe.
+.admin-barra > * {
+  order: 3;
+}
+
+.admin-barra > .admin-barra__campo {
+  order: 2;
+}
+
 .admin-barra__campo {
   max-width: 360px;
   flex: 1;
@@ -166,12 +234,20 @@
 // font-size:1.2rem"` inline ripetuto in mezzo pannello: uno stile inline non
 // si può ritoccare da un tema, non compare in nessuna ricerca e non si può
 // misurare da una guardia.
+.admin-barra > .admin-barra__titolo {
+  order: 1;
+}
+
 .admin-barra__titolo {
   margin: 0;
   font-size: 1.2rem;
 }
 
 // Il comando «crea» resta a destra anche quando la barra va a capo.
+.admin-barra > .admin-barra__crea {
+  order: 9;
+}
+
 .admin-barra__crea {
   margin-left: auto;
 }
@@ -187,25 +263,43 @@
     row-gap: 0.5rem;
   }
 
-  .admin-barra__titolo {
+  // Stessa regola di sopra, e per la stessa ragione: qui gli ordini dichiarati
+  // arrivano fino a 4, quindi il default va oltre.
+  // Stesso default di sopra, e stessa forma col combinatore per la stessa
+  // ragione di specificità: qui gli ordini dichiarati arrivano a 4, quindi il
+  // default va oltre.
+  .admin-barra > * {
+    order: 5;
+  }
+
+  .admin-barra > .admin-barra__titolo {
     // `order` e non un markup diverso: la sequenza sorgente resta quella che
     // legge uno screen reader, cambia solo la disposizione.
     order: 1;
+  }
+
+  .admin-barra__titolo {
     flex: 1;
   }
 
-  .admin-barra__crea {
+  .admin-barra > .admin-barra__crea {
     order: 2;
+  }
+
+  .admin-barra__crea {
     margin-left: 0;
   }
 
-  .admin-barra__campo {
+  .admin-barra > .admin-barra__campo {
     order: 3;
+  }
+
+  .admin-barra__campo {
     flex: 1 1 100%;
     max-width: none;
   }
 
-  .admin-barra__conta {
+  .admin-barra > .admin-barra__conta {
     order: 4;
   }
 }
@@ -263,17 +357,103 @@
   }
 }
 
+// ── La pastiglia di stato ──────────────────────────────────────────────────
+//
+// Lo stato di una riga: a che punto è un articolo, un'affiliazione, un ordine,
+// una fonte.
+//
+// ⚠️ ERA DISEGNATO IN QUATTRO POSTI. `.an-chip` (news), `.aff-chip`
+// (affiliazioni) e `.shop-chip` (negozio) avevano la stessa identica
+// dichiarazione base — undici righe, copiate tre volte — e `.fnt-chip` (fonti)
+// una quarta variante. Più il `badge` globale, che altre dieci sezioni usano
+// per la stessa funzione: lo stato si disegnava in cinque modi.
+//
+// ⚠️ REGOLA DI CONFINE, e non è pedanteria: **lo STATO è `.admin-stato`, il
+// FATTO è `.badge`**. Il tier di una lezione, «Gratis», «Tu», «Anonimizzato»
+// sono fatti — non cambiano da soli e non hanno un tono. Il precedente è già
+// scritto in `admin-lessons.component.html`: «il "da fare" NON è un badge — i
+// badge portano i FATTI della lezione».
+//
+// ⚠️ IL TONO È UN ATTRIBUTO, non sedici classi modificatrici. Aggiungere uno
+// stato diventa una riga in un `switch` invece di una regola CSS, e la parola
+// dice il SIGNIFICATO — che è l'unica cosa che il colore comunica. L'idioma è
+// quello che `.fnt-chip` già usava (`[data-tono='…']`).
+.admin-stato {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+// I toni del PERCORSO: dove si trova una riga fra il primo e l'ultimo passo.
+// Usati da news, affiliazioni e negozio, che sono la stessa macchina a stati
+// vista da tre porte diverse.
+//
+// ⚠️ Questi sette NON sono i toni di `/admin/fonti`, e non vanno mescolati: là
+// la domanda è «funziona?» e non «a che punto è?». Le due risposte userebbero
+// le stesse parole (`ok`, `attesa`, `allarme`) per colori diversi, e una parola
+// che vale due colori a seconda della sezione è peggio di due classi separate.
+// Per questo i toni della salute si chiamano `sana`/`degradata`/`morta` e
+// vivono nel foglio di quella sezione, sopra questa stessa base.
+.admin-stato {
+  // Non ancora in gioco: una bozza, una richiesta mai completata.
+  &[data-tono='spento'] {
+    color: var(--text-faint);
+  }
+
+  // Chiuso dal tempo e non da una persona: muto, ma distinto dalla bozza.
+  &[data-tono='neutro'] {
+    color: var(--text-muted);
+  }
+
+  // Aspetta qualcuno: è l'unico tono che indica una coda da smaltire.
+  &[data-tono='attesa'] {
+    color: var(--ember);
+  }
+
+  // Vivo, online, approvato.
+  &[data-tono='ok'] {
+    color: var(--gold-text);
+  }
+
+  // Finito bene, ma non più attivo: un ordine consegnato non è un ordine nuovo,
+  // e con lo stesso tono di «ricevuto» i due passi diventerebbero uno solo.
+  &[data-tono='concluso'] {
+    color: var(--copper-600);
+  }
+
+  // Deciso in negativo: scartato, rifiutato, revocato, annullato.
+  &[data-tono='allarme'] {
+    color: var(--danger);
+  }
+
+  // ⚠️ NON è uno stato in più: è la sua ASSENZA (una riga storica che una
+  // migrazione non ha toccato). Il bordo tratteggiato è di proposito — con lo
+  // stesso chrome degli altri si leggerebbe come uno stato legittimo della
+  // macchina, e la riga sembrerebbe decidibile quando non lo è.
+  &[data-tono='ignoto'] {
+    color: var(--danger);
+    border-style: dashed;
+  }
+}
+
 .admin-user__line {
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.admin-user__nick {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
+// ⚠️ `.admin-user__nick` viveva qui e non c'è più: si chiamava «il nickname di
+// un utente» ma in nove template su nove — tutti di tabella — portava i tag di
+// una lezione, il nome di un file, la piattaforma di una live. Ora è
+// `.admin-table__sub` e sta in `admin-table.scss`, con gli stessi valori.
 
 .admin-user__actions {
   align-items: center;

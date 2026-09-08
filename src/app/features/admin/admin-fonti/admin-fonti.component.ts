@@ -253,8 +253,22 @@ function validaCategorie(v: string): string | null {
   return null;
 }
 
-/** Tono della pastiglia di stato: guida il colore, e nient'altro. */
-type Tono = 'spenta' | 'attesa' | 'ok' | 'allarme' | 'grave';
+/**
+ * Tono della pastiglia di stato — il vocabolario della SALUTE di una fonte.
+ *
+ * ⚠️ Le parole sono deliberatamente DIVERSE da quelle di `TonoStato`
+ * (`admin-stato.ts`), che è il vocabolario del PERCORSO usato da news,
+ * affiliazioni e negozio. Le due domande sono diverse — «funziona?» contro «a
+ * che punto è?» — e i due vocabolari si sovrapponevano su tre parole (`ok`,
+ * `attesa`, `allarme`) con colori diversi: là `allarme` è rosso, qui era oro.
+ * Una parola che vale due colori a seconda della sezione è peggio di due
+ * vocabolari separati, perché non c'è niente che lo segnali. Qui si dice cosa
+ * si vede: sana, degradata, morta.
+ *
+ * ⚠️ Il chrome della pastiglia è invece CONDIVISO (`.admin-stato`): a divergere
+ * non deve essere il disegno, solo il significato dei colori.
+ */
+type Tono = 'spenta' | 'incerta' | 'sana' | 'degradata' | 'morta';
 
 /** Quale mutazione è in volo: mai un booleano unico (vedi `azione`). */
 type Quale = 'accendi' | 'spegni' | 'salva' | 'elimina';
@@ -505,10 +519,10 @@ export class AdminFontiComponent {
     const righe = this.righe();
     const conta = (t: Tono): number => righe.filter((r) => r.stato.tono === t).length;
     const voci: VoceRiepilogo[] = [
-      { key: 'ok', count: conta('ok'), label: 'in salute' },
-      { key: 'attesa', count: conta('attesa'), label: 'in attesa del primo articolo' },
-      { key: 'allarme', count: conta('allarme'), label: 'degradate' },
-      { key: 'grave', count: conta('grave'), label: 'morte' },
+      { key: 'sana', count: conta('sana'), label: 'in salute' },
+      { key: 'incerta', count: conta('incerta'), label: 'in attesa del primo articolo' },
+      { key: 'degradata', count: conta('degradata'), label: 'degradate' },
+      { key: 'morta', count: conta('morta'), label: 'morte' },
       { key: 'spenta', count: conta('spenta'), label: 'spente' },
     ];
     return voci.filter((v) => v.count > 0);
@@ -623,7 +637,7 @@ export class AdminFontiComponent {
       const cambiato = istante(f.healthChangedAt);
       return {
         etichetta: NEWS_SOURCE_HEALTH_LABELS[f.healthState],
-        tono: f.healthState === 'MORTA' ? 'grave' : 'allarme',
+        tono: f.healthState === 'MORTA' ? 'morta' : 'degradata',
         // ⚠️ Da `healthChangedAt`, mai da `lastErrorAt`: «morta da 3 giorni»
         // è da quando lo stato è cambiato, non dall'ultimo errore — che su una
         // fonte che risponde 200 senza item non esiste nemmeno.
@@ -638,7 +652,7 @@ export class AdminFontiComponent {
       const da = this.daOsservata(f, ora);
       return {
         etichetta: 'In attesa del primo articolo',
-        tono: 'attesa',
+        tono: 'incerta',
         // ⚠️ «Sotto osservazione da», non «accesa da»: `osservataDa` lo scrive
         // il server UNA volta sola (`updateOne` guardata su `$exists:false`) e
         // non lo azzera mai — né allo spegnimento, né alla riaccensione, né in
@@ -652,7 +666,7 @@ export class AdminFontiComponent {
       };
     }
 
-    return { etichetta: 'Sana', tono: 'ok', nota: null };
+    return { etichetta: 'Sana', tono: 'sana', nota: null };
   }
 
   /** «Sospesa fino a…»: senza, l'owner vede "accesa" e non capisce il silenzio. */
@@ -1407,12 +1421,19 @@ export class AdminFontiComponent {
 
     richiesta.subscribe({
       next: (f) => {
+        // ⚠️ PRIMA si chiude la modale, POI parte il toast. Invertendoli il
+        // messaggio viene emesso mentre il `<dialog>` è ancora aperto, e un
+        // `<dialog>` in top layer copre qualunque `position: fixed`: il toast
+        // dipinge DIETRO il fondale e non lo legge nessuno. Il signal si
+        // popola, i test restano verdi, e l'unica cosa che manca è la conferma.
+        // A trovarlo è stata la guardia in `ToastService.show()`, che in dev
+        // urla in console leggendo `html.is-modale`.
+        this.chiudiForm();
         this.toast.success(
           id
             ? `Fonte «${f.name}» aggiornata.`
             : `Fonte «${f.name}» creata, e nasce spenta: accendila quando l'indirizzo è quello giusto.`,
         );
-        this.chiudiForm();
         this.carica();
       },
       error: (err: unknown) => {

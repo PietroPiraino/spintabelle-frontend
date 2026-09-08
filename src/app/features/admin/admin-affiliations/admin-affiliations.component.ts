@@ -43,6 +43,7 @@ import {
   VoceScheda,
 } from '../../../shared/ui/schede/schede.component';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
+import { TonoStato } from '../admin-stato';
 
 /** Elementi per pagina (pager classico, come iscritti/lezioni/negozio). */
 const PAGE_SIZE = 25;
@@ -412,8 +413,28 @@ export class AdminAffiliationsComponent {
     this.loadRequests();
   }
 
-  protected chipClass(status: AffiliationStatus): string {
-    return `aff-chip aff-chip--${status.toLowerCase()}`;
+  /**
+   * Il tono della pastiglia di stato (`.admin-stato`, in `admin-shared.scss`).
+   *
+   * ⚠️ Era `chipClass()` e componeva il nome di una classe interpolando lo stato
+   * in minuscolo. Un `switch` esaustivo al suo posto è ciò che rende impossibile
+   * aggiungere uno stato alla macchina e dimenticarne la resa: TypeScript non
+   * compila il caso mancante, mentre l'interpolazione produceva in silenzio una
+   * classe che nessun foglio dichiara — cioè una pastiglia senza colore.
+   */
+  protected tono(status: AffiliationStatus): TonoStato {
+    switch (status) {
+      case 'RICHIESTO':
+      case 'ANNULLATO':
+        return 'spento';
+      case 'IN_VERIFICA':
+        return 'attesa';
+      case 'APPROVATO':
+        return 'ok';
+      case 'RIFIUTATO':
+      case 'REVOCATO':
+        return 'allarme';
+    }
   }
 
   protected who(a: AffiliationAdmin): string {

@@ -9,7 +9,7 @@
     <div>
       <h2>Coda di revisione</h2>
       @if (coda()) {
-        <p class="admin-item__meta">
+        <p class="admin-nota">
           {{ totale() }} {{ totale() === 1 ? 'articolo in coda' : 'articoli in coda' }}
           @if (totale() > articoli().length) {
             · in mano {{ articoli().length }}: gli altri entrano man mano che decidi
@@ -131,7 +131,7 @@
     <div class="empty-state">
       <p class="empty-state__suit" aria-hidden="true"></p>
       <p>Nessun articolo in coda.</p>
-      <p class="admin-item__meta">
+      <p class="admin-nota">
         Quando la redazione ne propone uno, compare qui.
       </p>
     </div>
@@ -140,7 +140,18 @@
       <!-- 1. Striscia di scadenza: l'ordinamento reso visibile. -->
       <div class="rz__strip" [class.is-urgente]="scadenza().urgente">
         <span class="badge rz__cat">{{ categoriaLabel(a.categoria) }}</span>
-        <span class="rz__deadline">{{ scadenza().testo }}</span>
+        <!--
+          ⚠️ `.admin-stato` e non una pastiglia locale: era la QUINTA del
+          pannello, e l'unica che nessuno aveva notato perché il suo contenuto è
+          un conto alla rovescia invece del nome di uno stato. È comunque lo
+          stato della riga — quanto le resta prima che la finestra di attualità
+          si chiuda — e il tono lo dice con una parola invece che con un colore.
+        -->
+        <span
+          class="admin-stato"
+          [attr.data-tono]="scadenza().urgente ? 'allarme' : 'neutro'"
+          >{{ scadenza().testo }}</span
+        >
         @if (rimando(); as r) {
           <span class="rz__snoozed">{{ r }}</span>
         }
@@ -166,7 +177,7 @@
         <p class="rz__hint">Il titolo corretto viene salvato con la pubblicazione.</p>
       }
 
-      <p class="admin-item__meta rz__meta">
+      <p class="admin-nota rz__meta">
         <!--
           ⚠️ `confidence` si mostra e basta (D32): non ordina la coda, e non
           deve dare l'impressione di essere un voto su cui delegare la decisione.

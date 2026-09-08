@@ -87,7 +87,7 @@
           <p class="empty-state__suit" aria-hidden="true"></p>
           <p>{{ vuotoTesto() }}</p>
           @if (filtroCaricato() !== TUTTI) {
-            <p class="admin-item__meta">
+            <p class="admin-nota">
               Il filtro attivo è «{{ filtroLabel(filtroCaricato()) }}»: passa a
               «Tutti» per vedere l'archivio intero.
             </p>
@@ -99,7 +99,9 @@
             <div class="admin-item__info">
               <strong>{{ news.title }}</strong>
               <span class="admin-item__meta admin-news__riga">
-                <span [class]="chipClass(news.status)">{{ statoLabel(news.status) }}</span>
+                <span class="admin-stato" [attr.data-tono]="tono(news.status)">
+                  {{ statoLabel(news.status) }}
+                </span>
                 @if (news.createdAt) {
                   <span>{{ news.createdAt | date: 'dd MMM yyyy, HH:mm' }}</span>
                 }

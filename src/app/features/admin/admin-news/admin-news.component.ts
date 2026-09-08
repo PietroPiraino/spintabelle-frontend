@@ -36,6 +36,7 @@ import {
   VoceScheda,
 } from '../../../shared/ui/schede/schede.component';
 import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.component';
+import { TonoStato } from '../admin-stato';
 
 /** Righe per pagina: il tetto del DTO admin è 100, 25 è il default del server. */
 const PAGE_SIZE = 25;
@@ -357,15 +358,35 @@ export class AdminNewsComponent {
   }
 
   /**
-   * Colore del chip per stato (idioma `aff-chip` delle affiliazioni).
+   * Il tono della pastiglia di stato (`.admin-stato`, in `admin-shared.scss`).
    *
-   * ⚠️ Il `?.` non è pignoleria: `undefined.toLowerCase()` dentro un binding è
-   * un TypeError che interrompe il render dell'elenco **e si ripete a ogni
-   * ciclo** — cioè l'archivio che si rompe esattamente sulla riga che esiste
-   * per farsi ritrovare.
+   * ⚠️ Era `chipClass()`, e componeva il nome di una classe interpolando lo
+   * stato in minuscolo: un `switch` esaustivo al suo posto è ciò che rende
+   * impossibile aggiungere uno stato alla macchina e dimenticare la sua resa —
+   * TypeScript non compila il caso mancante, mentre l'interpolazione produceva
+   * in silenzio una classe che nessun foglio dichiara, cioè una pastiglia senza
+   * colore.
+   * ⚠️ Il ramo `undefined` resta e resta necessario: `.lean()` non applica i
+   * default di schema, quindi una riga storica può arrivare senza `status` —
+   * e `undefined.toLowerCase()` dentro un binding era un TypeError che
+   * interrompeva il render dell'elenco **a ogni ciclo**, cioè l'archivio che si
+   * rompe esattamente sulla riga che esiste per farsi ritrovare.
    */
-  protected chipClass(s: NewsStatus | undefined): string {
-    return `an-chip an-chip--${s ? s.toLowerCase() : 'ignoto'}`;
+  protected tono(s: NewsStatus | undefined): TonoStato {
+    switch (s) {
+      case 'BOZZA':
+        return 'spento';
+      case 'IN_REVISIONE':
+        return 'attesa';
+      case 'PUBBLICATO':
+        return 'ok';
+      case 'SCARTATO':
+        return 'allarme';
+      case 'SCADUTO':
+        return 'neutro';
+      default:
+        return 'ignoto';
+    }
   }
 
   /** Cosa dice il vuoto: sempre con il nome del filtro **caricato**. */

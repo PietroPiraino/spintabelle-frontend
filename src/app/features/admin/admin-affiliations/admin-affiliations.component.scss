@@ -160,36 +160,12 @@
 
 // Chip di stato: stesso chrome del badge, colore per stato. L'etichetta la
 // scrive il server (`statusLabel`) — qui c'è solo il colore.
-.aff-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: 1px solid currentColor;
-  white-space: nowrap;
-}
-
-.aff-chip--richiesto,
-.aff-chip--annullato {
-  color: var(--text-faint);
-}
-
-.aff-chip--in_verifica {
-  color: var(--ember);
-}
-
-.aff-chip--approvato {
-  color: var(--gold-text);
-}
-
-.aff-chip--rifiutato,
-.aff-chip--revocato {
-  color: var(--danger);
-}
+// ⚠️ QUI C'ERA `.aff-chip`, e la sua dichiarazione base era identica parola per
+// parola a quelle di `.an-chip` (news) e `.shop-chip` (negozio): undici righe
+// copiate tre volte, con perfino la stessa corrispondenza stato→colore. Ora il
+// chrome è `.admin-stato` (in `admin-shared.scss`) e il colore lo decide un
+// `data-tono`, cioè un significato; la corrispondenza stato→tono vive nel
+// `switch` esaustivo di `tono()` nel componente.
 
 @media (max-width: 720px) {
   .aff-actions {
