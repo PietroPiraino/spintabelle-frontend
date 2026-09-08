@@ -19,7 +19,7 @@
 // ⚠️ Dall'08/09/2026 un punto sorveglia il verso OPPOSTO: da quando la cella
 // d'identità sta su due righe, i 44px della riga di tabella non sono più solo
 // dichiarati, sono anche LIMITATI dall'interlinea compressa. Un punto che dice
-// «non superare» in mezzo a sette che dicono «raggiungi» va letto per quello
+// «non superare» in mezzo a otto che dicono «raggiungi» va letto per quello
 // che è, non uniformato agli altri.
 //
 // Non gira nel build (`npm run build`): gira in `npm run test:scripts`.
@@ -33,7 +33,7 @@ const RADICE = process.cwd();
 const leggi = (p) => readFileSync(resolve(RADICE, p), 'utf8');
 
 /**
- * I cinque punti in cui il bersaglio di tocco del pannello è dichiarato una
+ * I NOVE punti in cui il bersaglio di tocco del pannello è dichiarato una
  * volta sola — e da cui ogni sezione lo eredita invece di riscriverselo.
  *
  * `dentro` è il selettore che deve esistere; `regola` è la dichiarazione che
@@ -95,7 +95,7 @@ const PUNTI = [
     // raggiunto, va NON SUPERATO. La cella d'identità sta su due righe, e ci
     // sta solo perché l'interlinea è compressa a 1.25: col `line-height: 1.6`
     // che il body eredita (`src/styles/_reset.scss`) la riga passerebbe da 45 a
-    // ~53px in TUTTE e undici le tabelle del pannello, senza che nulla si
+    // ~53px in TUTTE e tredici le tabelle del pannello, senza che nulla si
     // rompa, senza un test rosso e senza che nessuno se ne accorga finché non
     // mette due sezioni una accanto all'altra.
     //
@@ -109,6 +109,16 @@ const PUNTI = [
     attese: ['line-height: 1.25', 'min-height: 2lh'],
     perche:
       'il TETTO della riga di tabella: due righe di testo entrano nei 44px solo con l\'interlinea compressa, e il min-height tiene i titoli allineati anche dove il sotto-testo non c\'è',
+  },
+  {
+    // ⚠️ Questo comando esiste SOLO sotto i 1024px — cioè esattamente dove si usa
+    // col dito — ed è l'unica via per raggiungere le altre sezioni del pannello.
+    // Per questo era sfuggito a ogni misura: su desktop non c'è. Stava a 38,1px.
+    file: 'src/app/features/admin/admin.component.scss',
+    selettore: '.admin-shell__toggle {',
+    attese: ['min-height: 44px'],
+    perche:
+      'il comando che apre le sezioni su schermo stretto: senza, il padding lo lascia a 38,1px, e non c\'è altro modo di cambiare sezione dal telefono',
   },
 ];
 
@@ -151,5 +161,5 @@ test('⚠️ la guardia sta leggendo davvero qualcosa', () => {
   // Il verso anti-guardia-vuota: se i file si spostassero, ogni `blocco()`
   // tornerebbe null e i test sopra fallirebbero uno per uno — ma se qualcuno
   // svuotasse PUNTI la suite resterebbe verde senza controllare niente.
-  assert.ok(PUNTI.length >= 8, 'l\'elenco dei punti si è accorciato');
+  assert.ok(PUNTI.length >= 9, 'l\'elenco dei punti si è accorciato');
 });
