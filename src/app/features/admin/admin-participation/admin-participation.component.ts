@@ -19,6 +19,11 @@ import {
   SchedeComponent,
   VoceScheda,
 } from '../../../shared/ui/schede/schede.component';
+import {
+  FiltroComponent,
+  VoceFiltro,
+} from '../../../shared/ui/filtro/filtro.component';
+import { orologio, statoSessione } from '../../../shared/live/stato-sessione';
 
 /** Le due metà della pagina, che non condividono alcuno stato. */
 type Scheda = 'presenze' | 'viste';
@@ -33,7 +38,7 @@ type Scheda = 'presenze' | 'viste';
  */
 @Component({
   selector: 'app-admin-participation',
-  imports: [DatePipe, SchedeComponent],
+  imports: [DatePipe, SchedeComponent, FiltroComponent],
   templateUrl: './admin-participation.component.html',
   styleUrls: ['../admin-shared.scss', '../admin-table.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,6 +68,86 @@ export class AdminParticipationComponent {
   protected readonly hasExternal = computed(() =>
     (this.sessions() ?? []).some((s) => s.mode !== 'LIVEKIT'),
   );
+
+  /**
+   * L'orologio condiviso: serve a sapere quali sessioni sono già cominciate.
+   *
+   * ⚠️ È lo stesso `orologio()` di `/live` e `/admin/live`, e lo stato lo
+   * calcola `statoSessione()`: una terza definizione di «è già iniziata» in una
+   * terza schermata è il modo con cui le tre divergono senza che nessuno se ne
+   * accorga. Passo 30s — qui basterebbe molto meno spesso, ma un secondo
+   * orologio è comunque peggio di uno un po' troppo sveglio.
+   */
+  private readonly adesso = orologio();
+
+  /**
+   * Le on-site GIÀ COMINCIATE.
+   *
+   * ⚠️ Una sessione che deve ancora iniziare ha zero presenze **per
+   * definizione**, non perché non è venuto nessuno: elencarla significa
+   * mostrare uno zero che non è una misura. Il taglio è `startsAt` nel passato,
+   * non «terminata»: una live IN CORSO si sta riempiendo proprio adesso, ed è
+   * quella che si guarda più volentieri.
+   */
+  protected readonly presenzeAvvenute = computed(() =>
+    this.onsite().filter((s) => {
+      const st = statoSessione(s, this.adesso());
+      return st !== 'imminente' && st !== 'programmata';
+    }),
+  );
+
+  /**
+   * Quante ne sono state nascoste perché non ancora avvenute.
+   *
+   * ⚠️ Si DICE, non si tace: un elenco che mostra meno righe di quante ne
+   * esistono, e non spiega perché, fa cercare un guasto. È la stessa regola di
+   * `.admin-table__nota-mobile`.
+   */
+  protected readonly futureNascoste = computed(
+    () => this.onsite().length - this.presenzeAvvenute().length,
+  );
+
+  /**
+   * ⚠️ La ricerca copre titolo e descrizione, e NON la piattaforma: qui le
+   * sessioni sono tutte `LIVEKIT` (le EXTERNAL non lasciano traccia e sono già
+   * escluse), quindi «piattaforma» varrebbe «On-site» su ogni riga — un campo
+   * di ricerca che non discrimina niente promette qualcosa che non può dare.
+   * ⚠️ E non è debounced: il filtro è LOCALE, non una chiamata di rete. I 300ms
+   * delle altre sezioni servono a non sfondare il throttle del server; qui
+   * sarebbero solo un ritardo.
+   */
+  protected readonly ricerca = signal('');
+
+  protected readonly tier = signal<'TUTTI' | 'LOW' | 'HIGH'>('TUTTI');
+  protected readonly vociTier: readonly VoceFiltro<'TUTTI' | 'LOW' | 'HIGH'>[] = [
+    { valore: 'TUTTI', etichetta: 'Tutti' },
+    { valore: 'LOW', etichetta: 'Low stakes' },
+    { valore: 'HIGH', etichetta: 'High stakes' },
+  ];
+
+  protected readonly presenzeVisibili = computed(() => {
+    const q = this.ricerca().trim().toLowerCase();
+    const t = this.tier();
+    return this.presenzeAvvenute().filter((s) => {
+      if (t !== 'TUTTI' && s.stakes !== t) return false;
+      if (!q) return true;
+      return `${s.title} ${s.description ?? ''}`.toLowerCase().includes(q);
+    });
+  });
+
+  /** Vero se un filtro sta nascondendo delle righe che esistono. */
+  protected readonly filtroAttivo = computed(
+    () => this.ricerca().trim().length > 0 || this.tier() !== 'TUTTI',
+  );
+
+  protected onRicerca(e: Event): void {
+    this.ricerca.set((e.target as HTMLInputElement).value);
+  }
+
+  protected azzeraFiltri(): void {
+    this.ricerca.set('');
+    this.tier.set('TUTTI');
+  }
 
   /**
    * La scheda aperta.

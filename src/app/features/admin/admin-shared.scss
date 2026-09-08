@@ -87,15 +87,18 @@
   font-size: 0.9rem;
 }
 
+// ⚠️ Nessuna regola sull'`h2` qui dentro. `.admin-list h2` vale (0,1,1) e
+// batte lo (0,1,0) di `.admin-barra__titolo`: in TRE sezioni (affiliazioni,
+// partecipazione, negozio) il titolo usciva a 1,3rem mentre in tutte le altre è
+// 1,2 — cioè il primitivo condiviso c'era, era applicato, e perdeva. È la
+// stessa trappola già pagata su `.rz__head h2` in Redazione, e si ripresenta
+// ovunque un contenitore dichiari uno stile per un TAG invece che per una
+// classe: chi scrive `.admin-barra__titolo` nel markup crede di aver scelto la
+// dimensione, e non è vero.
 .admin-list {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
-
-  h2 {
-    font-size: 1.3rem;
-    margin-bottom: 0.4rem;
-  }
 }
 
 .admin-item {

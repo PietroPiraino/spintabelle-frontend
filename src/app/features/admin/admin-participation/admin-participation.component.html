@@ -23,17 +23,65 @@
   <div class="admin-list">
     <div class="admin-barra">
       <h2 class="admin-barra__titolo">Presenze alle lezioni live</h2>
-      @if (onsite().length > 0) {
+      <!--
+        ⚠️ La ricerca dice «titolo» e non «titolo o tag»: una sessione live non
+        ha tag — né nel modello né nello schema Mongo — e un segnaposto che ne
+        promette manda a cercare un campo che non esiste.
+      -->
+      <input
+        type="search"
+        class="input admin-barra__campo"
+        placeholder="Cerca per titolo…"
+        aria-label="Cerca fra le lezioni live"
+        [value]="ricerca()"
+        (input)="onRicerca($event)"
+      />
+      @if (presenzeAvvenute().length > 0) {
+        <!-- ⚠️ Il conteggio è delle righe VISIBILI, non di quelle caricate:
+             sopra un elenco filtrato, il totale dell'archivio è un numero che
+             non corrisponde a niente di ciò che si sta guardando. -->
         <span class="admin-barra__conta">
-          {{ onsite().length }} {{ onsite().length === 1 ? 'sessione' : 'sessioni' }} on-site
+          {{ presenzeVisibili().length }}
+          {{ presenzeVisibili().length === 1 ? 'sessione' : 'sessioni' }}
+          @if (presenzeVisibili().length !== presenzeAvvenute().length) {
+            su {{ presenzeAvvenute().length }}
+          }
         </span>
       }
     </div>
+
+    @if (presenzeAvvenute().length > 0) {
+      <app-filtro
+        etichetta="Filtra per tier"
+        [voci]="vociTier"
+        [scelto]="tier()"
+        (scegli)="tier.set($event)"
+      />
+    }
 
     <p class="admin-nota">
       Chi è entrato nella sala, quando e per quanto. Il registro esiste solo per le
       lezioni on-site: le sessioni su Zoom o Discord si svolgono fuori dal sito e
       non lasciano alcuna traccia qui.
+      <!-- ⚠️ Le future non si nascondono in silenzio: un elenco con meno righe
+           di quante ne esistono, e senza una spiegazione, fa cercare un guasto. -->
+      @if (futureNascoste() > 0) {
+        <!--
+          ⚠️ Due frasi intere e non un suffisso incollato: «cominciata» +
+          «e» dà «cominciatae». La concordanza italiana non si fa
+          concatenando lettere, e un test l'ha colta al primo giro.
+        -->
+        <strong>
+          @if (futureNascoste() === 1) {
+            Una sessione non è ancora cominciata e non compare qui:
+          } @else {
+            {{ futureNascoste() }} sessioni non sono ancora cominciate e non
+            compaiono qui:
+          }
+          avrebbero zero presenze per definizione, non perché non è venuto
+          nessuno.
+        </strong>
+      }
     </p>
 
     @if (listError()) {
@@ -42,17 +90,31 @@
 
     @if (!sessions() && listLoading()) {
       <div class="spinner" role="status" aria-label="Caricamento"></div>
-    } @else if (sessions() && onsite().length === 0) {
+    } @else if (sessions() && presenzeAvvenute().length === 0) {
       <div class="empty-state">
         <p>
-          Nessuna lezione live on-site.
+          @if (futureNascoste() > 0) {
+            Nessuna lezione live on-site è ancora cominciata.
+          } @else {
+            Nessuna lezione live on-site.
+          }
           @if (hasExternal()) {
             Le sessioni esterne (Zoom/Discord) non compaiono qui.
           }
         </p>
       </div>
+    } @else if (sessions() && presenzeVisibili().length === 0) {
+      <!-- ⚠️ Vuoto DIVERSO da quello sopra, e lo dice: «non c'è niente» e «i
+           filtri nascondono tutto» sono due situazioni opposte, e la seconda ha
+           una via d'uscita che va offerta. -->
+      <div class="empty-state">
+        <p>Nessuna sessione con questi filtri.</p>
+        <button type="button" class="btn btn--ghost btn--sm" (click)="azzeraFiltri()">
+          Azzera i filtri
+        </button>
+      </div>
     } @else if (sessions()) {
-      @for (s of onsite(); track s.id) {
+      @for (s of presenzeVisibili(); track s.id) {
         <div class="card admin-item">
           <div class="admin-item__info">
             <div class="row" style="gap: 0.6rem">
