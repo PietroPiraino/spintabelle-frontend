@@ -1,0 +1,24 @@
+// Le due soglie del pannello admin.
+//
+// ⚠️ Sono variabili SASS e non custom property: `var(--x)` non funziona dentro
+// una `@media`, che è l'unico posto in cui questi numeri servono.
+//
+// ⚠️ Esistono perché i tre fogli devono CONCORDARE. La barra dei filtri vive in
+// `admin-shared.scss`, il ripiegamento della tabella in `admin-table.scss`, la
+// densità dei campi in `admin-modale.scss`: finché il numero è scritto a mano
+// in tre file diverge in silenzio, e il sintomo è una barra che si incolonna
+// 160px prima della tabella che dovrebbe accompagnare.
+//
+// ⚠️ I nomi dicono la DECISIONE e non la taglia. Un `$md: 720px` sarebbe un
+// invito a riusare quel numero dove nessuno ha mai misurato niente — ed è
+// esattamente la ragione per cui l'880 di live-room e il 900 di varianza NON
+// stanno qui: sono misure di quelle due pagine, non soglie del progetto.
+
+/// Sotto questa soglia la tabella smette di essere una tabella: ogni riga
+/// diventa un blocco impilato. Misurata a 390px, vedi `admin-table.scss`.
+$bp-tabella-blocchi: 720px;
+
+/// Sotto questa soglia la modale è una schermata intera e i campi tornano a
+/// 16px, o iOS ingrandisce la pagina quando il fuoco entra in un campo più
+/// piccolo — e da quello zoom non si torna indietro da soli.
+$bp-modale-piena: 560px;

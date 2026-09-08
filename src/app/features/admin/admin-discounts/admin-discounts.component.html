@@ -1,8 +1,8 @@
 <div class="admin-users">
-  <div class="admin-users__head">
+  <div class="admin-barra">
     <input
       type="search"
-      class="input admin-users__search"
+      class="input admin-barra__campo"
       placeholder="Cerca codice…"
       aria-label="Cerca codici sconto"
       [formControl]="searchControl"
@@ -20,7 +20,7 @@
       + Nuovo codice
     </button>
     @if (page(); as p) {
-      <span class="admin-users__count">
+      <span class="admin-barra__conta">
         {{ p.total }} {{ p.total === 1 ? 'codice' : 'codici' }}
       </span>
     }

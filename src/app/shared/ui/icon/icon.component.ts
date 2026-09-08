@@ -82,6 +82,13 @@ export const ICON_NAMES = [
   // accanto al badge del ruolo sulla stessa linea, dove si leggerebbero come
   // un'ellissi di testo troncato invece che come un comando.
   'more-vertical',
+  // i comandi CRUD del pannello admin: `+` per creare, matita per modificare.
+  // ⚠️ Il set non ne aveva NESSUNA delle due: la piu' vicina a «modifica» era
+  // `pen-tool`, che pero' e' la penna Bezier ed e' gia' l'icona della voce
+  // Redazione nella sidebar — usarla anche per «modifica» avrebbe fatto dire
+  // due cose diverse allo stesso disegno.
+  'plus',
+  'pencil',
   // i tre temi del sito: erano ☀ U+2600, 🌇 U+1F307 e ☾ U+263E, cioe' tre
   // glifi che i font del sito NON contengono (i sottoinsiemi sono latini) e
   // che quindi disegnava il sistema operativo, con forma e peso diversi su
@@ -495,6 +502,14 @@ export type IconName = (typeof ICON_NAMES)[number];
         Raggio 1,75 e non 1: e' un cerchio riempito, non stirato da un tratto,
         quindi deve arrivare da solo al peso visivo delle altre icone.
       -->
+      @case ('plus') {
+        <path d="M12 5v14" />
+        <path d="M5 12h14" />
+      }
+      @case ('pencil') {
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+      }
       @case ('more-vertical') {
         <circle cx="12" cy="5" r="1.75" fill="currentColor" stroke="none" />
         <circle cx="12" cy="12" r="1.75" fill="currentColor" stroke="none" />

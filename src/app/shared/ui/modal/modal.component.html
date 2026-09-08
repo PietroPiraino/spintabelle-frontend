@@ -8,19 +8,28 @@
 <dialog
   #dlg
   class="mo"
-  [class.mo--larga]="larga()"
+  [class.mo--stretta]="taglia() === 'stretta'"
+  [class.mo--larga]="taglia() === 'larga'"
   [attr.aria-labelledby]="idTitolo"
   [attr.aria-describedby]="idSottotitolo()"
   (cancel)="onCancel($event)"
   (mousedown)="onGiu($event)"
   (click)="onClic($event)"
 >
-  <div class="mo__box" tabindex="-1">
+  <div class="mo__box" tabindex="-1" [attr.aria-busy]="salvando() ? 'true' : null">
     <header class="mo__testa">
       <div class="mo__titoli">
         <h2 [id]="idTitolo" class="mo__titolo">{{ titolo() }}</h2>
         @if (sottotitolo(); as sub) {
           <p [id]="idSottotitolo()" class="mo__sub">{{ sub }}</p>
+        }
+        <!--
+          ⚠️ Se `salvando` toglie Escape e il clic sul fondale, deve DIRE
+          perché: un tasto che smette di funzionare senza spiegazione si legge
+          come un blocco, e la reazione è premerlo più forte.
+        -->
+        @if (salvando()) {
+          <p class="mo__stato" role="status">Salvataggio in corso…</p>
         }
       </div>
       <button
@@ -36,6 +45,22 @@
     <div class="mo__corpo">
       <ng-content />
     </div>
+
+    <!--
+      Le azioni del form: restano ferme mentre il corpo scorre.
+
+      ⚠️ DENTRO `.mo__box`, mai come fratello sotto il `<dialog>`: il fondale si
+      riconosce da `e.target === dialog`, e una fascia appesa direttamente al
+      dialog lascerebbe attorno a sé pixel il cui bersaglio è ancora il dialog —
+      cioè un clic accanto a «Salva» che chiude la modale.
+      ⚠️ Sta PRIMA della riga di conferma, che deve restare l'ultima: è quella
+      che ha appena preso il fuoco.
+      ⚠️ Il submit del chiamante è qui, quindi FUORI dal suo `<form>`: gli serve
+      `form="<id>"`, o il clic non invia niente e non lo segnala nessuno.
+    -->
+    <footer class="mo__piede">
+      <ng-content select="[moPiede]" />
+    </footer>
 
     @if (confermaUscita()) {
       <!--

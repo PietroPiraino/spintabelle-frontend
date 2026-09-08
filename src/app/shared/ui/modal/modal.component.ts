@@ -41,6 +41,9 @@ let seq = 0;
  * del chiamante. Tenerlo montato e nascosto vorrebbe dire chiamare
  * `showModal()`/`close()` a mano e tenere il contatore allineato da fuori.
  */
+/** Le tre larghezze della scatola. Vedi l'input `taglia`. */
+export type TagliaModale = 'stretta' | 'media' | 'larga';
+
 @Component({
   selector: 'app-modal',
   imports: [IconComponent],
@@ -63,7 +66,28 @@ export class ModalComponent {
    * `toSignal(form.valueChanges, { initialValue: … })`.
    */
   readonly sporco = input(false);
-  readonly larga = input(false);
+  /**
+   * Taglia della scatola: 480 · 720 · 960.
+   *
+   * ⚠️ Ha SOSTITUITO il booleano `larga`, non lo affianca: due modi di dire la
+   * stessa cosa sono la divergenza che questo progetto paga ovunque, e le
+   * call-site erano due.
+   * ⚠️ Il default resta 720 anche perché la spec «è CENTRATA nel viewport»
+   * misura `left` contro `(innerWidth - 720) / 2`: cambiarlo la rompe.
+   * Oltre i 960 un form in colonna singola produce righe di lettura sopra gli
+   * 80 caratteri — a un editor serve ALTEZZA, non larghezza.
+   */
+  readonly taglia = input<TagliaModale>('media');
+  /**
+   * C'è una richiesta in volo.
+   *
+   * ⚠️ Blocca le due chiusure ACCIDENTALI (Escape, clic sul fondale) e non la
+   * ✕: bloccare ogni uscita significa che una richiesta appesa — rete morta,
+   * 504 lento — intrappola chi la sta usando dentro un `<dialog>` modale, e
+   * l'unica via d'uscita diventa ricaricare la pagina. È la stessa regola già
+   * scritta per `sporco`: si ferma il gesto distratto, non quello deliberato.
+   */
+  readonly salvando = input(false);
   readonly chiusa = output<void>();
 
   private readonly dlg =
@@ -125,6 +149,13 @@ export class ModalComponent {
 
   /** `Escape`: il browser lo consegna come `cancel` PRIMA di chiudere. */
   protected onCancel(e: Event): void {
+    // ⚠️ `salvando` PRIMA di `sporco`: con una richiesta in volo il contenuto
+    // non è «perso», è in viaggio, e «vuoi chiudere e perderle?» sarebbe una
+    // domanda a cui né sì né no è la risposta giusta.
+    if (this.salvando()) {
+      e.preventDefault();
+      return;
+    }
     if (!this.sporco()) {
       this.chiudi();
       return;
@@ -148,6 +179,7 @@ export class ModalComponent {
   protected onClic(e: MouseEvent): void {
     if (!this.giuSulFondale || e.target !== this.d) return;
     this.giuSulFondale = false;
+    if (this.salvando()) return;
     if (this.sporco()) {
       this.confermaUscita.set(true);
       return;

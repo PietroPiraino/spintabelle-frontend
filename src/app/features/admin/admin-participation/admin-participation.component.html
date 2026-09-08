@@ -1,9 +1,9 @@
 <div class="admin-users">
   <div class="admin-list">
-    <div class="admin-users__head">
+    <div class="admin-barra">
       <h2 style="margin: 0; font-size: 1.2rem">Presenze alle lezioni live</h2>
       @if (onsite().length > 0) {
-        <span class="admin-users__count">
+        <span class="admin-barra__conta">
           {{ onsite().length }} {{ onsite().length === 1 ? 'sessione' : 'sessioni' }} on-site
         </span>
       }
@@ -134,10 +134,10 @@
 
   <!-- ── Viste delle video-lezioni ─────────────────────────────────────── -->
   <div class="admin-list" style="margin-top: 2.4rem">
-    <div class="admin-users__head">
+    <div class="admin-barra">
       <h2 style="margin: 0; font-size: 1.2rem">Chi ha visto le lezioni</h2>
       @if (viewsRows(); as rows) {
-        <span class="admin-users__count">
+        <span class="admin-barra__conta">
           {{ rows.length }} {{ rows.length === 1 ? 'lezione aperta' : 'lezioni aperte' }}
         </span>
       }

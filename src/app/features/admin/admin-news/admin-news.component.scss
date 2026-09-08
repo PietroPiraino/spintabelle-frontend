@@ -54,13 +54,13 @@
   border-style: dashed;
 }
 
-// ⚠️ `.admin-users__count` è `nowrap` (nasce per "12 iscritti"): qui la riga
+// ⚠️ `.admin-barra__conta` è `nowrap` (nasce per "12 iscritti"): qui la riga
 // porta anche il nome del filtro e su telefono deve poter andare a capo.
 .admin-news__conteggio {
   white-space: normal;
 }
 
-// Conteggio e avviso di aggiornamento sono UN blocco solo: `.admin-users__head`
+// Conteggio e avviso di aggiornamento sono UN blocco solo: `.admin-barra`
 // è `space-between`, e da figli separati l'arrivo dell'avviso spingerebbe il
 // conteggio in mezzo alla riga a ogni ricarica.
 .admin-news__stato-elenco {

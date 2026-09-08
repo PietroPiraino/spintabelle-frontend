@@ -11,9 +11,15 @@ import { ModalComponent } from './modal.component';
         titolo="Gestisci iscritto"
         sottotitolo="mario@bff.it"
         [sporco]="sporco()"
+        [salvando]="salvando()"
         (chiusa)="visibile.set(false)"
       >
         <input type="text" class="dentro" />
+        @if (conPiede()) {
+          <div moPiede>
+            <button type="button" class="btn btn--primary">Salva</button>
+          </div>
+        }
       </app-modal>
     }
   `,
@@ -21,6 +27,8 @@ import { ModalComponent } from './modal.component';
 class Ospite {
   readonly visibile = signal(true);
   readonly sporco = signal(false);
+  readonly salvando = signal(false);
+  readonly conPiede = signal(false);
 }
 
 describe('app-modal', () => {
@@ -201,5 +209,70 @@ describe('app-modal', () => {
     expect(d.querySelector(`#${id}`)?.textContent).toContain(
       'Gestisci iscritto',
     );
+  });
+
+  describe('il piede', () => {
+    const piede = () =>
+      fixture.nativeElement.querySelector('.mo__piede') as HTMLElement;
+
+    it('⚠️ senza azioni proiettate non occupa spazio', async () => {
+      // È l'unica rete su `:empty`. Le due modali che esistevano prima del
+      // piede tengono le proprie azioni dentro i loro `<details>`, nel corpo:
+      // senza questa regola guadagnerebbero una fascia vuota con un filetto in
+      // fondo, e nessun test lo vedrebbe.
+      await stabilizza();
+      expect(getComputedStyle(piede()).display).toBe('none');
+    });
+
+    it('con le azioni proiettate resta VISIBILE e fuori dal corpo scorrevole', async () => {
+      // Il motivo per cui il piede esiste: prima Salva e Annulla stavano nel
+      // corpo e su un form più alto della finestra scorrevano via.
+      ospite.conPiede.set(true);
+      await stabilizza();
+      expect(getComputedStyle(piede()).display).not.toBe('none');
+      expect(piede().querySelector('button')?.textContent?.trim()).toBe('Salva');
+      const corpo = fixture.nativeElement.querySelector(
+        '.mo__corpo',
+      ) as HTMLElement;
+      expect(corpo.contains(piede())).toBe(false);
+    });
+  });
+
+  describe('durante il salvataggio', () => {
+    it('⚠️ Escape e il fondale non chiudono, la ✕ sì', async () => {
+      // Le due chiusure ACCIDENTALI si fermano; l'unico gesto deliberato no.
+      // Bloccare anche la ✕ significherebbe che una richiesta appesa — rete
+      // morta, 504 lento — intrappola chi la sta usando in un dialog modale,
+      // con la sola via d'uscita di ricaricare la pagina.
+      ospite.salvando.set(true);
+      await stabilizza();
+      const d = dialog()!;
+
+      d.dispatchEvent(new Event('cancel', { cancelable: true }));
+      await stabilizza();
+      expect(ospite.visibile()).toBe(true);
+
+      d.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      d.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await stabilizza();
+      expect(ospite.visibile()).toBe(true);
+
+      (
+        fixture.nativeElement.querySelector('.mo__chiudi') as HTMLButtonElement
+      ).click();
+      await stabilizza();
+      expect(ospite.visibile()).toBe(false);
+    });
+
+    it('lo dice, invece di lasciare che Escape sembri rotto', async () => {
+      ospite.salvando.set(true);
+      await stabilizza();
+      expect(fixture.nativeElement.textContent).toContain('Salvataggio in corso');
+      expect(
+        (fixture.nativeElement.querySelector('.mo__box') as HTMLElement).getAttribute(
+          'aria-busy',
+        ),
+      ).toBe('true');
+    });
   });
 });

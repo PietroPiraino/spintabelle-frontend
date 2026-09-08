@@ -1,5 +1,5 @@
 <div class="admin-users">
-  <div class="admin-users__head">
+  <div class="admin-barra">
     <div class="row" role="group" aria-label="Filtra per stato" style="gap: 0.5rem; flex-wrap: wrap">
       <button
         type="button"
@@ -27,7 +27,7 @@
       </button>
     </div>
     @if (page(); as p) {
-      <span class="admin-users__count">
+      <span class="admin-barra__conta">
         {{ p.total }} {{ p.total === 1 ? 'giocatore' : 'giocatori' }}
       </span>
     }
@@ -109,7 +109,7 @@
               -->
                 <button
                   type="button"
-                  class="admin-table__ico"
+                  class="admin-ico"
                   aria-haspopup="dialog"
                   [attr.aria-label]="'Apri la scheda di ' + chi(r)"
                   title="Apri la scheda"
@@ -165,7 +165,7 @@
     [titolo]="'Staking di ' + chi(r)"
     [sottotitolo]="r.userEmail ?? null"
     [sporco]="sporco()"
-    [larga]="true"
+    taglia="larga"
     (chiusa)="chiudiModale()"
   >
     <div [formGroup]="form" class="admin-modale">

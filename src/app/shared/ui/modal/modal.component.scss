@@ -21,6 +21,12 @@
   // nel posto sbagliato. Misurato, non dedotto.
   margin: auto;
 
+  // Le altre due taglie. Il default (`media`) è la `width` qui sopra: 720px,
+  // che la spec «è CENTRATA» misura per nome.
+  &.mo--stretta {
+    width: min(100vw - 2rem, 480px);
+  }
+
   &.mo--larga {
     width: min(100vw - 2rem, 960px);
   }
@@ -50,6 +56,50 @@
 }
 
 .mo__testa,
+.mo__piede,
+// ── Il piede: le azioni del form, che NON scorrono ─────────────────────────
+//
+// ⚠️ Esiste perché prima non esisteva: il chiamante metteva Salva e Annulla
+// dentro il corpo scorrevole, e su un form più alto della finestra i due
+// pulsanti scorrevano via. Su una modale che sostituisce un pannello inline è
+// il difetto che renderebbe la sostituzione un peggioramento.
+.mo__piede {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.8rem 1.2rem;
+  // A schermo intero il piede arriva sul bordo inferiore, dove su iPhone c'è
+  // la barra di sistema.
+  padding-bottom: max(0.8rem, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--surface-1);
+
+  // ⚠️ Senza contenuto proiettato non deve restare NÉ la fascia NÉ il filetto,
+  // o le due modali che esistono già — che le azioni ce l'hanno dentro i propri
+  // `<details>` — guadagnerebbero una riga vuota in fondo. `:empty` è
+  // affidabile qui: dove un `<ng-content>` non riceve nulla non resta alcun
+  // nodo, e i nodi di solo spazio li toglie `preserveWhitespaces: false`.
+  &:empty {
+    display: none;
+  }
+
+  // ⚠️ 44px DICHIARATI: qui `admin-modale.scss` non arriva (quel blocco è
+  // dentro `.admin-modale`, che sta nel CORPO), e un `.btn--sm` nudo sta sui
+  // 38,1px. È l'ultimo posto in cui il bersaglio di tocco poteva perdersi.
+  .btn {
+    min-height: 44px;
+  }
+}
+
+// La riga che spiega perché Escape non risponde.
+.mo__stato {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--copper-600);
+}
+
 .mo__conferma {
   flex: none;
 }
@@ -129,7 +179,12 @@
 
 // 390px: la modale diventa una schermata intera, non una finestrella.
 @media (max-width: 560px) {
+  // ⚠️ `.mo--stretta` VA ELENCATA: `.mo.mo--stretta` vale (0,2,0) contro lo
+  // (0,1,0) di `.mo`, quindi senza il suo selettore una modale stretta
+  // resterebbe a 480px su un telefono da 390. Difetto muto — si apre,
+  // funziona, sta solo stretta in mezzo allo schermo.
   .mo,
+  .mo.mo--stretta,
   .mo.mo--larga {
     width: 100vw;
   }

@@ -1,3 +1,5 @@
+@use './soglie' as s;
+
 // ── Sezioni dentro una modale del pannello admin ───────────────────────────
 //
 // Una modale sola per riga, con dentro N sezioni richiudibili. ⚠️ Sono
@@ -149,7 +151,7 @@
 // il carattere torna a 16px perché iOS INGRANDISCE la pagina quando il fuoco
 // entra in un campo con meno di 16px, e da quello zoom non si torna indietro da
 // soli. L'altezza resta 44.
-@media (max-width: 560px) {
+@media (max-width: #{s.$bp-modale-piena}) {
   .admin-modale .input {
     font-size: 1rem;
   }

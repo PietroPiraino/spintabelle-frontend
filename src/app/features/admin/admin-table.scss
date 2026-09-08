@@ -1,3 +1,5 @@
+@use './soglie' as s;
+
 // ── Tabella condivisa del pannello admin ───────────────────────────────────
 //
 // ⚠️ File NUOVO e non un'aggiunta ad `admin-shared.scss`: quel foglio è
@@ -143,47 +145,24 @@
     // nell'unica fascia in cui serve davvero (fra i 720px e la larghezza piena).
   }
 
-  // ── Il comando di riga: solo icona ──────────────────────────────────────
-  //
-  // ⚠️ NON e' un `.btn--sm`, e la ragione e' aritmetica: un `.btn--sm` nudo sta
-  // sui 38px (0,85rem x 1,6 di line-height + 14,4 di padding + 2 di bordo) e i
-  // 44px del progetto vanno DICHIARATI — precedenti gia' pagati in
-  // `my-hands.component.scss`, `mo__chiudi` e `.aff-move__btn`. Qui pesa il
-  // doppio: sotto i 720px la cella perde il proprio `height: 44px`, quindi su
-  // telefono NON resta nulla a reggere il bersaglio se non il bottone stesso.
-  //
+  // ── Il comando di riga dentro una CELLA ─────────────────────────────────
   // ⚠️ Il `margin-block` negativo vale ESATTAMENTE il padding verticale della
   // cella (0.3rem), e senza di lui la riga si ALZEREBBE: 44 di bottone + 9,6 di
   // padding = 53,6px, cioe' una tabella meno densa proprio per la modifica
   // fatta per renderla piu' densa. Assorbendolo, la riga resta a 44px (prima
   // erano ~47,8) e il bersaglio sale da 38 a 44. Idioma di `.mo__chiudi`.
-  .admin-table__ico {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
+  // ⚠️ Il `margin-block` negativo vale ESATTAMENTE il padding verticale della
+  // cella (0.3rem), ed è il solo pezzo di `.admin-ico` che appartiene alla
+  // TABELLA: il resto vive in `admin-shared.scss`, perché ogni sezione avrà un
+  // `+` e una matita anche dove una tabella non c'è.
+  //
+  // Senza di lui la riga si ALZEREBBE: 44 di bottone + 9,6 di padding = 53,6px,
+  // cioè una tabella meno densa proprio per la modifica fatta per renderla più
+  // densa. Assorbendolo, la riga resta a 44px (prima erano ~47,8) e il
+  // bersaglio sale da 38 a 44. Misurato tutti e tre i casi. Idioma di
+  // `.mo__chiudi`.
+  .admin-ico {
     margin-block: -0.3rem;
-    padding: 0;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition:
-      color 0.15s ease,
-      background-color 0.15s ease;
-
-    &:hover,
-    &:focus-visible {
-      // Mai un `rgba()` letterale: in Tramonto `--copper-500` e' rosa.
-      background: color-mix(in srgb, var(--copper-500) 10%, transparent);
-      color: var(--copper-600);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
   }
 
   thead .admin-table__c-ultimo {
@@ -210,7 +189,7 @@
 // un `matchMedia` da ascoltare e ripulire. Qui a decidere è il foglio di stile,
 // che è l'unico a sapere quanto spazio c'è — stessa scelta già fatta per le due
 // geometrie del tavolo nel replayer.
-@media (max-width: 720px) {
+@media (max-width: #{s.$bp-tabella-blocchi}) {
   .admin-table__scroll {
     // Niente più scorrimento orizzontale: non c'è niente da far scorrere, e le
     // ombre a gradiente annuncerebbero un «di là continua» che è falso.
@@ -279,7 +258,7 @@
     // ⚠️ Qui la cella ha `padding: 0`, quindi il rientro negativo non ha piu'
     // niente da assorbire: lasciarlo accorcerebbe il blocco di 9,6px tirando il
     // bottone SOPRA il badge del ruolo che gli sta accanto.
-    .admin-table__ico {
+    .admin-ico {
       margin-block: 0;
     }
 
@@ -315,7 +294,7 @@
   display: none;
 }
 
-@media (max-width: 720px) {
+@media (max-width: #{s.$bp-tabella-blocchi}) {
   .admin-table__nota-mobile {
     display: block;
     margin: 0.2rem 0 0.6rem;
@@ -419,10 +398,10 @@
 // carattere da 16px e le due tendine 36,5px con carattere da 13,6px — sedici
 // pixel di differenza sulla stessa riga.
 //
-// ⚠️ Vive in questo foglio e non in `admin-shared.scss`: là `.admin-users__head`
+// ⚠️ Vive in questo foglio e non in `admin-shared.scss`: là `.admin-barra`
 // è condivisa da altre quattro sezioni (log, partecipazione, affiliazioni) che
 // una tabella non ce l'hanno, e la loro barra non è in discussione.
-.admin-users__head {
+.admin-barra {
   .input {
     min-height: 44px;
     padding: 0.5rem 0.75rem;
@@ -439,14 +418,14 @@
   }
 }
 
-@media (max-width: 720px) {
-  .admin-users__head {
+@media (max-width: #{s.$bp-tabella-blocchi}) {
+  .admin-barra {
     // ⚠️ Incolonnamento DELIBERATO invece del ritorno a capo spontaneo: a 390px
     // il flusso naturale metteva ricerca e primo filtro sulla stessa riga e il
     // secondo da solo sotto, lasciando mezza riga vuota. Ora: ricerca sopra a
     // tutta larghezza, i due filtri si dividono la riga seguente, il conteggio
     // in fondo.
-    .admin-users__search {
+    .admin-barra__campo {
       flex: 1 1 100%;
       max-width: none;
     }
@@ -456,7 +435,7 @@
       min-width: 0;
     }
 
-    .admin-users__count {
+    .admin-barra__conta {
       flex: 1 1 100%;
     }
 

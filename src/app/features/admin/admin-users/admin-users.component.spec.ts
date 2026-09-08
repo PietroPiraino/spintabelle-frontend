@@ -225,7 +225,7 @@ describe('AdminUsersComponent', () => {
    * una scelta contro la corrente: dal 07/09/2026 quel pulsante è solo-icona,
    * quindi `textContent` è vuoto e il vecchio `find` per testo schiantava con
    * un TypeError che non nomina la causa. La riparazione naturale sarebbe
-   * `querySelector('.admin-table__ico')` — e da lì in poi nel repo non
+   * `querySelector('.admin-ico')` — e da lì in poi nel repo non
    * resterebbe UNA SOLA riga che nomina l'etichetta del comando principale di
    * questa tabella. Cercandolo per `aria-label` il test resta una rete: se il
    * nome sparisce, il rosso torna.

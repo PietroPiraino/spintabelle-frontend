@@ -1,8 +1,8 @@
 <div class="admin-users">
-  <div class="admin-users__head">
+  <div class="admin-barra">
     <input
       type="search"
-      class="input admin-users__search"
+      class="input admin-barra__campo"
       placeholder="Cerca per email o nickname…"
       aria-label="Cerca iscritti"
       [formControl]="ricerca"
@@ -29,7 +29,7 @@
       <option value="30">In scadenza ≤ 30 giorni</option>
     </select>
     @if (page(); as p) {
-      <span class="admin-users__count">
+      <span class="admin-barra__conta">
         {{ p.total }} {{ p.total === 1 ? 'iscritto' : 'iscritti' }}
       </span>
     }
@@ -138,7 +138,7 @@
               -->
                 <button
                   type="button"
-                  class="admin-table__ico"
+                  class="admin-ico"
                   aria-haspopup="dialog"
                   [attr.aria-label]="
                     'Gestisci ' + (user.nickname || user.email)
@@ -198,7 +198,7 @@
     [titolo]="'Gestisci ' + (u.nickname || u.email)"
     [sottotitolo]="u.email"
     [sporco]="sporco()"
-    [larga]="true"
+    taglia="larga"
     (chiusa)="chiudi()"
   >
     <div [formGroup]="form" class="admin-modale">

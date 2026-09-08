@@ -143,7 +143,7 @@
   gap: 1rem;
 }
 
-.admin-users__head {
+.admin-barra {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -151,15 +151,73 @@
   gap: 0.8rem;
 }
 
-.admin-users__search {
+.admin-barra__campo {
   max-width: 360px;
   flex: 1;
 }
 
-.admin-users__count {
+.admin-barra__conta {
   font-size: 0.85rem;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+// Il comando «crea» resta a destra anche quando la barra va a capo.
+.admin-barra__crea {
+  margin-left: auto;
+}
+
+// ── Il comando solo-icona del pannello: `+`, matita, tre puntini ───────────
+//
+// ⚠️ NON è un `.btn--sm`, e la ragione è aritmetica: un `.btn--sm` nudo sta sui
+// 38,1px (0,85rem × 1,6 di line-height + 14,4 di padding + 2 di bordo) e i 44px
+// del progetto vanno DICHIARATI — precedenti già pagati in
+// `my-hands.component.scss`, `.mo__chiudi` e `.aff-move__btn`.
+//
+// ⚠️ Vive QUI e non in `admin-table.scss`: ogni sezione del pannello avrà un
+// `+` e una matita, anche quelle senza tabella, e lasciandolo là ognuna si
+// riscriverebbe il proprio quadrato da 44 — che è esattamente il modo in cui
+// nascono le ~142 classi locali che questo programma sta togliendo. Il pezzo
+// specifico della cella (il rientro negativo che assorbe il padding) resta in
+// `admin-table.scss`, dove `.admin-table .admin-ico` vale (0,2,0) e vince.
+.admin-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    // Mai un `rgba()` letterale: in Tramonto `--copper-500` è rosa.
+    background: color-mix(in srgb, var(--copper-500) 10%, transparent);
+    color: var(--copper-600);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  // La variante distruttiva: stesso quadrato, colore del pericolo all'hover.
+  &.admin-ico--rischio:hover:not(:disabled),
+  &.admin-ico--rischio:focus-visible {
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+    color: var(--danger);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
 .admin-user__line {

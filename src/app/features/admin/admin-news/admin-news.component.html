@@ -101,7 +101,7 @@
 
   <!-- ARCHIVIO -->
   <div class="admin-list">
-    <div class="admin-users__head">
+    <div class="admin-barra">
       <h2>Archivio news</h2>
       <span class="admin-news__stato-elenco">
         @if (pagina(); as p) {
@@ -110,7 +110,7 @@
                stessa risposta delle righe, quindi finché la nuova non atterra
                (o se non atterra mai) intestazione ed elenco parlano della
                stessa cosa. -->
-          <span class="admin-users__count admin-news__conteggio">
+          <span class="admin-barra__conta admin-news__conteggio">
             {{ p.total }} {{ p.total === 1 ? 'articolo' : 'articoli' }} · filtro:
             {{ filtroLabel(filtroCaricato()) }}
           </span>
