@@ -1,156 +1,302 @@
-<div class="admin-grid">
-  <!-- FORM -->
-  <div class="card card--pad admin-form">
-    <h2>{{ editingId() ? 'Modifica materiale' : 'Nuovo materiale' }}</h2>
-
-    @if (feedback()) {
-      <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
+<div class="admin-users">
+  <div class="admin-barra">
+    <h2 class="admin-barra__titolo">Materiali pubblicati</h2>
+    @if (page(); as p) {
+      <span class="admin-barra__conta">
+        {{ p.total }} {{ p.total === 1 ? 'materiale' : 'materiali' }}
+      </span>
     }
-    @if (error()) {
-      <div class="form-feedback is-error" role="alert">{{ error() }}</div>
-    }
-
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <div class="field">
-        <label for="title">Titolo</label>
-        <input
-          id="title"
-          type="text"
-          class="input"
-          formControlName="title"
-          placeholder="Es. Filtro 3-bet pot"
-          [class.is-invalid]="form.controls.title.touched && form.controls.title.invalid"
-        />
-      </div>
-
-      <div class="field">
-        <label for="description">Descrizione</label>
-        <textarea
-          id="description"
-          class="input"
-          formControlName="description"
-          rows="4"
-          placeholder="A cosa serve questo materiale?"
-          [class.is-invalid]="form.controls.description.touched && form.controls.description.invalid"
-        ></textarea>
-      </div>
-
-      <div class="field">
-        <label for="category">Categoria</label>
-        <select id="category" class="input" formControlName="category">
-          @for (c of categoryOptions; track c.value) {
-            <option [value]="c.value">{{ c.label }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="visibility">Visibilità</label>
-        <select id="visibility" class="input" formControlName="visibility">
-          <option value="USER">Tutti i registrati</option>
-          <option value="PESCE_ROSSO">Abbonati (Pesce Rosso e Squalo)</option>
-          <option value="SQUALO">Solo Squalo</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="file">
-          File{{ editingId() ? ' (lascia vuoto per mantenere quello attuale)' : '' }}
-        </label>
-        <input id="file" type="file" class="input" (change)="onFileChange($event)" />
-        @if (selectedFile()) {
-          <span class="admin-item__meta">
-            {{ selectedFile()!.name }} · {{ formatSize(selectedFile()!.size) }}
-          </span>
-        }
-        <p class="admin-news__hint">
-          Max {{ maxMb }} MB. Ammessi: pdf, xls(x), csv, doc(x), xml, txt, zip, rtf, ppt(x).
-        </p>
-      </div>
-
-      <div class="row">
-        <button type="submit" class="btn btn--primary" [disabled]="saving()">
-          {{ saving() ? 'Salvataggio…' : editingId() ? 'Salva modifiche' : 'Carica materiale' }}
-        </button>
-        @if (editingId()) {
-          <button type="button" class="btn btn--ghost" (click)="cancelEdit()">Annulla</button>
-        }
-      </div>
-    </form>
+    <!--
+      ⚠️ Il `+` porta un `aria-label` per esteso: `app-icon` ha `aria-hidden`
+      sull'host, quindi un bottone solo-icona senza etichetta è ANONIMO — uno
+      screen reader annuncia «pulsante» e basta.
+    -->
+    <button
+      type="button"
+      class="admin-ico admin-barra__crea"
+      aria-haspopup="dialog"
+      aria-label="Carica un nuovo materiale"
+      title="Nuovo materiale"
+      (click)="creaNuovo()"
+    >
+      <app-icon name="plus" [size]="20" />
+    </button>
   </div>
 
-  <!-- LISTA -->
-  <div class="admin-list">
-    <div class="spread">
-      <h2>Materiali pubblicati</h2>
-      @if (page(); as p) {
-        <span class="admin-item__meta">
-          {{ p.total }} {{ p.total === 1 ? 'materiale' : 'materiali' }}
-        </span>
-      }
-    </div>
-    @if (listError()) {
-      <div class="form-feedback is-error" role="alert">{{ listError() }}</div>
-    }
-    @if (!page() && listLoading()) {
-      <div class="spinner" role="status" aria-label="Caricamento"></div>
-    } @else if (page() && page()!.items.length === 0) {
-      <div class="empty-state">
-        <p>Nessun materiale ancora: caricane uno dal form.</p>
-      </div>
-    } @else if (page()) {
-      @for (doc of page()!.items; track doc.id) {
-        <div class="card admin-item" [class.is-editing]="editingId() === doc.id">
-          <div class="admin-item__info">
-            <div class="row" style="gap: 0.6rem; flex-wrap: wrap">
-              <strong>{{ doc.title }}</strong>
-              <span class="badge badge--tag">{{ categoryLabel(doc.category) }}</span>
-              @if (doc.visibility === 'USER') {
-                <span class="badge badge--free">Gratis</span>
-              } @else if (doc.visibility === 'SQUALO') {
-                <span class="badge badge--premium">Solo Squalo</span>
-              } @else {
-                <span class="badge badge--premium">Abbonati</span>
-              }
-            </div>
-            <span class="admin-item__meta">
-              {{ doc.fileName }} · {{ formatSize(doc.sizeBytes) }}
-              @if (doc.createdAt) {
-                · {{ doc.createdAt | date: 'dd MMM yyyy' }}
-              }
-              · {{ doc.downloadCount }} download
-            </span>
-          </div>
-          <div class="row" style="gap: 0.5rem">
-            <button type="button" class="btn btn--ghost btn--sm" (click)="edit(doc)">
-              Modifica
-            </button>
-            <button type="button" class="btn btn--danger btn--sm" (click)="remove(doc)">
-              Elimina
-            </button>
-          </div>
-        </div>
-      }
+  @if (feedback()) {
+    <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
+  }
+  @if (listError()) {
+    <div class="form-feedback is-error" role="alert">{{ listError() }}</div>
+  }
+  @if (error() && aperto() === null) {
+    <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+  }
 
-      @if (page()!.totalPages > 1) {
+  @if (!page() && listLoading()) {
+    <div class="spinner" role="status" aria-label="Caricamento"></div>
+  } @else if (page(); as p) {
+    @if (p.items.length === 0) {
+      <div class="empty-state">
+        <p>Nessun materiale ancora: caricane uno col pulsante «+».</p>
+      </div>
+    } @else {
+      <p class="admin-item__meta admin-table__nota-mobile">
+        Categoria, dimensione e download sono nella scheda di ogni materiale.
+      </p>
+
+      <div class="admin-table__scroll">
+        <table class="admin-table">
+          <caption class="visually-hidden">
+            Materiali scaricabili, dal più recente
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="admin-table__c-primo">Titolo</th>
+              <th scope="col" class="admin-table__solo-largo">Categoria</th>
+              <th scope="col">Visibilità</th>
+              <th scope="col" class="is-num admin-table__solo-largo">Peso</th>
+              <th scope="col" class="is-num admin-table__solo-largo">Download</th>
+              <th scope="col" class="admin-table__c-ultimo">
+                <span class="visually-hidden">Azioni</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (doc of p.items; track doc.id) {
+              <tr>
+                <th scope="row" class="admin-table__c-primo">
+                  <span class="admin-table__ident">
+                    <strong>{{ doc.title }}</strong>
+                    <span class="admin-user__nick">{{ doc.fileName }}</span>
+                  </span>
+                </th>
+                <td class="admin-table__solo-largo">
+                  {{ categoryLabel(doc.category) }}
+                </td>
+                <td>
+                  @if (doc.visibility === 'USER') {
+                    <span class="badge badge--free">Gratis</span>
+                  } @else if (doc.visibility === 'SQUALO') {
+                    <span class="badge badge--premium">Solo Squalo</span>
+                  } @else {
+                    <span class="badge badge--premium">Abbonati</span>
+                  }
+                </td>
+                <td class="is-num admin-table__solo-largo">
+                  {{ formatSize(doc.sizeBytes) }}
+                </td>
+                <td class="is-num admin-table__solo-largo">
+                  {{ doc.downloadCount }}
+                </td>
+                <td class="admin-table__c-ultimo">
+                  <button
+                    type="button"
+                    class="admin-ico"
+                    aria-haspopup="dialog"
+                    [attr.aria-label]="'Modifica ' + doc.title"
+                    title="Modifica"
+                    (click)="edit(doc)"
+                  >
+                    <app-icon name="pencil" [size]="18" />
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (p.totalPages > 1) {
         <div class="row admin-users__pager">
           <button
             type="button"
             class="btn btn--ghost btn--sm"
-            [disabled]="page()!.page <= 1 || listLoading()"
-            (click)="goToPage(page()!.page - 1)"
-          >← Precedenti</button>
+            [disabled]="p.page <= 1 || listLoading()"
+            (click)="goToPage(p.page - 1)"
+          >
+            ← Precedenti
+          </button>
           <span class="admin-item__meta">
-            Pagina {{ page()!.page }} di {{ page()!.totalPages }}
+            Pagina {{ p.page }} di {{ p.totalPages }}
           </span>
           <button
             type="button"
             class="btn btn--ghost btn--sm"
-            [disabled]="page()!.page >= page()!.totalPages || listLoading()"
-            (click)="goToPage(page()!.page + 1)"
-          >Successive →</button>
+            [disabled]="p.page >= p.totalPages || listLoading()"
+            (click)="goToPage(p.page + 1)"
+          >
+            Successive →
+          </button>
         </div>
       }
     }
-  </div>
+  }
 </div>
+
+@if (aperto() !== null) {
+  <app-modal
+    [titolo]="editingId() ? 'Modifica materiale' : 'Nuovo materiale'"
+    [sporco]="sporco()"
+    [salvando]="saving()"
+    (chiusa)="cancelEdit()"
+  >
+    <div class="admin-modale">
+      @if (error()) {
+        <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+      }
+
+      <!--
+        ⚠️ Il `<form>` porta un `id`: il submit sta nel PIEDE della modale,
+        cioè fuori da qui, e senza `form="doc-form"` sul bottone il clic non
+        invia niente — un «Salva» che non fa nulla, console pulita.
+      -->
+      <form id="doc-form" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="field">
+          <label for="title">Titolo</label>
+          <input
+            id="title"
+            type="text"
+            class="input"
+            formControlName="title"
+            placeholder="Es. Filtro 3-bet pot"
+            [class.is-invalid]="
+              form.controls.title.touched && form.controls.title.invalid
+            "
+          />
+        </div>
+
+        <div class="field">
+          <label for="description">Descrizione</label>
+          <textarea
+            id="description"
+            class="input"
+            formControlName="description"
+            rows="4"
+            placeholder="A cosa serve questo materiale?"
+            [class.is-invalid]="
+              form.controls.description.touched &&
+              form.controls.description.invalid
+            "
+          ></textarea>
+        </div>
+
+        <div class="row admin-panel__row">
+          <div class="field">
+            <label for="category">Categoria</label>
+            <select id="category" class="input" formControlName="category">
+              @for (c of categoryOptions; track c.value) {
+                <option [value]="c.value">{{ c.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="visibility">Visibilità</label>
+            <select id="visibility" class="input" formControlName="visibility">
+              <option value="USER">Tutti i registrati</option>
+              <option value="PESCE_ROSSO">
+                Abbonati (Pesce Rosso e Squalo)
+              </option>
+              <option value="SQUALO">Solo Squalo</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="file">
+            File{{
+              editingId() ? ' (lascia vuoto per mantenere quello attuale)' : ''
+            }}
+          </label>
+          <!--
+            ⚠️ `accept` e la riga di aiuto vengono dalla STESSA tupla: la frase
+            era scritta a mano e copiava l'allowlist del server a memoria, quindi
+            aggiungendo un formato al backend l'amministratore continuava a
+            leggere che non era ammesso.
+          -->
+          <input
+            id="file"
+            type="file"
+            class="input"
+            [attr.accept]="accept"
+            (change)="onFileChange($event)"
+          />
+          @if (selectedFile(); as f) {
+            <span class="admin-item__meta">
+              {{ f.name }} · {{ formatSize(f.size) }}
+            </span>
+          }
+          <p class="admin-news__hint">
+            Max {{ maxMb }} MB. Ammessi: {{ estensioni }}.
+          </p>
+        </div>
+      </form>
+
+      @if (editingId(); as id) {
+        <details class="admin-modale__sez admin-modale__sez--rischio">
+          <summary class="admin-modale__sum">Elimina il materiale</summary>
+          <div class="admin-modale__corpo">
+            <p class="admin-item__meta">
+              Il file sparisce dalla libreria e dallo spazio di archiviazione.
+              Non si torna indietro.
+            </p>
+            <div class="row admin-panel__actions">
+              @if (confermaElimina()) {
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  [disabled]="saving()"
+                  (click)="remove(apertoDoc()!)"
+                >
+                  Confermo, elimina
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="confermaElimina.set(false)"
+                >
+                  Annulla
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  [disabled]="saving()"
+                  (click)="armaElimina()"
+                >
+                  Elimina
+                </button>
+              }
+            </div>
+          </div>
+        </details>
+      }
+    </div>
+
+    <div class="row admin-panel__actions" moPiede>
+      <button
+        type="button"
+        class="btn btn--ghost"
+        [disabled]="saving()"
+        (click)="cancelEdit()"
+      >
+        Annulla
+      </button>
+      <button
+        type="submit"
+        class="btn btn--primary"
+        form="doc-form"
+        [disabled]="saving()"
+      >
+        {{
+          saving()
+            ? 'Salvataggio…'
+            : editingId()
+              ? 'Salva modifiche'
+              : 'Carica materiale'
+        }}
+      </button>
+    </div>
+  </app-modal>
+}

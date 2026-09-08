@@ -7,24 +7,36 @@
       aria-label="Cerca codici sconto"
       [formControl]="searchControl"
     />
-    <select
-      class="input"
-      aria-label="Filtra per stato"
-      [formControl]="statoControl"
-    >
-      <option value="TUTTI">Tutti</option>
-      <option value="ATTIVI">Solo attivi</option>
-      <option value="DISATTIVATI">Solo disattivati</option>
-    </select>
-    <button type="button" class="btn btn--primary btn--sm" (click)="openCreate()">
-      + Nuovo codice
-    </button>
     @if (page(); as p) {
       <span class="admin-barra__conta">
         {{ p.total }} {{ p.total === 1 ? 'codice' : 'codici' }}
       </span>
     }
+    <button
+      type="button"
+      class="admin-ico admin-barra__crea"
+      aria-haspopup="dialog"
+      aria-label="Crea un nuovo codice sconto"
+      title="Nuovo codice"
+      (click)="openCreate()"
+    >
+      <app-icon name="plus" [size]="20" />
+    </button>
   </div>
+
+  <!--
+    ⚠️ Era una `<select>`: funzionava, ma tre stati sono tre pillole, e in tutto
+    il pannello i filtri esclusivi ora parlano la stessa lingua (radiogroup +
+    aria-checked + frecce). Una tendina per tre voci nasconde due terzi delle
+    scelte dietro un clic.
+  -->
+  <app-filtro
+    etichetta="Filtra per stato"
+    [voci]="statiFiltro"
+    [scelto]="stato()"
+    [inerte]="loading()"
+    (scegli)="setStato($event)"
+  />
 
   @if (feedback()) {
     <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
@@ -33,9 +45,111 @@
     <div class="form-feedback is-error" role="alert">{{ error() }}</div>
   }
 
-  @if (formOpen()) {
-    <div class="card card--pad admin-panel">
-      <h3>{{ editingId() ? 'Modifica codice' : 'Nuovo codice sconto' }}</h3>
+  @if (!page() && loading()) {
+    <div class="spinner" role="status" aria-label="Caricamento codici"></div>
+  } @else if (page(); as p) {
+    @if (p.items.length === 0) {
+      <div class="empty-state">
+        <p>Nessun codice sconto. Creane uno col pulsante «+».</p>
+      </div>
+    } @else {
+      <p class="admin-item__meta admin-table__nota-mobile">
+        Ambito, validità e utenti ammessi sono nella scheda di ogni codice.
+      </p>
+
+      <div class="admin-table__scroll">
+        <table class="admin-table">
+          <caption class="visually-hidden">
+            Codici sconto, dal più recente
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="admin-table__c-primo">Codice</th>
+              <th scope="col">Valore</th>
+              <th scope="col" class="admin-table__solo-largo">Platea</th>
+              <th scope="col">Stato</th>
+              <th scope="col" class="is-num admin-table__solo-largo">Usi</th>
+              <th scope="col" class="admin-table__c-ultimo">
+                <span class="visually-hidden">Azioni</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of p.items; track c.id) {
+              <tr>
+                <th scope="row" class="admin-table__c-primo">
+                  <span class="admin-table__ident">
+                    <strong>{{ c.code }}</strong>
+                    <span class="admin-user__nick">
+                      {{ tiersLabel(c) }}
+                      @if (c.scope && c.scope !== 'SUBSCRIPTION') {
+                        · {{ scopeLabel(c.scope) }}
+                      }
+                      @if (c.reusable) { · a vita }
+                    </span>
+                  </span>
+                </th>
+                <td>{{ valueLabel(c) }}</td>
+                <td class="admin-table__solo-largo">
+                  {{ audienceLabel(c.audience) }}
+                  @if (c.audience === 'RESTRICTED') {
+                    <span class="admin-item__meta">
+                      · {{ c.eligibleCount ?? 0 }} ammessi
+                    </span>
+                  }
+                </td>
+                <td>
+                  @if (c.active) {
+                    <span class="badge badge--free">Attivo</span>
+                  } @else {
+                    <span class="badge badge--tag">Disattivato</span>
+                  }
+                </td>
+                <td class="is-num admin-table__solo-largo">
+                  {{ c.redeemedCount
+                  }}{{ c.maxRedemptions != null ? '/' + c.maxRedemptions : '' }}
+                </td>
+                <td class="admin-table__c-ultimo">
+                  <button
+                    type="button"
+                    class="admin-ico"
+                    aria-haspopup="dialog"
+                    [attr.aria-label]="'Modifica il codice ' + c.code"
+                    title="Modifica"
+                    (click)="openEdit(c)"
+                  >
+                    <app-icon name="pencil" [size]="18" />
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (p.totalPages > 1) {
+        <div class="row admin-users__pager">
+          <button type="button" class="btn btn--ghost btn--sm" [disabled]="p.page <= 1" (click)="goToPage(p.page - 1)">
+            ← Precedenti
+          </button>
+          <span class="admin-item__meta">Pagina {{ p.page }} di {{ p.totalPages }}</span>
+          <button type="button" class="btn btn--ghost btn--sm" [disabled]="p.page >= p.totalPages" (click)="goToPage(p.page + 1)">
+            Successivi →
+          </button>
+        </div>
+      }
+    }
+  }
+</div>
+
+@if (formOpen()) {
+  <app-modal
+    [titolo]="editingId() ? 'Modifica codice' : 'Nuovo codice sconto'"
+    [sporco]="sporco()"
+    [salvando]="saving()"
+    (chiusa)="closeForm()"
+  >
+    <div class="admin-modale">
 
       @if (!editingId()) {
         <div class="field" style="margin: 0 0 0.6rem">
@@ -143,82 +257,86 @@
         <div class="form-feedback is-error" role="alert">{{ formError() }}</div>
       }
 
-      <div class="row admin-panel__actions">
-        <button type="button" class="btn btn--primary btn--sm" [disabled]="saving()" (click)="save()">
-          {{ saving() ? 'Salvataggio…' : (editingId() ? 'Salva modifiche' : 'Crea codice') }}
-        </button>
-        <button type="button" class="btn btn--ghost btn--sm" [disabled]="saving()" (click)="closeForm()">
-          Annulla
-        </button>
-      </div>
-    </div>
-  }
 
-  @if (!page() && loading()) {
-    <div class="spinner" role="status" aria-label="Caricamento codici"></div>
-  } @else if (page(); as p) {
-    @if (p.items.length === 0) {
-      <div class="empty-state">
-        <p>Nessun codice sconto. Creane uno con "+ Nuovo codice".</p>
-      </div>
-    } @else {
-      <div class="admin-list">
-        @for (c of p.items; track c.id) {
-          <div class="card admin-item">
-            <div class="admin-item__info">
-              <div class="row admin-user__line">
-                <strong>{{ c.code }}</strong>
-                <span class="badge badge--premium">{{ valueLabel(c) }}</span>
-                <span class="badge badge--tag">{{ audienceLabel(c.audience) }}</span>
-                @if (c.scope && c.scope !== 'SUBSCRIPTION') {
-                  <span class="badge badge--tag">{{ scopeLabel(c.scope) }}</span>
-                }
-                @if (c.reusable) {
-                  <span class="badge badge--premium">A vita</span>
-                }
-                @if (c.active) {
-                  <span class="badge badge--free">Attivo</span>
-                } @else {
-                  <span class="badge badge--tag">Disattivato</span>
-                }
-              </div>
-              <span class="admin-item__meta">
-                {{ tiersLabel(c) }}
-                · Usato {{ c.redeemedCount }}{{ c.maxRedemptions != null ? '/' + c.maxRedemptions : '' }} volte
-                @if (c.redeemedCount > 0) {
-                  <!--
-                    ⚠️ La ragione per cui «Elimina» non c'è deve stare SULLA
-                    RIGA. Prima viveva solo dentro il `confirm()`, cioè spariva
-                    nell'istante in cui la si leggeva: chi tornava sulla pagina
-                    trovava un codice che non si cancella e nessuna spiegazione.
-                  -->
-                  · non eliminabile: lo citano le richieste che l'hanno usato
-                }
-                @if (c.audience === 'RESTRICTED') {
-                  · {{ c.eligibleCount ?? 0 }} utenti ammessi
-                }
-                @if (c.validFrom) { · dal {{ c.validFrom | date: 'dd MMM yyyy' }} }
-                @if (c.validUntil) { · al {{ c.validUntil | date: 'dd MMM yyyy' }} }
-              </span>
-            </div>
-
-            <div class="row admin-user__actions">
-              <button type="button" class="btn btn--ghost btn--sm" (click)="openEdit(c)">
-                Modifica
-              </button>
-              @if (c.audience === 'RESTRICTED') {
-                <button type="button" class="btn btn--ghost btn--sm" (click)="openDetail(c)">
-                  Utenti ({{ c.eligibleCount ?? 0 }})
-                </button>
+      @if (editingId() && codiceAperto()?.audience === 'RESTRICTED') {
+        <!--
+          ⚠️ L'elenco degli ammessi era un pannello che si apriva SOTTO la riga,
+          con un bottone «Utenti (n)» in più per riga. Sta dentro la scheda del
+          codice perché è una sua proprietà, non una schermata a parte — e così
+          la riga torna a un comando solo.
+        -->
+        <details class="admin-modale__sez" (toggle)="caricaAmmessi()">
+          <summary class="admin-modale__sum">
+            Utenti ammessi ({{ codiceAperto()?.eligibleCount ?? 0 }})
+          </summary>
+          <div class="admin-modale__corpo">
+            @if (detailLoading()) {
+              <div
+                class="spinner"
+                role="status"
+                aria-label="Caricamento utenti"
+              ></div>
+            } @else if (detail(); as d) {
+              @if (d.eligibles.length === 0) {
+                <p class="admin-item__meta">
+                  Nessun utente ammesso. Aggiungili dalla tab Iscritti con
+                  «Codice sconto».
+                </p>
+              } @else {
+                <ul class="admin-history">
+                  @for (u of d.eligibles; track u.userId) {
+                    <li class="row spread">
+                      <span>
+                        {{ u.userEmail ?? u.userId }}
+                        @if (u.redeemedAt) {
+                          <span class="badge badge--free">
+                            Riscattato {{ u.redeemedAt | date: 'dd MMM yyyy' }}
+                          </span>
+                        }
+                      </span>
+                      <button
+                        type="button"
+                        class="btn btn--ghost btn--sm"
+                        [disabled]="removingUserId() === u.userId"
+                        (click)="removeEligible(u.userId)"
+                      >
+                        Rimuovi
+                      </button>
+                    </li>
+                  }
+                </ul>
               }
-              <!--
-                ⚠️ DUE comandi, e prima era uno solo con l'etichetta legata a
-                `redeemedCount`: su un codice già riscattato diceva «Disattiva»
-                PER SEMPRE, anche una volta disattivato, perché il conteggio
-                degli usi non cambia spegnendolo. Ora l'etichetta segue
-                `active`, cioè lo STATO della riga, ed è l'unica cosa che la
-                rende leggibile.
-              -->
+              <p class="admin-item__meta">
+                Per ammettere altri utenti: tab Iscritti → «Codice sconto».
+              </p>
+            }
+          </div>
+        </details>
+      }
+
+      @if (codiceAperto(); as c) {
+        <details class="admin-modale__sez admin-modale__sez--rischio">
+          <summary class="admin-modale__sum">Stato e cancellazione</summary>
+          <div class="admin-modale__corpo">
+            <!--
+              ⚠️ DUE comandi distinti, e l'etichetta del primo segue `active` —
+              cioè lo STATO della riga — non `redeemedCount`. Prima era un
+              pulsante solo che chiamava la DELETE, con l'etichetta legata a
+              quante volte il codice era stato usato: su un codice riscattato
+              diceva «Disattiva» per sempre, disattivato compreso.
+            -->
+            <p class="admin-item__meta">
+              Usato {{ c.redeemedCount
+              }}{{ c.maxRedemptions != null ? ' di ' + c.maxRedemptions : '' }}
+              volte.
+              @if (c.redeemedCount > 0) {
+                <strong>
+                  Non è eliminabile: lo citano le richieste che l'hanno usato.
+                </strong>
+                Disattivandolo smette di essere spendibile e resta in archivio.
+              }
+            </p>
+            <div class="row admin-panel__actions">
               <button
                 type="button"
                 class="btn btn--ghost btn--sm"
@@ -227,75 +345,43 @@
                 {{ c.active ? 'Disattiva' : 'Riattiva' }}
               </button>
               @if (c.redeemedCount === 0) {
-                <!--
-                  ⚠️ «Elimina» compare SOLO su un codice mai riscattato: il
-                  server cancella davvero solo in quel caso e altrimenti
-                  degrada a spegnimento. Un pulsante che promette una
-                  cancellazione che non avverrà è una bugia con l'aria di un
-                  guasto.
-                -->
-                <button type="button" class="btn btn--danger btn--sm" (click)="remove(c)">
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  (click)="remove(c)"
+                >
                   Elimina
                 </button>
               }
             </div>
           </div>
-
-          @if (detailId() === c.id) {
-            <div class="card card--pad admin-panel">
-              <h3>Utenti ammessi — {{ c.code }}</h3>
-              @if (detailLoading()) {
-                <div class="spinner" role="status" aria-label="Caricamento utenti"></div>
-              } @else if (detail(); as d) {
-                @if (d.eligibles.length === 0) {
-                  <p class="admin-item__meta">
-                    Nessun utente ammesso. Aggiungili dalla tab Iscritti con "Codice sconto".
-                  </p>
-                } @else {
-                  <ul class="admin-history">
-                    @for (u of d.eligibles; track u.userId) {
-                      <li class="row" style="gap: 0.5rem; align-items: center; justify-content: space-between">
-                        <span>
-                          {{ u.userEmail ?? u.userId }}
-                          @if (u.redeemedAt) {
-                            <span class="badge badge--free">Riscattato {{ u.redeemedAt | date: 'dd MMM yyyy' }}</span>
-                          }
-                        </span>
-                        <button
-                          type="button"
-                          class="btn btn--ghost btn--sm"
-                          [disabled]="removingUserId() === u.userId"
-                          (click)="removeEligible(u.userId)"
-                        >
-                          Rimuovi
-                        </button>
-                      </li>
-                    }
-                  </ul>
-                }
-                <p class="admin-item__meta" style="margin-top: 0.6rem">
-                  Per ammettere altri utenti: tab Iscritti → "Codice sconto".
-                </p>
-              }
-              <div class="row admin-panel__actions">
-                <button type="button" class="btn btn--ghost btn--sm" (click)="closeDetail()">Chiudi</button>
-              </div>
-            </div>
-          }
-        }
-      </div>
-
-      @if (p.totalPages > 1) {
-        <div class="row admin-users__pager">
-          <button type="button" class="btn btn--ghost btn--sm" [disabled]="p.page <= 1" (click)="goToPage(p.page - 1)">
-            ← Precedenti
-          </button>
-          <span class="admin-item__meta">Pagina {{ p.page }} di {{ p.totalPages }}</span>
-          <button type="button" class="btn btn--ghost btn--sm" [disabled]="p.page >= p.totalPages" (click)="goToPage(p.page + 1)">
-            Successivi →
-          </button>
-        </div>
+        </details>
       }
-    }
-  }
-</div>
+    </div>
+
+    <div class="row admin-panel__actions" moPiede>
+      <button
+        type="button"
+        class="btn btn--ghost"
+        [disabled]="saving()"
+        (click)="closeForm()"
+      >
+        Annulla
+      </button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="saving()"
+        (click)="save()"
+      >
+        {{
+          saving()
+            ? 'Salvataggio…'
+            : editingId()
+              ? 'Salva modifiche'
+              : 'Crea codice'
+        }}
+      </button>
+    </div>
+  </app-modal>
+}

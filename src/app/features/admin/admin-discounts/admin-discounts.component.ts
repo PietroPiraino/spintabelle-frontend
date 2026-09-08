@@ -2,11 +2,12 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import {
   DiscountAudience,
@@ -19,14 +20,32 @@ import {
 } from '../../../core/models/api.models';
 import { AdminDiscountsService } from '../../../core/services/admin-discounts.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import {
+  FiltroComponent,
+  VoceFiltro,
+} from '../../../shared/ui/filtro/filtro.component';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
+
+type StatoFiltro = 'TUTTI' | 'ATTIVI' | 'DISATTIVATI';
 
 const PAGE_SIZE = 25;
 
 @Component({
   selector: 'app-admin-discounts',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [
+    ReactiveFormsModule,
+    DatePipe,
+    FiltroComponent,
+    IconComponent,
+    ModalComponent,
+  ],
   templateUrl: './admin-discounts.component.html',
-  styleUrl: '../admin-shared.scss',
+  styleUrls: [
+    '../admin-shared.scss',
+    '../admin-table.scss',
+    '../admin-modale.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDiscountsComponent {
@@ -48,13 +67,24 @@ export class AdminDiscountsComponent {
    * griglia per sempre, e disattivare non toglieva niente di mezzo. Il
    * backend accetta gia' `active` come booleano: nessuna modifica lato server.
    */
-  protected readonly statoControl = new FormControl<
-    'TUTTI' | 'ATTIVI' | 'DISATTIVATI'
-  >('TUTTI', { nonNullable: true });
-  private readonly stato = signal<'TUTTI' | 'ATTIVI' | 'DISATTIVATI'>('TUTTI');
+  protected readonly stato = signal<StatoFiltro>('TUTTI');
+  protected readonly statiFiltro: readonly VoceFiltro<StatoFiltro>[] = [
+    { valore: 'TUTTI', etichetta: 'Tutti' },
+    { valore: 'ATTIVI', etichetta: 'Solo attivi' },
+    { valore: 'DISATTIVATI', etichetta: 'Solo disattivati' },
+  ];
+
+  protected setStato(v: StatoFiltro): void {
+    if (this.stato() === v) return;
+    this.stato.set(v);
+    // Ogni filtro riporta alla prima pagina, o lo stato vuoto mente.
+    this.currentPage.set(1);
+    this.load();
+  }
 
   // ── Form crea/modifica ──
   protected readonly formOpen = signal(false);
+
   /** null = creazione; id = modifica. */
   protected readonly editingId = signal<string | null>(null);
   protected readonly saving = signal(false);
@@ -94,6 +124,40 @@ export class AdminDiscountsComponent {
   protected readonly maxRedControl = new FormControl<number | null>(null);
   protected readonly noteControl = new FormControl('', { nonNullable: true });
 
+  /**
+   * Tutti i campi del form in un `FormGroup`, al solo scopo di poterne
+   * osservare i cambiamenti in blocco.
+   *
+   * ⚠️ Il form è fatto di `FormControl` sciolti (undici), e per la modale serve
+   * un `sporco` che REAGISCA: un `computed` che legge `control.value` non si
+   * ricalcola mai — un FormControl non è un signal — quindi resterebbe `false`
+   * per sempre ed Escape butterebbe via il digitato, cioè il difetto che quel
+   * input esiste per prevenire. Il gruppo è solo la vetrina che espone un unico
+   * `valueChanges`: i controlli restano quelli, e il template non cambia.
+   */
+  private readonly gruppo = new FormGroup({
+    code: this.codeControl,
+    kind: this.kindControl,
+    value: this.valueControl,
+    audience: this.audienceControl,
+    tierPesce: this.tierPesceControl,
+    tierSqualo: this.tierSqualoControl,
+    scope: this.scopeControl,
+    reusable: this.reusableControl,
+    active: this.activeControl,
+    validFrom: this.validFromControl,
+    validUntil: this.validUntilControl,
+    maxRed: this.maxRedControl,
+    note: this.noteControl,
+  });
+  private readonly baseline = signal('');
+  private readonly valori = toSignal(this.gruppo.valueChanges, {
+    initialValue: this.gruppo.getRawValue() as Record<string, unknown>,
+  });
+  protected readonly sporco = computed(
+    () => JSON.stringify(this.valori()) !== this.baseline(),
+  );
+
   // ── Dettaglio (utenti ammessi) ──
   protected readonly detailId = signal<string | null>(null);
   protected readonly detail = signal<DiscountCodeDetail | null>(null);
@@ -119,14 +183,6 @@ export class AdminDiscountsComponent {
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe((q) => {
         this.query.set(q.trim());
-        this.currentPage.set(1);
-        this.load();
-      });
-    this.statoControl.valueChanges
-      .pipe(takeUntilDestroyed())
-      .subscribe((v) => {
-        this.stato.set(v);
-        // Ogni filtro riporta alla prima pagina, o lo stato vuoto mente.
         this.currentPage.set(1);
         this.load();
       });
@@ -222,6 +278,10 @@ export class AdminDiscountsComponent {
     this.validUntilControl.setValue('');
     this.maxRedControl.reset(null);
     this.noteControl.reset('');
+    // ⚠️ La baseline si scrive DOPO aver riempito i campi, o la modale nasce
+    // già sporca e il primo Escape chiede conferma senza che si sia digitato
+    // nulla.
+    this.baseline.set(JSON.stringify(this.gruppo.getRawValue()));
     this.formOpen.set(true);
   }
 
@@ -242,12 +302,17 @@ export class AdminDiscountsComponent {
     this.validUntilControl.setValue(this.isoToDateInput(c.validUntil));
     this.maxRedControl.setValue(c.maxRedemptions ?? null);
     this.noteControl.setValue(c.note ?? '');
+    // ⚠️ La baseline si scrive DOPO aver riempito i campi, o la modale nasce
+    // già sporca e il primo Escape chiede conferma senza che si sia digitato
+    // nulla.
+    this.baseline.set(JSON.stringify(this.gruppo.getRawValue()));
     this.formOpen.set(true);
   }
 
   protected closeForm(): void {
     this.formOpen.set(false);
     this.editingId.set(null);
+    this.closeDetail();
   }
 
   private buildPayload(): DiscountCodePayload {
@@ -335,6 +400,10 @@ export class AdminDiscountsComponent {
     this.feedback.set(null);
     this.api.update(c.id, { active: !c.active }).subscribe({
       next: (saved) => {
+        // ⚠️ Prima si chiude la modale, poi si scrive: la banda di successo
+        // vive nella PAGINA, e scriverla col dialog aperto la metterebbe dietro
+        // il fondale (top layer).
+        this.closeForm();
         this.feedback.set(
           saved.active
             ? `Codice ${c.code} riattivato.`
@@ -375,7 +444,7 @@ export class AdminDiscountsComponent {
             ? `Codice ${c.code} usato nel frattempo: l'ho solo disattivato.`
             : `Codice ${c.code} eliminato.`,
         );
-        if (this.detailId() === c.id) this.closeDetail();
+        this.closeForm();
         this.load();
       },
       error: (err: unknown) =>
@@ -384,6 +453,28 @@ export class AdminDiscountsComponent {
   }
 
   // ── Dettaglio / utenti ammessi ────────────────────────────────────────---
+
+  /** Il codice in modifica, RILETTO dalla pagina (mai una copia congelata). */
+  protected readonly codiceAperto = computed(() => {
+    const id = this.editingId();
+    if (!id) return null;
+    return this.page()?.items.find((c) => c.id === id) ?? null;
+  });
+
+  /**
+   * Carica gli utenti ammessi alla PRIMA apertura del `<details>`.
+   *
+   * ⚠️ Pigro e una volta sola: l'elenco è una chiamata in più, e la scheda di
+   * un codice si apre quasi sempre per cambiarne il valore, non per guardare
+   * chi lo può usare. `(toggle)` scatta anche in chiusura, quindi la guardia
+   * sull'id già caricato non è un'ottimizzazione: senza, richiudere e riaprire
+   * rifà la GET ogni volta.
+   */
+  protected caricaAmmessi(): void {
+    const c = this.codiceAperto();
+    if (!c || this.detailId() === c.id || this.detailLoading()) return;
+    this.openDetail(c);
+  }
 
   protected openDetail(c: DiscountCode): void {
     this.detailId.set(c.id);

@@ -53,6 +53,18 @@ describe('AdminDocumentsComponent', () => {
   let comp: Testable;
   const isList = (r: { url: string }) => r.url === `${API}/documents`;
 
+  const stabilizza = async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+
+  /** Risponde alla GET dell'elenco e stabilizza. */
+  const rispondi = async (p: Paginated<DocumentResource>) => {
+    http.expectOne(isList).flush(p);
+    await stabilizza();
+  };
+
   const fillValidForm = () =>
     comp.form.setValue({
       title: 'Filtro 3-bet',
@@ -125,5 +137,98 @@ describe('AdminDocumentsComponent', () => {
     // dopo la creazione ricarica la lista (pagina 1)
     http.expectOne(isList).flush(pageOf([docOf('new')], 1));
     await fixture.whenStable();
+  });
+
+  describe('la modale', () => {
+    const bottone = (etichetta: string): HTMLButtonElement | undefined =>
+      [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) =>
+          b.getAttribute('aria-label') === etichetta ||
+          b.textContent?.trim() === etichetta,
+      ) as HTMLButtonElement | undefined;
+
+    it('⚠️ il form NON è a vista: si apre col «+»', async () => {
+      // Era la colonna sinistra di una griglia, sempre presente anche quando
+      // non si stava creando nulla — cioè quasi sempre.
+      await rispondi(pageOf([docOf('d1')], 1));
+      expect(fixture.nativeElement.querySelector('#doc-form')).toBeFalsy();
+      bottone('Carica un nuovo materiale')!.click();
+      await stabilizza();
+      const d = fixture.nativeElement.querySelector(
+        'dialog',
+      ) as HTMLDialogElement;
+      expect(d.matches(':modal')).toBe(true);
+      expect(fixture.nativeElement.querySelector('#doc-form')).toBeTruthy();
+    });
+
+    it('⚠️ il submit vive nel PIEDE e punta al form con `form=`', async () => {
+      // Il bottone sta fuori dal `<form>`: senza l'attributo il clic non invia
+      // niente e non lo segnala nessuno — un «Salva» che non fa nulla.
+      await rispondi(pageOf([docOf('d1')], 1));
+      bottone('Carica un nuovo materiale')!.click();
+      await stabilizza();
+      const piede = fixture.nativeElement.querySelector(
+        '.mo__piede',
+      ) as HTMLElement;
+      const salva = piede.querySelector(
+        'button[type="submit"]',
+      ) as HTMLButtonElement;
+      expect(salva).toBeTruthy();
+      expect(salva.getAttribute('form')).toBe('doc-form');
+      // E il form NON è dentro il piede: sono due sottoalberi diversi.
+      expect(piede.querySelector('#doc-form')).toBeFalsy();
+    });
+
+    it('la matita apre la scheda del materiale scelto', async () => {
+      await rispondi(pageOf([{ ...docOf('d1'), title: 'Filtro 3-bet' }], 1));
+      bottone('Modifica Filtro 3-bet')!.click();
+      await stabilizza();
+      expect(fixture.nativeElement.textContent).toContain('Modifica materiale');
+      const titolo = fixture.nativeElement.querySelector(
+        '#title',
+      ) as HTMLInputElement;
+      expect(titolo.value).toBe('Filtro 3-bet');
+    });
+
+    it('⚠️ l’elenco dei formati e l’`accept` vengono dalla STESSA fonte', async () => {
+      // La riga di aiuto era una frase scritta a mano che copiava l'allowlist
+      // del server a memoria: aggiungendo un formato al backend,
+      // l'amministratore continuava a leggere che non era ammesso. E l'input
+      // non aveva alcun `accept`, unico dei tre upload del pannello.
+      await rispondi(pageOf([docOf('d1')], 1));
+      bottone('Carica un nuovo materiale')!.click();
+      await stabilizza();
+      const file = fixture.nativeElement.querySelector(
+        '#file',
+      ) as HTMLInputElement;
+      const accept = file.getAttribute('accept')!;
+      expect(accept).toContain('.html');
+      expect(accept).toContain('.zip');
+      const aiuto = fixture.nativeElement.textContent as string;
+      for (const ext of accept.split(',')) {
+        expect(aiuto).toContain(ext.slice(1));
+      }
+    });
+
+    it('⚠️ la cancellazione ha una conferma IN LINEA, non un confirm() nativo', async () => {
+      // Il riquadro di sistema non si stila, non si legge nel contesto della
+      // modale, e su alcune configurazioni il browser lo sopprime: in quel caso
+      // il ramo «annulla» non è raggiungibile e il materiale sparisce al primo
+      // clic.
+      await rispondi(pageOf([{ ...docOf('d1'), title: 'Filtro 3-bet' }], 1));
+      bottone('Modifica Filtro 3-bet')!.click();
+      await stabilizza();
+      bottone('Elimina')!.click();
+      await stabilizza();
+      // Il primo clic non cancella niente: arma soltanto.
+      http.expectNone((r) => r.method === 'DELETE');
+      expect(bottone('Confermo, elimina')).toBeTruthy();
+      bottone('Confermo, elimina')!.click();
+      const req = http.expectOne((r) => r.method === 'DELETE');
+      expect(req.request.url).toContain('/documents/d1');
+      req.flush({});
+      await rispondi(pageOf([], 0));
+      expect(fixture.nativeElement.querySelector('dialog')).toBeFalsy();
+    });
   });
 });
