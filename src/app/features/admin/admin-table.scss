@@ -282,11 +282,6 @@
     }
   }
 
-  .admin-table__ident {
-    // A capo, mai tagliata: qui lo spazio c'è, è la riga intera.
-    flex-wrap: wrap;
-    max-width: 100%;
-  }
 }
 
 // La nota che dice dove sono finite le colonne nascoste: solo sullo stretto.
@@ -351,6 +346,25 @@
 
   strong {
     color: var(--cream-100);
+  }
+}
+
+// ⚠️ SUBITO DOPO la regola di base, e non nel blocco a 720px che sta più su nel
+// file: le due hanno la stessa specificità (0,1,0) e a decidere è l'ordine.
+// Scritta là sopra, `align-items: flex-start` perdeva contro il `center` della
+// base — e il difetto è muto: la colonna si formava (`flex-direction` non
+// collide con niente) ma i due valori uscivano CENTRATI, cioè un elenco
+// rientrato a caso. Misurato a 390px, non dedotto.
+//
+// ⚠️ E incolonnata, non «a capo se non ci sta»: con `flex-wrap` il nome e il
+// suo dettaglio restano sulla stessa riga finché ci stanno, quindi due righe
+// adiacenti prendono due layout diversi a seconda di quanto è lungo il testo.
+@media (max-width: #{s.$bp-tabella-blocchi}) {
+  .admin-table__ident {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    max-width: 100%;
   }
 }
 

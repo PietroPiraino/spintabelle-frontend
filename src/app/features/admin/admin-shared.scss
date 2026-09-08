@@ -176,6 +176,40 @@
   margin-left: auto;
 }
 
+// ⚠️ Su schermo stretto il `+` va accanto al TITOLO, non in fondo alla barra.
+// Misurato a 390px: con `flex: 1` sul campo di ricerca la riga si riempie, e il
+// `+` — spinto da `margin-left: auto` — finiva da solo su una riga propria, con
+// una fascia vuota sopra e sotto. Il campo prende la riga intera e il comando
+// torna dove lo si cerca, in testa.
+@media (max-width: 720px) {
+  .admin-barra {
+    justify-content: flex-start;
+    row-gap: 0.5rem;
+  }
+
+  .admin-barra__titolo {
+    // `order` e non un markup diverso: la sequenza sorgente resta quella che
+    // legge uno screen reader, cambia solo la disposizione.
+    order: 1;
+    flex: 1;
+  }
+
+  .admin-barra__crea {
+    order: 2;
+    margin-left: 0;
+  }
+
+  .admin-barra__campo {
+    order: 3;
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .admin-barra__conta {
+    order: 4;
+  }
+}
+
 // ── Il comando solo-icona del pannello: `+`, matita, tre puntini ───────────
 //
 // ⚠️ NON è un `.btn--sm`, e la ragione è aritmetica: un `.btn--sm` nudo sta sui
