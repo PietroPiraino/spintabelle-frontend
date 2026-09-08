@@ -8,15 +8,18 @@
   gap: 1rem;
 }
 
+// ⚠️ Non ridichiara più flex, space-between, wrap e gap: erano la copia esatta
+// di `.admin-barra`, che ora la classe porta davvero. E soprattutto non
+// ridichiara la dimensione dell'`h2`: `.rz__head h2` vale (0,1,1) contro lo
+// (0,1,0) di `.admin-barra__titolo`, quindi vinceva — il titolo restava a
+// 1,3rem mentre in ogni altra sezione è 1,2. Una riscrittura locale che batte
+// il primitivo è il modo in cui «armonizzare» non armonizza niente.
 .rz__head {
-  display: flex;
+  // L'unica differenza vera dalla barra condivisa: qui il titolo ha sotto di sé
+  // il conteggio della coda, quindi le due colonne si allineano in alto.
   align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.8rem;
 
   h2 {
-    font-size: 1.3rem;
     margin: 0 0 0.2rem;
   }
 
@@ -31,12 +34,12 @@
   gap: 0.6rem;
 }
 
+// ⚠️ `.rz__nav-btn` non ridichiara più i 44px: era un `.admin-ico` riscritto a
+// mano con un altro nome, e ora è un `.admin-ico`. Resta solo il pezzo suo — le
+// due frecce stanno in una riga con un contatore in mezzo, e senza `flex: none`
+// il gruppo le comprime quando il testo cresce.
 .rz__nav-btn {
-  // ⚠️ 44px pieni: si sfoglia col pollice, non col mouse.
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0.4rem 0.9rem;
-  font-size: 1rem;
+  flex: none;
 }
 
 .rz__counter {
@@ -114,6 +117,18 @@
   .rz__pausa-row .rz__btn {
     width: 100%;
   }
+}
+
+// ⚠️ I due `.btn--link` della sezione stavano a 22 e 25px — meno della metà del
+// bersaglio di tocco — perché il primitivo globale ha `padding: 0` e nessun
+// `min-height`. Si correggono QUI e non nel primitivo: `.btn--link` ha cinque
+// usi in tutto il sito, tre dei quali su pagine pubbliche dove è davvero un
+// link in mezzo a una frase, e alzarne l'altezza là aprirebbe buchi nel testo.
+.rz__pausa-apri,
+.rz__footer .btn--link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .rz__pausa-apri {

@@ -5,9 +5,14 @@
   e solo in fondo i tre pulsanti.
 -->
 <div class="rz">
-  <div class="rz__head">
+  <!--
+    ⚠️ `.rz__head` era una `.admin-barra` riscritta a mano — stesso flex, stesso
+    space-between, stesso gap — con un `<h2>` nudo che ereditava la scala
+    globale, cioè un titolo di sezione grande quanto l'h1 di pagina.
+  -->
+  <div class="admin-barra rz__head">
     <div>
-      <h2>Coda di revisione</h2>
+      <h2 class="admin-barra__titolo">Coda di revisione</h2>
       @if (coda()) {
         <p class="admin-nota">
           {{ totale() }} {{ totale() === 1 ? 'articolo in coda' : 'articoli in coda' }}
@@ -19,24 +24,37 @@
     </div>
 
     @if (articoli().length > 0) {
+      <!--
+        ⚠️ Le frecce erano CARATTERI di testo (`←`/`→`) dentro un bottone, ed è
+        la lezione già pagata sui semi delle carte: un glifo lasciato al font di
+        sistema si disegna come vuole la piattaforma — su iOS certi caratteri
+        prendono perfino la presentazione emoji e ignorano il `color`. Ora sono
+        icone del set, cioè forme nostre.
+        ⚠️ E `.admin-ico` al posto di `.rz__nav-btn`, che era un `.admin-ico`
+        riscritto a mano: 44×44 ridichiarati con un altro nome.
+      -->
       <div class="rz__nav" role="group" aria-label="Naviga la coda">
         <button
           type="button"
-          class="btn btn--ghost btn--sm rz__nav-btn"
+          class="admin-ico rz__nav-btn"
           [disabled]="indice() === 0"
           aria-label="Articolo precedente"
           (click)="precedente()"
-        >←</button>
+        >
+          <app-icon name="arrow-left" [size]="18" />
+        </button>
         <span class="rz__counter" aria-live="polite">
           {{ indice() + 1 }} di {{ articoli().length }}
         </span>
         <button
           type="button"
-          class="btn btn--ghost btn--sm rz__nav-btn"
+          class="admin-ico rz__nav-btn"
           [disabled]="indice() >= articoli().length - 1"
           aria-label="Articolo successivo"
           (click)="successivo()"
-        >→</button>
+        >
+          <app-icon name="arrow-right" [size]="18" />
+        </button>
       </div>
     }
   </div>
@@ -183,7 +201,10 @@
           deve dare l'impressione di essere un voto su cui delegare la decisione.
         -->
         @if (confidenza() !== null) { Confidenza {{ confidenza() }}% · }
-        Firma: {{ a.autore }}
+        <!-- ⚠️ L'etichetta si stampa solo se c'è una firma: «Firma:» seguito dal
+             nulla annuncia un campo che non esiste, e su una coda di articoli
+             generati la firma manca spesso. -->
+        @if (a.autore) { Firma: {{ a.autore }} } @else { Senza firma }
         @if (a.aiGeneratedAt) { · generato con l'ausilio dell'IA }
       </p>
 
