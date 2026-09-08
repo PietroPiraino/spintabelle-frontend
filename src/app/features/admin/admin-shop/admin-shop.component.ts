@@ -2,10 +2,11 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   FormBuilder,
   FormControl,
@@ -24,6 +25,16 @@ import {
 } from '../../../core/models/api.models';
 import { ShopService } from '../../../core/services/shop.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import {
+  FiltroComponent,
+  VoceFiltro,
+} from '../../../shared/ui/filtro/filtro.component';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
+import {
+  SchedeComponent,
+  VoceScheda,
+} from '../../../shared/ui/schede/schede.component';
 
 /** Elementi per pagina (pager classico, come iscritti/lezioni/richieste). */
 const PAGE_SIZE = 25;
@@ -36,27 +47,32 @@ type ShopView = 'prodotti' | 'ordini';
 type TypeFilter = 'all' | ShopOrderType;
 type StatusFilter = 'all' | ShopOrderStatus;
 
-const TYPE_FILTERS: { key: TypeFilter; label: string }[] = [
-  { key: 'all', label: 'Tutti' },
-  { key: 'VOUCHER', label: 'Buoni' },
-  { key: 'SUBSCRIPTION', label: 'Abbonamenti' },
-  { key: 'GADGET', label: 'Gadget' },
+const TYPE_FILTERS: readonly VoceFiltro<TypeFilter>[] = [
+  { valore: 'all', etichetta: 'Tutti' },
+  { valore: 'VOUCHER', etichetta: 'Buoni' },
+  { valore: 'SUBSCRIPTION', etichetta: 'Abbonamenti' },
+  { valore: 'GADGET', etichetta: 'Gadget' },
 ];
 
-const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
-  { key: 'all', label: 'Tutti' },
-  { key: 'RICEVUTO', label: 'Ricevuto' },
-  { key: 'SPEDITO', label: 'Spedito' },
-  { key: 'CONSEGNATO', label: 'Consegnato' },
-  { key: 'ANNULLATO', label: 'Annullato' },
-  { key: 'COMPLETED', label: 'Completato' },
+const STATUS_FILTERS: readonly VoceFiltro<StatusFilter>[] = [
+  { valore: 'all', etichetta: 'Tutti' },
+  { valore: 'RICEVUTO', etichetta: 'Ricevuto' },
+  { valore: 'SPEDITO', etichetta: 'Spedito' },
+  { valore: 'CONSEGNATO', etichetta: 'Consegnato' },
+  { valore: 'ANNULLATO', etichetta: 'Annullato' },
+  { valore: 'COMPLETED', etichetta: 'Completato' },
 ];
 
 @Component({
   selector: 'app-admin-shop',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, SchedeComponent, FiltroComponent, IconComponent, ModalComponent],
   templateUrl: './admin-shop.component.html',
-  styleUrls: ['../admin-shared.scss', './admin-shop.component.scss'],
+  styleUrls: [
+    '../admin-shared.scss',
+    '../admin-table.scss',
+    '../admin-modale.scss',
+    './admin-shop.component.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminShopComponent {
@@ -67,6 +83,11 @@ export class AdminShopComponent {
 
   /** Sotto-vista attiva: catalogo prodotti o lista ordini. */
   protected readonly view = signal<ShopView>('prodotti');
+  protected readonly sottoSezioni: readonly VoceScheda<ShopView>[] =
+    [
+    { valore: 'prodotti', etichetta: 'Prodotti' },
+    { valore: 'ordini', etichetta: 'Ordini' },
+  ];
 
   // ── Prodotti (gadget CRUD) ──
 
@@ -100,6 +121,56 @@ export class AdminShopComponent {
     stock: [null as number | null, [Validators.min(0)]],
     active: [true],
   });
+
+  /** La modale del prodotto: `null` chiusa, `''` creazione, id modifica. */
+  protected readonly formAperto = signal<string | null>(null);
+
+  private readonly baseline = signal('');
+  private readonly valori = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue() as Record<string, unknown>,
+  });
+  /**
+   * ⚠️ Da `toSignal(valueChanges)`: un `computed` che legge `form.value` non si
+   * ricalcola mai (un FormGroup non è un signal) ed Escape butterebbe via il
+   * digitato. L'immagine scelta conta come sporco.
+   */
+  protected readonly sporcoProdotto = computed(
+    () =>
+      JSON.stringify(this.valori()) !== this.baseline() ||
+      this.selectedImage() !== null,
+  );
+
+  /** Il prodotto in modifica, RILETTO dalla pagina (mai una copia). */
+  protected readonly prodottoAperto = computed(() => {
+    const id = this.editingId();
+    if (!id) return null;
+    return this.prodPage()?.items.find((g) => g.id === id) ?? null;
+  });
+
+  /** L'ordine aperto nella scheda, RILETTO dalla pagina (mai una copia). */
+  protected readonly ordineApertoId = signal<string | null>(null);
+  protected readonly ordineAperto = computed(() => {
+    const id = this.ordineApertoId();
+    if (!id) return null;
+    return this.ordPage()?.items.find((o) => o.id === id) ?? null;
+  });
+
+  protected apriOrdine(o: ShopOrder): void {
+    this.ordineApertoId.set(o.id);
+    this.ordError.set(null);
+    this.ordFeedback.set(null);
+  }
+
+  protected chiudiOrdine(): void {
+    this.ordineApertoId.set(null);
+  }
+
+  protected creaProdotto(): void {
+    this.cancelEdit();
+    this.prodFeedback.set(null);
+    this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.formAperto.set('');
+  }
 
   // ── Ordini ──
 
@@ -220,10 +291,14 @@ export class AdminShopComponent {
       stock: g.stock,
       active: g.active,
     });
-    scrollTo({ top: 0, behavior: 'smooth' });
+    // ⚠️ La baseline DOPO il patch, o la modale nasce già sporca.
+    this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.formAperto.set(g.id);
   }
 
   protected cancelEdit(): void {
+    this.formAperto.set(null);
+    this.confirmDeleteId.set(null);
     this.editingId.set(null);
     this.selectedImage.set(null);
     this.form.reset({
@@ -410,6 +485,7 @@ export class AdminShopComponent {
       next: (updated) => {
         this.actingId.set(null);
         this.trackingId.set(null);
+        this.chiudiOrdine();
         this.ordFeedback.set(
           `Ordine di ${updated.userNickname || updated.userEmail} aggiornato a "${updated.statusLabel}".`,
         );
@@ -438,6 +514,9 @@ export class AdminShopComponent {
       next: (updated) => {
         this.actingId.set(null);
         this.cancelId.set(null);
+        // ⚠️ Prima si chiude la scheda, poi si scrive: la banda vive nella
+        // pagina e col dialog aperto finirebbe dietro il fondale.
+        this.chiudiOrdine();
         const who = updated.userNickname || updated.userEmail;
         // Ordine in euro: nessun punto da rimborsare (rimborso off-site manuale).
         this.ordFeedback.set(

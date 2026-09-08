@@ -6,7 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   FormBuilder,
   FormControl,
@@ -32,7 +32,16 @@ import {
 } from '../../../core/models/api.models';
 import { AffiliationsService } from '../../../core/services/affiliations.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import {
+  FiltroComponent,
+  VoceFiltro,
+} from '../../../shared/ui/filtro/filtro.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
+import {
+  SchedeComponent,
+  VoceScheda,
+} from '../../../shared/ui/schede/schede.component';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 
 /** Elementi per pagina (pager classico, come iscritti/lezioni/negozio). */
@@ -99,9 +108,14 @@ type RowAction = 'approva' | 'rifiuta' | 'revoca' | 'nota';
  */
 @Component({
   selector: 'app-admin-affiliations',
-  imports: [ReactiveFormsModule, DatePipe, IconComponent],
+  imports: [ReactiveFormsModule, DatePipe, SchedeComponent, FiltroComponent, IconComponent, ModalComponent],
   templateUrl: './admin-affiliations.component.html',
-  styleUrls: ['../admin-shared.scss', './admin-affiliations.component.scss'],
+  styleUrls: [
+    '../admin-shared.scss',
+    '../admin-table.scss',
+    '../admin-modale.scss',
+    './admin-affiliations.component.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminAffiliationsComponent {
@@ -111,6 +125,19 @@ export class AdminAffiliationsComponent {
 
   protected readonly maxLogoMb = MAX_LOGO_MB;
   protected readonly statuses = AFFILIATION_STATUSES;
+  /**
+   * Le voci del filtro di stato.
+   *
+   * ⚠️ L'etichetta si compone qui e non nel template: `statusFilterLabel` è una
+   * funzione, e un `app-filtro` vuole un elenco. Averlo come `computed` invece
+   * che come costante non servirebbe — `AFFILIATION_STATUSES` è una tupla
+   * chiusa e non cambia a runtime.
+   */
+  protected readonly vociStato: readonly VoceFiltro<AffiliationStatus>[] =
+    AFFILIATION_STATUSES.map((s) => ({
+      valore: s,
+      etichetta: this.statusFilterLabel(s),
+    }));
   protected readonly identifierFormats = IDENTIFIER_FORMATS;
 
   /**
@@ -124,6 +151,11 @@ export class AdminAffiliationsComponent {
 
   /** Sotto-vista attiva: coda delle richieste o catalogo delle sale. */
   protected readonly view = signal<AffiliationsView>('richieste');
+  protected readonly sottoSezioni: readonly VoceScheda<AffiliationsView>[] =
+    [
+    { valore: 'richieste', etichetta: 'Richieste' },
+    { valore: 'sale', etichetta: 'Poker room' },
+  ];
 
   // ── Richieste ──
 
@@ -257,6 +289,31 @@ export class AdminAffiliationsComponent {
     // ⚠️ NASCE SPENTA: una sala si pubblica di proposito, mai salvandola.
     active: [false],
   });
+
+  /** La modale della sala: `null` chiusa, `''` creazione, id modifica. */
+  protected readonly formAperto = signal<string | null>(null);
+
+  private readonly baseline = signal('');
+  private readonly valori = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue() as Record<string, unknown>,
+  });
+  /**
+   * ⚠️ Da `toSignal(valueChanges)`: un `computed` su `form.value` non si
+   * ricalcolerebbe mai (un FormGroup non è un signal) ed Escape butterebbe via
+   * il digitato. Il logo scelto conta come sporco.
+   */
+  protected readonly sporcoSala = computed(
+    () =>
+      JSON.stringify(this.valori()) !== this.baseline() ||
+      this.selectedLogo() !== null,
+  );
+
+  protected creaSala(): void {
+    this.cancelEdit();
+    this.roomFeedback.set(null);
+    this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.formAperto.set('');
+  }
 
   constructor() {
     this.searchControl.valueChanges
@@ -629,10 +686,13 @@ export class AdminAffiliationsComponent {
       ordine: r.ordine,
       active: r.active,
     });
-    scrollTo({ top: 0, behavior: 'smooth' });
+    // ⚠️ La baseline DOPO il patch, o la modale nasce già sporca.
+    this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.formAperto.set(r.id);
   }
 
   protected cancelEdit(): void {
+    this.formAperto.set(null);
     this.editingId.set(null);
     this.selectedLogo.set(null);
     this.logoRejected.set(false);
