@@ -38,10 +38,16 @@
 }
 
 // visibile solo sotto il breakpoint: apre il pannello sezioni
+// ⚠️ `min-height: 44px` DICHIARATO: il padding da 0.45rem lo lasciava a 38,1px,
+// e questo comando compare **solo sotto i 1024px** — cioè esattamente dove si
+// usa col dito, ed è l'unica via per raggiungere le altre sezioni. Era rimasto
+// fuori da tutte le misure del pannello perché su desktop non esiste. Trovato
+// misurando le tre sezioni a 390px, dove è l'unico controllo sotto soglia.
 .admin-shell__toggle {
   display: none;
   align-items: center;
   gap: 0.4rem;
+  min-height: 44px;
   padding: 0.45rem 0.8rem;
   background: var(--btn-ghost-bg);
   border: 1px solid var(--line-strong);
