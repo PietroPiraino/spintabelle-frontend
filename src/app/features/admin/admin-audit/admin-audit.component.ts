@@ -55,7 +55,7 @@ const KEY_LABELS: Record<string, string> = {
   selector: 'app-admin-audit',
   imports: [DatePipe],
   templateUrl: './admin-audit.component.html',
-  styleUrl: '../admin-shared.scss',
+  styleUrls: ['../admin-shared.scss', '../admin-table.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminAuditComponent {

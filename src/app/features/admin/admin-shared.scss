@@ -162,6 +162,15 @@
   white-space: nowrap;
 }
 
+// Il titolo di sezione dentro la barra. ⚠️ Era uno `style="margin:0;
+// font-size:1.2rem"` inline ripetuto in mezzo pannello: uno stile inline non
+// si può ritoccare da un tema, non compare in nessuna ricerca e non si può
+// misurare da una guardia.
+.admin-barra__titolo {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
 // Il comando «crea» resta a destra anche quando la barra va a capo.
 .admin-barra__crea {
   margin-left: auto;

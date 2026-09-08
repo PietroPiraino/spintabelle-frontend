@@ -1,143 +1,300 @@
-<div class="admin-list">
-  <div class="spread">
-    <h2>Richieste di abbonamento</h2>
+<div class="admin-users">
+  <div class="admin-barra">
+    <h2 class="admin-barra__titolo">Richieste di abbonamento</h2>
+    <input
+      type="search"
+      class="input admin-barra__campo"
+      placeholder="Cerca per email o nickname…"
+      aria-label="Cerca richieste"
+      [formControl]="searchControl"
+    />
     @if (page(); as p) {
-      <span class="admin-item__meta">
+      <span class="admin-barra__conta">
         {{ p.total }} {{ p.total === 1 ? 'richiesta' : 'richieste' }}
       </span>
     }
   </div>
 
-  <input
-    type="search"
-    class="input"
-    placeholder="Cerca per email o nickname…"
-    aria-label="Cerca richieste"
-    [formControl]="searchControl"
-    style="margin: 0.6rem 0"
+  <!--
+    ⚠️ Scelta ESCLUSIVA, quindi `app-filtro` (radiogroup + aria-checked) e non
+    la fila di `badge--tag` con il solo `is-active` che c'era prima: quella
+    annunciava quattro bottoni indistinguibili, senza dire quale fosse acceso.
+  -->
+  <app-filtro
+    etichetta="Filtra per stato"
+    [voci]="statuses"
+    [scelto]="statusFilter()"
+    [inerte]="loading()"
+    (scegli)="setStatus($event)"
   />
-
-  <div
-    class="row"
-    role="group"
-    aria-label="Filtra per stato"
-    style="gap: 0.5rem; margin: 0.4rem 0 1.2rem"
-  >
-    @for (s of statuses; track s.key) {
-      <button
-        type="button"
-        class="badge badge--tag"
-        [class.is-active]="statusFilter() === s.key"
-        (click)="setStatus(s.key)"
-      >{{ s.label }}</button>
-    }
-  </div>
 
   @if (feedback()) {
     <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
   }
-  @if (error()) {
+  @if (error() && !aperta()) {
     <div class="form-feedback is-error" role="alert">{{ error() }}</div>
   }
 
   @if (!page() && loading()) {
     <div class="spinner" role="status" aria-label="Caricamento"></div>
-  } @else if (page() && page()!.items.length === 0) {
-    <div class="empty-state">
-      <p>Nessuna richiesta con questo filtro.</p>
-    </div>
-  } @else if (page()) {
-    @for (req of page()!.items; track req.id) {
-      <div class="card admin-item">
-        <div class="admin-item__info">
-          <div class="row" style="gap: 0.6rem">
-            <strong>{{ req.userNickname || req.userEmail }}</strong>
-            @if (req.tier === 'SQUALO') {
-              <span class="badge badge--premium">Squalo</span>
-            } @else {
-              <span class="badge badge--free">Pesce Rosso</span>
-            }
-            <span class="badge badge--tag">{{ statusLabel(req.status) }}</span>
-          </div>
-          <span class="admin-item__meta">
-            {{ req.userEmail }} · {{ methodLabel(req.paymentMethod) }}
-            @if (req.paymentReference) {
-              · rif: {{ req.paymentReference }}
-            }
-            @if (req.createdAt) {
-              · {{ req.createdAt | date: 'dd MMM yyyy HH:mm' }}
-            }
-          </span>
-          <!--
-            ⚠️ Prima di questa riga la coda non mostrava ALCUN importo: ne'
-            listino, ne' scontato, ne' i buoni. Con una quota pagabile in punti
-            l'owner non ha piu' modo di dedurre quanto aspettarsi sul conto, e
-            approverebbe un pagamento diverso da quello ricevuto.
-          -->
-          @if (daIncassare(req) !== null) {
-            <span class="admin-item__meta">
-              <strong>Da incassare: €{{ daIncassare(req) }}</strong>
-              @if (req.listPriceEur != null && req.listPriceEur !== daIncassare(req)) {
-                · listino €{{ req.listPriceEur }}
-              }
-              @for (c of req.discountCodes ?? []; track c) { · buono {{ c }} }
-              @if (req.pointsSpent) {
-                · {{ fmtPunti(req.pointsSpent) }} pt
-                @if (req.pointsDiscountEur) { (−€{{ req.pointsDiscountEur }}) }
-              }
-            </span>
-          }
-          @if (req.refundedPoints) {
-            <span class="admin-item__meta">
-              Punti restituiti: {{ fmtPunti(req.refundedPoints) }}
-            </span>
-          }
-          @if (req.status === 'approved' && req.resultingExpiresAt) {
-            <span class="admin-item__meta">
-              Attivo fino al {{ req.resultingExpiresAt | date: 'dd MMM yyyy' }}
-            </span>
-          }
-          @if (req.status === 'rejected' && req.decisionNote) {
-            <span class="admin-item__meta">Motivo: {{ req.decisionNote }}</span>
-          }
-        </div>
-        @if (req.status === 'pending') {
-          <div class="row" style="gap: 0.5rem">
-            <button
-              type="button"
-              class="btn btn--primary btn--sm"
-              [disabled]="actingId() === req.id"
-              (click)="approve(req)"
-            >Approva</button>
-            <button
-              type="button"
-              class="btn btn--danger btn--sm"
-              [disabled]="actingId() === req.id"
-              (click)="reject(req)"
-            >Rifiuta</button>
-          </div>
-        }
+  } @else if (page(); as p) {
+    @if (p.items.length === 0) {
+      <div class="empty-state">
+        <p>Nessuna richiesta con questo filtro.</p>
       </div>
-    }
+    } @else {
+      <p class="admin-item__meta admin-table__nota-mobile">
+        Piano e data sono nella scheda di ogni richiesta.
+      </p>
 
-    @if (page()!.totalPages > 1) {
-      <div class="row admin-users__pager">
-        <button
-          type="button"
-          class="btn btn--ghost btn--sm"
-          [disabled]="page()!.page <= 1 || loading()"
-          (click)="goToPage(page()!.page - 1)"
-        >← Precedenti</button>
-        <span class="admin-item__meta">
-          Pagina {{ page()!.page }} di {{ page()!.totalPages }}
-        </span>
-        <button
-          type="button"
-          class="btn btn--ghost btn--sm"
-          [disabled]="page()!.page >= page()!.totalPages || loading()"
-          (click)="goToPage(page()!.page + 1)"
-        >Successive →</button>
+      <div class="admin-table__scroll">
+        <table class="admin-table">
+          <caption class="visually-hidden">
+            Richieste di abbonamento, dalla più recente
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="admin-table__c-primo">Iscritto</th>
+              <th scope="col" class="admin-table__solo-largo">Piano</th>
+              <th scope="col">Stato</th>
+              <th scope="col" class="is-num">Da incassare</th>
+              <th scope="col" class="admin-table__solo-largo">Quando</th>
+              <th scope="col" class="admin-table__c-ultimo">
+                <span class="visually-hidden">Azioni</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (req of p.items; track req.id) {
+              <tr>
+                <th scope="row" class="admin-table__c-primo">
+                  <span class="admin-table__ident">
+                    <strong>{{ req.userNickname || req.userEmail }}</strong>
+                    @if (req.userNickname) {
+                      <span class="admin-user__nick">{{ req.userEmail }}</span>
+                    }
+                  </span>
+                </th>
+                <td class="admin-table__solo-largo">
+                  @if (req.tier === 'SQUALO') {
+                    <span class="badge badge--premium">Squalo</span>
+                  } @else {
+                    <span class="badge badge--free">Pesce Rosso</span>
+                  }
+                </td>
+                <td>
+                  <span
+                    class="badge"
+                    [class.badge--free]="req.status === 'pending'"
+                    [class.badge--tag]="req.status !== 'pending'"
+                  >
+                    {{ statusLabel(req.status) }}
+                  </span>
+                </td>
+                <!--
+                  ⚠️ È la colonna su cui si decide: è il numero che l'owner
+                  confronta col bonifico ricevuto. Prima non compariva affatto
+                  nella riga — bisognava leggere quattro paragrafi di meta.
+                -->
+                <td class="is-num">
+                  @if (daIncassare(req); as eur) {
+                    €{{ eur }}
+                  } @else {
+                    <span class="is-vuota">—</span>
+                  }
+                </td>
+                <td class="admin-table__solo-largo">
+                  {{ req.createdAt | date: 'dd MMM yyyy' }}
+                </td>
+                <td class="admin-table__c-ultimo">
+                  <button
+                    type="button"
+                    class="admin-ico"
+                    aria-haspopup="dialog"
+                    [attr.aria-label]="
+                      'Apri la richiesta di ' + (req.userNickname || req.userEmail)
+                    "
+                    title="Apri la richiesta"
+                    (click)="apri(req)"
+                  >
+                    <app-icon name="more-vertical" [size]="18" />
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
+
+      @if (p.totalPages > 1) {
+        <div class="row admin-users__pager">
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            [disabled]="p.page <= 1 || loading()"
+            (click)="goToPage(p.page - 1)"
+          >
+            ← Precedenti
+          </button>
+          <span class="admin-item__meta">
+            Pagina {{ p.page }} di {{ p.totalPages }}
+          </span>
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            [disabled]="p.page >= p.totalPages || loading()"
+            (click)="goToPage(p.page + 1)"
+          >
+            Successive →
+          </button>
+        </div>
+      }
     }
   }
 </div>
+
+@if (aperta(); as req) {
+  <app-modal
+    [titolo]="'Richiesta di ' + (req.userNickname || req.userEmail)"
+    [sottotitolo]="req.userEmail"
+    [salvando]="actingId() === req.id"
+    (chiusa)="chiudi()"
+  >
+    <div class="admin-modale">
+      <!--
+        ⚠️ La banda dell'errore sta QUI, dentro la modale, e non è una
+        duplicazione: con un dialog aperto un toast dipinge dietro il fondale
+        (il `<dialog>` è in top layer). Vedi la guardia in `ToastService`.
+      -->
+      @if (error()) {
+        <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+      }
+
+      <dl class="admin-modale__anagrafica">
+        <div>
+          <dt>Piano</dt>
+          <dd>{{ tierLabel(req) }}</dd>
+        </div>
+        <div>
+          <dt>Stato</dt>
+          <dd>{{ statusLabel(req.status) }}</dd>
+        </div>
+        <div>
+          <dt>Metodo</dt>
+          <dd>{{ methodLabel(req.paymentMethod) }}</dd>
+        </div>
+        @if (req.createdAt) {
+          <div>
+            <dt>Richiesta il</dt>
+            <dd>{{ req.createdAt | date: 'dd MMM yyyy, HH:mm' }}</dd>
+          </div>
+        }
+      </dl>
+
+      <details class="admin-modale__sez" open>
+        <summary class="admin-modale__sum">Il conto</summary>
+        <div class="admin-modale__corpo">
+          @if (daIncassare(req) !== null) {
+            <p>
+              <strong>Da incassare: €{{ daIncassare(req) }}</strong>
+              @if (
+                req.listPriceEur != null && req.listPriceEur !== daIncassare(req)
+              ) {
+                <span class="admin-item__meta">
+                  · listino €{{ req.listPriceEur }}
+                </span>
+              }
+            </p>
+            @for (c of req.discountCodes ?? []; track c) {
+              <p class="admin-item__meta">Buono applicato: {{ c }}</p>
+            }
+            @if (req.pointsSpent) {
+              <p class="admin-item__meta">
+                Punti BFF: {{ fmtPunti(req.pointsSpent) }} pt
+                @if (req.pointsDiscountEur) { (−€{{ req.pointsDiscountEur }}) }
+              </p>
+            }
+          } @else {
+            <p class="admin-item__meta">
+              Nessun importo registrato su questa richiesta.
+            </p>
+          }
+          @if (req.paymentReference) {
+            <p class="admin-item__meta">
+              Riferimento del pagamento: {{ req.paymentReference }}
+            </p>
+          }
+          @if (req.refundedPoints) {
+            <p class="admin-item__meta">
+              Punti restituiti: {{ fmtPunti(req.refundedPoints) }}
+            </p>
+          }
+        </div>
+      </details>
+
+      @if (req.status === 'approved' && req.resultingExpiresAt) {
+        <p class="admin-item__meta">
+          Abbonamento attivo fino al
+          {{ req.resultingExpiresAt | date: 'dd MMM yyyy' }}
+        </p>
+      }
+      @if (req.status === 'rejected' && req.decisionNote) {
+        <p class="admin-item__meta">Motivo del rifiuto: {{ req.decisionNote }}</p>
+      }
+
+      @if (req.status === 'pending') {
+        <details class="admin-modale__sez admin-modale__sez--rischio">
+          <summary class="admin-modale__sum">Rifiuta la richiesta</summary>
+          <div class="admin-modale__corpo">
+            <!--
+              ⚠️ Era un `window.prompt`: un campo di sistema, non stilizzabile, e
+              su alcune configurazioni soppresso dal browser — nel qual caso la
+              richiesta veniva rifiutata SENZA motivo e nessuno se ne accorgeva.
+            -->
+            <label class="field" for="rq-motivo">
+              Motivo (facoltativo, lo legge l'iscritto)
+            </label>
+            <input
+              id="rq-motivo"
+              type="text"
+              class="input"
+              maxlength="200"
+              [formControl]="motivo"
+            />
+            <div class="row admin-panel__actions">
+              <button
+                type="button"
+                class="btn btn--danger btn--sm"
+                [disabled]="actingId() === req.id"
+                (click)="reject(req)"
+              >
+                Rifiuta
+              </button>
+            </div>
+          </div>
+        </details>
+      }
+    </div>
+
+    @if (req.status === 'pending') {
+      <div class="row admin-panel__actions" moPiede>
+        <button
+          type="button"
+          class="btn btn--ghost"
+          [disabled]="actingId() === req.id"
+          (click)="chiudi()"
+        >
+          Chiudi
+        </button>
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="actingId() === req.id"
+          (click)="approve(req)"
+        >
+          {{ actingId() === req.id ? 'Attivo…' : 'Approva' }}
+        </button>
+      </div>
+    }
+  </app-modal>
+}

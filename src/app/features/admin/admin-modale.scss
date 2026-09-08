@@ -91,6 +91,30 @@
 // La riga d'anagrafica in testa alla modale: date e stato, non modificabili.
 .admin-modale__anagrafica {
   margin: 0 0 0.2rem;
+
+  // Variante a COPPIE etichetta/valore, quando i dati in testa sono davvero
+  // coppie e non una frase (l'anagrafica di /iscritti è una frase; il conto di
+  // una richiesta è una tabellina). ⚠️ `:is(dl)` e non una classe in più: il
+  // markup dichiara già di che tipo di dato si tratta, e un modificatore
+  // sarebbe una seconda dichiarazione da tenere d'accordo con la prima.
+  &:is(dl) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.6rem;
+
+    dt {
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+
+    dd {
+      margin: 0.1rem 0 0;
+      font-weight: 600;
+    }
+  }
 }
 
 // ── Densità dei controlli dentro la modale ─────────────────────────────────

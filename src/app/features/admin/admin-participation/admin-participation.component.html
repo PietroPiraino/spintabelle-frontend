@@ -1,7 +1,28 @@
 <div class="admin-users">
+  <app-schede
+    #sch
+    etichetta="Sezioni della partecipazione"
+    [voci]="schede"
+    [scelto]="scheda()"
+    (scegli)="apriScheda($event)"
+  />
+
+  <!--
+    ⚠️ `tabindex="0"` sul pannello: senza, un pannello i cui primi elementi non
+    sono focalizzabili — qui un titolo e un paragrafo — è irraggiungibile da
+    tastiera dopo aver premuto la scheda.
+  -->
+  <div
+    role="tabpanel"
+    tabindex="0"
+    [id]="sch.idPannello()"
+    [attr.aria-labelledby]="sch.idSchedaAttiva()"
+  >
+    @if (scheda() === 'presenze') {
+
   <div class="admin-list">
     <div class="admin-barra">
-      <h2 style="margin: 0; font-size: 1.2rem">Presenze alle lezioni live</h2>
+      <h2 class="admin-barra__titolo">Presenze alle lezioni live</h2>
       @if (onsite().length > 0) {
         <span class="admin-barra__conta">
           {{ onsite().length }} {{ onsite().length === 1 ? 'sessione' : 'sessioni' }} on-site
@@ -133,9 +154,10 @@
   </div>
 
   <!-- ── Viste delle video-lezioni ─────────────────────────────────────── -->
-  <div class="admin-list" style="margin-top: 2.4rem">
+    } @else {
+<div class="admin-list">
     <div class="admin-barra">
-      <h2 style="margin: 0; font-size: 1.2rem">Chi ha visto le lezioni</h2>
+      <h2 class="admin-barra__titolo">Chi ha visto le lezioni</h2>
       @if (viewsRows(); as rows) {
         <span class="admin-barra__conta">
           {{ rows.length }} {{ rows.length === 1 ? 'lezione aperta' : 'lezioni aperte' }}
@@ -222,6 +244,8 @@
           }
         }
       }
+    }
+  </div>
     }
   </div>
 </div>

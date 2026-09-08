@@ -15,6 +15,13 @@ import {
 import { LessonsService } from '../../../core/services/lessons.service';
 import { LiveService } from '../../../core/services/live.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import {
+  SchedeComponent,
+  VoceScheda,
+} from '../../../shared/ui/schede/schede.component';
+
+/** Le due metà della pagina, che non condividono alcuno stato. */
+type Scheda = 'presenze' | 'viste';
 
 /**
  * Tab "Partecipazione": chi c'era davvero.
@@ -26,9 +33,9 @@ import { apiErrorMessage } from '../../../core/utils/http-error';
  */
 @Component({
   selector: 'app-admin-participation',
-  imports: [DatePipe],
+  imports: [DatePipe, SchedeComponent],
   templateUrl: './admin-participation.component.html',
-  styleUrl: '../admin-shared.scss',
+  styleUrls: ['../admin-shared.scss', '../admin-table.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminParticipationComponent {
@@ -57,9 +64,39 @@ export class AdminParticipationComponent {
     (this.sessions() ?? []).some((s) => s.mode !== 'LIVEKIT'),
   );
 
+  /**
+   * La scheda aperta.
+   *
+   * ⚠️ Le due sezioni erano impilate in colonna, la seconda staccata da uno
+   * `style="margin-top: 2.4rem"`: per arrivare alle viste bisognava scorrere
+   * ~130 righe di markup di presenze. Sono due elenchi che non condividono
+   * NIENTE — né stato, né filtri, né una chiamata — quindi non c'è alcuna
+   * ragione per cui debbano stare sullo stesso schermo.
+   */
+  protected readonly scheda = signal<Scheda>('presenze');
+  protected readonly schede: readonly VoceScheda<Scheda>[] = [
+    { valore: 'presenze', etichetta: 'Presenze live' },
+    { valore: 'viste', etichetta: 'Viste delle lezioni' },
+  ];
+
+  /**
+   * ⚠️ Chi ha già caricato. Il caricamento è PIGRO — la seconda scheda non
+   * chiede niente finché non la si apre — ma una volta caricata non si
+   * ricarica cambiando scheda: un elenco che si ricostruisce a ogni andata e
+   * ritorno fa lampeggiare lo spinner su dati che erano già lì.
+   */
+  private readonly caricate = new Set<Scheda>();
+
   constructor() {
-    this.load();
-    this.loadViews();
+    this.apriScheda('presenze');
+  }
+
+  protected apriScheda(s: Scheda): void {
+    this.scheda.set(s);
+    if (this.caricate.has(s)) return;
+    this.caricate.add(s);
+    if (s === 'presenze') this.load();
+    else this.loadViews();
   }
 
   private load(): void {

@@ -1,6 +1,6 @@
 <div class="admin-users">
   <div class="admin-barra">
-    <h2 style="margin: 0; font-size: 1.2rem">Log azioni admin</h2>
+    <h2 class="admin-barra__titolo">Log azioni admin</h2>
     @if (page(); as p) {
       <span class="admin-barra__conta">
         {{ p.total }} {{ p.total === 1 ? 'azione' : 'azioni' }}
@@ -20,34 +20,89 @@
         <p>Nessuna azione registrata.</p>
       </div>
     } @else {
-      <div class="admin-list">
-        @for (e of p.items; track e.id) {
-          <div class="card admin-item">
-            <div class="admin-item__info">
-              <div class="row admin-user__line">
-                <strong>{{ actionLabel(e.action) }}</strong>
-                @if (e.userEmail) {
-                  <span class="admin-user__nick">su {{ e.userEmail }}</span>
-                }
-              </div>
-              <span class="admin-item__meta">
-                {{ e.createdAt | date: 'dd MMM yyyy, HH:mm' }}
-                @if (e.adminEmail) { · da {{ e.adminEmail }} }
-                @if (details(e)) { · {{ details(e) }} }
-                @if (e.reason) { · "{{ e.reason }}" }
-              </span>
-            </div>
-          </div>
-        }
+      <!--
+        ⚠️ La nota va PRIMA della tabella: dice dove sono finite le colonne che
+        sotto i 720px spariscono, e detta dopo l'elenco si legge quando si è già
+        smesso di cercarle.
+      -->
+      <p class="admin-item__meta admin-table__nota-mobile">
+        Amministratore e dettagli della modifica sono visibili su schermi più
+        larghi.
+      </p>
+
+      <div class="admin-table__scroll">
+        <table class="admin-table">
+          <caption class="visually-hidden">
+            Registro delle azioni degli amministratori, dalla più recente
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="admin-table__c-primo">Azione</th>
+              <th scope="col">Quando</th>
+              <th scope="col" class="admin-table__solo-largo">Da</th>
+              <th scope="col" class="admin-table__solo-largo">Dettagli</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of p.items; track e.id) {
+              <tr>
+                <th scope="row" class="admin-table__c-primo">
+                  <span class="admin-table__ident">
+                    <strong>{{ actionLabel(e.action) }}</strong>
+                    @if (e.userEmail) {
+                      <span class="admin-user__nick">su {{ e.userEmail }}</span>
+                    }
+                  </span>
+                </th>
+                <td>{{ e.createdAt | date: 'dd MMM yyyy, HH:mm' }}</td>
+                <td class="admin-table__solo-largo">
+                  @if (e.adminEmail) {
+                    {{ e.adminEmail }}
+                  } @else {
+                    <span class="is-vuota">sistema</span>
+                  }
+                </td>
+                <!--
+                  ⚠️ `admin-table__multi` toglie il `white-space: nowrap` della
+                  riga: un riepilogo «prima → dopo» può essere lungo, e su una
+                  sola riga spingerebbe la tabella oltre lo schermo su OGNI
+                  scheda, non solo sulle poche verbose.
+                -->
+                <td class="admin-table__multi admin-table__solo-largo">
+                  @if (details(e); as d) {
+                    {{ d }}
+                  } @else {
+                    <span class="is-vuota">—</span>
+                  }
+                  @if (e.reason) {
+                    <em class="admin-item__meta">«{{ e.reason }}»</em>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
 
       @if (p.totalPages > 1) {
         <div class="row admin-users__pager">
-          <button type="button" class="btn btn--ghost btn--sm" [disabled]="p.page <= 1" (click)="goToPage(p.page - 1)">
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            [disabled]="p.page <= 1"
+            (click)="goToPage(p.page - 1)"
+          >
             ← Precedenti
           </button>
-          <span class="admin-item__meta">Pagina {{ p.page }} di {{ p.totalPages }}</span>
-          <button type="button" class="btn btn--ghost btn--sm" [disabled]="p.page >= p.totalPages" (click)="goToPage(p.page + 1)">
+          <span class="admin-item__meta">
+            Pagina {{ p.page }} di {{ p.totalPages }}
+          </span>
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            [disabled]="p.page >= p.totalPages"
+            (click)="goToPage(p.page + 1)"
+          >
             Successivi →
           </button>
         </div>
