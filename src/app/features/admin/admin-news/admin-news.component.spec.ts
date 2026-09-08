@@ -431,7 +431,7 @@ describe('AdminNewsComponent', () => {
     campo.dispatchEvent(new Event('input'));
     await stabilizza();
 
-    await clicca(uno<HTMLButtonElement>('.btn--danger-solid', conferma!)!);
+    await clicca(uno<HTMLButtonElement>('.admin-news__conferma-si', conferma!)!);
     const req = http.expectOne(`${API}/admin/news/p/ritira`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({});
@@ -455,7 +455,7 @@ describe('AdminNewsComponent', () => {
     campo.dispatchEvent(new Event('input'));
     await stabilizza();
 
-    await clicca(uno<HTMLButtonElement>('.btn--danger-solid', conferma)!);
+    await clicca(uno<HTMLButtonElement>('.admin-news__conferma-si', conferma)!);
     const req = http.expectOne(`${API}/admin/news/p/ritira`);
     expect(req.request.body).toEqual({ note: 'Dato sbagliato' });
     req.flush(newsOf('p', 'BOZZA'));
@@ -497,7 +497,7 @@ describe('AdminNewsComponent', () => {
 
     // Primo tocco: apre la conferma, nomina l'articolo e non chiama niente.
     await clicca(
-      uno<HTMLButtonElement>('.btn--danger.btn--sm', riga('Titolo p'))!,
+      uno<HTMLButtonElement>('.admin-news__elimina', riga('Titolo p'))!,
     );
     expect(confirmSpy).not.toHaveBeenCalled();
     http.expectNone((r) => r.method === 'DELETE');
@@ -506,17 +506,17 @@ describe('AdminNewsComponent', () => {
     expect(testo(conferma)).toContain('Titolo p');
 
     // Ripensarci non deve costare niente.
-    await clicca(uno<HTMLButtonElement>('.btn--ghost.btn--sm', conferma)!);
+    await clicca(uno<HTMLButtonElement>('.admin-news__conferma-no', conferma)!);
     expect(uno('.admin-news__conferma')).toBeNull();
     http.expectNone((r) => r.method === 'DELETE');
 
     // Secondo giro, fino in fondo.
     await clicca(
-      uno<HTMLButtonElement>('.btn--danger.btn--sm', riga('Titolo p'))!,
+      uno<HTMLButtonElement>('.admin-news__elimina', riga('Titolo p'))!,
     );
     await clicca(
       uno<HTMLButtonElement>(
-        '.btn--danger-solid',
+        '.admin-news__conferma-si',
         uno<HTMLElement>('.admin-news__conferma')!,
       )!,
     );
@@ -722,12 +722,12 @@ describe('AdminNewsComponent', () => {
     expect(testo(riga('Titolo r'))).toContain('già pubblicato il');
     expect(testo(riga('Titolo mai'))).not.toContain('già pubblicato');
 
-    await clicca(uno<HTMLButtonElement>('.btn--danger.btn--sm', riga('Titolo r'))!);
+    await clicca(uno<HTMLButtonElement>('.admin-news__elimina', riga('Titolo r'))!);
     expect(testo(uno('.admin-news__conferma'))).toContain('già stato online');
-    await clicca(uno<HTMLButtonElement>('.btn--ghost.btn--sm', uno<HTMLElement>('.admin-news__conferma')!)!);
+    await clicca(uno<HTMLButtonElement>('.admin-news__conferma-no', uno<HTMLElement>('.admin-news__conferma')!)!);
 
     // Sulla bozza mai pubblicata la stessa frase sarebbe una minaccia inventata.
-    await clicca(uno<HTMLButtonElement>('.btn--danger.btn--sm', riga('Titolo mai'))!);
+    await clicca(uno<HTMLButtonElement>('.admin-news__elimina', riga('Titolo mai'))!);
     const conferma = testo(uno('.admin-news__conferma'));
     expect(conferma).toContain('mai stata pubblicata');
     // ⚠️ Niente perdita promessa dove non c'è nulla da perdere: la frase
@@ -738,16 +738,16 @@ describe('AdminNewsComponent', () => {
   it('⚠️ la cancellazione in corso lo dice: «Elimino…» è raggiungibile', async () => {
     await rispondi([newsOf('p', 'PUBBLICATO')]);
 
-    await clicca(uno<HTMLButtonElement>('.btn--danger.btn--sm', riga('Titolo p'))!);
+    await clicca(uno<HTMLButtonElement>('.admin-news__elimina', riga('Titolo p'))!);
     await clicca(
-      uno<HTMLButtonElement>('.btn--danger-solid', uno<HTMLElement>('.admin-news__conferma')!)!,
+      uno<HTMLButtonElement>('.admin-news__conferma-si', uno<HTMLElement>('.admin-news__conferma')!)!,
     );
 
     // ⚠️ `esegui()` chiude la conferma nello STESSO istante in cui parte la
     // richiesta: l'etichetta dentro il blocco di conferma è irraggiungibile, e
     // l'unica azione irreversibile restava senza alcun segno su rete lenta.
     expect(uno('.admin-news__conferma')).toBeNull();
-    expect(testo(uno('.btn--danger.btn--sm', riga('Titolo p')))).toBe('Elimino…');
+    expect(testo(uno('.admin-news__elimina', riga('Titolo p')))).toBe('Elimino…');
 
     http.expectOne(`${API}/news/p`).flush({});
     await stabilizza();
@@ -1032,7 +1032,7 @@ describe('AdminNewsComponent', () => {
 
     // Il secondo tocco parte davvero.
     const vai = tutti<HTMLButtonElement>(
-      '.btn--danger-solid',
+      '.admin-news__conferma-si',
       riga('Titolo storico'),
     )[0];
     await clicca(vai);

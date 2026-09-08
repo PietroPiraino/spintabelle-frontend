@@ -182,13 +182,13 @@
                   <div class="row admin-news__azioni">
                     <button
                       type="button"
-                      class="btn btn--danger-solid btn--sm"
+                      class="btn btn--danger-solid btn--sm admin-news__conferma-si"
                       [disabled]="inVolo()"
                       (click)="confermaRitiro(news)"
                     >{{ inVoloSu(news._id, 'ritira') ? 'Ritiro…' : 'Conferma ritiro' }}</button>
                     <button
                       type="button"
-                      class="btn btn--ghost btn--sm"
+                      class="btn btn--ghost btn--sm admin-news__conferma-no"
                       [disabled]="inVolo()"
                       (click)="cancelConfirm()"
                     >Annulla</button>
@@ -222,13 +222,13 @@
                   <div class="row admin-news__azioni">
                     <button
                       type="button"
-                      class="btn btn--danger-solid btn--sm"
+                      class="btn btn--danger-solid btn--sm admin-news__conferma-si"
                       [disabled]="inVolo()"
                       (click)="confermaElimina(news)"
                     >{{ inVoloSu(news._id, 'elimina') ? 'Elimino…' : 'Conferma eliminazione' }}</button>
                     <button
                       type="button"
-                      class="btn btn--ghost btn--sm"
+                      class="btn btn--ghost btn--sm admin-news__conferma-no"
                       [disabled]="inVolo()"
                       (click)="cancelConfirm()"
                     >Annulla</button>
@@ -249,7 +249,7 @@
                   <div class="row admin-news__azioni">
                     <button
                       type="button"
-                      class="btn btn--danger-solid btn--sm"
+                      class="btn btn--danger-solid btn--sm admin-news__conferma-si"
                       [disabled]="inVolo()"
                       (click)="generaCopertina(news)"
                     >{{
@@ -259,7 +259,7 @@
                     }}</button>
                     <button
                       type="button"
-                      class="btn btn--ghost btn--sm"
+                      class="btn btn--ghost btn--sm admin-news__conferma-no"
                       [disabled]="inVolo()"
                       (click)="cancelConfirm()"
                     >Annulla</button>
@@ -326,7 +326,7 @@
                 }
                 <button
                   type="button"
-                  class="btn btn--ghost btn--sm"
+                  class="btn btn--ghost btn--sm admin-news__modifica"
                   [disabled]="inVolo()"
                   (click)="edit(news)"
                 >
@@ -339,7 +339,7 @@
                      irreversibile — restava senza alcun segno su rete lenta. -->
                 <button
                   type="button"
-                  class="btn btn--danger btn--sm"
+                  class="btn btn--danger btn--sm admin-news__elimina"
                   [disabled]="inVolo()"
                   (click)="askConfirm('elimina:' + news._id)"
                 >
