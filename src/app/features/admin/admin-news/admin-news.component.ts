@@ -96,6 +96,13 @@ interface Ritorno {
   selector: 'app-admin-news',
   imports: [ReactiveFormsModule, DatePipe, RouterLink, MarkdownComponent, FiltroComponent, IconComponent, ModalComponent, SchedeComponent],
   templateUrl: './admin-news.component.html',
+  // ⚠️ `DatePipe` iniettato, non `toLocaleDateString`: il sotto-testo della riga
+  // è composto due volte — come elementi nel template e come stringa in
+  // `sotto()` per il `title` — e le due devono formattare la data allo STESSO
+  // modo. Con `toLocaleDateString('it-IT')` da una parte e il pipe dall'altra
+  // uscivano «08 set 2026» e «08 Sep 2026», perché il pipe segue il `LOCALE_ID`
+  // dell'applicazione. Trovato dalla spec che confronta testo e tooltip.
+  providers: [DatePipe],
   styleUrls: [
     '../admin-shared.scss',
     '../admin-table.scss',
@@ -106,6 +113,7 @@ interface Ritorno {
 })
 export class AdminNewsComponent {
   private readonly fb = inject(FormBuilder);
+  private readonly date = inject(DatePipe);
   private readonly newsApi = inject(NewsService);
   private readonly toast = inject(ToastService);
   private readonly pending = inject(AdminPendingService);
@@ -208,6 +216,32 @@ export class AdminNewsComponent {
 
   /** La modale dell'articolo: `null` chiusa, `''` creazione, id modifica. */
   protected readonly formAperto = signal<string | null>(null);
+
+  /**
+   * L'id della riga di cui è aperta la SCHEDA (`⋮`), o null.
+   *
+   * ⚠️ Due modali non si sovrappongono: `formAperto` è il form di scrittura,
+   * questo è la scheda dell'articolo, e «Modifica» chiude la seconda per aprire
+   * il primo. Sovrapposte funzionerebbero — il top layer impila i `<dialog>` —
+   * ma l'`Escape` chiuderebbe solo quella sopra e chi guarda non saprebbe di
+   * averne due aperte.
+   */
+  protected readonly schedaId = signal<string | null>(null);
+
+  /**
+   * L'articolo della scheda, **riletto dall'elenco** invece che copiato.
+   *
+   * ⚠️ È ciò che tiene la scheda viva: ogni azione ricarica la lista, e con una
+   * copia congelata la scheda continuerebbe a mostrare lo stato di prima —
+   * «Ritira» resterebbe a schermo su un articolo già ritirato. E se la riga
+   * sparisce (eliminata) il computed torna null e la scheda si chiude da sé,
+   * invece di restare aperta su qualcosa che non esiste più.
+   */
+  protected readonly scheda = computed<NewsAdmin | null>(() => {
+    const id = this.schedaId();
+    if (!id) return null;
+    return this.pagina()?.items.find((n) => n._id === id) ?? null;
+  });
 
   protected readonly vociEditor: readonly VoceScheda<'write' | 'preview'>[] = [
     { valore: 'write', etichetta: 'Scrivi' },
@@ -450,6 +484,48 @@ export class AdminNewsComponent {
 
   protected isConfirming(key: string): boolean {
     return this.confirming() === key;
+  }
+
+  protected apriScheda(news: NewsAdmin): void {
+    this.cancelConfirm();
+    this.feedback.set(null);
+    this.schedaId.set(news._id);
+  }
+
+  protected chiudiScheda(): void {
+    this.cancelConfirm();
+    this.schedaId.set(null);
+  }
+
+  /**
+   * Il sotto-testo della cella d'identità: le date e i due marcatori.
+   *
+   * ⚠️ I marcatori «senza copertina» e «non annunciato» restano nella RIGA e
+   * non finiscono nella scheda, ed è il punto: sono la coda di lavoro. Stanno
+   * anche dove il pulsante non c'è — è ciò che rende il problema trovabile — e
+   * spostarli dentro vorrebbe dire aprire cinque schede per sapere quali
+   * articoli hanno qualcosa da sistemare.
+   *
+   * ⚠️ Un metodo solo, usato per il testo e per il `title`: composto nel
+   * template servirebbe riscriverlo due volte, e un tooltip che dice qualcosa
+   * di diverso dal testo che copre è un difetto che nessuno nota.
+   */
+  protected sotto(news: NewsAdmin): string {
+    const parti: string[] = [];
+    const giorno = (iso: string) => this.date.transform(iso, 'dd MMM yyyy') ?? '';
+    if (news.publishedAt) {
+      parti.push(
+        news.status === 'PUBBLICATO'
+          ? `online dal ${giorno(news.publishedAt)}`
+          : `già pubblicato il ${giorno(news.publishedAt)}`,
+      );
+    }
+    if (news.status === 'SCADUTO' && news.scadutoAt) {
+      parti.push(`finestra chiusa il ${giorno(news.scadutoAt)}`);
+    }
+    if (this.senzaCopertina(news)) parti.push('Senza copertina');
+    if (this.nonAnnunciato(news)) parti.push('Non annunciato');
+    return parti.join(' · ');
   }
 
   protected askConfirm(key: string): void {
@@ -771,6 +847,10 @@ export class AdminNewsComponent {
   // ── Form: scrittura e cancellazione ────────────────────────────────────────
 
   protected edit(news: NewsAdmin): void {
+    // ⚠️ La scheda si chiude PRIMA: due `<dialog>` aperti insieme si impilano
+    // nel top layer, e l'Escape ne chiuderebbe uno solo.
+    this.schedaId.set(null);
+    this.cancelConfirm();
     this.editingId.set(news._id);
     this.feedback.set(null);
     this.error.set(null);

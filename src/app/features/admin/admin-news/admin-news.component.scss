@@ -42,37 +42,12 @@
   white-space: nowrap;
 }
 
-.admin-news__filtri {
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin: 0.2rem 0 0.4rem;
+// ⚠️ `.admin-news__filtri` non c'è più: era MORTA da quando i filtri
+// sono passati ad `app-filtro`, e nessun template la nominava.
 
-  // ⚠️ `.badge--tag` non prevede lo stato disabilitato (nasce come pillola
-  // sempre cliccabile): senza questa riga una pillola spenta durante
-  // un'azione resterebbe identica a una viva, e si illuminerebbe pure
-  // all'hover.
-  .badge--tag:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  // ⚠️ Solo la pillola NON attiva: l'hover su una spenta non deve fingere di
-  // poter cambiare filtro, ma quella attiva resta accesa perché dice qual è.
-  .badge--tag:disabled:not(.is-active):hover {
-    border-color: var(--line-strong);
-    color: inherit;
-    background: none;
-    box-shadow: none;
-  }
-}
-
-// Riga secondaria della card: chip + date, che a schermo stretto vanno a capo.
-.admin-news__riga {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
+// ⚠️ `.admin-news__riga` non c'è più: era la riga secondaria della card,
+// e le card sono diventate righe di tabella. Il suo lavoro lo fa
+// `.admin-table__sub`.
 
 // Marcatore «Senza copertina»: quell'articolo, condiviso, mostra l'immagine
 // predefinita del sito invece della propria targa.
@@ -91,12 +66,8 @@
   color: var(--copper-600);
 }
 
-// Motivo dello scarto e testi di conferma: leggibili, non monospace.
-.admin-news__motivo {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  line-height: 1.45;
-}
+// ⚠️ `.admin-news__motivo` non c'è più: la prosa dello scarto e i testi
+// delle conferme vivono nella scheda, e là sono `.admin-nota`.
 
 .admin-news__errore {
   display: flex;
@@ -106,25 +77,16 @@
   flex-wrap: wrap;
 }
 
-.admin-news__azioni {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+// ⚠️ `.admin-news__azioni` non c'è più: era la colonna dei comandi della
+// card — fino a SEI pulsanti affiancati — e i comandi ora stanno nella
+// scheda, dove le sezioni li dispongono da sé.
 
-  // Con una conferma aperta la colonna azioni prende tutta la riga: il campo
-  // del motivo e i due pulsanti non devono stare in una colonna da 8rem.
-  &.is-confirming {
-    flex: 1 1 100%;
-  }
-}
-
+// Il blocco di conferma dentro la scheda: l'involucro che dice «qui c'è una
+// conferma aperta», e su cui poggiano undici asserzioni.
 .admin-news__conferma {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  flex: 1 1 100%;
-  min-width: 0;
 }
 
 @media (max-width: 560px) {

@@ -94,261 +94,108 @@
           }
         </div>
       } @else {
-        @for (news of p.items; track news._id) {
-          <div class="card admin-item" [class.is-editing]="editingId() === news._id">
-            <div class="admin-item__info">
-              <strong>{{ news.title }}</strong>
-              <span class="admin-item__meta admin-news__riga">
-                <span class="admin-stato" [attr.data-tono]="tono(news.status)">
-                  {{ statoLabel(news.status) }}
-                </span>
-                @if (news.createdAt) {
-                  <span>{{ news.createdAt | date: 'dd MMM yyyy, HH:mm' }}</span>
-                }
-                <!-- ⚠️ `publishedAt` si mostra a QUALUNQUE stato, non solo a
-                     `PUBBLICATO`: il ritiro riporta in bozza conservando data,
-                     slug e slugStorici, quindi un articolo ritirato era a
-                     schermo identico a una bozza mai vista da nessuno — e la
-                     conferma di eliminazione parla di «indirizzo pubblico» che
-                     in un caso esiste (ed è indicizzato) e nell'altro no. -->
-                @if (news.publishedAt) {
-                  <span>
-                    ·
-                    {{ news.status === 'PUBBLICATO' ? 'online dal' : 'già pubblicato il' }}
-                    {{ news.publishedAt | date: 'dd MMM yyyy' }}
-                  </span>
-                }
-                @if (news.status === 'SCADUTO' && news.scadutoAt) {
-                  <span>· finestra chiusa il {{ news.scadutoAt | date: 'dd MMM yyyy' }}</span>
-                }
-                <!-- ⚠️ Il marcatore sta su OGNI riga la cui anteprima social
-                     ricadrebbe sull'immagine predefinita del sito — cioè senza
-                     targa E senza foto: l'`og:image` è una catena, e una riga
-                     con `coverImageUrl` un'anteprima propria ce l'ha già (sono
-                     i tre articoli storici). Sta anche dove il pulsante non
-                     c'è: è ciò che rende il problema trovabile. Legato a
-                     `PUBBLICATO` sarebbe co-estensivo al pulsante, cioè non
-                     direbbe niente che non si veda già. Vedi
-                     `senzaCopertina()`. -->
-                @if (senzaCopertina(news)) {
-                  <span class="admin-news__senza-copertina">· Senza copertina</span>
-                }
-                <!-- ⚠️ Dice quello che nessun'altra schermata diceva: il
-                     23/08/2026 il canale Forum ha rifiutato ogni annuncio e
-                     l'unico segno era un warning nei log di Render. -->
-                @if (nonAnnunciato(news)) {
-                  <span class="admin-news__non-annunciato">· Non annunciato</span>
-                }
-              </span>
-              @if (news.status === 'SCARTATO' && news.decisionNote) {
-                <span class="admin-news__motivo">Motivo: {{ news.decisionNote }}</span>
-              }
-              @if (!news.status) {
-                <!-- ⚠️ La riga senza stato non è un errore di questo pannello:
-                     è un articolo antecedente alla redazione che la migrazione
-                     d'avvio non ha toccato (il suo catch non rilancia, per non
-                     far cadere il boot dell'intera API). Nessuna transizione
-                     può partire da qui — `ALLOWED_TRANSITIONS` non ha una riga
-                     per «nessuno stato» — quindi al posto di un pulsante che
-                     darebbe 409 c'è la via d'uscita vera. -->
-                <span class="admin-news__motivo">
-                  Articolo antecedente alla redazione: la migrazione d'avvio non
-                  l'ha ancora toccato, quindi non è né in coda né online e da
-                  qui non si può muovere. Un riavvio dell'API la rimette in moto.
-                </span>
-              }
-            </div>
+        <p class="admin-nota admin-table__nota-mobile">
+          Le date e i marcatori sono nella riga; ogni altra azione sta nella
+          scheda dell'articolo.
+        </p>
 
-            <div
-              class="row admin-news__azioni"
-              [class.is-confirming]="
-                isConfirming('ritira:' + news._id) ||
-                isConfirming('elimina:' + news._id) ||
-                isConfirming('copertina:' + news._id)
-              "
-            >
-              @if (isConfirming('ritira:' + news._id)) {
-                <!-- Inline-confirm del ritiro: toglie l'articolo dal pubblico. -->
-                <div class="admin-news__conferma">
-                  <input
-                    type="text"
-                    class="input"
-                    maxlength="2000"
-                    placeholder="Motivo del ritiro (facoltativo)"
-                    aria-label="Motivo del ritiro, facoltativo"
-                    [value]="notaRitiro()"
-                    (input)="onNotaRitiro($event)"
-                  />
-                  <div class="row admin-news__azioni">
-                    <button
-                      type="button"
-                      class="btn btn--danger-solid btn--sm admin-news__conferma-si"
-                      [disabled]="inVolo()"
-                      (click)="confermaRitiro(news)"
-                    >{{ inVoloSu(news._id, 'ritira') ? 'Ritiro…' : 'Conferma ritiro' }}</button>
-                    <button
-                      type="button"
-                      class="btn btn--ghost btn--sm admin-news__conferma-no"
-                      [disabled]="inVolo()"
-                      (click)="cancelConfirm()"
-                    >Annulla</button>
-                  </div>
-                  <p class="admin-news__motivo">
-                    L'articolo torna in bozza: la data di prima pubblicazione
-                    resta, il motivo finisce nel registro e non lo legge nessun
-                    lettore.
-                  </p>
-                </div>
-              } @else if (isConfirming('elimina:' + news._id)) {
-                <!-- Inline-confirm della cancellazione: irreversibile. -->
-                <div class="admin-news__conferma">
-                  <!-- ⚠️ Due frasi diverse perché descrivono due perdite
-                       diverse: un articolo già pubblicato (anche se ritirato)
-                       porta con sé un indirizzo indicizzato e i 301 che ci
-                       puntano; una bozza mai uscita non ha niente da perdere, e
-                       promettergliela sarebbe una minaccia inventata. -->
-                  <p class="admin-news__motivo">
-                    @if (news.publishedAt || news.slug) {
-                      Eliminare «{{ news.title }}»? La riga sparisce per sempre,
-                      e con lei il suo indirizzo pubblico — che è già stato
-                      online. Per toglierla dal sito conservandola basta
-                      «Ritira».
+        <div class="admin-table__scroll">
+          <table class="admin-table">
+            <caption class="visually-hidden">
+              Archivio degli articoli, dal più recente
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col" class="admin-table__c-primo">Articolo</th>
+                <th scope="col">Stato</th>
+                <th scope="col" class="admin-table__solo-largo">Creato</th>
+                <th scope="col" class="admin-table__c-ultimo">
+                  <span class="visually-hidden">Azioni</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (news of p.items; track news._id) {
+                <tr>
+                  <th scope="row" class="admin-table__c-primo">
+                    <span class="admin-table__ident">
+                      <span class="admin-table__ident-riga">
+                        <strong [title]="news.title">{{ news.title }}</strong>
+                      </span>
+                      <!--
+                        ⚠️ I due marcatori restano ELEMENTI e non testo dentro
+                        la stringa: portano il colore rame che li fa saltare
+                        all'occhio scorrendo l'elenco, ed è tutto il loro
+                        scopo. La stringa piatta serve al `title`, e una spec
+                        verifica che le due dicano la stessa cosa — due
+                        composizioni della stessa riga possono divergere, e un
+                        tooltip che smentisce il testo che copre non lo nota
+                        nessuno.
+                      -->
+                      @if (sotto(news)) {
+                        <span class="admin-table__sub" [title]="sotto(news)">
+                          @if (news.publishedAt) {
+                            {{ news.status === 'PUBBLICATO' ? 'online dal' : 'già pubblicato il' }}
+                            {{ news.publishedAt | date: 'dd MMM yyyy' }}
+                          }
+                          @if (news.status === 'SCADUTO' && news.scadutoAt) {
+                            @if (news.publishedAt) { · }
+                            finestra chiusa il {{ news.scadutoAt | date: 'dd MMM yyyy' }}
+                          }
+                          <!-- ⚠️ Il marcatore sta su OGNI riga la cui anteprima
+                               social ricadrebbe sull'immagine predefinita del
+                               sito — cioè senza targa E senza foto: l'`og:image`
+                               è una catena, e una riga con `coverImageUrl`
+                               un'anteprima propria ce l'ha già (sono i tre
+                               articoli storici). Sta anche dove il comando non
+                               c'è: è ciò che rende il problema trovabile. -->
+                          @if (senzaCopertina(news)) {
+                            <span class="admin-news__senza-copertina"
+                              >@if (news.publishedAt || news.scadutoAt) { · } Senza copertina</span
+                            >
+                          }
+                          <!-- ⚠️ Dice quello che nessun'altra schermata diceva:
+                               il 23/08/2026 il canale Forum ha rifiutato ogni
+                               annuncio e l'unico segno era un warning nei log. -->
+                          @if (nonAnnunciato(news)) {
+                            <span class="admin-news__non-annunciato"
+                              >@if (news.publishedAt || news.scadutoAt || senzaCopertina(news)) { · } Non annunciato</span
+                            >
+                          }
+                        </span>
+                      }
+                    </span>
+                  </th>
+                  <td>
+                    <span class="admin-stato" [attr.data-tono]="tono(news.status)">
+                      {{ statoLabel(news.status) }}
+                    </span>
+                  </td>
+                  <td class="admin-table__solo-largo">
+                    @if (news.createdAt) {
+                      {{ news.createdAt | date: 'dd MMM yyyy' }}
                     } @else {
-                      Eliminare «{{ news.title }}»? La riga sparisce per sempre.
-                      Non è mai stata pubblicata: non ha un indirizzo pubblico
-                      da perdere.
+                      <span class="is-vuota">&mdash;</span>
                     }
-                  </p>
-                  <div class="row admin-news__azioni">
+                  </td>
+                  <td class="admin-table__c-ultimo">
                     <button
                       type="button"
-                      class="btn btn--danger-solid btn--sm admin-news__conferma-si"
+                      class="admin-ico"
+                      aria-haspopup="dialog"
+                      [attr.aria-label]="'Apri la scheda di ' + news.title"
+                      title="Apri la scheda"
                       [disabled]="inVolo()"
-                      (click)="confermaElimina(news)"
-                    >{{ inVoloSu(news._id, 'elimina') ? 'Elimino…' : 'Conferma eliminazione' }}</button>
-                    <button
-                      type="button"
-                      class="btn btn--ghost btn--sm admin-news__conferma-no"
-                      [disabled]="inVolo()"
-                      (click)="cancelConfirm()"
-                    >Annulla</button>
-                  </div>
-                </div>
-              } @else if (isConfirming('copertina:' + news._id)) {
-                <!-- ⚠️ Inline-confirm della SOSTITUZIONE: questa riga ha una
-                     foto vera, che oggi è la sua anteprima social. Generare la
-                     targa la copre, e da nessuna schermata si torna indietro
-                     (nessun DTO accetta `ogImageUrl`). Vedi `sostituisceFoto()`. -->
-                <div class="admin-news__conferma">
-                  <p class="admin-news__motivo">
-                    «{{ news.title }}» ha già una sua immagine, ed è quella che
-                    si vede oggi condividendolo. La targa generata la
-                    sostituisce nell'anteprima — e non c'è modo di tornare
-                    indietro da qui. L'immagine dentro l'articolo non cambia.
-                  </p>
-                  <div class="row admin-news__azioni">
-                    <button
-                      type="button"
-                      class="btn btn--danger-solid btn--sm admin-news__conferma-si"
-                      [disabled]="inVolo()"
-                      (click)="generaCopertina(news)"
-                    >{{
-                      inVoloSu(news._id, 'copertina')
-                        ? 'Genero…'
-                        : 'Sostituisci l’anteprima'
-                    }}</button>
-                    <button
-                      type="button"
-                      class="btn btn--ghost btn--sm admin-news__conferma-no"
-                      [disabled]="inVolo()"
-                      (click)="cancelConfirm()"
-                    >Annulla</button>
-                  </div>
-                </div>
-              } @else {
-                @if (news.status === 'IN_REVISIONE') {
-                  <!-- ⚠️ Nessuna decisione qui: si decide in Redazione, e basta. -->
-                  <a class="btn btn--ghost btn--sm" routerLink="/admin/redazione"
-                    >Decidi in Redazione →</a
-                  >
-                } @else if (ritorno(news.status); as r) {
-                  <button
-                    type="button"
-                    class="btn btn--ghost btn--sm admin-news__ritorno"
-                    [disabled]="inVolo()"
-                    (click)="ritornoClick(news)"
-                  >{{ inVoloSu(news._id, r.azione) ? r.inCorso : r.etichetta }}</button>
-                }
-                <!-- ⚠️ Presente su OGNI riga pubblicata, targa o non targa: il
-                     comando è incondizionatamente rigenerante, ed è l'unica
-                     strada per rimettere in pari la copertina dopo che
-                     «Modifica» ha corretto il titolo (la targa lo stampa).
-                     Nasconderlo su chi ce l'ha già chiuderebbe a chiave
-                     l'unica via d'uscita. -->
-                @if (mostraCopertina(news)) {
-                  <button
-                    type="button"
-                    class="btn btn--ghost btn--sm admin-news__copertina"
-                    [disabled]="inVolo()"
-                    (click)="copertinaClick(news)"
-                  >{{
-                    inVoloSu(news._id, 'copertina')
-                      ? 'Genero…'
-                      : etichettaCopertina(news)
-                  }}</button>
-                }
-                <!-- ⚠️ Stessa condizione della copertina (`PUBBLICATO`): la
-                     storia si posta con il link all'articolo, e fuori da quello
-                     stato non c'è una pagina da collegare — il server risponde
-                     409. Un pulsante che finisce in 409 è una bugia. -->
-                <!-- ⚠️ Solo dove serve davvero: su un articolo già nel canale
-                     il server risponde 409, perché un secondo post non si
-                     ritira. Qui il pulsante segue il marcatore, non lo stato. -->
-                @if (nonAnnunciato(news)) {
-                  <button
-                    type="button"
-                    class="btn btn--ghost btn--sm admin-news__discord"
-                    [disabled]="inVolo()"
-                    (click)="annunciaSuDiscord(news)"
-                  >{{
-                    inVoloSu(news._id, 'discord') ? 'Annuncio…' : 'Annuncia su Discord'
-                  }}</button>
-                }
-                @if (mostraCopertina(news)) {
-                  <button
-                    type="button"
-                    class="btn btn--ghost btn--sm admin-news__storia"
-                    [disabled]="inVolo()"
-                    (click)="scaricaStoria(news)"
-                  >{{
-                    inVoloSu(news._id, 'storia') ? 'Disegno…' : 'Storia IG'
-                  }}</button>
-                }
-                <button
-                  type="button"
-                  class="btn btn--ghost btn--sm admin-news__modifica"
-                  [disabled]="inVolo()"
-                  (click)="edit(news)"
-                >
-                  Modifica
-                </button>
-                <!-- ⚠️ L'etichetta «Elimino…» sta QUI e non solo nel blocco di
-                     conferma: `esegui()` chiude la conferma nello stesso
-                     istante in cui parte la richiesta, quindi quella dentro non
-                     è raggiungibile e la cancellazione — l'unica azione
-                     irreversibile — restava senza alcun segno su rete lenta. -->
-                <button
-                  type="button"
-                  class="btn btn--danger btn--sm admin-news__elimina"
-                  [disabled]="inVolo()"
-                  (click)="askConfirm('elimina:' + news._id)"
-                >
-                  {{ inVoloSu(news._id, 'elimina') ? 'Elimino…' : 'Elimina' }}
-                </button>
+                      (click)="apriScheda(news)"
+                    >
+                      <app-icon name="more-vertical" [size]="18" />
+                    </button>
+                  </td>
+                </tr>
               }
-            </div>
-          </div>
-        }
+            </tbody>
+          </table>
+        </div>
 
         @if (p.totalPages > 1) {
           <div class="row admin-users__pager">
@@ -372,6 +219,278 @@
       }
     }
 </div>
+
+<!--
+  La SCHEDA dell'articolo: tutto ciò che si può fare su una riga.
+
+  ⚠️ Erano fino a SEI pulsanti di testo affiancati sulla riga — 25 su cinque
+  articoli — e questa era l'ultima sezione del pannello a mostrare i comandi in
+  chiaro. Qui c'è spazio per l'etichetta intera e per la frase che spiega cosa
+  fa un comando, che sulla riga non c'era mai stata.
+
+  ⚠️ I marcatori «senza copertina» e «non annunciato» NON stanno qui: restano
+  nella riga, perché sono la coda di lavoro. Vedi `sotto()`.
+-->
+@if (scheda(); as n) {
+  <app-modal
+    [titolo]="n.title"
+    [sottotitolo]="statoLabel(n.status)"
+    (chiusa)="chiudiScheda()"
+  >
+    <div class="admin-modale">
+      <p class="admin-nota admin-modale__anagrafica">
+        @if (n.createdAt) { Creato il {{ n.createdAt | date: 'dd MMM yyyy, HH:mm' }} }
+        @if (n.publishedAt) {
+          ·
+          {{ n.status === 'PUBBLICATO' ? 'online dal' : 'già pubblicato il' }}
+          {{ n.publishedAt | date: 'dd MMM yyyy' }}
+        }
+        @if (n.status === 'SCADUTO' && n.scadutoAt) {
+          · finestra chiusa il {{ n.scadutoAt | date: 'dd MMM yyyy' }}
+        }
+      </p>
+
+      @if (n.status === 'SCARTATO' && n.decisionNote) {
+        <p class="admin-nota">Motivo dello scarto: {{ n.decisionNote }}</p>
+      }
+
+      @if (!n.status) {
+        <!-- ⚠️ La riga senza stato non è un errore di questo pannello: è un
+             articolo antecedente alla redazione che la migrazione d'avvio non
+             ha toccato (il suo catch non rilancia, per non far cadere il boot
+             dell'intera API). Nessuna transizione può partire da qui —
+             `ALLOWED_TRANSITIONS` non ha una riga per «nessuno stato» — quindi
+             al posto di un pulsante che darebbe 409 c'è la via d'uscita vera. -->
+        <p class="form-feedback is-error" role="note">
+          Articolo antecedente alla redazione: la migrazione d'avvio non l'ha
+          ancora toccato, quindi non è né in coda né online e da qui non si può
+          muovere. Un riavvio dell'API la rimette in moto.
+        </p>
+      }
+
+      <!-- ── Contenuto ──────────────────────────────────────────────────── -->
+      <details class="admin-modale__sez" open>
+        <summary class="admin-modale__sum">Contenuto</summary>
+        <div class="admin-modale__corpo">
+          <p class="admin-nota">
+            Titolo, testo e immagine di copertina si correggono nel form.
+          </p>
+          <div class="row admin-panel__actions">
+            <button
+              type="button"
+              class="btn btn--primary btn--sm admin-news__modifica"
+              [disabled]="inVolo()"
+              (click)="edit(n)"
+            >
+              Modifica l’articolo
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <!-- ── Pubblicazione ──────────────────────────────────────────────── -->
+      @if (n.status === 'IN_REVISIONE' || ritorno(n.status)) {
+        <details class="admin-modale__sez" open>
+          <summary class="admin-modale__sum">Pubblicazione</summary>
+          <div class="admin-modale__corpo">
+            @if (n.status === 'IN_REVISIONE') {
+              <!-- ⚠️ Nessuna decisione qui: si decide in Redazione, e basta. -->
+              <p class="admin-nota">
+                Questo articolo è in coda: pubblicare o scartare si fa in
+                Redazione, che è la superficie su cui poggia la revisione umana.
+              </p>
+              <a class="btn btn--ghost btn--sm" routerLink="/admin/redazione"
+                >Decidi in Redazione →</a
+              >
+            } @else if (ritorno(n.status); as r) {
+              @if (isConfirming('ritira:' + n._id)) {
+                <!-- Inline-confirm del ritiro: toglie l'articolo dal pubblico.
+                     ⚠️ `.admin-news__conferma` è l'involucro su cui poggiano
+                     undici asserzioni: dice «qui c'è una conferma aperta», ed è
+                     ciò che distingue «il comando esiste» da «il comando è a un
+                     secondo tocco dal partire». -->
+                <div class="admin-news__conferma">
+                <p class="admin-nota">
+                  L’articolo torna in bozza: la data di prima pubblicazione
+                  resta, il motivo finisce nel registro e non lo legge nessun
+                  lettore.
+                </p>
+                <div class="field">
+                  <label for="news-nota-ritiro">Motivo del ritiro (facoltativo)</label>
+                  <input
+                    id="news-nota-ritiro"
+                    type="text"
+                    class="input"
+                    maxlength="2000"
+                    [value]="notaRitiro()"
+                    (input)="onNotaRitiro($event)"
+                  />
+                </div>
+                <div class="row admin-panel__actions">
+                  <button
+                    type="button"
+                    class="btn btn--danger-solid btn--sm admin-news__conferma-si"
+                    [disabled]="inVolo()"
+                    (click)="confermaRitiro(n)"
+                  >{{ inVoloSu(n._id, 'ritira') ? 'Ritiro…' : 'Conferma ritiro' }}</button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm admin-news__conferma-no"
+                    [disabled]="inVolo()"
+                    (click)="cancelConfirm()"
+                  >Annulla</button>
+                </div>
+                </div>
+              } @else {
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm admin-news__ritorno"
+                  [disabled]="inVolo()"
+                  (click)="ritornoClick(n)"
+                >{{ inVoloSu(n._id, r.azione) ? r.inCorso : r.etichetta }}</button>
+              }
+            }
+          </div>
+        </details>
+      }
+
+      <!-- ── Anteprima social ───────────────────────────────────────────── -->
+      @if (mostraCopertina(n)) {
+        <details class="admin-modale__sez">
+          <summary class="admin-modale__sum">Anteprima social</summary>
+          <div class="admin-modale__corpo">
+            @if (isConfirming('copertina:' + n._id)) {
+              <!-- ⚠️ Inline-confirm della SOSTITUZIONE: questa riga ha una foto
+                   vera, che oggi è la sua anteprima social. Generare la targa la
+                   copre, e da nessuna schermata si torna indietro (nessun DTO
+                   accetta `ogImageUrl`). Vedi `sostituisceFoto()`. -->
+              <div class="admin-news__conferma">
+              <p class="admin-nota">
+                «{{ n.title }}» ha già una sua immagine, ed è quella che si vede
+                oggi condividendolo. La targa generata la sostituisce
+                nell’anteprima — e non c’è modo di tornare indietro da qui.
+                L’immagine dentro l’articolo non cambia.
+              </p>
+              <div class="row admin-panel__actions">
+                <button
+                  type="button"
+                  class="btn btn--danger-solid btn--sm admin-news__conferma-si"
+                  [disabled]="inVolo()"
+                  (click)="generaCopertina(n)"
+                >{{ inVoloSu(n._id, 'copertina') ? 'Genero…' : 'Sostituisci l’anteprima' }}</button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm admin-news__conferma-no"
+                  [disabled]="inVolo()"
+                  (click)="cancelConfirm()"
+                >Annulla</button>
+              </div>
+              </div>
+            } @else {
+              <!-- ⚠️ Presente su OGNI riga pubblicata, targa o non targa: il
+                   comando è incondizionatamente rigenerante, ed è l'unica strada
+                   per rimettere in pari la copertina dopo che «Modifica» ha
+                   corretto il titolo (la targa lo stampa). Nasconderlo su chi ce
+                   l'ha già chiuderebbe a chiave l'unica via d'uscita. -->
+              <p class="admin-nota">
+                La targa 1200×675 è ciò che si vede condividendo l’articolo su
+                WhatsApp, Telegram o Facebook. La storia è un’immagine 1080×1920
+                da caricare a mano: lo sticker del link non è aggiungibile via
+                API.
+              </p>
+              <div class="row admin-panel__actions">
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm admin-news__copertina"
+                  [disabled]="inVolo()"
+                  (click)="copertinaClick(n)"
+                >{{ inVoloSu(n._id, 'copertina') ? 'Genero…' : etichettaCopertina(n) }}</button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm admin-news__storia"
+                  [disabled]="inVolo()"
+                  (click)="scaricaStoria(n)"
+                >{{ inVoloSu(n._id, 'storia') ? 'Disegno…' : 'Storia IG' }}</button>
+              </div>
+            }
+          </div>
+        </details>
+      }
+
+      <!-- ── Discord ────────────────────────────────────────────────────── -->
+      <!-- ⚠️ Solo dove serve davvero: su un articolo già nel canale il server
+           risponde 409, perché un secondo post non si ritira. Il comando segue
+           il marcatore, non lo stato. -->
+      @if (nonAnnunciato(n)) {
+        <details class="admin-modale__sez">
+          <summary class="admin-modale__sum">Discord</summary>
+          <div class="admin-modale__corpo">
+            <p class="admin-nota">
+              L’annuncio apre un post nel canale forum degli studenti, senza
+              menzioni. Parte una volta sola: un secondo post non si ritira.
+            </p>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm admin-news__discord"
+              [disabled]="inVolo()"
+              (click)="annunciaSuDiscord(n)"
+            >{{ inVoloSu(n._id, 'discord') ? 'Annuncio…' : 'Annuncia su Discord' }}</button>
+          </div>
+        </details>
+      }
+
+      <!-- ── Eliminazione ───────────────────────────────────────────────── -->
+      <details class="admin-modale__sez admin-modale__sez--rischio">
+        <summary class="admin-modale__sum">Elimina l’articolo</summary>
+        <div class="admin-modale__corpo">
+          @if (isConfirming('elimina:' + n._id)) {
+            <div class="admin-news__conferma">
+              <!-- ⚠️ Il titolo è ripetuto qui benché stia già in testa alla
+                   scheda: è l'unica azione irreversibile del pannello, e la
+                   frase che la annuncia deve poter essere letta da sola.
+                   ⚠️ Due frasi diverse perché descrivono due perdite diverse: un
+                   articolo già pubblicato (anche se ritirato) porta con sé un
+                   indirizzo indicizzato e i 301 che ci puntano; una bozza mai
+                   uscita non ha niente da perdere, e promettergliela sarebbe una
+                   minaccia inventata. -->
+              <p class="admin-nota">
+                @if (n.publishedAt || n.slug) {
+                  Eliminare «{{ n.title }}»? La riga sparisce per sempre, e con
+                  lei il suo indirizzo pubblico — che è già stato online. Per
+                  toglierla dal sito conservandola basta «Ritira».
+                } @else {
+                  Eliminare «{{ n.title }}»? La riga sparisce per sempre. Non è
+                  mai stata pubblicata: non ha un indirizzo pubblico da perdere.
+                }
+              </p>
+            <div class="row admin-panel__actions">
+              <button
+                type="button"
+                class="btn btn--danger-solid btn--sm admin-news__conferma-si"
+                [disabled]="inVolo()"
+                (click)="confermaElimina(n)"
+              >{{ inVoloSu(n._id, 'elimina') ? 'Elimino…' : 'Conferma eliminazione' }}</button>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm admin-news__conferma-no"
+                [disabled]="inVolo()"
+                (click)="cancelConfirm()"
+              >Annulla</button>
+            </div>
+            </div>
+          } @else {
+            <button
+              type="button"
+              class="btn btn--danger btn--sm admin-news__elimina"
+              [disabled]="inVolo()"
+              (click)="askConfirm('elimina:' + n._id)"
+            >{{ inVoloSu(n._id, 'elimina') ? 'Elimino…' : 'Elimina' }}</button>
+          }
+        </div>
+      </details>
+    </div>
+  </app-modal>
+}
 
 @if (formAperto() !== null) {
   <app-modal

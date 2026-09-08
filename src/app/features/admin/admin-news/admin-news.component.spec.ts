@@ -139,7 +139,13 @@ describe('AdminNewsComponent', () => {
     await stabilizza();
   };
 
-  const righe = () => tutti<HTMLElement>('.card.admin-item');
+  /**
+   * ⚠️ Dall'08/09/2026 l'elenco è una TABELLA, non più una lista di card: la
+   * riga porta identità, stato e data, e ogni comando vive nella scheda che si
+   * apre col `⋮`. Questo selettore è il solo punto da cambiare — `riga()` e
+   * `righe()` sono usate 63 volte e si adeguano tutte da qui.
+   */
+  const righe = () => tutti<HTMLElement>('table.admin-table tbody tr');
 
   /** La riga dell'articolo con quel titolo: le asserzioni sono per-riga. */
   const riga = (titolo: string): HTMLElement => {
@@ -165,6 +171,24 @@ describe('AdminNewsComponent', () => {
   const clicca = async (el: HTMLElement) => {
     el.click();
     await stabilizza();
+  };
+
+  /**
+   * Apre la SCHEDA di un articolo e la restituisce.
+   *
+   * ⚠️ I comandi non stanno più sulla riga: erano fino a sei pulsanti di testo
+   * affiancati, e ora vivono qui dentro. Le asserzioni che cercano un comando
+   * si scopano su questa, quelle che guardano il contenuto della riga restano
+   * su `riga()`.
+   */
+  const scheda = async (titolo: string): Promise<HTMLElement> => {
+    const gia = uno<HTMLElement>('dialog .admin-modale');
+    if (gia && testo(uno<HTMLElement>('.mo__titolo')).includes(titolo)) return gia;
+    if (gia) await clicca(uno<HTMLButtonElement>('.mo__chiudi')!);
+    await clicca(uno<HTMLButtonElement>('.admin-ico', riga(titolo))!);
+    const aperta = uno<HTMLElement>('dialog .admin-modale');
+    if (!aperta) throw new Error(`Scheda non aperta per: ${titolo}`);
+    return aperta;
   };
 
   /**
@@ -310,10 +334,13 @@ describe('AdminNewsComponent', () => {
 
     // Nessun pulsante di ritorno: da «nessuno stato» ogni transizione è un 409
     // (`ALLOWED_TRANSITIONS` non ha una riga per l'assenza di stato).
-    expect(uno('.admin-news__ritorno', r)).toBeNull();
-    // …ma la via d'uscita vera è scritta.
-    expect(testo(r)).toContain('migrazione');
-    expect(testo(r)).toContain('riavvio');
+    const schLegacy = await scheda('Titolo legacy');
+    expect(uno('.admin-news__ritorno', schLegacy)).toBeNull();
+    // …ma la via d'uscita vera è scritta. ⚠️ Nella scheda: è un paragrafo di
+    // prosa, e in una cella di tabella non ci sta.
+    expect(testo(schLegacy)).toContain('migrazione');
+    expect(testo(schLegacy)).toContain('riavvio');
+    await clicca(uno<HTMLButtonElement>('.mo__chiudi')!);
 
     // Le altre righe non sono state travolte: l'elenco è integro.
     expect(
@@ -330,12 +357,12 @@ describe('AdminNewsComponent', () => {
     ]);
 
     // Il motivo dello scarto è a schermo: senza, «rimetti in coda» è al buio.
-    expect(testo(riga('Titolo s'))).toContain('Motivo: Fonte non citata');
+    // ⚠️ Nella SCHEDA e non più nella riga: è testo libero scritto da chi ha
+    // scartato, e in una cella di tabella o si taglia o allarga la colonna.
+    const sch = await scheda('Titolo s');
+    expect(testo(sch)).toContain('Motivo dello scarto: Fonte non citata');
 
-    const ritorno = uno<HTMLButtonElement>(
-      '.admin-news__ritorno',
-      riga('Titolo s'),
-    );
+    const ritorno = uno<HTMLButtonElement>('.admin-news__ritorno', sch);
     expect(ritorno).not.toBeNull();
     expect(testo(ritorno)).toBe('Rimetti in coda');
 
@@ -371,7 +398,7 @@ describe('AdminNewsComponent', () => {
 
     const ritorno = uno<HTMLButtonElement>(
       '.admin-news__ritorno',
-      riga('Titolo x'),
+      await scheda('Titolo x'),
     );
     expect(testo(ritorno)).toBe('Rimetti in coda');
 
@@ -388,7 +415,7 @@ describe('AdminNewsComponent', () => {
 
     const ritorno = uno<HTMLButtonElement>(
       '.admin-news__ritorno',
-      riga('Titolo b'),
+      await scheda('Titolo b'),
     );
     expect(testo(ritorno)).toBe('Manda in revisione');
 
@@ -408,7 +435,7 @@ describe('AdminNewsComponent', () => {
       newsOf('p', 'PUBBLICATO', { publishedAt: new Date(ORA).toISOString() }),
     ]);
 
-    const azioni = riga('Titolo p');
+    const azioni = await scheda('Titolo p');
     const ritorno = uno<HTMLButtonElement>('.admin-news__ritorno', azioni);
     // ⚠️ Un pulsante che propone una transizione non ammessa è una bugia che
     // finisce in un 409: da PUBBLICATO si torna in BOZZA, non in coda.
@@ -420,7 +447,7 @@ describe('AdminNewsComponent', () => {
     http.expectNone(`${API}/admin/news/p/ritira`);
     const conferma = uno<HTMLElement>(
       '.admin-news__conferma',
-      riga('Titolo p'),
+      await scheda('Titolo p'),
     );
     expect(conferma).not.toBeNull();
 
@@ -447,7 +474,7 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('p', 'PUBBLICATO')]);
 
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__ritorno', riga('Titolo p'))!,
+      uno<HTMLButtonElement>('.admin-news__ritorno', await scheda('Titolo p'))!,
     );
     const conferma = uno<HTMLElement>('.admin-news__conferma')!;
     const campo = uno<HTMLInputElement>('input.input', conferma)!;
@@ -468,15 +495,26 @@ describe('AdminNewsComponent', () => {
   it('IN_REVISIONE: nessuna decisione qui, solo il rimando alla coda', async () => {
     await rispondi([newsOf('r', 'IN_REVISIONE')]);
 
-    const azioni = uno<HTMLElement>('.admin-news__azioni', riga('Titolo r'))!;
+    // ⚠️ Lo scope è la SCHEDA intera: i comandi non hanno più un involucro
+    // proprio, e cercarli in tutta la scheda è anche l'asserzione più forte —
+    // «in nessun punto di questa card si decide».
+    const azioni = await scheda('Titolo r');
 
     // ⚠️ Nessun pulsante di ritorno: da qui si DECIDE, e si decide in Redazione.
     expect(uno('.admin-news__ritorno', azioni)).toBeNull();
     // ⚠️ E nessuna decisione duplicata: approve/reject sdoppierebbero il cancello
     // umano dell'art. 50(4) AI Act su due schermate.
-    expect(testo(azioni)).not.toContain('Pubblica');
-    expect(testo(azioni)).not.toContain('Scarta');
-    expect(testo(azioni)).not.toContain('Rimetti in coda');
+    // ⚠️ Si guardano le ETICHETTE DEI COMANDI e non il testo della card: la
+    // scheda spiega a parole che si decide in Redazione, quindi cercare
+    // «Pubblica» nella prosa colpisce la spiegazione invece del pulsante. È
+    // anche l'asserzione più fedele all'intento — «qui non c'è un comando che
+    // decide», non «qui non compare quella parola».
+    const comandi = tutti<HTMLElement>('button, a.btn', azioni).map((b) =>
+      testo(b),
+    );
+    expect(comandi).not.toContain('Pubblica');
+    expect(comandi).not.toContain('Scarta');
+    expect(comandi).not.toContain('Rimetti in coda');
 
     // ⚠️ Ancorato dentro le azioni della riga: il link alla Redazione compare
     // anche nell'occhiello sopra l'elenco, e cercarlo a livello di pagina
@@ -497,7 +535,7 @@ describe('AdminNewsComponent', () => {
 
     // Primo tocco: apre la conferma, nomina l'articolo e non chiama niente.
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__elimina', riga('Titolo p'))!,
+      uno<HTMLButtonElement>('.admin-news__elimina', await scheda('Titolo p'))!,
     );
     expect(confirmSpy).not.toHaveBeenCalled();
     http.expectNone((r) => r.method === 'DELETE');
@@ -512,7 +550,7 @@ describe('AdminNewsComponent', () => {
 
     // Secondo giro, fino in fondo.
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__elimina', riga('Titolo p'))!,
+      uno<HTMLButtonElement>('.admin-news__elimina', await scheda('Titolo p'))!,
     );
     await clicca(
       uno<HTMLButtonElement>(
@@ -722,12 +760,12 @@ describe('AdminNewsComponent', () => {
     expect(testo(riga('Titolo r'))).toContain('già pubblicato il');
     expect(testo(riga('Titolo mai'))).not.toContain('già pubblicato');
 
-    await clicca(uno<HTMLButtonElement>('.admin-news__elimina', riga('Titolo r'))!);
+    await clicca(uno<HTMLButtonElement>('.admin-news__elimina', await scheda('Titolo r'))!);
     expect(testo(uno('.admin-news__conferma'))).toContain('già stato online');
     await clicca(uno<HTMLButtonElement>('.admin-news__conferma-no', uno<HTMLElement>('.admin-news__conferma')!)!);
 
     // Sulla bozza mai pubblicata la stessa frase sarebbe una minaccia inventata.
-    await clicca(uno<HTMLButtonElement>('.admin-news__elimina', riga('Titolo mai'))!);
+    await clicca(uno<HTMLButtonElement>('.admin-news__elimina', await scheda('Titolo mai'))!);
     const conferma = testo(uno('.admin-news__conferma'));
     expect(conferma).toContain('mai stata pubblicata');
     // ⚠️ Niente perdita promessa dove non c'è nulla da perdere: la frase
@@ -738,7 +776,7 @@ describe('AdminNewsComponent', () => {
   it('⚠️ la cancellazione in corso lo dice: «Elimino…» è raggiungibile', async () => {
     await rispondi([newsOf('p', 'PUBBLICATO')]);
 
-    await clicca(uno<HTMLButtonElement>('.admin-news__elimina', riga('Titolo p'))!);
+    await clicca(uno<HTMLButtonElement>('.admin-news__elimina', await scheda('Titolo p'))!);
     await clicca(
       uno<HTMLButtonElement>('.admin-news__conferma-si', uno<HTMLElement>('.admin-news__conferma')!)!,
     );
@@ -747,7 +785,7 @@ describe('AdminNewsComponent', () => {
     // richiesta: l'etichetta dentro il blocco di conferma è irraggiungibile, e
     // l'unica azione irreversibile restava senza alcun segno su rete lenta.
     expect(uno('.admin-news__conferma')).toBeNull();
-    expect(testo(uno('.admin-news__elimina', riga('Titolo p')))).toBe('Elimino…');
+    expect(testo(uno('.admin-news__elimina', await scheda('Titolo p')))).toBe('Elimino…');
 
     http.expectOne(`${API}/news/p`).flush({});
     await stabilizza();
@@ -805,18 +843,18 @@ describe('AdminNewsComponent', () => {
       }),
     ]);
 
-    expect(uno('.admin-news__discord', riga('Titolo muto'))).not.toBeNull();
+    expect(uno('.admin-news__discord', await scheda('Titolo muto'))).not.toBeNull();
     // ⚠️ Su chi è già nel canale il pulsante NON c'è: il server risponde 409
     // perché un secondo post non si ritira, e un pulsante che finisce in 409 è
     // una bugia (stessa regola della copertina fuori da PUBBLICATO).
-    expect(uno('.admin-news__discord', riga('Titolo detto'))).toBeNull();
+    expect(uno('.admin-news__discord', await scheda('Titolo detto'))).toBeNull();
   });
 
   it('annuncia: chiama la rotta e ricarica l’elenco', async () => {
     await rispondi([newsOf('muto', 'PUBBLICATO')]);
 
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__discord', riga('Titolo muto'))!,
+      uno<HTMLButtonElement>('.admin-news__discord', await scheda('Titolo muto'))!,
     );
     const req = http.expectOne(`${API}/admin/news/muto/discord`);
     expect(req.request.method).toBe('POST');
@@ -850,7 +888,7 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('muto', 'PUBBLICATO')]);
 
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__discord', riga('Titolo muto'))!,
+      uno<HTMLButtonElement>('.admin-news__discord', await scheda('Titolo muto'))!,
     );
     http.expectOne(`${API}/admin/news/muto/discord`).flush(
       {
@@ -896,8 +934,8 @@ describe('AdminNewsComponent', () => {
       newsOf('boz', 'BOZZA'),
     ]);
 
-    expect(uno('.admin-news__storia', riga('Titolo pub'))).not.toBeNull();
-    expect(uno('.admin-news__storia', riga('Titolo boz'))).toBeNull();
+    expect(uno('.admin-news__storia', await scheda('Titolo pub'))).not.toBeNull();
+    expect(uno('.admin-news__storia', await scheda('Titolo boz'))).toBeNull();
   });
 
   it('scarica il PNG dalla rotta della storia e ripulisce l’URL temporaneo', async () => {
@@ -905,7 +943,7 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('s', 'PUBBLICATO')]);
 
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__storia', riga('Titolo s'))!,
+      uno<HTMLButtonElement>('.admin-news__storia', await scheda('Titolo s'))!,
     );
     const req = http.expectOne(`${API}/admin/news/s/storia-ig`);
     expect(req.request.method).toBe('GET');
@@ -933,7 +971,7 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('s', 'PUBBLICATO')]);
 
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__storia', riga('Titolo s'))!,
+      uno<HTMLButtonElement>('.admin-news__storia', await scheda('Titolo s'))!,
     );
     http
       .expectOne(`${API}/admin/news/s/storia-ig`)
@@ -952,7 +990,7 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('s', 'PUBBLICATO')]);
 
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__storia', riga('Titolo s'))!,
+      uno<HTMLButtonElement>('.admin-news__storia', await scheda('Titolo s'))!,
     );
     http
       .expectOne(`${API}/admin/news/s/storia-ig`)
@@ -963,6 +1001,27 @@ describe('AdminNewsComponent', () => {
   });
 
   // ── 8. La copertina social: marcatore e comando ──────────────────────────
+
+  /**
+   * ⚠️ Il sotto-testo della riga è composto DUE VOLTE: come elementi nel
+   * template (i marcatori portano il colore rame che li fa saltare all'occhio)
+   * e come stringa piatta in `sotto()`, che finisce nel `title`. Due
+   * composizioni della stessa riga possono divergere al primo ritocco, e un
+   * tooltip che smentisce il testo che copre non lo nota nessuno: qui si
+   * verifica che dicano la stessa cosa.
+   */
+  it('⚠️ il `title` del sotto-testo dice ESATTAMENTE quello che c’è scritto', async () => {
+    await rispondi([
+      newsOf('p', 'PUBBLICATO', { publishedAt: new Date(ORA).toISOString() }),
+    ]);
+
+    const sub = uno<HTMLElement>('.admin-table__sub', riga('Titolo p'))!;
+    expect(sub).not.toBeNull();
+    // Normalizzati entrambi: il template va a capo, la stringa no.
+    expect(testo(sub)).toBe(sub.getAttribute('title')!.replace(/\s+/g, ' ').trim());
+    // …e non è vuoto, o l'asserzione sopra passerebbe senza controllare niente.
+    expect(testo(sub).length).toBeGreaterThan(5);
+  });
 
   it('il marcatore «Senza copertina» c’è dove la targa manca e NON dove c’è', async () => {
     await rispondi([
@@ -1020,12 +1079,12 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('storico', 'PUBBLICATO', { coverImageUrl: URL_FOTO })]);
 
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__copertina', riga('Titolo storico'))!,
+      uno<HTMLButtonElement>('.admin-news__copertina', await scheda('Titolo storico'))!,
     );
 
     // Nessuna chiamata alla prima pressione: si è aperta la conferma.
     http.expectNone((r) => r.url.endsWith('/copertina'));
-    const conferma = uno('.admin-news__conferma', riga('Titolo storico'));
+    const conferma = uno('.admin-news__conferma', await scheda('Titolo storico'));
     expect(conferma).not.toBeNull();
     expect(testo(conferma)).toContain('sostituisce');
     expect(testo(conferma)).toContain('tornare indietro');
@@ -1033,7 +1092,7 @@ describe('AdminNewsComponent', () => {
     // Il secondo tocco parte davvero.
     const vai = tutti<HTMLButtonElement>(
       '.admin-news__conferma-si',
-      riga('Titolo storico'),
+      await scheda('Titolo storico'),
     )[0];
     await clicca(vai);
     const req = http.expectOne(`${API}/admin/news/storico/copertina`);
@@ -1071,7 +1130,7 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('v', 'PUBBLICATO', { ogImageUrl: URL_TARGA })]);
 
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__copertina', riga('Titolo v'))!,
+      uno<HTMLButtonElement>('.admin-news__copertina', await scheda('Titolo v'))!,
     );
     http
       .expectOne(`${API}/admin/news/v/copertina`)
@@ -1098,7 +1157,7 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('n', 'PUBBLICATO')]);
 
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__copertina', riga('Titolo n'))!,
+      uno<HTMLButtonElement>('.admin-news__copertina', await scheda('Titolo n'))!,
     );
     http
       .expectOne(`${API}/admin/news/n/copertina`)
@@ -1127,13 +1186,13 @@ describe('AdminNewsComponent', () => {
     // dimenticanza da «correggere».
     const rigenera = uno<HTMLButtonElement>(
       '.admin-news__copertina',
-      riga('Titolo vestita'),
+      await scheda('Titolo vestita'),
     );
     expect(rigenera).not.toBeNull();
     expect(testo(rigenera)).toBe('Rigenera copertina');
 
     // Dove manca, l'etichetta dice l'altra delle due cose che possono succedere.
-    expect(testo(uno('.admin-news__copertina', riga('Titolo nuda')))).toBe(
+    expect(testo(uno('.admin-news__copertina', await scheda('Titolo nuda')))).toBe(
       'Genera copertina',
     );
   });
@@ -1174,7 +1233,7 @@ describe('AdminNewsComponent', () => {
     await rispondi([newsOf('p', 'PUBBLICATO')]);
 
     await clicca(
-      uno<HTMLButtonElement>('.admin-news__copertina', riga('Titolo p'))!,
+      uno<HTMLButtonElement>('.admin-news__copertina', await scheda('Titolo p'))!,
     );
 
     const req = http.expectOne(`${API}/admin/news/p/copertina`);
@@ -1185,7 +1244,7 @@ describe('AdminNewsComponent', () => {
     expect(req.request.body).toEqual({});
 
     // Disegno + caricamento non sono istantanei: il pulsante lo dice.
-    expect(testo(uno('.admin-news__copertina', riga('Titolo p')))).toBe(
+    expect(testo(uno('.admin-news__copertina', await scheda('Titolo p')))).toBe(
       'Genero…',
     );
 
@@ -1200,7 +1259,7 @@ describe('AdminNewsComponent', () => {
     expect(toast).toHaveBeenCalled();
     // Il marcatore sparisce, il pulsante resta e cambia mestiere.
     expect(uno('.admin-news__senza-copertina', riga('Titolo p'))).toBeNull();
-    expect(testo(uno('.admin-news__copertina', riga('Titolo p')))).toBe(
+    expect(testo(uno('.admin-news__copertina', await scheda('Titolo p')))).toBe(
       'Rigenera copertina',
     );
     // ⚠️ Lo stato dell'articolo non cambia: il badge «Redazione» della sidebar

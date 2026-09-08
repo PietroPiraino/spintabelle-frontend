@@ -57,14 +57,9 @@
   margin-bottom: 0.4rem;
 }
 
-.admin-news__tabs {
-  gap: 0.35rem;
+// ⚠️ `.admin-news__tabs` non c'è più: era MORTA: nessun template la usava
+// da quando l'editor Scrivi/Anteprima è passato ad `app-schede`.
 
-  .btn.is-active {
-    color: var(--copper-600);
-    border-color: var(--copper-400);
-  }
-}
 
 .admin-news__hint {
   margin-top: 0.45rem;

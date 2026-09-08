@@ -458,11 +458,20 @@
   // proprio dove il tooltip non c'è.
   // ⚠️ `.admin-table__ident strong` e non `strong` nudo: (0,1,1) contro
   // (0,0,1), o perde contro la regola di base.
+  // ⚠️ `overflow-wrap: anywhere` e non il solo `white-space: normal`: quello
+  // manda a capo agli SPAZI, e qui i valori più lunghi non ne hanno nemmeno uno
+  // — un'email, uno slug, il nome di un file. Misurato a 390px con un indirizzo
+  // vero: la cella usciva a 481px in un viewport da 390 e la PAGINA scorreva in
+  // orizzontale, cioè il difetto che il ripiegamento a blocchi esiste per
+  // togliere. E si spezza invece di tagliare, perché su un'email l'ellissi
+  // mangerebbe l'inizio — la parte che identifica la persona. Trovato dalla
+  // sonda `check-admin-tabelle.mjs`, non da un test.
   .admin-table__sub,
   .admin-table__ident strong {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
+    overflow-wrap: anywhere;
   }
 }
 
