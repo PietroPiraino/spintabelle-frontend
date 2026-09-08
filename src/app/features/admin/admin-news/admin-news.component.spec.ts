@@ -148,9 +148,14 @@ describe('AdminNewsComponent', () => {
     return trovata;
   };
 
-  /** Pillola di filtro per etichetta visibile (l'utente clicca quella). */
+  /**
+   * Pillola di filtro per etichetta visibile (l'utente clicca quella).
+   *
+   * ⚠️ Dall'08/09/2026 il gruppo è `app-filtro`: `role="radio"` dentro un
+   * `role="radiogroup"`, non più una fila di `badge--tag` in un `role="group"`.
+   */
   const pillola = (etichetta: string): HTMLButtonElement => {
-    const p = tutti<HTMLButtonElement>('.admin-news__filtri .badge--tag').find(
+    const p = tutti<HTMLButtonElement>('[role="radio"]').find(
       (b) => testo(b) === etichetta,
     );
     if (!p) throw new Error(`Pillola assente nel DOM: ${etichetta}`);
@@ -162,8 +167,21 @@ describe('AdminNewsComponent', () => {
     await stabilizza();
   };
 
+  /**
+   * Apre la modale del form, se non è già aperta.
+   *
+   * ⚠️ Dall'08/09/2026 il form non è più la colonna sinistra di una griglia,
+   * sempre a vista: si apre col `+` (creazione) o con la matita (modifica).
+   */
+  const apriForm = async () => {
+    if (uno('#news-title')) return;
+    uno<HTMLButtonElement>('[aria-label="Scrivi un nuovo articolo"]')!.click();
+    await stabilizza();
+  };
+
   /** Scrive in un campo del form reattivo come farebbe una persona. */
   const scrivi = async (sel: string, valore: string) => {
+    await apriForm();
     const campo = uno<HTMLInputElement | HTMLTextAreaElement>(sel)!;
     campo.value = valore;
     campo.dispatchEvent(new Event('input'));
@@ -253,8 +271,15 @@ describe('AdminNewsComponent', () => {
     await stabilizza();
 
     expect(righe().length).toBe(1);
-    expect(pillola('Scartato').getAttribute('aria-pressed')).toBe('true');
-    expect(pillola('Tutti').getAttribute('aria-pressed')).toBe('false');
+    // ⚠️ `aria-checked` e non `aria-pressed`: quest'ultimo è la grammatica dei
+    // toggle INDIPENDENTI, e su cinque pillole di cui una sempre accesa
+    // annunciava «cinque interruttori, uno premuto» invece di «radio 2 di 5».
+    // L'intento dell'asserzione non cambia — cambia il nome dell'attributo.
+    expect(pillola('Scartato').getAttribute('aria-checked')).toBe('true');
+    expect(pillola('Tutti').getAttribute('aria-checked')).toBe('false');
+    // Mai entrambi insieme: ogni screen reader risolve la contraddizione a
+    // modo suo.
+    expect(pillola('Scartato').getAttribute('aria-pressed')).toBeNull();
     expect(testo(uno('.admin-news__conteggio'))).toBe(
       '1 articolo · filtro: Scartato',
     );
@@ -313,7 +338,13 @@ describe('AdminNewsComponent', () => {
 
     // In volo: l'etichetta lo dice e l'intera lista è bloccata (niente doppio tocco).
     expect(testo(uno('.admin-news__ritorno'))).toBe('Rimetto…');
-    expect(pillola('Tutti').disabled).toBeTrue();
+    // ⚠️ `aria-disabled` e NON `disabled`: in un gruppo a roving tabindex
+    // disabilitare il bottone che porta il `tabindex="0"` fa uscire il fuoco
+    // dal gruppo senza poterci rientrare con Tab finché il caricamento non
+    // finisce. Il gruppo resta raggiungibile e annunciato come non
+    // disponibile; a fermare l'azione è la guardia nel click.
+    expect(pillola('Tutti').disabled).toBeFalse();
+    expect(pillola('Tutti').getAttribute('aria-disabled')).toBe('true');
 
     const req = http.expectOne(`${API}/admin/news/s/riapri`);
     expect(req.request.method).toBe('POST');
@@ -553,7 +584,7 @@ describe('AdminNewsComponent', () => {
       '2 articoli · filtro: Tutti',
     );
     // La pillola premuta resta accesa: è la domanda, ed è ciò che «Riprova» rifà.
-    expect(pillola('Scartato').getAttribute('aria-pressed')).toBe('true');
+    expect(pillola('Scartato').getAttribute('aria-checked')).toBe('true');
 
     // ⚠️ E ricliccare la pillola già attiva DEVE riprovare: prima la guardia
     // «è già il filtro attivo» la rendeva un controllo acceso e inerte, con
@@ -615,7 +646,10 @@ describe('AdminNewsComponent', () => {
     // bloccato dal caricamento dell'elenco, quindi due GET convivono davvero.
     await scrivi('#news-title', 'Un titolo qualunque');
     await scrivi('#news-body', 'Un corpo qualunque.');
-    await clicca(uno<HTMLButtonElement>('form button[type="submit"]')!);
+    // ⚠️ Il submit sta nel PIEDE della modale, cioè FUORI dal <form>: ci
+    // arriva con `form="news-form"`. Senza quell'attributo il clic non
+    // invierebbe niente, e non lo segnalerebbe nessuno.
+    await clicca(uno<HTMLButtonElement>('.mo__piede button[type="submit"]')!);
     http.expectOne(`${API}/news`).flush(newsOf('n', 'PUBBLICATO'));
     await stabilizza();
 
@@ -645,7 +679,10 @@ describe('AdminNewsComponent', () => {
 
     await scrivi('#news-title', 'Nuovo pezzo');
     await scrivi('#news-body', 'Corpo del nuovo pezzo.');
-    await clicca(uno<HTMLButtonElement>('form button[type="submit"]')!);
+    // ⚠️ Il submit sta nel PIEDE della modale, cioè FUORI dal <form>: ci
+    // arriva con `form="news-form"`. Senza quell'attributo il clic non
+    // invierebbe niente, e non lo segnalerebbe nessuno.
+    await clicca(uno<HTMLButtonElement>('.mo__piede button[type="submit"]')!);
 
     const post = http.expectOne(`${API}/news`);
     expect(post.request.method).toBe('POST');

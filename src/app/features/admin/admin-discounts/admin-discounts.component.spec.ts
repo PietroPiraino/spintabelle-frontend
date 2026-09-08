@@ -147,6 +147,13 @@ describe('AdminDiscountsComponent', () => {
       await rispondi(pagina([codice({ redeemedCount: 0 })]));
       await apriScheda();
       expect(bottone('Elimina')).toBeTruthy();
+      // ⚠️ Il primo clic ARMA soltanto: la conferma è in linea, non un
+      // `confirm()` nativo — quello su alcune configurazioni il browser lo
+      // sopprime, e in quel caso il ramo «annulla» non è raggiungibile.
+      bottone('Elimina')!.click();
+      await stabilizza();
+      http.expectNone((r) => r.method === 'DELETE');
+      expect(bottone('Confermo, elimina')).toBeTruthy();
       expect(testo()).not.toContain('non eliminabile');
     });
   });

@@ -141,7 +141,10 @@ function dominio(url: string): string {
  * ⚠️ Niente approvazione in blocco, niente editor (§3.7): il corpo si riscrive
  * dal form News, che è linkato in fondo alla card.
  *
- * ⚠️ Niente `confirm()` nativo e niente modale — nel progetto non esiste un
+ * ⚠️ Niente `confirm()` nativo. ⚠️ E la frase «nel progetto non esiste un
+ * dialog» che stava qui NON è più vera dal 07/09/2026: `shared/ui/modal/`
+ * esiste, e dall'08/09/2026 ospita i form del pannello. Quello che resta
+ * valido è il seguito:
  * solo dialog: lo scarto è un inline-confirm a due tocchi (idioma
  * `live-room.component.ts:108, 856-865`).
  */

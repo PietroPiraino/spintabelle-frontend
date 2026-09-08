@@ -311,6 +311,7 @@ export class AdminDiscountsComponent {
 
   protected closeForm(): void {
     this.formOpen.set(false);
+    this.confermaElimina.set(false);
     this.editingId.set(null);
     this.closeDetail();
   }
@@ -427,14 +428,15 @@ export class AdminDiscountsComponent {
    * quel caso il server degrada a spegnimento e il messaggio lo DICE, invece
    * di annunciare una cancellazione che non c'e' stata.
    */
+  /** La cancellazione è armata (conferma in linea). */
+  protected readonly confermaElimina = signal(false);
+
   protected remove(c: DiscountCode): void {
-    if (
-      !confirm(
-        `Eliminare il codice ${c.code}? Non è mai stato usato, quindi sparisce del tutto.`,
-      )
-    ) {
-      return;
-    }
+    // ⚠️ Conferma IN LINEA e non `confirm()` nativo: il riquadro di sistema
+    // non si stila, non si legge nel contesto della modale, e su alcune
+    // configurazioni il browser lo sopprime — nel qual caso il ramo «annulla»
+    // non è raggiungibile e il codice sparisce al primo clic.
+    this.confermaElimina.set(false);
     this.error.set(null);
     this.feedback.set(null);
     this.api.remove(c.id).subscribe({

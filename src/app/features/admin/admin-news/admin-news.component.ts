@@ -25,6 +25,16 @@ import { NewsService } from '../../../core/services/news.service';
 import { AdminPendingService } from '../../../core/services/admin-pending.service';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import {
+  FiltroComponent,
+  VoceFiltro,
+} from '../../../shared/ui/filtro/filtro.component';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
+import {
+  SchedeComponent,
+  VoceScheda,
+} from '../../../shared/ui/schede/schede.component';
 import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.component';
 
 /** Righe per pagina: il tetto del DTO admin è 100, 25 è il default del server. */
@@ -74,15 +84,23 @@ interface Ritorno {
  * `ALLOWED_TRANSITIONS` è una bugia che finisce in un 409: ogni stato mostra
  * **solo** la sua riga della macchina a stati (vedi `ritorno()`).
  *
- * ⚠️ Niente `confirm()` nativo — nel progetto non esiste un solo dialog:
+ * ⚠️ Niente `confirm()` nativo. ⚠️ E la frase «nel progetto non esiste un
+ * dialog» che stava qui NON è più vera dal 07/09/2026: `shared/ui/modal/`
+ * esiste, e dall'08/09/2026 ospita i form del pannello. Quello che resta
+ * valido è il seguito:
  * ritiro e cancellazione sono inline-confirm a due tocchi (idioma
  * `live-room.component.ts:108, 856-865`, ripreso da `admin-redazione`).
  */
 @Component({
   selector: 'app-admin-news',
-  imports: [ReactiveFormsModule, DatePipe, RouterLink, MarkdownComponent],
+  imports: [ReactiveFormsModule, DatePipe, RouterLink, MarkdownComponent, FiltroComponent, IconComponent, ModalComponent, SchedeComponent],
   templateUrl: './admin-news.component.html',
-  styleUrls: ['../admin-shared.scss', './admin-news.component.scss'],
+  styleUrls: [
+    '../admin-shared.scss',
+    '../admin-table.scss',
+    '../admin-modale.scss',
+    './admin-news.component.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminNewsComponent {
@@ -142,6 +160,12 @@ export class AdminNewsComponent {
   private seq = 0;
 
   protected readonly filtri = NEWS_STATUS_FILTRI;
+  /** Le voci del filtro, per `app-filtro`. */
+  protected readonly vociFiltro: readonly VoceFiltro<NewsStatusFiltro>[] =
+    NEWS_STATUS_FILTRI.map((f) => ({
+      valore: f,
+      etichetta: NEWS_FILTRO_LABELS[f] ?? f,
+    }));
   /** La sentinella, per confrontarla nel template senza scriverla a mano. */
   protected readonly TUTTI = NEWS_STATUS_TUTTI;
 
@@ -180,6 +204,34 @@ export class AdminNewsComponent {
     body: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(20000)]],
     coverImageUrl: [''],
   });
+
+  /** La modale dell'articolo: `null` chiusa, `''` creazione, id modifica. */
+  protected readonly formAperto = signal<string | null>(null);
+
+  protected readonly vociEditor: readonly VoceScheda<'write' | 'preview'>[] = [
+    { valore: 'write', etichetta: 'Scrivi' },
+    { valore: 'preview', etichetta: 'Anteprima' },
+  ];
+
+  private readonly baseline = signal('');
+  private readonly valori = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue() as Record<string, unknown>,
+  });
+  /**
+   * ⚠️ Da `toSignal(valueChanges)`: un `computed` su `form.value` non si
+   * ricalcolerebbe mai (un FormGroup non è un signal) ed Escape butterebbe via
+   * un articolo intero — qui è il form più lungo del pannello.
+   */
+  protected readonly sporcoNews = computed(
+    () => JSON.stringify(this.valori()) !== this.baseline(),
+  );
+
+  protected creaArticolo(): void {
+    this.cancelEdit();
+    this.feedback.set(null);
+    this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.formAperto.set('');
+  }
 
   /** Tab attiva dell'editor del corpo: scrittura o anteprima markdown. */
   protected readonly editorTab = signal<'write' | 'preview'>('write');
@@ -706,10 +758,14 @@ export class AdminNewsComponent {
       body: news.body,
       coverImageUrl: news.coverImageUrl ?? '',
     });
-    scrollTo({ top: 0, behavior: 'smooth' });
+    // ⚠️ La baseline DOPO il patch, o la modale nasce già sporca e il primo
+    // Escape chiede conferma senza che si sia digitato nulla.
+    this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.formAperto.set(news._id);
   }
 
   protected cancelEdit(): void {
+    this.formAperto.set(null);
     this.editingId.set(null);
     this.form.reset();
     this.error.set(null);

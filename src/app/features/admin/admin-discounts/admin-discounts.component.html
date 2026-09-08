@@ -345,13 +345,30 @@
                 {{ c.active ? 'Disattiva' : 'Riattiva' }}
               </button>
               @if (c.redeemedCount === 0) {
-                <button
-                  type="button"
-                  class="btn btn--danger btn--sm"
-                  (click)="remove(c)"
-                >
-                  Elimina
-                </button>
+                @if (confermaElimina()) {
+                  <button
+                    type="button"
+                    class="btn btn--danger btn--sm"
+                    (click)="remove(c)"
+                  >
+                    Confermo, elimina
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="confermaElimina.set(false)"
+                  >
+                    Annulla
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn--danger btn--sm"
+                    (click)="confermaElimina.set(true)"
+                  >
+                    Elimina
+                  </button>
+                }
               }
             </div>
           </div>

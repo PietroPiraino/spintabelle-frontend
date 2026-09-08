@@ -145,294 +145,6 @@
     </p>
   }
 
-  <!--
-    Il form: un pannello inline, come ovunque nel pannello admin (niente
-    modali). Sta FUORI dalle righe, e la riga in modifica si marca da sola.
-  -->
-  @if (formAperto()) {
-    <section class="card card--pad admin-panel fnt__form" id="fonte-form">
-      <h3>
-        {{ modificaId() ? 'Modifica la fonte' : 'Nuova fonte' }}
-      </h3>
-
-      @if (formErrore(); as e) {
-        <div class="form-feedback is-error" role="alert">{{ e }}</div>
-      }
-
-      <div class="field">
-        <label for="fonte-nome">Nome della testata</label>
-        <input
-          id="fonte-nome"
-          type="text"
-          class="input"
-          [attr.maxlength]="nomeMax"
-          [value]="fNome()"
-          (input)="onNome($event)"
-        />
-        @if (erroreNome(); as e) {
-          <p class="field-error">{{ e }}</p>
-        }
-      </div>
-
-      <div class="field">
-        <label for="fonte-slug">Slug</label>
-        <input
-          id="fonte-slug"
-          type="text"
-          class="input fnt__mono"
-          [attr.maxlength]="slugMax"
-          [value]="fSlug()"
-          (input)="onSlug($event)"
-        />
-        <p class="fnt__hint">
-          È la stringa con cui questa fonte comparirà nei log e nelle email di
-          allarme: minuscole, cifre e trattini.
-        </p>
-        @if (erroreSlug(); as e) {
-          <p class="field-error">{{ e }}</p>
-        }
-      </div>
-
-      <div class="field">
-        <label for="fonte-strategia">Come si scarica</label>
-        <!--
-          ⚠️ **La selezione si dichiara sulle `<option>`, MAI con un `[value]`
-          sul `<select>`.** Angular esegue il property binding del select PRIMA
-          del repeater che crea le option, e assegnare `value` a un select
-          ancora vuoto è un no-op: `value` resta `''`. All'inserimento delle
-          option il browser sceglie la **prima abilitata**, e al giro dopo il
-          binding non riscrive più niente perché il valore non è cambiato — il
-          selettore resta bloccato sulla prima voce mentre il signal ne dice
-          un'altra. Il danno è silenzioso: precompilando Somuchpoker il form
-          mostrava «WordPress REST» e «Italiano» e salvava RSS2/en.
-          (Gli altri select del pannello admin non hanno il problema perché
-          passano da `formControlName`, e il `SelectControlValueAccessor`
-          riapplica il valore quando le option si registrano.)
-        -->
-        <select id="fonte-strategia" class="input" (change)="onStrategy($event)">
-          <!-- ⚠️ Atom e HTML si vedono ma non si scelgono: dichiararle e poi
-               rifiutarle al salvataggio farebbe scoprire il limite con un 400.
-               Nasconderle farebbe credere che non esistano. -->
-          @for (s of strategie; track s.valore) {
-            <option
-              [value]="s.valore"
-              [selected]="s.valore === fStrategy()"
-              [disabled]="!s.disponibile"
-            >
-              {{ s.label }}{{ s.disponibile ? '' : ' — nessun lettore disponibile' }}
-            </option>
-          }
-        </select>
-        @if (parserDerivato(); as p) {
-          <p class="fnt__hint">
-            Lettore: <code>{{ p }}</code> — lo sceglie la forma della fonte, non
-            c'è nulla da decidere.
-          </p>
-        }
-      </div>
-
-      <div class="field">
-        <label for="fonte-endpoint">Indirizzo da interrogare</label>
-        <input
-          id="fonte-endpoint"
-          type="url"
-          class="input fnt__mono"
-          [attr.maxlength]="urlMax"
-          [value]="fEndpoint()"
-          (input)="onEndpoint($event)"
-        />
-        <p class="fnt__hint">
-          ⚠️ Da confermare sul sito vero prima di accendere: gli indirizzi del
-          censimento non sono mai stati provati da qui. Alcuni siti sono esclusi
-          in partenza per ragioni legali (fonti inibite da ADM, robots.txt che
-          vieta i crawler, condizioni d'uso che vietano lo scraping): in quel
-          caso il salvataggio risponde spiegando quale.
-        </p>
-        @if (erroreEndpoint(); as e) {
-          <p class="field-error">{{ e }}</p>
-        }
-      </div>
-
-      @if (mostraCategorie()) {
-        <div class="field">
-          <label for="fonte-categorie">Categorie da escludere</label>
-          <input
-            id="fonte-categorie"
-            type="text"
-            class="input fnt__mono"
-            inputmode="numeric"
-            placeholder="es. 16586"
-            [value]="fCategorie()"
-            (input)="onCategorie($event)"
-          />
-          <p class="fnt__hint">
-            Gli id numerici delle categorie di WordPress, separati da virgole.
-            Su una fonte come Assopoker questo filtro è ciò che tiene fuori
-            scommesse e casinò: se smette di funzionare, il volume in arrivo
-            sale di colpo — ed è per questo che anche il «troppo» è un allarme.
-          </p>
-          @if (erroreCategorie(); as e) {
-            <p class="field-error">{{ e }}</p>
-          }
-        </div>
-        <div class="field">
-          <label class="row admin-panel__check" style="gap: 0.4rem">
-            <input
-              type="checkbox"
-              [checked]="fEscludiContenuto()"
-              (change)="onEscludiContenuto($event)"
-            />
-            <span>Non scaricare il corpo degli articoli</span>
-          </label>
-          <p class="fnt__hint">
-            Da spuntare quando la testata incorpora le immagini dentro
-            all'articolo: la risposta diventa enorme, il download si interrompe
-            a metà e la fonte non consegna più niente — pur risultando
-            raggiungibile. Su PokerItaliaWeb sono <strong>23,6 MB</strong>
-            contro un tetto di 5; senza il corpo, 16 KB. In cambio si usa il
-            sommario invece del testo intero, quindi va spuntata solo dove
-            serve davvero.
-          </p>
-        </div>
-      } @else {
-        <p class="fnt__hint fnt__hint--nota">
-          Le categorie da escludere e la scelta sul corpo dell'articolo esistono
-          solo sulle fonti WordPress: sono impostazioni di WordPress, altrove
-          non avrebbero niente su cui agire.
-        </p>
-      }
-
-      <div class="admin-panel__row">
-        <div class="field">
-          <label for="fonte-lingua">Lingua</label>
-          <!-- ⚠️ Stessa ragione del selettore qui sopra: `[selected]` sulle
-               option, mai `[value]` sul select. -->
-          <select id="fonte-lingua" class="input" (change)="onLingua($event)">
-            @for (l of lingue; track l.valore) {
-              <option [value]="l.valore" [selected]="l.valore === fLingua()">
-                {{ l.label }}
-              </option>
-            }
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="fonte-poll">Ogni quanti minuti</label>
-          <input
-            id="fonte-poll"
-            type="number"
-            class="input"
-            [attr.min]="pollMin"
-            [attr.max]="pollMax"
-            step="1"
-            [value]="fPoll()"
-            (input)="onPoll($event)"
-          />
-          @if (errorePoll(); as e) {
-            <p class="field-error">{{ e }}</p>
-          }
-        </div>
-
-        <div class="field">
-          <label for="fonte-baseline">Articoli al giorno attesi</label>
-          <!-- ⚠️ `step="any"`: i volumi del censimento sono decimali (3,51 —
-               0,71 — 7,6), e uno `step` intero li farebbe rifiutare dal
-               browser prima ancora di partire. -->
-          <input
-            id="fonte-baseline"
-            type="number"
-            class="input"
-            min="0"
-            [attr.max]="baselineMax"
-            step="any"
-            [value]="fBaseline()"
-            (input)="onBaseline($event)"
-          />
-          @if (erroreBaseline(); as e) {
-            <p class="field-error">{{ e }}</p>
-          }
-        </div>
-      </div>
-      <p class="fnt__hint">
-        Il volume atteso è il metro di paragone per accorgersi che una fonte sta
-        pubblicando molto meno (o molto più) del solito.
-        <strong>Lasciandolo vuoto quel controllo resta spento</strong> su questa
-        fonte: non darà mai un allarme sul volume. Da qui non si può più
-        svuotare — per spegnerlo dopo, scrivi 0.
-      </p>
-
-      <div class="field">
-        <label for="fonte-note">Nota interna</label>
-        <textarea
-          id="fonte-note"
-          class="input"
-          rows="3"
-          [attr.maxlength]="notaMax"
-          [value]="fNote()"
-          (input)="onNote($event)"
-        ></textarea>
-        <p class="fnt__hint">
-          La ragione della cadenza, o la trappola già scoperta su questa fonte.
-          La legge solo chi apre questo pannello.
-        </p>
-        @if (erroreNota(); as e) {
-          <p class="field-error">{{ e }}</p>
-        }
-      </div>
-
-      <!--
-        ⚠️ L'effetto collaterale detto PRIMA del salvataggio: cambiare la
-        domanda che si fa alla sorgente azzera la pazienza accumulata e butta i
-        segnaposto della risposta precedente. Senza questa riga, un contatore
-        che torna a zero da solo sembra un bug.
-      -->
-      @if (cambiaLaRichiesta()) {
-        <p class="form-feedback is-info fnt__form-effetto">
-          Stai cambiando la <strong>domanda</strong> che si fa a questa fonte.
-          Salvando, i fallimenti consecutivi tornano a zero, l'eventuale
-          sospensione decade e i segnaposto della risposta precedente vengono
-          buttati — altrimenti la fonte potrebbe rispondere «niente di nuovo» a
-          una domanda che invece è nuova.
-          @if (inModifica(); as f) {
-            @if (f.consecutiveFailures > 0) {
-              Oggi la riga ha {{ f.consecutiveFailures }} fallimenti
-              consecutivi.
-            }
-          }
-        </p>
-      }
-
-      <p class="fnt__hint fnt__hint--nota">
-        Una fonte nuova nasce <strong>spenta</strong>: si accende dall'elenco,
-        una per volta, quando l'indirizzo è confermato.
-      </p>
-
-      <div class="admin-panel__actions">
-        <button
-          type="button"
-          class="btn btn--primary"
-          [disabled]="!formValido() || inVolo()"
-          (click)="salva()"
-        >
-          {{
-            azione()?.quale === 'salva'
-              ? 'Salvo…'
-              : modificaId()
-                ? 'Salva le modifiche'
-                : 'Crea la fonte (spenta)'
-          }}
-        </button>
-        <button
-          type="button"
-          class="btn btn--ghost"
-          [disabled]="inVolo()"
-          (click)="chiudiForm()"
-        >
-          Annulla
-        </button>
-      </div>
-    </section>
-  }
 
   <!--
     Il censimento: cinque righe già scritte, con la ragione della cadenza
@@ -834,3 +546,298 @@
     </p>
   }
 </div>
+
+@if (formAperto()) {
+  <!--
+    ⚠️ Il form era un pannello INLINE, e il commento qui sopra diceva «niente
+    modali»: era vero finché il progetto un dialog non ce l'aveva. Dall'
+    07/09/2026 `app-modal` esiste ed è un `<dialog>` nativo — top layer,
+    focus-trap, Escape e `::backdrop` li dà il browser, cioè esattamente le tre
+    cose che erano la ragione per non averne mai scritta una.
+  -->
+  <app-modal
+    [titolo]="modificaId() ? 'Modifica la fonte' : 'Nuova fonte'"
+    [salvando]="inVolo()"
+    taglia="larga"
+    (chiusa)="chiudiForm()"
+  >
+    <div class="admin-modale fnt__form" id="fonte-form">
+      @if (formErrore(); as e) {
+        <div class="form-feedback is-error" role="alert">{{ e }}</div>
+      }
+
+      <div class="field">
+        <label for="fonte-nome">Nome della testata</label>
+        <input
+          id="fonte-nome"
+          type="text"
+          class="input"
+          [attr.maxlength]="nomeMax"
+          [value]="fNome()"
+          (input)="onNome($event)"
+        />
+        @if (erroreNome(); as e) {
+          <p class="field-error">{{ e }}</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="fonte-slug">Slug</label>
+        <input
+          id="fonte-slug"
+          type="text"
+          class="input fnt__mono"
+          [attr.maxlength]="slugMax"
+          [value]="fSlug()"
+          (input)="onSlug($event)"
+        />
+        <p class="fnt__hint">
+          È la stringa con cui questa fonte comparirà nei log e nelle email di
+          allarme: minuscole, cifre e trattini.
+        </p>
+        @if (erroreSlug(); as e) {
+          <p class="field-error">{{ e }}</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="fonte-strategia">Come si scarica</label>
+        <!--
+          ⚠️ **La selezione si dichiara sulle `<option>`, MAI con un `[value]`
+          sul `<select>`.** Angular esegue il property binding del select PRIMA
+          del repeater che crea le option, e assegnare `value` a un select
+          ancora vuoto è un no-op: `value` resta `''`. All'inserimento delle
+          option il browser sceglie la **prima abilitata**, e al giro dopo il
+          binding non riscrive più niente perché il valore non è cambiato — il
+          selettore resta bloccato sulla prima voce mentre il signal ne dice
+          un'altra. Il danno è silenzioso: precompilando Somuchpoker il form
+          mostrava «WordPress REST» e «Italiano» e salvava RSS2/en.
+          (Gli altri select del pannello admin non hanno il problema perché
+          passano da `formControlName`, e il `SelectControlValueAccessor`
+          riapplica il valore quando le option si registrano.)
+        -->
+        <select id="fonte-strategia" class="input" (change)="onStrategy($event)">
+          <!-- ⚠️ Atom e HTML si vedono ma non si scelgono: dichiararle e poi
+               rifiutarle al salvataggio farebbe scoprire il limite con un 400.
+               Nasconderle farebbe credere che non esistano. -->
+          @for (s of strategie; track s.valore) {
+            <option
+              [value]="s.valore"
+              [selected]="s.valore === fStrategy()"
+              [disabled]="!s.disponibile"
+            >
+              {{ s.label }}{{ s.disponibile ? '' : ' — nessun lettore disponibile' }}
+            </option>
+          }
+        </select>
+        @if (parserDerivato(); as p) {
+          <p class="fnt__hint">
+            Lettore: <code>{{ p }}</code> — lo sceglie la forma della fonte, non
+            c'è nulla da decidere.
+          </p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="fonte-endpoint">Indirizzo da interrogare</label>
+        <input
+          id="fonte-endpoint"
+          type="url"
+          class="input fnt__mono"
+          [attr.maxlength]="urlMax"
+          [value]="fEndpoint()"
+          (input)="onEndpoint($event)"
+        />
+        <p class="fnt__hint">
+          ⚠️ Da confermare sul sito vero prima di accendere: gli indirizzi del
+          censimento non sono mai stati provati da qui. Alcuni siti sono esclusi
+          in partenza per ragioni legali (fonti inibite da ADM, robots.txt che
+          vieta i crawler, condizioni d'uso che vietano lo scraping): in quel
+          caso il salvataggio risponde spiegando quale.
+        </p>
+        @if (erroreEndpoint(); as e) {
+          <p class="field-error">{{ e }}</p>
+        }
+      </div>
+
+      @if (mostraCategorie()) {
+        <div class="field">
+          <label for="fonte-categorie">Categorie da escludere</label>
+          <input
+            id="fonte-categorie"
+            type="text"
+            class="input fnt__mono"
+            inputmode="numeric"
+            placeholder="es. 16586"
+            [value]="fCategorie()"
+            (input)="onCategorie($event)"
+          />
+          <p class="fnt__hint">
+            Gli id numerici delle categorie di WordPress, separati da virgole.
+            Su una fonte come Assopoker questo filtro è ciò che tiene fuori
+            scommesse e casinò: se smette di funzionare, il volume in arrivo
+            sale di colpo — ed è per questo che anche il «troppo» è un allarme.
+          </p>
+          @if (erroreCategorie(); as e) {
+            <p class="field-error">{{ e }}</p>
+          }
+        </div>
+        <div class="field">
+          <label class="row admin-panel__check" style="gap: 0.4rem">
+            <input
+              type="checkbox"
+              [checked]="fEscludiContenuto()"
+              (change)="onEscludiContenuto($event)"
+            />
+            <span>Non scaricare il corpo degli articoli</span>
+          </label>
+          <p class="fnt__hint">
+            Da spuntare quando la testata incorpora le immagini dentro
+            all'articolo: la risposta diventa enorme, il download si interrompe
+            a metà e la fonte non consegna più niente — pur risultando
+            raggiungibile. Su PokerItaliaWeb sono <strong>23,6 MB</strong>
+            contro un tetto di 5; senza il corpo, 16 KB. In cambio si usa il
+            sommario invece del testo intero, quindi va spuntata solo dove
+            serve davvero.
+          </p>
+        </div>
+      } @else {
+        <p class="fnt__hint fnt__hint--nota">
+          Le categorie da escludere e la scelta sul corpo dell'articolo esistono
+          solo sulle fonti WordPress: sono impostazioni di WordPress, altrove
+          non avrebbero niente su cui agire.
+        </p>
+      }
+
+      <div class="admin-panel__row">
+        <div class="field">
+          <label for="fonte-lingua">Lingua</label>
+          <!-- ⚠️ Stessa ragione del selettore qui sopra: `[selected]` sulle
+               option, mai `[value]` sul select. -->
+          <select id="fonte-lingua" class="input" (change)="onLingua($event)">
+            @for (l of lingue; track l.valore) {
+              <option [value]="l.valore" [selected]="l.valore === fLingua()">
+                {{ l.label }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="fonte-poll">Ogni quanti minuti</label>
+          <input
+            id="fonte-poll"
+            type="number"
+            class="input"
+            [attr.min]="pollMin"
+            [attr.max]="pollMax"
+            step="1"
+            [value]="fPoll()"
+            (input)="onPoll($event)"
+          />
+          @if (errorePoll(); as e) {
+            <p class="field-error">{{ e }}</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="fonte-baseline">Articoli al giorno attesi</label>
+          <!-- ⚠️ `step="any"`: i volumi del censimento sono decimali (3,51 —
+               0,71 — 7,6), e uno `step` intero li farebbe rifiutare dal
+               browser prima ancora di partire. -->
+          <input
+            id="fonte-baseline"
+            type="number"
+            class="input"
+            min="0"
+            [attr.max]="baselineMax"
+            step="any"
+            [value]="fBaseline()"
+            (input)="onBaseline($event)"
+          />
+          @if (erroreBaseline(); as e) {
+            <p class="field-error">{{ e }}</p>
+          }
+        </div>
+      </div>
+      <p class="fnt__hint">
+        Il volume atteso è il metro di paragone per accorgersi che una fonte sta
+        pubblicando molto meno (o molto più) del solito.
+        <strong>Lasciandolo vuoto quel controllo resta spento</strong> su questa
+        fonte: non darà mai un allarme sul volume. Da qui non si può più
+        svuotare — per spegnerlo dopo, scrivi 0.
+      </p>
+
+      <div class="field">
+        <label for="fonte-note">Nota interna</label>
+        <textarea
+          id="fonte-note"
+          class="input"
+          rows="3"
+          [attr.maxlength]="notaMax"
+          [value]="fNote()"
+          (input)="onNote($event)"
+        ></textarea>
+        <p class="fnt__hint">
+          La ragione della cadenza, o la trappola già scoperta su questa fonte.
+          La legge solo chi apre questo pannello.
+        </p>
+        @if (erroreNota(); as e) {
+          <p class="field-error">{{ e }}</p>
+        }
+      </div>
+
+      <!--
+        ⚠️ L'effetto collaterale detto PRIMA del salvataggio: cambiare la
+        domanda che si fa alla sorgente azzera la pazienza accumulata e butta i
+        segnaposto della risposta precedente. Senza questa riga, un contatore
+        che torna a zero da solo sembra un bug.
+      -->
+      @if (cambiaLaRichiesta()) {
+        <p class="form-feedback is-info fnt__form-effetto">
+          Stai cambiando la <strong>domanda</strong> che si fa a questa fonte.
+          Salvando, i fallimenti consecutivi tornano a zero, l'eventuale
+          sospensione decade e i segnaposto della risposta precedente vengono
+          buttati — altrimenti la fonte potrebbe rispondere «niente di nuovo» a
+          una domanda che invece è nuova.
+          @if (inModifica(); as f) {
+            @if (f.consecutiveFailures > 0) {
+              Oggi la riga ha {{ f.consecutiveFailures }} fallimenti
+              consecutivi.
+            }
+          }
+        </p>
+      }
+
+      <p class="fnt__hint fnt__hint--nota">
+        Una fonte nuova nasce <strong>spenta</strong>: si accende dall'elenco,
+        una per volta, quando l'indirizzo è confermato.
+      </p>
+    </div>
+
+    <div class="row admin-panel__actions" moPiede>
+      <button
+        type="button"
+        class="btn btn--ghost"
+        [disabled]="inVolo()"
+        (click)="chiudiForm()"
+      >
+        Annulla
+      </button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="!formValido() || inVolo()"
+        (click)="salva()"
+      >
+        {{
+          azione()?.quale === 'salva'
+            ? 'Salvo\u2026'
+            : modificaId()
+              ? 'Salva le modifiche'
+              : 'Crea la fonte (spenta)'
+        }}
+      </button>
+    </div>
+  </app-modal>
+}

@@ -554,7 +554,7 @@ describe('AdminFontiComponent', () => {
       '#fonte-endpoint',
       'https://www.italiapokerclub.com/wp-json/wp/v2/posts',
     );
-    await clic('.fnt__form .btn--primary');
+    await clic('.mo__piede .btn--primary');
 
     const post = http.expectOne(LISTA);
     expect(post.request.method).toBe('POST');
@@ -578,7 +578,7 @@ describe('AdminFontiComponent', () => {
     await clic('#dettaglio-toggle-x');
     await clic('.fnt-row__modifica');
     await clic('.admin-panel__check input');
-    await clic('.fnt__form .btn--primary');
+    await clic('.mo__piede .btn--primary');
 
     const patch = http.expectOne(LISTA + '/x');
     expect(patch.request.method).toBe('PATCH');
@@ -622,7 +622,7 @@ describe('AdminFontiComponent', () => {
     // Il campo sparisce: su una fonte non-WordPress non filtrerebbe niente.
     expect(q('#fonte-categorie')).toBeNull();
     await scrivi('#fonte-endpoint', 'https://www.assopoker.com/feed');
-    await clic('.fnt__form .btn--primary');
+    await clic('.mo__piede .btn--primary');
 
     const patch = http.expectOne(`${LISTA}/x`);
     expect(patch.request.method).toBe('PATCH');
@@ -685,7 +685,7 @@ describe('AdminFontiComponent', () => {
     expect(testo()).toContain(
       'Lo slug ammette solo minuscole, cifre e trattini',
     );
-    expect(q<HTMLButtonElement>('.fnt__form .btn--primary')?.disabled).toBeTrue();
+    expect(q<HTMLButtonElement>('.mo__piede .btn--primary')?.disabled).toBeTrue();
   });
 
   /**
@@ -701,7 +701,7 @@ describe('AdminFontiComponent', () => {
     await scrivi('#fonte-slug', 'assopoker');
     await scrivi('#fonte-endpoint', 'https://www.assopoker.com/wp-json/wp/v2/posts');
     await scrivi('#fonte-baseline', '3.51');
-    await clic('.fnt__form .btn--primary');
+    await clic('.mo__piede .btn--primary');
 
     const post = http.expectOne(LISTA);
     expect((post.request.body as Record<string, unknown>)['baselineItemsPerDay']).toBe(3.51);
@@ -717,7 +717,7 @@ describe('AdminFontiComponent', () => {
     await scrivi('#fonte-nome', 'Assopoker');
     await scrivi('#fonte-slug', 'assopoker');
     await scrivi('#fonte-endpoint', 'https://www.assopoker.com/wp-json/wp/v2/posts');
-    await clic('.fnt__form .btn--primary');
+    await clic('.mo__piede .btn--primary');
 
     http
       .expectOne(LISTA)
@@ -943,7 +943,7 @@ describe('AdminFontiComponent', () => {
     await avvia([], { seeds: [seedOf()] });
     await clic('.fnt-seed__usa');
 
-    expect(q('.fnt__form .btn--primary')?.textContent).toContain(
+    expect(q('.mo__piede .btn--primary')?.textContent).toContain(
       'Crea la fonte (spenta)',
     );
     expect(testo()).toContain('Una fonte nuova nasce');

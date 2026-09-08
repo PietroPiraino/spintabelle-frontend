@@ -1,109 +1,17 @@
-<div class="admin-grid">
-  <!-- FORM -->
-  <div class="card card--pad admin-form">
-    <h2>{{ editingId() ? 'Modifica news' : 'Nuova news' }}</h2>
-
-    @if (feedback()) {
-      <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
-    }
-    @if (error()) {
-      <div class="form-feedback is-error" role="alert">{{ error() }}</div>
-    }
-
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <div class="field">
-        <label for="news-title">Titolo</label>
-        <input
-          id="news-title"
-          type="text"
-          class="input"
-          formControlName="title"
-          placeholder="Titolo della news"
-          [class.is-invalid]="form.controls.title.touched && form.controls.title.invalid"
-        />
-      </div>
-
-      <div class="field">
-        <div class="admin-news__editor-head">
-          <label for="news-body">Testo</label>
-          <div class="row admin-news__tabs" role="tablist" aria-label="Editor del testo">
-            <button
-              type="button"
-              class="btn btn--ghost btn--sm"
-              role="tab"
-              [class.is-active]="editorTab() === 'write'"
-              [attr.aria-selected]="editorTab() === 'write'"
-              (click)="editorTab.set('write')"
-            >
-              Scrivi
-            </button>
-            <button
-              type="button"
-              class="btn btn--ghost btn--sm"
-              role="tab"
-              [class.is-active]="editorTab() === 'preview'"
-              [attr.aria-selected]="editorTab() === 'preview'"
-              (click)="editorTab.set('preview')"
-            >
-              Anteprima
-            </button>
-          </div>
-        </div>
-
-        @if (editorTab() === 'write') {
-          <textarea
-            id="news-body"
-            class="input"
-            formControlName="body"
-            rows="8"
-            placeholder="Il contenuto della news (Markdown supportato)"
-            [class.is-invalid]="form.controls.body.touched && form.controls.body.invalid"
-          ></textarea>
-          <p class="admin-news__hint">
-            Markdown: <code>## titolo</code>, <code>**grassetto**</code>,
-            <code>- elenco</code>, <code>[testo](url)</code>,
-            <code>![img](url)</code>
-          </p>
-        } @else {
-          <div class="admin-news__preview">
-            @if (bodyPreview().trim()) {
-              <app-markdown [markdown]="bodyPreview()" />
-            } @else {
-              <p class="admin-news__preview-empty">
-                Niente da mostrare: scrivi qualcosa nel testo.
-              </p>
-            }
-          </div>
-        }
-      </div>
-
-      <div class="field">
-        <label for="news-cover">URL immagine di copertina (opzionale)</label>
-        <input
-          id="news-cover"
-          type="url"
-          class="input"
-          formControlName="coverImageUrl"
-          placeholder="https://…"
-        />
-      </div>
-
-      <div class="row">
-        <button type="submit" class="btn btn--primary" [disabled]="saving()">
-          {{ saving() ? 'Salvataggio…' : editingId() ? 'Salva modifiche' : 'Pubblica news' }}
-        </button>
-        @if (editingId()) {
-          <button type="button" class="btn btn--ghost" (click)="cancelEdit()">Annulla</button>
-        }
-      </div>
-    </form>
-  </div>
-
-  <!-- ARCHIVIO -->
-  <div class="admin-list">
-    <div class="admin-barra">
-      <h2>Archivio news</h2>
-      <span class="admin-news__stato-elenco">
+<div class="admin-users">
+  <div class="admin-barra">
+    <h2 class="admin-barra__titolo">Archivio news</h2>
+    <button
+      type="button"
+      class="admin-ico admin-barra__crea"
+      aria-haspopup="dialog"
+      aria-label="Scrivi un nuovo articolo"
+      title="Nuovo articolo"
+      (click)="creaArticolo()"
+    >
+      <app-icon name="plus" [size]="20" />
+    </button>
+    <span class="admin-news__stato-elenco">
         @if (pagina(); as p) {
           <!-- ⚠️ Il conteggio dice sempre a QUALE filtro si riferisce, e nomina
                quello **caricato**, non quello chiesto: `total` arriva dalla
@@ -122,26 +30,33 @@
             >Aggiorno l'elenco…</span
           >
         }
-      </span>
-    </div>
+    </span>
+  </div>
 
-    <!-- Filtro: un solo stato per volta, «Tutti» compreso (sentinella lato API). -->
-    <div
-      class="row admin-news__filtri"
-      role="group"
-      aria-label="Filtra per stato"
-    >
-      @for (f of filtri; track f) {
-        <button
-          type="button"
-          class="badge badge--tag"
-          [class.is-active]="filtro() === f"
-          [attr.aria-pressed]="filtro() === f"
-          [disabled]="inVolo() || caricamento()"
-          (click)="setFiltro(f)"
-        >{{ filtroLabel(f) }}</button>
-      }
-    </div>
+  @if (feedback()) {
+    <div class="form-feedback is-success" role="status">{{ feedback() }}</div>
+  }
+  @if (error() && formAperto() === null) {
+    <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+  }
+
+  <!-- Filtro: un solo stato per volta, «Tutti» compreso (sentinella lato API). -->
+  <!--
+    ⚠️ Era `aria-pressed`, che è la grammatica dei TOGGLE indipendenti: su
+    cinque pillole di cui una sempre accesa uno screen reader annunciava
+    «cinque interruttori, uno premuto» invece di «radio 2 di 5». È una scelta
+    esclusiva, quindi radiogroup + aria-checked.
+    ⚠️ E `aria-disabled` invece di `[disabled]`: in un gruppo a roving tabindex
+    disabilitare il bottone che porta il `tabindex="0"` fa uscire il fuoco dal
+    gruppo senza poterci rientrare con Tab finché il caricamento non finisce.
+  -->
+  <app-filtro
+    etichetta="Filtra per stato"
+    [voci]="vociFiltro"
+    [scelto]="filtro()"
+    [inerte]="inVolo() || caricamento()"
+    (scegli)="setFiltro($event)"
+  />
 
     <p class="admin-news__hint">
       Qui c'è l'archivio completo: anche le bozze, gli scartati e gli scaduti, che
@@ -454,5 +369,116 @@
         }
       }
     }
-  </div>
 </div>
+
+@if (formAperto() !== null) {
+  <app-modal
+    [titolo]="editingId() ? 'Modifica news' : 'Nuova news'"
+    [sporco]="sporcoNews()"
+    [salvando]="saving()"
+    taglia="larga"
+    (chiusa)="cancelEdit()"
+  >
+    <div class="admin-modale">
+      @if (error()) {
+        <div class="form-feedback is-error" role="alert">{{ error() }}</div>
+      }
+
+      <form id="news-form" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="field">
+        <label for="news-title">Titolo</label>
+        <input
+          id="news-title"
+          type="text"
+          class="input"
+          formControlName="title"
+          placeholder="Titolo della news"
+          [class.is-invalid]="form.controls.title.touched && form.controls.title.invalid"
+        />
+      </div>
+
+      <div class="field">
+        <div class="admin-news__editor-head">
+          <label for="news-body">Testo</label>
+          <!--
+            ⚠️ Era l'UNICO `role="tablist"` del progetto, e l'unico che
+            dichiarava il ruolo senza mantenerlo: niente `aria-controls`,
+            niente `role="tabpanel"`, niente roving tabindex. Un ruolo che
+            promette e non mantiene è peggio di nessun ruolo.
+          -->
+          <app-schede
+            #ed
+            etichetta="Editor del testo"
+            [voci]="vociEditor"
+            [scelto]="editorTab()"
+            (scegli)="editorTab.set($event)"
+          />
+        </div>
+
+        <div
+          role="tabpanel"
+          tabindex="0"
+          [id]="ed.idPannello()"
+          [attr.aria-labelledby]="ed.idSchedaAttiva()"
+        >
+        @if (editorTab() === 'write') {
+          <textarea
+            id="news-body"
+            class="input"
+            formControlName="body"
+            rows="8"
+            placeholder="Il contenuto della news (Markdown supportato)"
+            [class.is-invalid]="form.controls.body.touched && form.controls.body.invalid"
+          ></textarea>
+          <p class="admin-news__hint">
+            Markdown: <code>## titolo</code>, <code>**grassetto**</code>,
+            <code>- elenco</code>, <code>[testo](url)</code>,
+            <code>![img](url)</code>
+          </p>
+        } @else {
+          <div class="admin-news__preview">
+            @if (bodyPreview().trim()) {
+              <app-markdown [markdown]="bodyPreview()" />
+            } @else {
+              <p class="admin-news__preview-empty">
+                Niente da mostrare: scrivi qualcosa nel testo.
+              </p>
+            }
+          </div>
+        }
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="news-cover">URL immagine di copertina (opzionale)</label>
+        <input
+          id="news-cover"
+          type="url"
+          class="input"
+          formControlName="coverImageUrl"
+          placeholder="https://…"
+        />
+      </div>
+      </form>
+    </div>
+
+    <div class="row admin-panel__actions" moPiede>
+      <button
+        type="button"
+        class="btn btn--ghost"
+        [disabled]="saving()"
+        (click)="cancelEdit()"
+      >
+        Annulla
+      </button>
+      <button
+        type="submit"
+        class="btn btn--primary"
+        form="news-form"
+        [disabled]="saving()"
+      >
+        {{ saving() ? 'Salvataggio\u2026' : editingId() ? 'Salva' : 'Crea' }}
+      </button>
+    </div>
+  </app-modal>
+}

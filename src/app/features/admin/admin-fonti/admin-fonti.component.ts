@@ -23,6 +23,7 @@ import { HealthService } from '../../../core/services/health.service';
 import { NewsSourcesService } from '../../../core/services/news-sources.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -324,14 +325,21 @@ interface Riga {
  * di rosso e non diventa un "sospetta". «Non lo so ancora» e «va male» sono due
  * frasi diverse, e finiscono in due elenchi diversi (`avvisi` e `perche`).
  *
- * ⚠️ **Niente `confirm()` nativi e niente modali** (idioma `live-room`): due
+ * ⚠️ Niente `confirm()` nativo. ⚠️ E la frase «nel progetto non esiste un
+ * dialog» che stava qui NON è più vera dal 07/09/2026: `shared/ui/modal/`
+ * esiste, e dall'08/09/2026 ospita i form del pannello. Quello che resta
+ * valido è il seguito:
  * conferme in linea, una sola aperta per pagina.
  */
 @Component({
   selector: 'app-admin-fonti',
-  imports: [IconComponent],
+  imports: [IconComponent, ModalComponent],
   templateUrl: './admin-fonti.component.html',
-  styleUrls: ['../admin-shared.scss', './admin-fonti.component.scss'],
+  styleUrls: [
+    '../admin-shared.scss',
+    '../admin-modale.scss',
+    './admin-fonti.component.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminFontiComponent {
