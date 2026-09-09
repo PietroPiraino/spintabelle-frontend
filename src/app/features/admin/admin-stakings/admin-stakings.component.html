@@ -32,6 +32,39 @@
   @if (!page() && loading()) {
     <div class="spinner" role="status" aria-label="Caricamento registro"></div>
   } @else if (page(); as p) {
+    <!--
+      ⚠️ I totali arrivano dal SERVER e coprono l'insieme filtrato, non le 25
+      righe della pagina: sommare quello che si vede è esatto finché i giocatori
+      finanziati stanno in una pagina, e sbagliato dal 26° in poi — su una cifra
+      di denaro, senza che niente si rompa.
+      ⚠️ La frase di ambito non è decorazione: senza, la stessa cifra si legge
+      come «tutto il registro» qualunque filtro sia attivo.
+      ⚠️ `@if (totali(); as t)` e non un ripiego a zero: contro un backend che
+      non li manda ancora, degli zeri inventati direbbero «nessun fondo in giro»
+      invece di non dire niente.
+    -->
+    @if (totali(); as t) {
+      @if (p.total > 0) {
+        <p class="stk__totali">
+          <span class="visually-hidden">Totali dei registri elencati:</span>
+          <span class="stk__tot">
+            <span class="admin-item__meta">Fondi</span>
+            <strong>{{ formattaCent(t.fondiCent) }}</strong>
+          </span>
+          <span class="stk__tot">
+            <span class="admin-item__meta">EV</span>
+            <!--
+              Stessa lingua della colonna: `testoEv` scrive «In pari» a zero e
+              «X da recuperare» altrimenti. La somma di valori tutti ≤ 0 è ≤ 0,
+              quindi la funzione regge esattamente anche sul totale.
+            -->
+            <strong [class.is-debito]="t.evCent < 0">{{ testoEv(t.evCent) }}</strong>
+          </span>
+          <span class="stk__ambito">{{ ambito() }}</span>
+        </p>
+      }
+    }
+
     <div class="admin-table__scroll">
       <table class="admin-table">
         <caption class="visually-hidden">

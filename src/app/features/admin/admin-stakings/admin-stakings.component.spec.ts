@@ -6,7 +6,7 @@ import {
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../environments/environment';
-import { Paginated, StakingRow } from '../../../core/models/api.models';
+import { ElencoStakings, StakingRow } from '../../../core/models/api.models';
 import { AdminStakingsComponent } from './admin-stakings.component';
 
 const API = environment.API_URL;
@@ -23,12 +23,27 @@ const riga = (over: Partial<StakingRow> = {}): StakingRow => ({
   ...over,
 });
 
-const pagina = (items: StakingRow[]): Paginated<StakingRow> => ({
+/**
+ * ⚠️ I totali arrivano SULL'ENVELOPE, calcolati dal server sull'intero insieme
+ * filtrato. Qui il default li ricava dagli `items` solo per comodità — con una
+ * pagina sola coincidono — ma un test apposta ne manda di diversi, perché è
+ * proprio quel caso a distinguere «la striscia legge l'envelope» da «la
+ * striscia somma le righe che vede».
+ */
+const pagina = (
+  items: StakingRow[],
+  over: Partial<ElencoStakings> = {},
+): ElencoStakings => ({
   items,
   total: items.length,
   page: 1,
   limit: 25,
   totalPages: 1,
+  totali: {
+    fondiCent: items.reduce((t, r) => t + r.saldoFondiCent, 0),
+    evCent: items.reduce((t, r) => t + r.saldoEvCent, 0),
+  },
+  ...over,
 });
 
 describe('AdminStakingsComponent', () => {
@@ -43,7 +58,7 @@ describe('AdminStakingsComponent', () => {
     fixture.detectChanges();
   };
 
-  const rispondi = async (p: Paginated<StakingRow>) => {
+  const rispondi = async (p: ElencoStakings) => {
     http.expectOne((r) => r.url === `${API}/admin/stakings`).flush(p);
     await stabilizza();
   };
@@ -60,6 +75,19 @@ describe('AdminStakingsComponent', () => {
     http
       .expectOne((q) => q.url === `${API}/admin/stakings/${r.id}`)
       .flush({ riga: r, movimenti: [] });
+    await stabilizza();
+  };
+
+  /**
+   * Scarica la rilettura dell'elenco che parte dopo ogni mutazione.
+   *
+   * ⚠️ Il componente la fa perché righe e TOTALI tornino da una lettura sola:
+   * senza consumarla qui, `http.verify()` in `afterEach` la troverebbe pendente
+   * e ogni test di movimento fallirebbe con un messaggio che non nomina la
+   * causa.
+   */
+  const scaricaRilettura = async (p = pagina([riga()])) => {
+    http.expectOne((r) => r.url === `${API}/admin/stakings`).flush(p);
     await stabilizza();
   };
 
@@ -225,6 +253,9 @@ describe('AdminStakingsComponent', () => {
           },
         });
       await stabilizza();
+      // La riga si aggiorna SUBITO (patch in locale); la rilettura che segue
+      // porta i totali in pari e deve rispondere con la riga già aggiornata.
+      await scaricaRilettura(pagina([riga({ saldoFondiCent: 75_000 })]));
 
       expect(testo()).toContain('750,00');
       // e lo storico mostra subito il movimento appena registrato
@@ -268,6 +299,7 @@ describe('AdminStakingsComponent', () => {
         },
       });
       await stabilizza();
+      await scaricaRilettura();
     });
 
     it('su una riga chiusa il form non compare', async () => {
@@ -276,6 +308,113 @@ describe('AdminStakingsComponent', () => {
       await apri(chiusa);
       expect(testo()).toContain('riaprilo per registrare un movimento');
       expect(fixture.nativeElement.querySelector('#stk-importo')).toBeNull();
+    });
+  });
+
+  describe('i totali di fondi ed EV', () => {
+    const striscia = () =>
+      (
+        fixture.nativeElement.querySelector('.stk__totali') as HTMLElement | null
+      )?.textContent ?? '';
+
+    it('⚠️ stampa i totali dell’ENVELOPE, non la somma delle righe visibili', async () => {
+      // Il test che conta. L'elenco è paginato: sommare gli `items` dà un
+      // numero esatto finché i giocatori finanziati stanno in una pagina e
+      // sbagliato dal 26° in poi — su una cifra di denaro e senza che niente si
+      // rompa. Qui l'envelope dichiara di proposito totali che NON corrispondono
+      // all'unica riga mostrata: se la striscia li sommasse in locale, si
+      // leggerebbe «500,00» invece di «12.345,00».
+      await rispondi(
+        pagina([riga()], {
+          total: 26,
+          totali: { fondiCent: 1_234_500, evCent: -6_789_000 },
+        }),
+      );
+      expect(striscia()).toContain('12.345,00');
+      expect(striscia()).toContain('67.890,00');
+      expect(striscia()).toContain('da recuperare');
+      // I due negativi sono la metà che conta: «500,00» e «340,00» sono
+      // esattamente i saldi dell'unica riga mostrata, cioè quello che si
+      // leggerebbe se la striscia sommasse `items` invece di leggere l'envelope.
+      expect(striscia()).not.toContain('500,00');
+      expect(striscia()).not.toContain('340,00');
+    });
+
+    it('l’EV in pari lo dice, e non resta una cifra nuda', async () => {
+      await rispondi(pagina([riga({ saldoEvCent: 0 })]));
+      expect(striscia()).toContain('In pari');
+    });
+
+    it('⚠️ nomina l’insieme che sta sommando, e la frase segue il filtro', async () => {
+      // Senza, la stessa cifra si legge come «tutto il registro» qualunque
+      // filtro sia attivo — il precedente di /admin/partecipazione.
+      await rispondi(pagina([riga(), riga({ id: 's2' })]));
+      expect(striscia()).toContain('su 2 registri in corso');
+
+      const chiusi = [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) => b.textContent?.trim() === 'Chiusi',
+      ) as HTMLButtonElement;
+      chiusi.click();
+      http
+        .expectOne((r) => r.url === `${API}/admin/stakings`)
+        .flush(pagina([riga({ id: 's3', stato: 'CHIUSO' })]));
+      await stabilizza();
+      // ⚠️ «chiuso» concorda col singolare: un aggettivo appeso al plurale
+      // darebbe «su 1 registro chiusi».
+      expect(striscia()).toContain('su 1 registro chiuso');
+    });
+
+    it('a zero righe la striscia non compare', async () => {
+      // Un «0,00 €» sopra un elenco vuoto è rumore: a spiegare la schermata
+      // c'è già la cella di stato vuoto.
+      await rispondi(pagina([]));
+      expect(fixture.nativeElement.querySelector('.stk__totali')).toBeNull();
+    });
+
+    it('⚠️ dopo un movimento l’elenco viene RILETTO, o i totali restano indietro', async () => {
+      // `patchRiga` aggiorna la riga in locale ma non può aggiornare un totale
+      // calcolato dal server sull'intero insieme: senza la rilettura, la cifra
+      // in testa e la colonna sotto direbbero due cose diverse sugli stessi
+      // soldi. L'alternativa — applicare il delta anche al totale — metterebbe
+      // la stessa aritmetica in due punti che devono concordare.
+      await rispondi(pagina([riga()]));
+      await apri();
+      await digitaImporto('250');
+      const causale = fixture.nativeElement.querySelector(
+        '#stk-causale',
+      ) as HTMLInputElement;
+      causale.value = 'anticipo di maggio';
+      causale.dispatchEvent(new Event('input'));
+      await stabilizza();
+
+      (
+        [...fixture.nativeElement.querySelectorAll('button')].find(
+          (b: HTMLButtonElement) =>
+            b.textContent?.includes('Registra movimento'),
+        ) as HTMLButtonElement
+      ).click();
+      http
+        .expectOne((r) => r.url === `${API}/admin/stakings/s1/movimenti`)
+        .flush({
+          riga: riga({ saldoFondiCent: 75_000 }),
+          movimento: {
+            id: 'm1',
+            tipo: 'FONDI',
+            importoCent: 25_000,
+            causale: 'anticipo di maggio',
+            saldoFondiDopoCent: 75_000,
+            saldoEvDopoCent: -34_000,
+          },
+        });
+      await stabilizza();
+
+      // È QUESTA la chiamata che il test pretende: senza, `http.verify()`
+      // passerebbe e i totali resterebbero fermi al valore di prima.
+      const rilettura = http.expectOne((r) => r.url === `${API}/admin/stakings`);
+      expect(rilettura.request.params.get('stato')).toBe('APERTO');
+      rilettura.flush(pagina([riga({ saldoFondiCent: 75_000 })]));
+      await stabilizza();
+      expect(striscia()).toContain('750,00');
     });
   });
 

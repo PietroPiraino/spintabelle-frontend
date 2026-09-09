@@ -285,6 +285,29 @@ export interface StakingDettaglio {
   movimenti: StakingMovimento[];
 }
 
+/**
+ * I due totali del registro, in CENTESIMI come ogni importo del modulo.
+ *
+ * ⚠️ Li calcola il SERVER sull'intero insieme filtrato, e non si ricavano
+ * sommando `items`: quella somma è esatta finché i giocatori finanziati stanno
+ * in una pagina e sbagliata dal 26° in poi, senza che niente si rompa.
+ */
+export interface StakingTotali {
+  fondiCent: number;
+  evCent: number;
+}
+
+/**
+ * L'elenco del registro: la pagina PIÙ i totali dell'insieme filtrato.
+ *
+ * ⚠️ I totali viaggiano sull'envelope e non su una rotta gemella (idioma di
+ * `CodaRedazione` qui sotto): due letture separate possono dissentire, e qui
+ * dissentirebbero su una cifra di denaro.
+ */
+export type ElencoStakings = Paginated<StakingRow> & {
+  totali: StakingTotali;
+};
+
 export type SubscriptionTier = 'PESCE_ROSSO' | 'SQUALO';
 /** 'manuale' = concessione admin (mai selezionabile dall'utente). */
 /**

@@ -12,6 +12,51 @@
   }
 }
 
+// La striscia dei totali, sopra la tabella: la risposta alla prima domanda che
+// si fa a un registro di soldi — quanto ne è fuori, e quanto EV resta.
+// ⚠️ Modellata su `.fnt__summary` di `/admin/fonti`, ed è la SECONDA copia di
+// questa striscia: alla terza va promossa in `admin-shared.scss`, prima che
+// diventi la storia già pagata delle cinque pastiglie di stato.
+// ⚠️ Sta SOPRA la tabella e non in un `<tfoot>`: sotto i 720px la tabella
+// diventa blocchi impilati e una riga di piede si leggerebbe come un giocatore
+// in più — e comunque un totale va visto senza scorrere fino in fondo.
+.stk__totali {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 1.4rem;
+  margin: 0 0 0.9rem;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.stk__tot {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+
+  strong {
+    // Le due cifre stanno una sopra l'altra rispetto alla colonna della
+    // tabella: senza, le migliaia ballano.
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    font-size: 1.05rem;
+
+    // ⚠️ Solo l'EV prende colore, come nella colonna. Il totale dei fondi può
+    // essere negativo (anticipi bruciati) e resta neutro: colorarlo qui
+    // inventerebbe un segnale che la tabella sotto non dà.
+    &.is-debito {
+      color: var(--copper-600);
+    }
+  }
+}
+
+// ⚠️ La frase che dice COSA si sta sommando. Senza, la stessa cifra si legge
+// come «tutto il registro» qualunque filtro sia attivo.
+.stk__ambito {
+  color: var(--text-faint);
+}
+
 // I due saldi in testa alla modale: la risposta alla prima domanda che si fa
 // aprendola, senza dover leggere lo storico.
 .stk__saldi {

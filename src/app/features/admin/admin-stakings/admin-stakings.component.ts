@@ -9,7 +9,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import {
-  Paginated,
+  ElencoStakings,
   StakingMovimento,
   StakingRow,
   StakingStato,
@@ -62,7 +62,7 @@ export class AdminStakingsComponent {
   private readonly api = inject(AdminStakingsService);
   private readonly fb = inject(FormBuilder);
 
-  protected readonly page = signal<Paginated<StakingRow> | null>(null);
+  protected readonly page = signal<ElencoStakings | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly feedback = signal<string | null>(null);
@@ -77,6 +77,48 @@ export class AdminStakingsComponent {
     { valore: 'TUTTI', etichetta: 'Tutti' },
   ];
   private readonly pagina = signal(1);
+
+  // ── Totali ───────────────────────────────────────────────────────────────
+
+  /**
+   * I due totali dell'insieme filtrato, così come li ha calcolati il server.
+   *
+   * ⚠️ NON si sommano `items`: quella somma coprirebbe le 25 righe della
+   * pagina, cioè sarebbe esatta finché i giocatori finanziati stanno in una
+   * pagina e sbagliata dal 26° in poi — su una cifra di denaro, senza che
+   * niente si rompa.
+   * ⚠️ `?? null` e non `?? {fondiCent: 0, evCent: 0}`: contro un backend che
+   * non li manda ancora (la finestra fra i due deploy) inventare degli zeri
+   * significherebbe stampare «nessun fondo in giro» al posto di non dire
+   * niente. Il template salta la striscia e la tabella resta intatta.
+   */
+  protected readonly totali = computed(() => this.page()?.totali ?? null);
+
+  /**
+   * La frase che dice COSA si sta sommando.
+   *
+   * ⚠️ Non è decorazione: senza, la stessa cifra si legge come «tutto il
+   * registro» qualunque filtro sia attivo. È il precedente scritto in
+   * `admin-participation.component.html` — sopra un elenco filtrato, un totale
+   * che non nomina il proprio insieme non corrisponde a niente di ciò che si ha
+   * davanti.
+   */
+  protected readonly ambito = computed(() => {
+    const totale = this.page()?.total ?? 0;
+    const uno = totale === 1;
+    const nome = uno ? 'registro' : 'registri';
+    switch (this.filtro()) {
+      case 'APERTO':
+        return `su ${totale} ${nome} in corso`;
+      case 'CHIUSO':
+        // ⚠️ «chiuso» concorda, «in corso» e «in tutto» no: con un aggettivo
+        // appeso al plurale si legge «su 1 registro chiusi». Trovato da una
+        // spec, non a occhio.
+        return `su ${totale} ${nome} ${uno ? 'chiuso' : 'chiusi'}`;
+      case 'TUTTI':
+        return `su ${totale} ${nome} in tutto`;
+    }
+  });
 
   // ── Modale ───────────────────────────────────────────────────────────────
 
@@ -96,6 +138,17 @@ export class AdminStakingsComponent {
 
   /** Guardia anti-fuori-ordine sui dettagli (idioma di `admin-users`). */
   private seq = 0;
+
+  /**
+   * La stessa guardia sull'ELENCO.
+   *
+   * ⚠️ Serve da quando `carica()` non è più chiamata solo da filtro e
+   * paginazione ma anche dalle tre mutazioni: due chiamate sovrapposte possono
+   * far vincere la risposta più vecchia, e qui la risposta porta con sé i
+   * totali — cioè si tornerebbe a mostrare una cifra di denaro già superata,
+   * senza alcun errore.
+   */
+  private seqElenco = 0;
 
   protected readonly form = this.fb.nonNullable.group({
     tipo: 'FONDI' as StakingTipo,
@@ -206,6 +259,8 @@ export class AdminStakingsComponent {
     this.loading.set(true);
     this.error.set(null);
     const f = this.filtro();
+    this.seqElenco += 1;
+    const mio = this.seqElenco;
     this.api
       .list({
         stato: f === 'TUTTI' ? undefined : f,
@@ -213,16 +268,38 @@ export class AdminStakingsComponent {
       })
       .subscribe({
         next: (p) => {
+          if (mio !== this.seqElenco) return;
           this.page.set(p);
           this.loading.set(false);
         },
         error: (err: unknown) => {
+          if (mio !== this.seqElenco) return;
           this.loading.set(false);
           this.error.set(
             apiErrorMessage(err, 'Caricamento del registro non riuscito.'),
           );
         },
       });
+  }
+
+  /**
+   * Rilegge l'elenco dopo una mutazione, perché righe e TOTALI tornino da una
+   * lettura sola.
+   *
+   * ⚠️ L'alternativa — applicare al totale lo stesso delta che `patchRiga`
+   * applica alla riga — è stata scartata: metterebbe la stessa aritmetica del
+   * denaro in due punti che devono concordare, ed è così che un totale comincia
+   * a scostarsi senza che nessuno se ne accorga. `patchRiga` resta perché
+   * aggiorna la riga (e i saldi in testa alla modale) SUBITO: la striscia si
+   * allinea un round-trip dopo.
+   *
+   * ⚠️ Conseguenza voluta: chiudendo un registro col filtro «In corso» la riga
+   * esce dall'insieme, `rigaAperta()` diventa `null` e la modale si chiude da
+   * sé — la conferma è renderizzata fuori dalla modale, quindi resta leggibile.
+   * Il comportamento segue il filtro, che è ciò che il filtro promette.
+   */
+  private ricaricaTotali(): void {
+    this.carica();
   }
 
   protected impostaFiltro(f: FiltroStato): void {
@@ -325,6 +402,7 @@ export class AdminStakingsComponent {
           this.form.patchValue({ importo: '', causale: '' });
           this.riallineaBaseline();
           this.feedback.set('Movimento registrato.');
+          this.ricaricaTotali();
         },
         error: (err: unknown) =>
           this.fallito(err, 'Registrazione del movimento non riuscita.'),
@@ -349,6 +427,7 @@ export class AdminStakingsComponent {
         this.salvando.set(false);
         this.patchRiga(agg);
         this.feedback.set('Registro chiuso.');
+        this.ricaricaTotali();
       },
       error: (err: unknown) => this.fallito(err, 'Chiusura non riuscita.'),
     });
@@ -362,6 +441,7 @@ export class AdminStakingsComponent {
         this.salvando.set(false);
         this.patchRiga(agg);
         this.feedback.set('Registro riaperto.');
+        this.ricaricaTotali();
       },
       error: (err: unknown) => this.fallito(err, 'Riapertura non riuscita.'),
     });

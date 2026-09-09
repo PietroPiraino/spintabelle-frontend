@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  Paginated,
+  ElencoStakings,
   StakingDettaglio,
   StakingMovimento,
   StakingRow,
@@ -24,16 +24,23 @@ const API = environment.API_URL;
 export class AdminStakingsService {
   private readonly http = inject(HttpClient);
 
+  /**
+   * ⚠️ L'envelope porta anche i due TOTALI di fondi ed EV, calcolati dal server
+   * sull'intero insieme filtrato: non esiste una `GET /admin/stakings/totali`
+   * gemella, e non va aggiunta — sarebbe una seconda lettura che può dissentire
+   * dalla prima proprio su una cifra di denaro (idioma di `pausaFino`
+   * sull'elenco della redazione).
+   */
   list(filtri?: {
     stato?: StakingStato;
     page?: number;
     limit?: number;
-  }): Observable<Paginated<StakingRow>> {
+  }): Observable<ElencoStakings> {
     let params = new HttpParams();
     if (filtri?.stato) params = params.set('stato', filtri.stato);
     if (filtri?.page) params = params.set('page', filtri.page);
     if (filtri?.limit) params = params.set('limit', filtri.limit);
-    return this.http.get<Paginated<StakingRow>>(`${API}/admin/stakings`, {
+    return this.http.get<ElencoStakings>(`${API}/admin/stakings`, {
       params,
     });
   }
