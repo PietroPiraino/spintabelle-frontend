@@ -878,7 +878,15 @@
                 <th scope="col" class="admin-table__c-primo">Voce</th>
                 <th scope="col">Categoria</th>
                 <th scope="col" class="admin-table__solo-largo">Come</th>
-                <th scope="col" class="admin-table__solo-largo">Chi ha pagato</th>
+                <!--
+                  ⚠️ «Portafoglio» e non «Chi ha pagato»: questa tabella
+                  MESCOLA entrate e uscite, quindi un'intestazione che segue il
+                  verso non e' possibile — e «chi ha pagato» su un incasso
+                  nomina l'abbonato, cioe' l'esatto contrario di quello che la
+                  cella mostra. ⚠️ E non «Cassa», che accanto a una colonna
+                  «Come» in cui compare «Contanti» si legge come il metodo.
+                -->
+                <th scope="col" class="admin-table__solo-largo">Portafoglio</th>
                 <th scope="col" class="is-num">Importo</th>
                 <th scope="col" class="admin-table__c-ultimo">
                   <span class="visually-hidden">Azioni</span>
@@ -1296,7 +1304,7 @@
             </select>
           </div>
           <div class="field">
-            <label for="cm-cassa">Chi ha pagato</label>
+            <label for="cm-cassa">{{ etichettaCassa() }}</label>
             <select id="cm-cassa" class="input" formControlName="cassa">
               <option value="">non specificato</option>
               @for (c of CASSE; track c) {
@@ -1306,10 +1314,11 @@
           </div>
         </div>
         <p class="admin-nota">
-          Serve al conguaglio fra i soci: chi anticipa una spesa di tasca
-          propria resta a credito di quell'importo. Lasciandolo vuoto la spesa
-          finisce fra quelle <strong>da attribuire</strong>, che il Riepilogo
-          mostra in chiaro — meglio di una cassa indovinata.
+          Serve al conguaglio fra i soci: chi anticipa una spesa di tasca propria
+          resta a credito, chi incassa di persona ha già preso quella somma.
+          Lasciandolo vuoto la riga finisce fra quelle
+          <strong>da attribuire</strong>, che il Riepilogo mostra in chiaro —
+          meglio di un portafoglio indovinato.
         </p>
         <p class="admin-nota">
           L'importo è sempre <strong>positivo</strong>: a dire se entra o esce è

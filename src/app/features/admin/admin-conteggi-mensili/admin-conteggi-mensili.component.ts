@@ -591,6 +591,21 @@ export class AdminConteggiMensiliComponent {
       : 'es. Commissione Grinderlab',
   );
 
+  /**
+   * ⚠️ L'etichetta della cassa SEGUE IL VERSO, ed è la correzione di un difetto
+   * uscito in produzione il 10/09/2026: il campo diceva «Chi ha pagato» anche
+   * su un'ENTRATA, dove chi ha pagato è l'abbonato — non il socio che ha
+   * incassato. È lo stesso difetto del segnaposto «es. LiveKit» qui sopra
+   * (giusto per una spesa, falso davanti a un'entrata), sul campo successivo.
+   *
+   * ⚠️ Il campo è UNO SOLO e il valore non cambia significato: dice sempre da
+   * quale portafoglio il denaro si muove. A cambiare è la sola direzione, e
+   * quindi la sola parola.
+   */
+  protected readonly etichettaCassa = computed(() =>
+    this.voceVal().verso === 'USCITA' ? 'Chi ha pagato' : 'Chi ha incassato',
+  );
+
   // ── Il mese: apri, chiudi, riapri, sincronizza ───────────────────────────
 
   protected apriModaleMese(): void {

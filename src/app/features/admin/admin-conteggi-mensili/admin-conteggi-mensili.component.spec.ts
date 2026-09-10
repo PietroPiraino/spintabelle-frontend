@@ -613,6 +613,54 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(uscita).not.toContain('Staking');
   });
 
+  it('l’etichetta della cassa segue il verso: «pagato» su una spesa, «incassato» su un’entrata', async () => {
+    // ⚠️ Difetto uscito in PRODUZIONE il 10/09/2026 e segnalato dall'owner
+    // mentre provava: il campo diceva «Chi ha pagato» anche su un'ENTRATA,
+    // dove chi ha pagato è l'abbonato — non il socio che ha incassato. È lo
+    // stesso difetto del segnaposto «es. LiveKit», sul campo successivo, e per
+    // questo la spec sta di seguito a quella.
+    await avvia();
+    const c = fixture.componentInstance as unknown as {
+      apriVoce: (v: unknown) => void;
+      formVoce: { patchValue: (v: Record<string, unknown>) => void };
+    };
+    c.apriVoce('nuova');
+    await stabilizza();
+
+    const etichetta = () =>
+      fixture.nativeElement
+        .querySelector('label[for="cm-cassa"]')
+        ?.textContent?.trim();
+
+    // Una voce nasce come SPESA.
+    expect(etichetta()).toBe('Chi ha pagato');
+
+    c.formVoce.patchValue({ verso: 'ENTRATA' });
+    await stabilizza();
+    expect(etichetta()).toBe('Chi ha incassato');
+
+    // ⚠️ E il verso di ritorno: senza, un `computed` che si aggiorna una volta
+    // sola passerebbe lo stesso.
+    c.formVoce.patchValue({ verso: 'USCITA' });
+    await stabilizza();
+    expect(etichetta()).toBe('Chi ha pagato');
+  });
+
+  it('l’intestazione di colonna NON segue il verso, perché la tabella li mescola', async () => {
+    // ⚠️ Il verso che nega: una tabella con entrate e uscite insieme non può
+    // avere un'intestazione che segue il verso, e «Chi ha pagato» sopra una
+    // colonna che contiene anche incassi nomina l'esatto contrario di quello
+    // che la cella mostra. Deve restare neutra.
+    await avvia();
+    fixture.componentInstance['vista'].set('voci');
+    await stabilizza();
+    const intestazioni = [
+      ...fixture.nativeElement.querySelectorAll('thead th'),
+    ].map((t: HTMLElement) => t.textContent?.trim());
+    expect(intestazioni).toContain('Portafoglio');
+    expect(intestazioni).not.toContain('Chi ha pagato');
+  });
+
   it('cambiando verso, una categoria dell’altro verso torna ad «Altro»', async () => {
     await avvia();
     const c = fixture.componentInstance as unknown as {
