@@ -2439,6 +2439,14 @@ export interface VoceMese {
   controparte?: string;
   importoCent: number;
   metodo?: MetodoMovimento;
+  /**
+   * Da quale portafoglio è uscita (o in quale è entrata).
+   *
+   * ⚠️ Non è `controparte`: quella dice a CHI sono andati i soldi (LiveKit,
+   * GTOwizard), questa da DOVE sono usciti. Assente = non ancora attribuita, ed
+   * è visibile nel Riepilogo invece di essere indovinata.
+   */
+  cassa?: Cassa;
   pagataAt?: string;
   /** Presente ⇒ generata da una spesa ricorrente. */
   ricorrenteId?: string;
@@ -2450,6 +2458,8 @@ export interface SpesaRicorrente {
   descrizione: string;
   categoria: CategoriaUscita;
   controparte?: string;
+  /** Chi la paga di solito: si copia sulla voce che genera. */
+  cassaPredefinita?: Cassa;
   importoCentPredefinito: number;
   attiva: boolean;
   nota?: string;
@@ -2525,6 +2535,33 @@ export interface TotaliRakeback {
  * ⚠️ I quattro campi SOMMANO `abbonamentiCent`: righe rientrate che non tornano
  * col totale sopra si leggono come un buco.
  */
+/**
+ * I tre portafogli da cui il denaro esce e in cui entra.
+ *
+ * ⚠️ Ricalcata a mano da `CASSE` in `backend/src/conteggi/conteggi.types.ts`:
+ * i due repo non condividono una riga di codice. ⚠️ E NON è un alias di
+ * `Incassante`, benché oggi coincidano su due valori su tre — quello dice chi
+ * ha materialmente preso i contanti di un abbonamento, questo da quale
+ * portafoglio si muove il denaro. Il giorno in cui si apre un secondo conto
+ * online cresce solo questa.
+ */
+export const CASSE = ['PIETRO', 'EXIVEZZZ', 'COMUNE'] as const;
+export type Cassa = (typeof CASSE)[number];
+
+/**
+ * Le spese del mese ripartite per portafoglio.
+ *
+ * ⚠️ Le quattro voci SOMMANO `speseCent`: righe rientrate che non tornano col
+ * numero sopra si leggono come un buco.
+ */
+export interface UscitePerCassa {
+  pietroCent: number;
+  exivezzzCent: number;
+  comuneCent: number;
+  /** Le righe su cui nessuno ha ancora detto da dove sono uscite. */
+  nonAttribuitoCent: number;
+}
+
 export interface AbbonamentiPerDestinazione {
   pietroCent: number;
   exivezzzCent: number;
@@ -2579,7 +2616,18 @@ export interface RiepilogoMese {
     altreCent: number;
     totaleCent: number;
   };
-  uscite: { speseCent: number; totaleCent: number };
+  uscite: {
+    speseCent: number;
+    /**
+     * ⚠️ Su un mese chiuso PRIMA di questo lotto lo snapshot non ha il campo:
+     * il server lo riempie in lettura mettendo TUTTO in `nonAttribuitoCent`
+     * (`snapshotCompleto`), perché quelle spese sono uscite da un portafoglio
+     * vero che nessuno aveva dichiarato — zero sarebbe stato un buco, «comune»
+     * una bugia.
+     */
+    perCassa: UscitePerCassa;
+    totaleCent: number;
+  };
   margineNettoCent: number;
   ripartizione: {
     titolareCent: number;
@@ -2627,6 +2675,7 @@ export interface VocePayload {
   controparte?: string;
   importoCent: number;
   metodo?: MetodoMovimento;
+  cassa?: Cassa;
   pagataAt?: string;
 }
 
@@ -2634,6 +2683,7 @@ export interface SpesaRicorrentePayload {
   descrizione: string;
   categoria: CategoriaUscita;
   controparte?: string;
+  cassaPredefinita?: Cassa;
   importoCentPredefinito: number;
   attiva?: boolean;
   nota?: string;

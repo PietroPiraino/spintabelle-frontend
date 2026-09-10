@@ -18,7 +18,7 @@
  * poi è UNA copia sola, e la guardia di completezza qui sotto non lascia
  * aggiungere un metodo senza deciderne l'etichetta.
  */
-import { Incassante, PaymentMethod } from '../../core/models/api.models';
+import { Cassa, Incassante, PaymentMethod } from '../../core/models/api.models';
 
 export const METODI_PAGAMENTO = [
   'paypal',
@@ -113,4 +113,28 @@ export function motivoSenzaCassa(
   if (metodo === 'punti') return 'punti';
   if (metodo === 'manuale') return 'concessione';
   return 'omaggio';
+}
+
+/**
+ * Il nome del portafoglio da cui il denaro si muove.
+ *
+ * ⚠️ Vive qui e non in `denaro.ts`: quello converte centesimi in euro e non sa
+ * niente di chi maneggia il denaro, mentre in questo file c'e' gia' il
+ * vocabolario di «chi ha preso i soldi» (`incassanteLabel`). Tenerli insieme e'
+ * cio' che impedisce la quarta copia a mano — ne sono gia' state trovate tre
+ * per il metodo di pagamento, di cui una rotta.
+ *
+ * ⚠️ `switch` esaustivo senza `default`: aggiungere una cassa senza deciderne
+ * l'etichetta non compila. E' l'unica difesa possibile, visto che la tupla e'
+ * ricalcata a mano dall'altro repo.
+ */
+export function cassaLabel(c: Cassa): string {
+  switch (c) {
+    case 'PIETRO':
+      return 'Pietro';
+    case 'EXIVEZZZ':
+      return 'Exivezzz';
+    case 'COMUNE':
+      return 'Cassa comune';
+  }
 }

@@ -217,6 +217,35 @@
           <dt>Spese</dt>
           <dd class="is-num">− {{ eur(d.riepilogo.uscite.speseCent) }}</dd>
 
+          <!--
+            ⚠️ Le tre righe rientrate SOMMANO la riga sopra, come le cinque
+            righe delle entrate sommano il totale: una ripartizione che non
+            torna col numero da cui pende si legge come un buco.
+          -->
+          <dt class="cm__didi">di cui anticipate da Pietro</dt>
+          <dd class="is-num cm__didi">
+            {{ eur(d.riepilogo.uscite.perCassa.pietroCent) }}
+          </dd>
+          <dt class="cm__didi">di cui anticipate da Exivezzz</dt>
+          <dd class="is-num cm__didi">
+            {{ eur(d.riepilogo.uscite.perCassa.exivezzzCent) }}
+          </dd>
+          <dt class="cm__didi">di cui dal conto comune</dt>
+          <dd class="is-num cm__didi">
+            {{ eur(d.riepilogo.uscite.perCassa.comuneCent) }}
+          </dd>
+          @if (d.riepilogo.uscite.perCassa.nonAttribuitoCent) {
+            <!--
+              ⚠️ Si mostra SOLO se > 0, idioma di «senza incassante» sopra: e'
+              una coda di lavoro, non uno stato normale, e una riga sempre a
+              zero smetterebbe di essere letta proprio quando conta.
+            -->
+            <dt class="cm__didi">di cui da attribuire</dt>
+            <dd class="is-num cm__didi is-perdita">
+              {{ eur(d.riepilogo.uscite.perCassa.nonAttribuitoCent) }}
+            </dd>
+          }
+
           <dt class="cm__margine">Margine netto della scuola</dt>
           <dd class="is-num cm__margine" [class.is-perdita]="d.riepilogo.margineNettoCent < 0">
             {{ eur(d.riepilogo.margineNettoCent) }}
@@ -849,6 +878,7 @@
                 <th scope="col" class="admin-table__c-primo">Voce</th>
                 <th scope="col">Categoria</th>
                 <th scope="col" class="admin-table__solo-largo">Come</th>
+                <th scope="col" class="admin-table__solo-largo">Chi ha pagato</th>
                 <th scope="col" class="is-num">Importo</th>
                 <th scope="col" class="admin-table__c-ultimo">
                   <span class="visually-hidden">Azioni</span>
@@ -877,6 +907,14 @@
                   <td class="admin-table__solo-largo">
                     {{ v.metodo ? metodoLabel(v.metodo) : '—' }}
                   </td>
+                  <!--
+                    ⚠️ Un trattino e non «Cassa comune»: «non lo so» e «l'ha
+                    pagata il conto comune» sono due cose diverse, e indovinare
+                    la seconda falserebbe il conguaglio senza lasciare un segno.
+                  -->
+                  <td class="admin-table__solo-largo">
+                    {{ v.cassa ? cassaLabel(v.cassa) : '—' }}
+                  </td>
                   <td class="is-num" [class.is-perdita]="v.verso === 'USCITA'">
                     {{ v.verso === 'USCITA' ? '− ' : '+ ' }}{{ eur(v.importoCent) }}
                   </td>
@@ -896,7 +934,7 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="5" class="admin-table__vuota">
+                  <td colspan="6" class="admin-table__vuota">
                     Nessuna spesa e nessuna entrata in questo mese. Le spese
                     fisse compaiono da sole quando si apre il mese, se sono
                     state configurate in <strong>Anagrafiche</strong>.
@@ -1257,7 +1295,22 @@
               }
             </select>
           </div>
+          <div class="field">
+            <label for="cm-cassa">Chi ha pagato</label>
+            <select id="cm-cassa" class="input" formControlName="cassa">
+              <option value="">non specificato</option>
+              @for (c of CASSE; track c) {
+                <option [value]="c">{{ cassaLabel(c) }}</option>
+              }
+            </select>
+          </div>
         </div>
+        <p class="admin-nota">
+          Serve al conguaglio fra i soci: chi anticipa una spesa di tasca
+          propria resta a credito di quell'importo. Lasciandolo vuoto la spesa
+          finisce fra quelle <strong>da attribuire</strong>, che il Riepilogo
+          mostra in chiaro — meglio di una cassa indovinata.
+        </p>
         <p class="admin-nota">
           L'importo è sempre <strong>positivo</strong>: a dire se entra o esce è
           il tipo qui sopra. Un rimborso ricevuto è un'entrata, non una spesa
@@ -1555,7 +1608,22 @@
               autocomplete="off"
             />
           </div>
+          <div class="field">
+            <label for="cm-ric-cassa">Chi la paga</label>
+            <select id="cm-ric-cassa" class="input" formControlName="cassa">
+              <option value="">non specificato</option>
+              @for (c of CASSE; track c) {
+                <option [value]="c">{{ cassaLabel(c) }}</option>
+              }
+            </select>
+          </div>
         </div>
+        <p class="admin-nota">
+          «Chi la paga» si copia sulla voce che questa spesa genera ogni mese,
+          come l'importo: è un <strong>valore predefinito</strong>, non un
+          vincolo — il mese in cui l'anticipa l'altro socio lo si corregge sulla
+          voce.
+        </p>
         <label class="row admin-panel__check">
           <input type="checkbox" formControlName="attiva" />
           <span>Attiva (compare nei mesi che apri)</span>

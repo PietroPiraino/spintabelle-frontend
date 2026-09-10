@@ -9,6 +9,8 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
+  CASSE,
+  Cassa,
   CategoriaEntrata,
   CategoriaUscita,
   CategoriaVoce,
@@ -37,6 +39,7 @@ import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { TonoStato } from '../admin-stato';
 import { formattaBp, formattaCent, parseImportoInCent } from '../denaro';
 import {
+  cassaLabel,
   incassanteLabel,
   metodoPagamentoLabel,
   motivoSenzaCassa,
@@ -162,10 +165,12 @@ export class AdminConteggiMensiliComponent {
   protected readonly CATEGORIE_ENTRATA = CATEGORIE_ENTRATA;
   protected readonly METODI = METODI;
   protected readonly INCASSANTI: readonly Incassante[] = ['PIETRO', 'EXIVEZZZ'];
+  protected readonly CASSE = CASSE;
 
   protected readonly metodoPagamentoLabel = metodoPagamentoLabel;
   protected readonly incassanteLabel = incassanteLabel;
   protected readonly motivoSenzaCassa = motivoSenzaCassa;
+  protected readonly cassaLabel = cassaLabel;
 
   // ── Le schede ────────────────────────────────────────────────────────────
 
@@ -324,6 +329,7 @@ export class AdminConteggiMensiliComponent {
     controparte: [''],
     importo: ['', Validators.required],
     metodo: ['' as MetodoMovimento | ''],
+    cassa: ['' as Cassa | ''],
   });
 
   protected readonly formConto = this.fb.nonNullable.group({
@@ -343,6 +349,7 @@ export class AdminConteggiMensiliComponent {
     descrizione: ['', [Validators.required, Validators.minLength(2)]],
     categoria: ['INFRASTRUTTURA' as CategoriaUscita, Validators.required],
     controparte: [''],
+    cassa: ['' as Cassa | ''],
     importo: ['', Validators.required],
     attiva: [true],
     nota: [''],
@@ -795,6 +802,7 @@ export class AdminConteggiMensiliComponent {
         controparte: '',
         importo: '',
         metodo: '',
+        cassa: '',
       });
     } else {
       this.formVoce.setValue({
@@ -804,6 +812,7 @@ export class AdminConteggiMensiliComponent {
         controparte: v.controparte ?? '',
         importo: this.euro(v.importoCent),
         metodo: v.metodo ?? '',
+        cassa: v.cassa ?? '',
       });
     }
     // ⚠️ La baseline DOPO il patch, o la modale nasce già sporca e il primo
@@ -829,6 +838,10 @@ export class AdminConteggiMensiliComponent {
       ...(f.controparte.trim() ? { controparte: f.controparte.trim() } : {}),
       importoCent,
       ...(f.metodo ? { metodo: f.metodo } : {}),
+      // ⚠️ Si manda solo se scelta, come `metodo`: `forbidNonWhitelisted` non
+      // c'entra (il campo esiste), ma una stringa vuota NON è un valore di
+      // `CASSE` e il DTO risponderebbe 400 sull'intera chiamata.
+      ...(f.cassa ? { cassa: f.cassa } : {}),
     };
     this.salvando.set(true);
     this.erroreModale.set(null);
@@ -985,6 +998,7 @@ export class AdminConteggiMensiliComponent {
         descrizione: '',
         categoria: 'INFRASTRUTTURA',
         controparte: '',
+        cassa: '',
         importo: '',
         attiva: true,
         nota: '',
@@ -994,6 +1008,7 @@ export class AdminConteggiMensiliComponent {
         descrizione: r.descrizione,
         categoria: r.categoria,
         controparte: r.controparte ?? '',
+        cassa: r.cassaPredefinita ?? '',
         importo: this.euro(r.importoCentPredefinito),
         attiva: r.attiva,
         nota: r.nota ?? '',
@@ -1016,6 +1031,7 @@ export class AdminConteggiMensiliComponent {
       descrizione: f.descrizione.trim(),
       categoria: f.categoria,
       ...(f.controparte.trim() ? { controparte: f.controparte.trim() } : {}),
+      ...(f.cassa ? { cassaPredefinita: f.cassa } : {}),
       importoCentPredefinito: importo,
       attiva: f.attiva,
       ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),

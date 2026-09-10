@@ -95,7 +95,19 @@ const dettaglio = (
       altreCent: 0,
       totaleCent: 55_290,
     },
-    uscite: { speseCent: 36_000, totaleCent: 36_000 },
+    uscite: {
+      speseCent: 36_000,
+      // ⚠️ Le quattro voci sommano `speseCent`: la fixture rispetta
+      // l'invariante che il pannello mostra, o la spec verificherebbe una
+      // schermata che in produzione non può esistere.
+      perCassa: {
+        pietroCent: 4_820,
+        exivezzzCent: 8_900,
+        comuneCent: 21_000,
+        nonAttribuitoCent: 1_280,
+      },
+      totaleCent: 36_000,
+    },
     margineNettoCent: 19_290,
     ripartizione: {
       titolareCent: 12_539,
@@ -245,6 +257,84 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(
       fixture.nativeElement.querySelector('.admin-totali__ambito')?.textContent,
     ).toContain('2 conti');
+  });
+
+  it('le tre righe «di cui anticipate» sommano la riga Spese', async () => {
+    await avvia(dettaglio(), [], []);
+    const testo = fixture.nativeElement.textContent as string;
+    // ⚠️ `textContent` e mai `innerText`: questo pannello e' pieno di
+    // `text-transform: uppercase`, e `innerText` restituisce il testo COME LO
+    // DIPINGE IL CSS — falsi rossi su una pagina corretta.
+    expect(testo).toContain('di cui anticipate da Pietro');
+    expect(testo).toContain('di cui anticipate da Exivezzz');
+    expect(testo).toContain('di cui dal conto comune');
+    // La quarta compare solo quando c'e' qualcosa da attribuire, ed e' il caso
+    // della fixture: e' una coda di lavoro, non uno stato normale.
+    expect(testo).toContain('di cui da attribuire');
+
+    const r = dettaglio().riepilogo.uscite;
+    expect(
+      r.perCassa.pietroCent +
+        r.perCassa.exivezzzCent +
+        r.perCassa.comuneCent +
+        r.perCassa.nonAttribuitoCent,
+    ).toBe(r.speseCent);
+  });
+
+  it('«da attribuire» sparisce quando non c e niente da attribuire', async () => {
+    const d = dettaglio();
+    d.riepilogo.uscite.perCassa = {
+      pietroCent: 4_820,
+      exivezzzCent: 8_900,
+      comuneCent: 22_280,
+      nonAttribuitoCent: 0,
+    };
+    await avvia(d, [], []);
+    // ⚠️ Il verso che nega: una riga sempre a zero smette di essere letta
+    // proprio quando conta qualcosa. Idioma di «senza incassante».
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'di cui da attribuire',
+    );
+  });
+
+  it('una voce senza cassa mostra un trattino, non «Cassa comune»', async () => {
+    await avvia(dettaglio(), [], []);
+    const d = dettaglio([], {
+      voci: [
+        {
+          id: 'v1',
+          verso: 'USCITA',
+          categoria: 'INFRASTRUTTURA',
+          descrizione: 'LiveKit',
+          importoCent: 4_820,
+          cassa: 'PIETRO',
+        },
+        {
+          id: 'v2',
+          verso: 'USCITA',
+          categoria: 'ALTRO',
+          descrizione: 'Spesa vecchia',
+          importoCent: 1_280,
+        },
+      ],
+    });
+    fixture.componentInstance['dett'].set(d);
+    fixture.componentInstance['vista'].set('voci');
+    await stabilizza();
+
+    const righeTab = [
+      ...fixture.nativeElement.querySelectorAll('tbody tr'),
+    ] as HTMLElement[];
+    const conCassa = righeTab.find((r) =>
+      r.textContent?.includes('LiveKit'),
+    );
+    const senza = righeTab.find((r) => r.textContent?.includes('Spesa vecchia'));
+    expect(conCassa?.textContent).toContain('Pietro');
+    // ⚠️⚠️ L'asserzione che conta: «non lo so» e «l'ha pagata il conto comune»
+    // sono due cose diverse. Indovinare la seconda falserebbe il conguaglio
+    // fra i soci di quell'importo esatto, e senza lasciare un segno.
+    expect(senza?.textContent).not.toContain('Cassa comune');
+    expect(senza?.textContent).toContain('—');
   });
 
   it('il comando di riga si trova per NOME ACCESSIBILE, e due righe hanno etichette diverse', async () => {
