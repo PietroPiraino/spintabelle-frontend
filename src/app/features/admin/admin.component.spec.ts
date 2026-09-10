@@ -112,9 +112,11 @@ describe('AdminComponent (shell dashboard)', () => {
     const soon = Array.from(el().querySelectorAll('.admin-shell__soon')).map(
       (chip) => chip.closest('.admin-shell__link')?.textContent ?? '',
     );
-    expect(soon.length).toBe(1);
-    expect(soon.some((t) => t.includes('Conteggi mensili'))).toBeTrue();
-    expect(soon.some((t) => t.includes('Stakings'))).toBeFalse();
+    // ⚠️ Aggiornato il 10/09/2026: «Conteggi mensili» non è più un segnaposto.
+    // Non resta NESSUNA voce col chip, e il test lo asserisce invece di essere
+    // stato cancellato — è la guardia contro un chip lasciato addosso a una
+    // sezione viva, che dice all'owner di non aprirla.
+    expect(soon.length).toBe(0);
   });
 
   it('mostra i badge coi conteggi, ognuno sulla SUA voce', async () => {

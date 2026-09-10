@@ -45,13 +45,13 @@
     -->
     @if (totali(); as t) {
       @if (p.total > 0) {
-        <p class="stk__totali">
+        <p class="admin-totali stk__totali-spazio">
           <span class="visually-hidden">Totali dei registri elencati:</span>
-          <span class="stk__tot">
+          <span class="admin-totali__voce">
             <span class="admin-item__meta">Fondi</span>
             <strong>{{ formattaCent(t.fondiCent) }}</strong>
           </span>
-          <span class="stk__tot">
+          <span class="admin-totali__voce">
             <span class="admin-item__meta">EV</span>
             <!--
               Stessa lingua della colonna: `testoEv` scrive «In pari» a zero e
@@ -60,7 +60,7 @@
             -->
             <strong [class.is-debito]="t.evCent < 0">{{ testoEv(t.evCent) }}</strong>
           </span>
-          <span class="stk__ambito">{{ ambito() }}</span>
+          <span class="admin-totali__ambito">{{ ambito() }}</span>
         </p>
       }
     }

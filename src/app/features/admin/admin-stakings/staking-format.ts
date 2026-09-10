@@ -1,66 +1,23 @@
 /**
  * Denaro del registro staking: lettura e scrittura, funzioni PURE.
  *
- * ⚠️ Sul filo passano CENTESIMI INTERI (vedi `stakings.types.ts` lato server):
- * gli euro esistono solo qui, sul bordo, dove li digita e li legge una persona.
- * Se la conversione vivesse anche altrove, i due punti dovrebbero concordare su
- * un fattore 100 — ed è il modo più rapido di registrare 125.050 € al posto di
- * 1.250,50 €.
- */
-
-/** Un importo in centesimi, in euro all'italiana: «1.250,50 €». */
-export function formattaCent(cent: number): string {
-  return new Intl.NumberFormat('it-IT', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(cent / 100);
-}
-
-/**
- * Interpreta quello che una persona ha digitato in un campo importo, e torna i
- * CENTESIMI interi (o `null` se non è un importo).
+ * ⚠️ Dal 09/09/2026 `formattaCent` e `parseImportoInCent` NON sono più
+ * dichiarate qui: vivono in `../denaro.ts` e questo file le ri-esporta. La
+ * ragione è che il pannello ha una seconda sezione di denaro (i conteggi
+ * mensili) e il commento originale di quelle funzioni diceva che gli euro
+ * esistono «solo qui, sul bordo» — una frase che con due copie sarebbe
+ * diventata falsa nel modo peggiore, cioè restando scritta.
  *
- * ⚠️ Il punto è ambiguo in italiano: in «1.250» separa le migliaia, in «12.50»
- * i decimali. Cancellare tutti i punti prima di convertire — la scorciatoia
- * ovvia — trasforma «12.50» in 1250 centesimi, cioè moltiplica per cento un
- * importo su due. La regola qui è: se c'è una virgola, i punti sono migliaia e
- * la virgola è il decimale; altrimenti UN punto seguito da una o due cifre è un
- * decimale, e tutto il resto sono migliaia.
+ * La ri-esportazione, invece dello spostamento degli import, tiene fermi i
+ * call-site esistenti e `staking-format.spec.ts`, che continua a coprire le due
+ * funzioni attraverso questo file. È l'idioma di `SUBSCRIPTION_TIERS` in
+ * `roles.enum.ts` e di `TZ` in `admin-stats.constants.ts`.
  *
- * ⚠️ `Number()` accetta «0x10» (16), «0b11» (3) e « 12 » (12): su un campo di
- * denaro sono tutte stringhe che un utente non ha inteso scrivere, e passarle
- * in silenzio è peggio che rifiutarle. Di qui il controllo di forma esplicito
- * invece di affidarsi alla conversione.
+ * Qui resta il solo `testoEv`, che è specifico dell'EV e non ha senso altrove.
  */
-export function parseImportoInCent(raw: string): number | null {
-  const testo = raw.trim().replace(/\s|€/g, '');
-  if (!testo) return null;
+export { formattaCent, parseImportoInCent } from '../denaro';
 
-  const segno = testo.startsWith('-') ? -1 : 1;
-  const corpo = testo.replace(/^[+-]/, '');
-
-  let normalizzato: string;
-  if (corpo.includes(',')) {
-    // C'è una virgola: è LEI il decimale, i punti sono migliaia.
-    normalizzato = corpo.replace(/\./g, '').replace(',', '.');
-  } else {
-    const punti = corpo.split('.').length - 1;
-    const decimaliDopoIlPunto = /\.(\d{1,2})$/.exec(corpo)?.[1];
-    normalizzato =
-      punti === 1 && decimaliDopoIlPunto
-        ? corpo // un punto con 1-2 cifre dopo: è un decimale
-        : corpo.replace(/\./g, ''); // zero, o più d'uno: migliaia
-  }
-
-  // Forma ammessa: cifre, al più un punto decimale con al più due cifre.
-  if (!/^\d+(\.\d{1,2})?$/.test(normalizzato)) return null;
-
-  // ⚠️ `Math.round` sul prodotto e non un troncamento: `12.35 * 100` in
-  // IEEE754 vale 1234.9999999999998, e `Math.trunc` perderebbe un centesimo a
-  // ogni movimento. In un libro mastro un centesimo perso non torna più
-  // indietro. Stessa lezione di `prezzoInPunti` lato server.
-  return segno * Math.round(Number(normalizzato) * 100);
-}
+import { formattaCent } from '../denaro';
 
 /**
  * Come si legge un saldo EV, che per costruzione è ≤ 0.

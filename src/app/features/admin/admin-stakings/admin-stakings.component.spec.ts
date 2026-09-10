@@ -314,7 +314,7 @@ describe('AdminStakingsComponent', () => {
   describe('i totali di fondi ed EV', () => {
     const striscia = () =>
       (
-        fixture.nativeElement.querySelector('.stk__totali') as HTMLElement | null
+        fixture.nativeElement.querySelector('.admin-totali') as HTMLElement | null
       )?.textContent ?? '';
 
     it('⚠️ stampa i totali dell’ENVELOPE, non la somma delle righe visibili', async () => {
@@ -368,7 +368,7 @@ describe('AdminStakingsComponent', () => {
       // Un «0,00 €» sopra un elenco vuoto è rumore: a spiegare la schermata
       // c'è già la cella di stato vuoto.
       await rispondi(pagina([]));
-      expect(fixture.nativeElement.querySelector('.stk__totali')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.admin-totali')).toBeNull();
     });
 
     it('⚠️ dopo un movimento l’elenco viene RILETTO, o i totali restano indietro', async () => {

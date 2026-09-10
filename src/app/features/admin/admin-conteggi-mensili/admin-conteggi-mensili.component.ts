@@ -1,55 +1,1015 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  CategoriaEntrata,
+  CategoriaUscita,
+  CategoriaVoce,
+  ContoRakeback,
+  DestinazioneMargine,
+  DettaglioMese,
+  MeseContabile,
+  MetodoMovimento,
+  RigaRakebackPayload,
+  SpesaRicorrente,
+  VersoVoce,
+  VoceMese,
+} from '../../../core/models/api.models';
+import { AdminConteggiService } from '../../../core/services/admin-conteggi.service';
+import { apiErrorMessage } from '../../../core/utils/http-error';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
+import {
+  SchedeComponent,
+  VoceScheda,
+} from '../../../shared/ui/schede/schede.component';
+import { ToastService } from '../../../shared/ui/toast/toast.service';
+import { TonoStato } from '../admin-stato';
+import { formattaBp, formattaCent, parseImportoInCent } from '../denaro';
+
+type Vista = 'riepilogo' | 'rakeback' | 'voci' | 'anagrafiche';
+
+/** Quello che si sta digitando nella colonna del rakeback, prima di salvare. */
+interface BozzaRiga {
+  rake: string;
+  pagato: string;
+  metodo: MetodoMovimento | '';
+  nota: string;
+}
+
+const CATEGORIE_USCITA: readonly CategoriaUscita[] = [
+  'COACH',
+  'INFRASTRUTTURA',
+  'MARKETING',
+  'COMMISSIONI',
+  'ALTRO',
+];
+// ⚠️ L'ORDINE è quello delle `<option>` nel select, e ricalca a mano la tupla
+// di `backend/src/conteggi/conteggi.types.ts`: i due repo non condividono nulla
+// e nessuna guardia segnala una divergenza. `ALTRO` resta ultimo — è il ripiego.
+const CATEGORIE_ENTRATA: readonly CategoriaEntrata[] = [
+  'COMMISSIONI_AGENTE',
+  'CONTENUTI',
+  'COACHING',
+  'STAKING',
+  'ALTRO',
+];
+const METODI: readonly MetodoMovimento[] = [
+  'BONIFICO',
+  'PAYPAL',
+  'SKRILL',
+  'CONTANTI',
+  'TICKET',
+  'ALTRO',
+];
 
 /**
- * Placeholder: i conteggi mensili arriveranno in un lotto dedicato. La voce
- * esiste già in sidebar col chip "Presto" così la struttura della dashboard è
- * quella definitiva.
+ * I conteggi mensili della scuola: spese, entrate, commissioni di rakeback e il
+ * conto economico del mese.
+ *
+ * ⚠️ Il client NON calcola NIENTE di questa schermata. Rake, scaglioni, margini,
+ * totali e ripartizione col socio arrivano già fatti dal server, e ogni
+ * salvataggio restituisce il mese ricalcolato per intero: righe, totali e conto
+ * economico nascono da una lettura sola e quindi non possono dissentire. Una
+ * copia dell'aritmetica del denaro qui sarebbe la cosa che questo progetto
+ * vieta più esplicitamente (`conteggi.types.ts`, `stakings.types.ts`).
+ *
+ * ⚠️ Gli unici euro che esistono qui sono quelli digitati e quelli mostrati: la
+ * conversione da e verso i centesimi interi vive in `../denaro.ts`, in un punto
+ * solo.
+ *
+ * ⚠️ `styleUrls` PLURALE con i tre fogli condivisi. Col solo foglio locale
+ * `.admin-barra`, `.admin-ico`, `.admin-nota`, `.admin-stato` e la tabella non
+ * sarebbero nemmeno raggiungibili — è il difetto che aveva isolato
+ * `/admin/replayer`, dove l'h2 era più grande dell'h1 di pagina e dieci comandi
+ * su dodici stavano sotto i 44px.
  */
 @Component({
   selector: 'app-admin-conteggi-mensili',
-  imports: [IconComponent],
-  template: `
-    <div class="card card--pad admin-soon">
-      <app-icon name="calendar-days" [size]="34" />
-      <h2>Conteggi mensili</h2>
-      <p>Sezione in costruzione — presto disponibile.</p>
-      <p class="admin-soon__hint">
-        Qui arriveranno i riepiloghi di fine mese: conteggi economici e report
-        periodici della scuola.
-      </p>
-    </div>
-  `,
-  styles: `
-    .admin-soon {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-      padding-block: 3rem;
-      text-align: center;
-      color: var(--text-muted);
-
-      .app-icon {
-        color: var(--copper-600);
-      }
-
-      h2 {
-        margin: 0;
-        font-size: 1.3rem;
-      }
-
-      p {
-        margin: 0;
-      }
-    }
-
-    .admin-soon__hint {
-      font-size: 0.9rem;
-      color: var(--text-faint);
-      max-width: 46ch;
-    }
-  `,
+  imports: [
+    ReactiveFormsModule,
+    IconComponent,
+    ModalComponent,
+    SchedeComponent,
+  ],
+  templateUrl: './admin-conteggi-mensili.component.html',
+  styleUrls: [
+    '../admin-shared.scss',
+    '../admin-table.scss',
+    '../admin-modale.scss',
+    './admin-conteggi-mensili.component.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminConteggiMensiliComponent {}
+export class AdminConteggiMensiliComponent {
+  private readonly api = inject(AdminConteggiService);
+  private readonly fb = inject(FormBuilder);
+  private readonly toast = inject(ToastService);
+
+  protected readonly mesi = signal<MeseContabile[] | null>(null);
+  protected readonly dett = signal<DettaglioMese | null>(null);
+  protected readonly conti = signal<ContoRakeback[] | null>(null);
+  protected readonly ricorrenti = signal<SpesaRicorrente[] | null>(null);
+
+  protected readonly loading = signal(false);
+  protected readonly error = signal<string | null>(null);
+  protected readonly salvando = signal(false);
+  /** Errore mostrato DENTRO la modale aperta: un toast lì sarebbe invisibile. */
+  protected readonly erroreModale = signal<string | null>(null);
+
+  /**
+   * L'errore di VALIDAZIONE della colonna, separato da quello di caricamento.
+   *
+   * ⚠️⚠️ Erano lo stesso signal, ed era un difetto grave: la banda di
+   * `error()` offre «Riprova», che chiama `carica()` → `scegliMese` →
+   * `applica` → **riscrive la bozza**. Chi digitava quindici righe, sbagliava
+   * un importo e premeva il pulsante che gli era stato offerto COME LA
+   * RIPARAZIONE, le perdeva tutte. È la stessa regola già scritta per le
+   * modali: l'errore che compare mentre la superficie di lavoro è aperta non
+   * deve portare via il pulsante di riparazione.
+   *
+   * ⚠️ E si mostra ACCANTO a «Salva la colonna», non in cima alla pagina: la
+   * banda di caricamento sta sopra le schede, cioè fuori schermo mentre si
+   * compila la quindicesima riga.
+   */
+  protected readonly erroreValidazione = signal<string | null>(null);
+
+  protected readonly vista = signal<Vista>('riepilogo');
+  protected readonly conferma = signal<string | null>(null);
+
+  protected readonly CATEGORIE_USCITA = CATEGORIE_USCITA;
+  protected readonly CATEGORIE_ENTRATA = CATEGORIE_ENTRATA;
+  protected readonly METODI = METODI;
+
+  // ── Le schede ────────────────────────────────────────────────────────────
+
+  /**
+   * ⚠️ `app-schede` e non `app-filtro`: cambia il GENERE di cosa si vede (il
+   * conto economico, la tabella del rakeback, le spese, le anagrafiche), non
+   * l'elenco di cose dello stesso genere. Una scheda promette un pannello
+   * raggiungibile da tastiera, ed è quello che il template dichiara.
+   */
+  protected readonly viste = computed<readonly VoceScheda<Vista>[]>(() => {
+    const d = this.dett();
+    return [
+      { valore: 'riepilogo', etichetta: 'Riepilogo' },
+      {
+        valore: 'rakeback',
+        etichetta: 'Rakeback',
+        conteggio: d?.righe.length ?? null,
+      },
+      {
+        valore: 'voci',
+        etichetta: 'Spese ed entrate',
+        conteggio: d?.voci.length ?? null,
+      },
+      { valore: 'anagrafiche', etichetta: 'Anagrafiche' },
+    ];
+  });
+
+  // ── Il mese scelto ───────────────────────────────────────────────────────
+
+  protected readonly mese = computed(() => this.dett()?.mese ?? null);
+  protected readonly aperto = computed(() => this.mese()?.stato === 'APERTO');
+
+  protected readonly tonoMese = computed<TonoStato>(() =>
+    this.aperto() ? 'attesa' : 'concluso',
+  );
+
+  /**
+   * Il titolo della barra nomina il PANNELLO, non la sezione.
+   *
+   * ⚠️ La topbar della shell stampa già «Conteggi mensili» (`ADMIN_NAV` →
+   * `admin.component.html`): ripeterlo qui lo scriveva due volte nella stessa
+   * schermata. Su sedici sezioni quattordici differenziano — «Lezioni
+   * pubblicate», «Archivio news», «Codici sconto», «Registro staking» — e in
+   * una sezione a schede il livello due deve dire in quale scheda si è.
+   *
+   * ⚠️ Il ramo `anagrafiche` non è oggi stampato da nessuna parte, e non è una
+   * svista: quel pannello non ha una barra sola: ne ha DUE, una per elenco
+   * («Conti rakeback», «Spese ricorrenti»), perché lì il mese non c'entra e il
+   * `+` di ciascuna crea la riga della propria tabella. Lo `switch` resta
+   * esaustivo perché è così che TypeScript impedisce di aggiungere una quinta
+   * scheda senza deciderne il nome.
+   */
+  protected readonly titoloPannello = computed(() => {
+    switch (this.vista()) {
+      case 'riepilogo':
+        return 'Riepilogo del mese';
+      case 'rakeback':
+        return 'Rakeback';
+      case 'voci':
+        return 'Spese ed entrate';
+      case 'anagrafiche':
+        return 'Anagrafiche';
+    }
+  });
+
+  /**
+   * Che cosa sta sommando la striscia dei totali.
+   *
+   * ⚠️ Non è decorazione: sopra un elenco, un totale che non nomina il proprio
+   * insieme si legge come «tutto», qualunque cosa ci sia in tabella. È il
+   * precedente di `ambito()` in `/admin/stakings`, e prima ancora la nota
+   * scritta in `admin-participation.component.html`.
+   */
+  protected readonly ambito = computed(() => {
+    const n = this.dett()?.righe.length ?? 0;
+    const mese = this.mese()?.etichetta ?? '';
+    return `su ${n} ${n === 1 ? 'conto' : 'conti'} di ${mese}`;
+  });
+
+  // ── La colonna del rakeback ──────────────────────────────────────────────
+
+  /**
+   * Quello che si sta digitando, per riga. Si semina a ogni lettura del mese.
+   *
+   * ⚠️ Un signal e non una `FormArray`: i campi sono due per riga su quindici
+   * righe, e l'unica domanda che si fa a questo stato è «cosa è cambiato
+   * rispetto a quello che il server mi ha appena dato». Con una `FormArray`
+   * quella domanda richiederebbe comunque un confronto a mano, più il ciclo di
+   * vita dei controlli da tenere allineato a una tabella che si ridisegna dopo
+   * ogni salvataggio.
+   */
+  protected readonly bozza = signal<Record<string, BozzaRiga>>({});
+
+  /**
+   * ⚠️ Confronta i CENTESIMI e non le stringhe: «30» e «30,00» sono lo stesso
+   * importo, e un pulsante «Salva» acceso perché qualcuno ha aggiunto uno zero
+   * insegna a premerlo senza motivo.
+   */
+  protected readonly sporcoRakeback = computed(() => {
+    const d = this.dett();
+    if (!d) return false;
+    const b = this.bozza();
+    return d.righe.some((r) => {
+      const v = b[r.contoId];
+      if (!v) return false;
+      return (
+        (parseImportoInCent(v.rake) ?? 0) !== r.rakeGeneratoCent ||
+        (parseImportoInCent(v.pagato) ?? 0) !== r.pagatoAlPlayerCent ||
+        (v.metodo || undefined) !== r.metodoPagamento ||
+        (v.nota || undefined) !== r.nota
+      );
+    });
+  });
+
+  /** Le righe con un importo digitato che non è un importo. */
+  protected readonly righeNonValide = computed(() => {
+    const b = this.bozza();
+    return Object.entries(b)
+      .filter(
+        ([, v]) =>
+          (v.rake.trim() !== '' && parseImportoInCent(v.rake) === null) ||
+          (v.pagato.trim() !== '' && parseImportoInCent(v.pagato) === null),
+      )
+      .map(([id]) => id);
+  });
+
+  // ── Form ─────────────────────────────────────────────────────────────────
+
+  protected readonly formVoce = this.fb.nonNullable.group({
+    verso: ['USCITA' as VersoVoce, Validators.required],
+    categoria: ['ALTRO' as CategoriaVoce, Validators.required],
+    descrizione: ['', [Validators.required, Validators.minLength(2)]],
+    controparte: [''],
+    importo: ['', Validators.required],
+    metodo: ['' as MetodoMovimento | ''],
+  });
+
+  protected readonly formConto = this.fb.nonNullable.group({
+    username: ['', [Validators.required, Validators.minLength(2)]],
+    nomeReale: [''],
+    backAgente: ['57', Validators.required],
+    backPlayer: ['45', Validators.required],
+    scaglioneBase: ['45', Validators.required],
+    scaglionePasso: ['22,50', Validators.required],
+    destinazione: ['SCUOLA' as DestinazioneMargine, Validators.required],
+    attivo: [true],
+    ordine: [100],
+    nota: [''],
+  });
+
+  protected readonly formRicorrente = this.fb.nonNullable.group({
+    descrizione: ['', [Validators.required, Validators.minLength(2)]],
+    categoria: ['INFRASTRUTTURA' as CategoriaUscita, Validators.required],
+    controparte: [''],
+    importo: ['', Validators.required],
+    attiva: [true],
+    nota: [''],
+  });
+
+  /**
+   * ⚠️ `toSignal(valueChanges)` e MAI un `computed` che legge `form.value`: un
+   * `FormGroup` non è un signal, quindi quel computed non si ricalcolerebbe MAI
+   * e `sporco` resterebbe falso — cioè Escape butterebbe via il digitato senza
+   * chiedere, che è esattamente il difetto che questo input esiste per
+   * prevenire.
+   */
+  private readonly voceVal = toSignal(this.formVoce.valueChanges, {
+    initialValue: this.formVoce.getRawValue(),
+  });
+  private readonly contoVal = toSignal(this.formConto.valueChanges, {
+    initialValue: this.formConto.getRawValue(),
+  });
+  private readonly ricorrenteVal = toSignal(this.formRicorrente.valueChanges, {
+    initialValue: this.formRicorrente.getRawValue(),
+  });
+
+  /** La baseline si scrive DOPO il patch dei campi, o la modale nasce sporca. */
+  private readonly baseVoce = signal('');
+  private readonly baseConto = signal('');
+  private readonly baseRicorrente = signal('');
+
+  protected readonly voceSporca = computed(
+    () => JSON.stringify(this.voceVal()) !== this.baseVoce(),
+  );
+  protected readonly contoSporco = computed(
+    () => JSON.stringify(this.contoVal()) !== this.baseConto(),
+  );
+  protected readonly ricorrenteSporca = computed(
+    () => JSON.stringify(this.ricorrenteVal()) !== this.baseRicorrente(),
+  );
+
+  // ── Modali ───────────────────────────────────────────────────────────────
+
+  protected readonly voceAperta = signal<VoceMese | 'nuova' | null>(null);
+  protected readonly contoAperto = signal<ContoRakeback | 'nuovo' | null>(null);
+  protected readonly ricorrenteAperta = signal<
+    SpesaRicorrente | 'nuova' | null
+  >(null);
+  protected readonly apriMeseAperto = signal(false);
+
+  protected readonly formMese = this.fb.nonNullable.group({
+    anno: [new Date().getFullYear(), Validators.required],
+    mese: [new Date().getMonth() + 1, Validators.required],
+  });
+
+  constructor() {
+    this.carica();
+
+    /**
+     * Cambiando VERSO, una categoria rimasta dell'altro verso torna ad «Altro».
+     *
+     * ⚠️⚠️ Senza, il difetto è muto in pagina e rumoroso al salvataggio: il
+     * `<select>` non ha più un'`<option>` con quel valore, quindi **si mostra
+     * VUOTO** — «non ho ancora scelto» —, ma il `FormControl` conserva il
+     * valore vecchio e il server risponde 400 «La categoria «COACH» non è
+     * ammessa per un'entrata». Misurato: scegli Spesa → «Compensi ai coach»,
+     * poi cambi in Entrata, e prendi un errore su una cosa che a schermo non
+     * c'era.
+     *
+     * ⚠️ Un `effect` e non una sottoscrizione a `verso.valueChanges`: quella
+     * scatta DENTRO il `setValue` di `apriVoce`, cioè quando `categoria` porta
+     * ancora il valore della modale precedente, e la correttezza dipenderebbe
+     * dall'ordine delle chiavi dell'oggetto passato. L'effetto gira dopo, su
+     * uno stato già coerente: aprendo una voce esistente non tocca niente e la
+     * modale non nasce «sporca».
+     *
+     * ⚠️ Si torna ad «Altro» — l'unica categoria valida in ENTRAMBI i versi —
+     * e non alla prima dell'elenco nuovo: scegliere d'ufficio una categoria che
+     * significa qualcosa metterebbe in bocca all'utente una classificazione che
+     * non ha chiesto.
+     */
+    effect(() => {
+      const { verso, categoria } = this.voceVal();
+      const ammesse: readonly string[] =
+        verso === 'USCITA' ? CATEGORIE_USCITA : CATEGORIE_ENTRATA;
+      if (categoria && !ammesse.includes(categoria)) {
+        this.formVoce.patchValue({ categoria: 'ALTRO' });
+      }
+    });
+  }
+
+  // ── Lettura ──────────────────────────────────────────────────────────────
+
+  protected carica(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.api.listMesi().subscribe({
+      next: (mesi) => {
+        this.mesi.set(mesi);
+        this.loading.set(false);
+        if (mesi.length) this.scegliMese(mesi[0].id);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(
+          apiErrorMessage(err, 'Non riesco a leggere i mesi contabili.'),
+        );
+      },
+    });
+    this.caricaAnagrafiche();
+  }
+
+  private caricaAnagrafiche(): void {
+    this.api.listConti().subscribe({
+      next: (c) => this.conti.set(c),
+      error: () => this.conti.set(null),
+    });
+    this.api.listRicorrenti().subscribe({
+      next: (r) => this.ricorrenti.set(r),
+      error: () => this.ricorrenti.set(null),
+    });
+  }
+
+  protected scegliMese(id: string): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.api.dettaglio(id).subscribe({
+      next: (d) => this.applica(d),
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(apiErrorMessage(err, 'Non riesco a leggere il mese.'));
+      },
+    });
+  }
+
+  /** Applica il dettaglio e RISEMINA la bozza: il server è l'autorità. */
+  private applica(d: DettaglioMese): void {
+    this.dett.set(d);
+    this.loading.set(false);
+    const b: Record<string, BozzaRiga> = {};
+    for (const r of d.righe) {
+      b[r.contoId] = {
+        rake: r.rakeGeneratoCent ? this.euro(r.rakeGeneratoCent) : '',
+        pagato: r.pagatoAlPlayerCent ? this.euro(r.pagatoAlPlayerCent) : '',
+        metodo: r.metodoPagamento ?? '',
+        nota: r.nota ?? '',
+      };
+    }
+    this.bozza.set(b);
+  }
+
+  /** Euro nudi per un campo di input: «1250,50», mai «1.250,50 €». */
+  private euro(cent: number): string {
+    return (cent / 100).toFixed(2).replace('.', ',');
+  }
+
+  // ── Formattazione ────────────────────────────────────────────────────────
+
+  protected readonly eur = (cent: number | undefined | null): string =>
+    formattaCent(cent ?? 0);
+  protected readonly pct = (bp: number): string => formattaBp(bp);
+
+  protected categoriaLabel(c: CategoriaVoce): string {
+    switch (c) {
+      case 'COACH':
+        return 'Compensi ai coach';
+      case 'INFRASTRUTTURA':
+        return 'Infrastruttura e servizi';
+      case 'MARKETING':
+        return 'Marketing';
+      case 'COMMISSIONI':
+        return 'Commissioni e provvigioni';
+      case 'COMMISSIONI_AGENTE':
+        return 'Commissioni da agente';
+      case 'CONTENUTI':
+        return 'Contenuti e canali';
+      case 'COACHING':
+        return 'Coaching individuale';
+      case 'STAKING':
+        return 'Staking';
+      case 'ALTRO':
+        return 'Altro';
+    }
+  }
+
+  protected metodoLabel(m: MetodoMovimento): string {
+    switch (m) {
+      case 'BONIFICO':
+        return 'Bonifico';
+      case 'PAYPAL':
+        return 'PayPal';
+      case 'SKRILL':
+        return 'Skrill';
+      case 'CONTANTI':
+        return 'Contanti';
+      case 'TICKET':
+        return 'Ticket';
+      case 'ALTRO':
+        return 'Altro';
+    }
+  }
+
+  /** Le categorie ammesse dal verso scelto nel form. */
+  protected readonly categorieDelVerso = computed<readonly CategoriaVoce[]>(
+    () =>
+      this.voceVal().verso === 'USCITA' ? CATEGORIE_USCITA : CATEGORIE_ENTRATA,
+  );
+
+  /**
+   * L'esempio nel campo descrizione segue il VERSO.
+   *
+   * ⚠️ Era fisso su «es. LiveKit» — che è una **spesa**, sempre e solo — anche
+   * quando il tipo è Entrata. In una modale dove a distinguere un'entrata da
+   * un'uscita c'è una sola tendina, l'esempio è metà del segnale: suggerirne
+   * uno del verso sbagliato è il modo più rapido per far registrare un incasso
+   * come un costo.
+   *
+   * ⚠️ Il segnaposto della modale delle **spese ricorrenti** resta «es. LiveKit»
+   * e non va toccato: quel form accetta le sole `CATEGORIE_USCITA`, quindi là
+   * l'esempio è giusto per costruzione.
+   */
+  protected readonly esempioDescrizione = computed(() =>
+    this.voceVal().verso === 'USCITA'
+      ? 'es. LiveKit'
+      : 'es. Commissione Grinderlab',
+  );
+
+  // ── Il mese: apri, chiudi, riapri, sincronizza ───────────────────────────
+
+  protected apriModaleMese(): void {
+    const oggi = new Date();
+    this.formMese.setValue({
+      anno: oggi.getFullYear(),
+      mese: oggi.getMonth() + 1,
+    });
+    this.erroreModale.set(null);
+    this.apriMeseAperto.set(true);
+  }
+
+  protected confermaApriMese(): void {
+    const { anno, mese } = this.formMese.getRawValue();
+    this.salvando.set(true);
+    this.erroreModale.set(null);
+    this.api.apriMese(anno, mese).subscribe({
+      next: (d) => {
+        this.salvando.set(false);
+        this.apriMeseAperto.set(false);
+        this.applica(d);
+        this.api.listMesi().subscribe((m) => this.mesi.set(m));
+        // ⚠️ Toast SOLO a modale chiusa: `showModal()` mette il dialog nel top
+        // layer, sopra qualunque `position: fixed`, e `<app-toast/>` è montato
+        // in `app-root` — con la modale aperta il messaggio parte, il signal si
+        // popola, i test restano verdi e nessuno lo legge.
+        this.toast.success(`${d.mese.etichetta} è pronto.`);
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco ad aprire il mese.'),
+        );
+      },
+    });
+  }
+
+  protected sincronizza(): void {
+    const m = this.mese();
+    if (!m) return;
+    this.api.sincronizza(m.id).subscribe({
+      next: (r) => {
+        this.scegliMese(m.id);
+        this.caricaAnagrafiche();
+        this.toast.success(
+          r.vociCreate || r.righeCreate
+            ? `Aggiunte ${r.vociCreate} spese ricorrenti e ${r.righeCreate} righe di rakeback.`
+            : 'Il mese era già allineato: niente da aggiungere.',
+        );
+      },
+      error: (err) =>
+        this.error.set(
+          apiErrorMessage(err, 'Non riesco a sincronizzare il mese.'),
+        ),
+    });
+  }
+
+  protected chiudiMese(): void {
+    const m = this.mese();
+    if (!m) return;
+    this.api.chiudiMese(m.id).subscribe({
+      next: (d) => {
+        this.applica(d);
+        this.conferma.set(null);
+        this.api.listMesi().subscribe((x) => this.mesi.set(x));
+        this.toast.success(`${d.mese.etichetta} è chiuso e i numeri congelati.`);
+      },
+      error: (err) =>
+        this.error.set(apiErrorMessage(err, 'Non riesco a chiudere il mese.')),
+    });
+  }
+
+  protected riapriMese(): void {
+    const m = this.mese();
+    if (!m) return;
+    this.api.riapriMese(m.id).subscribe({
+      next: (d) => {
+        this.applica(d);
+        this.conferma.set(null);
+        this.api.listMesi().subscribe((x) => this.mesi.set(x));
+        this.toast.success(`${d.mese.etichetta} è di nuovo aperto.`);
+      },
+      error: (err) =>
+        this.error.set(apiErrorMessage(err, 'Non riesco a riaprire il mese.')),
+    });
+  }
+
+  // ── Rakeback ─────────────────────────────────────────────────────────────
+
+  protected scriviRake(contoId: string, valore: string): void {
+    this.bozza.update((b) => ({
+      ...b,
+      [contoId]: { ...b[contoId], rake: valore },
+    }));
+  }
+
+  protected scriviPagato(contoId: string, valore: string): void {
+    this.bozza.update((b) => ({
+      ...b,
+      [contoId]: { ...b[contoId], pagato: valore },
+    }));
+  }
+
+  protected scriviMetodo(contoId: string, valore: string): void {
+    this.bozza.update((b) => ({
+      ...b,
+      [contoId]: { ...b[contoId], metodo: valore as MetodoMovimento | '' },
+    }));
+  }
+
+  protected scriviNota(contoId: string, valore: string): void {
+    this.bozza.update((b) => ({
+      ...b,
+      [contoId]: { ...b[contoId], nota: valore },
+    }));
+  }
+
+  /**
+   * La scheda di una riga: metodo di pagamento, nota e il dettaglio del calcolo.
+   *
+   * ⚠️ Il selettore del metodo stava DENTRO la cella, accanto all'importo, e si
+   * e' visto sbagliato guardando la pagina: due controlli in una cella
+   * portavano la riga a 62px (il tetto del pannello e' 46) e la tabella a
+   * sfondare di 119px a 1024. Qui il metodo e' informazione secondaria — non
+   * serve a far tornare i conti del mese — e la scheda e' la grammatica che
+   * tutte le altre tabelle del pannello usano gia'.
+   *
+   * ⚠️ Scrive nella STESSA bozza della colonna: il salvataggio resta uno solo,
+   * la PUT di tutta la tabella. Una seconda strada di scrittura vorrebbe dire
+   * due punti in cui la riga puo' cambiare, e uno dei due dimenticato.
+   */
+  protected readonly rigaAperta = signal<string | null>(null);
+
+  protected readonly rigaInScheda = computed(() => {
+    const id = this.rigaAperta();
+    if (!id) return null;
+    // ⚠️ La condizione e' la RIGA riletta dalla pagina e non l'id: se la
+    // tabella si ricarica e quella riga non c'e' piu', la scheda si chiude da
+    // se' invece di restare aperta su un'entita' che non esiste.
+    return this.dett()?.righe.find((r) => r.contoId === id) ?? null;
+  });
+
+  protected apriRiga(r: { contoId: string }): void {
+    this.rigaAperta.set(r.contoId);
+  }
+
+  protected salvaRakeback(): void {
+    const m = this.mese();
+    const d = this.dett();
+    if (!m || !d) return;
+    const rotte = this.righeNonValide();
+    if (rotte.length) {
+      // ⚠️ Il messaggio NOMINA le righe: `righeNonValide()` ha già gli id, e
+      // «ci sono importi illeggibili» su quindici righe manda a cercarli a mano.
+      const nomi = d.righe
+        .filter((r) => rotte.includes(r.contoId))
+        .map((r) => r.username)
+        .join(', ');
+      this.erroreValidazione.set(
+        `Non riesco a leggere l’importo di ${nomi}: correggilo prima di salvare.`,
+      );
+      return;
+    }
+    const b = this.bozza();
+    const righe: RigaRakebackPayload[] = d.righe.map((r) => {
+      const v = b[r.contoId];
+      return {
+        contoId: r.contoId,
+        rakeGeneratoCent: parseImportoInCent(v?.rake ?? '') ?? 0,
+        pagatoAlPlayerCent: parseImportoInCent(v?.pagato ?? '') ?? 0,
+        ...(v?.metodo ? { metodoPagamento: v.metodo } : {}),
+        ...(v?.nota?.trim() ? { nota: v.nota.trim() } : {}),
+      };
+    });
+    this.salvando.set(true);
+    this.erroreValidazione.set(null);
+    this.api.salvaRakeback(m.id, righe).subscribe({
+      next: (nuovo) => {
+        this.salvando.set(false);
+        this.applica(nuovo);
+        this.toast.success('Colonna salvata.');
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        // ⚠️ Anche l'errore di rete del salvataggio va nella banda ACCANTO al
+        // pulsante, non in quella di caricamento: là ci sarebbe «Riprova», che
+        // ricaricherebbe buttando via la colonna.
+        this.erroreValidazione.set(
+          apiErrorMessage(err, 'Non riesco a salvare la colonna.'),
+        );
+      },
+    });
+  }
+
+  // ── Voci ─────────────────────────────────────────────────────────────────
+
+  protected apriVoce(v: VoceMese | 'nuova'): void {
+    this.erroreModale.set(null);
+    // ⚠️ La conferma distruttiva NON sopravvive a un'altra apertura: senza,
+    // chi apre «Elimina», preme Escape e riapre un'ALTRA riga trova la sezione
+    // già in stato «Elimina davvero» — il passaggio di conferma saltato,
+    // sull'unica azione irreversibile della sezione.
+    this.conferma.set(null);
+    if (v === 'nuova') {
+      this.formVoce.reset({
+        verso: 'USCITA',
+        categoria: 'ALTRO',
+        descrizione: '',
+        controparte: '',
+        importo: '',
+        metodo: '',
+      });
+    } else {
+      this.formVoce.setValue({
+        verso: v.verso,
+        categoria: v.categoria,
+        descrizione: v.descrizione,
+        controparte: v.controparte ?? '',
+        importo: this.euro(v.importoCent),
+        metodo: v.metodo ?? '',
+      });
+    }
+    // ⚠️ La baseline DOPO il patch, o la modale nasce già sporca e il primo
+    // Escape chiede conferma senza che nessuno abbia digitato niente.
+    this.baseVoce.set(JSON.stringify(this.formVoce.getRawValue()));
+    this.voceAperta.set(v);
+  }
+
+  protected salvaVoce(): void {
+    const m = this.mese();
+    const aperta = this.voceAperta();
+    if (!m || !aperta) return;
+    const f = this.formVoce.getRawValue();
+    const importoCent = parseImportoInCent(f.importo);
+    if (importoCent === null || importoCent <= 0) {
+      this.erroreModale.set('L’importo non è valido.');
+      return;
+    }
+    const body = {
+      verso: f.verso,
+      categoria: f.categoria,
+      descrizione: f.descrizione.trim(),
+      ...(f.controparte.trim() ? { controparte: f.controparte.trim() } : {}),
+      importoCent,
+      ...(f.metodo ? { metodo: f.metodo } : {}),
+    };
+    this.salvando.set(true);
+    this.erroreModale.set(null);
+    const chiamata =
+      aperta === 'nuova'
+        ? this.api.creaVoce(m.id, body)
+        : this.api.aggiornaVoce(aperta.id, body);
+    chiamata.subscribe({
+      next: () => {
+        this.salvando.set(false);
+        this.voceAperta.set(null);
+        this.scegliMese(m.id);
+        this.toast.success('Voce salvata.');
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a salvare la voce.'),
+        );
+      },
+    });
+  }
+
+  protected eliminaVoce(v: VoceMese): void {
+    const m = this.mese();
+    if (!m) return;
+    this.api.eliminaVoce(v.id).subscribe({
+      next: () => {
+        this.voceAperta.set(null);
+        this.conferma.set(null);
+        this.scegliMese(m.id);
+        this.toast.success('Voce eliminata.');
+      },
+      error: (err) =>
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a eliminare la voce.'),
+        ),
+    });
+  }
+
+  // ── Conti ────────────────────────────────────────────────────────────────
+
+  protected apriConto(c: ContoRakeback | 'nuovo'): void {
+    this.erroreModale.set(null);
+    this.conferma.set(null);
+    if (c === 'nuovo') {
+      this.formConto.reset({
+        username: '',
+        nomeReale: '',
+        backAgente: '57',
+        backPlayer: '45',
+        scaglioneBase: '45',
+        scaglionePasso: '22,50',
+        destinazione: 'SCUOLA',
+        attivo: true,
+        ordine: 100,
+        nota: '',
+      });
+    } else {
+      this.formConto.setValue({
+        username: c.username,
+        nomeReale: c.nomeReale ?? '',
+        backAgente: String(c.backAgenteBp / 100).replace('.', ','),
+        backPlayer: String(c.backPlayerBp / 100).replace('.', ','),
+        scaglioneBase: String(c.scaglioneBaseBp / 100).replace('.', ','),
+        scaglionePasso: this.euro(c.scaglionePassoCent),
+        destinazione: c.destinazione,
+        attivo: c.attivo,
+        ordine: c.ordine,
+        nota: c.nota ?? '',
+      });
+    }
+    this.baseConto.set(JSON.stringify(this.formConto.getRawValue()));
+    this.contoAperto.set(c);
+  }
+
+  protected salvaConto(): void {
+    const aperto = this.contoAperto();
+    if (!aperto) return;
+    const f = this.formConto.getRawValue();
+    const bp = (s: string): number | null => {
+      const n = Number(s.replace(',', '.'));
+      return Number.isFinite(n) && n >= 0 && n <= 100 ? Math.round(n * 100) : null;
+    };
+    const agente = bp(f.backAgente);
+    const player = bp(f.backPlayer);
+    const base = bp(f.scaglioneBase);
+    const passo = parseImportoInCent(f.scaglionePasso);
+    if (agente === null || player === null || base === null) {
+      this.erroreModale.set('Le percentuali devono stare fra 0 e 100.');
+      return;
+    }
+    if (passo === null || passo <= 0) {
+      this.erroreModale.set('Il taglio dello scaglione non è valido.');
+      return;
+    }
+    const body = {
+      agente: 'LOTTOMATICA' as const,
+      username: f.username.trim(),
+      ...(f.nomeReale.trim() ? { nomeReale: f.nomeReale.trim() } : {}),
+      backAgenteBp: agente,
+      backPlayerBp: player,
+      scaglioneBaseBp: base,
+      scaglionePassoCent: passo,
+      destinazione: f.destinazione,
+      attivo: f.attivo,
+      ordine: Number(f.ordine) || 100,
+      ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),
+    };
+    this.salvando.set(true);
+    this.erroreModale.set(null);
+    const chiamata =
+      aperto === 'nuovo'
+        ? this.api.creaConto(body)
+        : this.api.aggiornaConto(aperto.id, body);
+    chiamata.subscribe({
+      next: () => {
+        this.salvando.set(false);
+        this.contoAperto.set(null);
+        this.caricaAnagrafiche();
+        this.toast.success('Conto salvato. Sincronizza il mese per usarlo.');
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a salvare il conto.'),
+        );
+      },
+    });
+  }
+
+  protected eliminaConto(c: ContoRakeback): void {
+    this.api.eliminaConto(c.id).subscribe({
+      next: () => {
+        this.contoAperto.set(null);
+        this.conferma.set(null);
+        this.caricaAnagrafiche();
+        this.toast.success('Conto rimosso.');
+      },
+      error: (err) =>
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a rimuovere il conto.'),
+        ),
+    });
+  }
+
+  // ── Spese ricorrenti ─────────────────────────────────────────────────────
+
+  protected apriRicorrente(r: SpesaRicorrente | 'nuova'): void {
+    this.erroreModale.set(null);
+    this.conferma.set(null);
+    if (r === 'nuova') {
+      this.formRicorrente.reset({
+        descrizione: '',
+        categoria: 'INFRASTRUTTURA',
+        controparte: '',
+        importo: '',
+        attiva: true,
+        nota: '',
+      });
+    } else {
+      this.formRicorrente.setValue({
+        descrizione: r.descrizione,
+        categoria: r.categoria,
+        controparte: r.controparte ?? '',
+        importo: this.euro(r.importoCentPredefinito),
+        attiva: r.attiva,
+        nota: r.nota ?? '',
+      });
+    }
+    this.baseRicorrente.set(JSON.stringify(this.formRicorrente.getRawValue()));
+    this.ricorrenteAperta.set(r);
+  }
+
+  protected salvaRicorrente(): void {
+    const aperta = this.ricorrenteAperta();
+    if (!aperta) return;
+    const f = this.formRicorrente.getRawValue();
+    const importo = parseImportoInCent(f.importo);
+    if (importo === null || importo <= 0) {
+      this.erroreModale.set('L’importo non è valido.');
+      return;
+    }
+    const body = {
+      descrizione: f.descrizione.trim(),
+      categoria: f.categoria,
+      ...(f.controparte.trim() ? { controparte: f.controparte.trim() } : {}),
+      importoCentPredefinito: importo,
+      attiva: f.attiva,
+      ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),
+    };
+    this.salvando.set(true);
+    this.erroreModale.set(null);
+    const chiamata =
+      aperta === 'nuova'
+        ? this.api.creaRicorrente(body)
+        : this.api.aggiornaRicorrente(aperta.id, body);
+    chiamata.subscribe({
+      next: () => {
+        this.salvando.set(false);
+        this.ricorrenteAperta.set(null);
+        this.caricaAnagrafiche();
+        this.toast.success('Spesa ricorrente salvata.');
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a salvare la spesa.'),
+        );
+      },
+    });
+  }
+
+  protected eliminaRicorrente(r: SpesaRicorrente): void {
+    this.api.eliminaRicorrente(r.id).subscribe({
+      next: () => {
+        this.ricorrenteAperta.set(null);
+        this.conferma.set(null);
+        this.caricaAnagrafiche();
+        this.toast.success('Spesa ricorrente rimossa.');
+      },
+      error: (err) =>
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a rimuovere la spesa.'),
+        ),
+    });
+  }
+
+  // ── Conferme in linea ────────────────────────────────────────────────────
+
+  /**
+   * ⚠️ Conferme in linea e mai `confirm()` nativo: quel riquadro è di sistema,
+   * non si stila, non si legge nel contesto della modale e su alcune
+   * configurazioni il browser lo SOPPRIME — nel qual caso il ramo «annulla» non
+   * è raggiungibile e la riga sparisce al primo clic.
+   */
+  protected chiedi(chiave: string): void {
+    this.conferma.set(chiave);
+  }
+
+  protected annulla(): void {
+    this.conferma.set(null);
+  }
+}

@@ -315,7 +315,21 @@ export type SubscriptionTier = 'PESCE_ROSSO' | 'SQUALO';
  * interamente dai punti BFF, e senza di lui l'etichetta cade nel ramo di default
  * — che è «PayPal».
  */
-export type PaymentMethod = 'paypal' | 'skrill' | 'manuale' | 'punti';
+export type PaymentMethod =
+  | 'paypal'
+  | 'skrill'
+  | 'manuale'
+  | 'punti'
+  | 'contanti';
+
+/**
+ * Chi ha materialmente incassato un pagamento in contanti.
+ *
+ * ⚠️ Enum chiuso e non un id utente: un riferimento a un account entrerebbe
+ * nella cascata GDPR e rischierebbe di comparire nell'export dell'abbonato,
+ * che non deve leggere il nome del socio.
+ */
+export type Incassante = 'PIETRO' | 'EXIVEZZZ';
 export type SubscriptionRequestStatus = 'pending' | 'approved' | 'rejected';
 
 /** Richiesta di abbonamento come esposta a client/admin. */
@@ -328,6 +342,8 @@ export interface SubscriptionRequest {
   tierLabel: string;
   paymentMethod: PaymentMethod;
   paymentReference?: string;
+  /** Chi ha incassato, sui soli pagamenti in contanti. */
+  incassatoDa?: Incassante;
   /** codice sconto applicato (snapshot, legacy singolo) */
   discountCode?: string;
   /** codici sconto cumulati applicati (snapshot) */
@@ -2358,3 +2374,237 @@ export type HandReportReason =
   | 'NON_MIA'
   | 'FORMATO'
   | 'ALTRO';
+
+// ───────────────────────────────────────────────────────────────────────────
+// Conteggi mensili (voce di registro A18)
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * ⚠️ Ogni importo di questa sezione è in CENTESIMI INTERI e ogni percentuale in
+ * PUNTI BASE (5700 = 57,00%): gli euro esistono solo sul bordo, dove li digita
+ * e li legge una persona (`features/admin/denaro.ts`). La conversione vive in
+ * un punto per lato — con due punti che devono concordare su un fattore 100 si
+ * registrano 125.050 € al posto di 1.250,50 €.
+ *
+ * ⚠️ I tipi qui sono RICALCATI a mano da `backend/src/conteggi/conteggi.types.ts`:
+ * i due repo non condividono nulla, quindi se là cambia una forma va cambiata
+ * anche qui.
+ */
+export type MeseContabileStato = 'APERTO' | 'CHIUSO';
+export type VersoVoce = 'ENTRATA' | 'USCITA';
+export type CategoriaUscita =
+  | 'COACH'
+  | 'INFRASTRUTTURA'
+  | 'MARKETING'
+  | 'COMMISSIONI'
+  | 'ALTRO';
+export type CategoriaEntrata =
+  | 'COMMISSIONI_AGENTE'
+  | 'CONTENUTI'
+  | 'COACHING'
+  | 'STAKING'
+  | 'ALTRO';
+export type CategoriaVoce = CategoriaUscita | CategoriaEntrata;
+export type MetodoMovimento =
+  | 'BONIFICO'
+  | 'PAYPAL'
+  | 'SKRILL'
+  | 'CONTANTI'
+  | 'TICKET'
+  | 'ALTRO';
+export type AgenteRakeback = 'LOTTOMATICA';
+/** ⚠️ `PERSONALE` resta FUORI dalla divisione col socio. */
+export type DestinazioneMargine = 'SCUOLA' | 'PERSONALE';
+
+export interface MeseContabile {
+  id: string;
+  anno: number;
+  mese: number;
+  /** «settembre 2026», calcolata dal server: una sola definizione di etichetta. */
+  etichetta: string;
+  stato: MeseContabileStato;
+  quotaTitolareBp: number;
+  chiusoAt?: string;
+  chiusoDaAdminEmail?: string;
+  nota?: string;
+  /** Se il riepilogo arriva dallo snapshot congelato o dal calcolo dal vivo. */
+  riepilogoCongelato: boolean;
+}
+
+export interface VoceMese {
+  id: string;
+  verso: VersoVoce;
+  categoria: CategoriaVoce;
+  descrizione: string;
+  controparte?: string;
+  importoCent: number;
+  metodo?: MetodoMovimento;
+  pagataAt?: string;
+  /** Presente ⇒ generata da una spesa ricorrente. */
+  ricorrenteId?: string;
+  createdAt?: string;
+}
+
+export interface SpesaRicorrente {
+  id: string;
+  descrizione: string;
+  categoria: CategoriaUscita;
+  controparte?: string;
+  importoCentPredefinito: number;
+  attiva: boolean;
+  nota?: string;
+}
+
+export interface ContoRakeback {
+  id: string;
+  agente: AgenteRakeback;
+  username: string;
+  nomeReale?: string;
+  userId: string | null;
+  backAgenteBp: number;
+  backPlayerBp: number;
+  scaglioneBaseBp: number;
+  scaglionePassoCent: number;
+  destinazione: DestinazioneMargine;
+  attivo: boolean;
+  ordine: number;
+  nota?: string;
+  anonimizzato: boolean;
+}
+
+/**
+ * Una riga della tabella rakeback: gli ingressi PIÙ il calcolo.
+ *
+ * ⚠️ I sei campi calcolati arrivano dal SERVER e il client non li ricalcola
+ * mai: l'aritmetica del rakeback (divisione intera con correzione dell'ulp,
+ * scaglioni da 22,50 €) vive in un punto solo. Due copie direbbero due margini
+ * per lo stesso mese.
+ */
+export interface RigaRakeback {
+  id: string;
+  contoId: string;
+  username: string;
+  nomeReale?: string;
+  backAgenteBp: number;
+  backPlayerBp: number;
+  scaglioneBaseBp: number;
+  scaglionePassoCent: number;
+  destinazione: DestinazioneMargine;
+  ordine: number;
+  rakeGeneratoCent: number;
+  pagatoAlPlayerCent: number;
+  metodoPagamento?: MetodoMovimento;
+  nota?: string;
+  scaglioni: number;
+  erogatoBonusCent: number;
+  spettanteDaAgenteCent: number;
+  spettanteAlPlayerCent: number;
+  profittoAgenteCent: number;
+  nettoCassaCent: number;
+  residuoAlPlayerCent: number;
+}
+
+export interface TotaliRakeback {
+  rakeGeneratoCent: number;
+  erogatoBonusCent: number;
+  spettanteDaAgenteCent: number;
+  spettanteAlPlayerCent: number;
+  profittoAgenteCent: number;
+  pagatoAlPlayerCent: number;
+  nettoCassaCent: number;
+}
+
+export interface RiepilogoMese {
+  entrate: {
+    abbonamentiCent: number;
+    gadgetCent: number;
+    commissioniRakebackCent: number;
+    /**
+     * Quello che rientra dai giocatori finanziati: una voce scritta a mano,
+     * con la sua riga nel conto economico.
+     *
+     * ⚠️ Su un mese chiuso PRIMA del 10/09/2026 lo snapshot congelato non ha
+     * questo campo. Il server lo riempie a 0 in lettura (`snapshotCompleto`),
+     * ma `eur()` fa comunque `?? 0`: qui la difesa è doppia di proposito,
+     * perché i due repo non condividono una riga e questo tipo è ricalcato a
+     * mano.
+     */
+    stakingCent: number;
+    /** ⚠️ Le entrate a mano che NON sono staking: le due sono complementari. */
+    altreCent: number;
+    totaleCent: number;
+  };
+  uscite: { speseCent: number; totaleCent: number };
+  margineNettoCent: number;
+  ripartizione: {
+    titolareCent: number;
+    socioCent: number;
+    quotaTitolareBp: number;
+  };
+  /** ⚠️ Fuori dalla divisione: i conti marcati PERSONALE. */
+  marginePersonaleCent: number;
+  /** ⚠️ Partite di giro, NON conto economico. */
+  cassaGiocatori: {
+    attesoDaAgenteCent: number;
+    pagatoAiGiocatoriCent: number;
+    residuoDovutoCent: number;
+  };
+  /** Quante righe di abbonamento sono ricostruite dal listino invece che dallo snapshot. */
+  abbonamentiStimati: number;
+}
+
+/**
+ * Il mese intero in una risposta sola: niente paginazione, di proposito — un
+ * conto economico letto a metà è un totale sbagliato.
+ */
+export interface DettaglioMese {
+  mese: MeseContabile;
+  voci: VoceMese[];
+  righe: RigaRakeback[];
+  totaliRakeback: TotaliRakeback;
+  riepilogo: RiepilogoMese;
+  /** ⚠️ Un tetto raggiunto si DICE, mai si tronca in silenzio. */
+  troncato: boolean;
+}
+
+export interface VocePayload {
+  verso: VersoVoce;
+  categoria: CategoriaVoce;
+  descrizione: string;
+  controparte?: string;
+  importoCent: number;
+  metodo?: MetodoMovimento;
+  pagataAt?: string;
+}
+
+export interface SpesaRicorrentePayload {
+  descrizione: string;
+  categoria: CategoriaUscita;
+  controparte?: string;
+  importoCentPredefinito: number;
+  attiva?: boolean;
+  nota?: string;
+}
+
+export interface ContoRakebackPayload {
+  agente: AgenteRakeback;
+  username: string;
+  nomeReale?: string;
+  userId?: string;
+  backAgenteBp: number;
+  backPlayerBp: number;
+  scaglioneBaseBp?: number;
+  scaglionePassoCent?: number;
+  destinazione?: DestinazioneMargine;
+  attivo?: boolean;
+  ordine?: number;
+  nota?: string;
+}
+
+export interface RigaRakebackPayload {
+  contoId: string;
+  rakeGeneratoCent: number;
+  pagatoAlPlayerCent?: number;
+  metodoPagamento?: MetodoMovimento;
+  nota?: string;
+}

@@ -542,3 +542,53 @@
 .admin-lessons__da-classificare {
   color: var(--copper-600);
 }
+
+// ── La striscia dei totali, sopra un elenco ─────────────────────────────────
+//
+// ⚠️ Promossa qui il 10/09/2026 alla TERZA copia, ed è il commento di
+// `admin-stakings.component.scss` a chiederlo: «modellata su `.fnt__summary` di
+// /admin/fonti, ed è la SECONDA copia di questa striscia: alla terza va
+// promossa in `admin-shared.scss`, prima che diventi la storia già pagata delle
+// cinque pastiglie di stato». La terza è quella dei Conteggi mensili.
+//
+// ⚠️ Sta SOPRA l'elenco e non in un `<tfoot>`, e la ragione è già scritta in
+// stakings: sotto i 720px la tabella diventa blocchi impilati e una riga di
+// piede si legge come «una riga di dati in più»; e comunque un totale va visto
+// senza scorrere fino in fondo. In una tabella con `border-collapse: separate`
+// — che è la nostra, per non far perdere il bordo alle celle sticky — un
+// `border-top` su un `<tr>` è per giunta IGNORATO dal browser.
+//
+// ⚠️ La striscia deve NOMINARE l'insieme che somma (`.admin-totali__ambito`):
+// sopra un elenco filtrato, un totale che non dice cosa sta sommando si legge
+// come «tutto l'archivio» qualunque filtro sia attivo. Precedente scritto in
+// `admin-participation.component.html`.
+.admin-totali {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 1.4rem;
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.admin-totali__voce {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+
+  strong {
+    // ⚠️ `tabular-nums` non è cosmesi: le cifre stanno una sopra l'altra
+    // rispetto alla colonna della tabella sotto, e senza, le migliaia ballano.
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    font-size: 1.05rem;
+  }
+}
+
+// L'insieme sommato, in coda alla striscia e in tono minore: è il contesto del
+// numero, non un numero.
+.admin-totali__ambito {
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}

@@ -68,6 +68,28 @@ export const ACTION_LABELS: Record<string, string> = {
   'create-news-source': 'Fonte news aggiunta',
   'update-news-source': 'Fonte news modificata',
   'delete-news-source': 'Fonte news rimossa',
+  // Conteggi mensili (voce di registro A18). ⚠️ Le stesse quindici stringhe,
+  // VERBATIM, sono nella union `AdminAction` del backend: divergendo, il tab
+  // Log, lo storico per-iscritto e la Panoramica stamperebbero lo slug grezzo —
+  // e il backend non se ne accorgerebbe, perché la union la soddisfa lui.
+  'open-accounting-month': 'Mese contabile aperto',
+  'close-accounting-month': 'Mese contabile chiuso',
+  'reopen-accounting-month': 'Mese contabile riaperto',
+  'note-accounting-month': 'Nota sul mese contabile',
+  'add-accounting-entry': 'Voce di contabilità aggiunta',
+  'update-accounting-entry': 'Voce di contabilità modificata',
+  'delete-accounting-entry': 'Voce di contabilità eliminata',
+  'create-recurring-expense': 'Spesa ricorrente aggiunta',
+  'update-recurring-expense': 'Spesa ricorrente modificata',
+  'delete-recurring-expense': 'Spesa ricorrente rimossa',
+  'create-rakeback-account': 'Conto rakeback aggiunto',
+  'update-rakeback-account': 'Conto rakeback modificato',
+  'delete-rakeback-account': 'Conto rakeback rimosso',
+  'save-rakeback-month': 'Rakeback del mese salvato',
+  // ⚠️ Non è dei conteggi ma delle richieste di abbonamento, ed è la prima
+  // scrittura del progetto che cambia un importo GIÀ registrato: nel log la
+  // coppia prima/dopo è tutta la traccia di rettifica che resta.
+  'edit-subscription-payment': 'Incasso abbonamento corretto',
 };
 
 /** Etichetta leggibile o, per un'azione non ancora mappata, lo slug grezzo. */

@@ -585,3 +585,26 @@
     }
   }
 }
+
+// ── La fascia stretta del pannello (721-1200px) ─────────────────────────────
+//
+// ⚠️⚠️ La sidebar del pannello è affiancata fin sopra i 1024px e collassa
+// sotto: vuol dire che la colonna di contenuto è più STRETTA a 1100px (788px
+// utili) che a 1024 (984). È la fascia in cui una tabella sfonda per prima, ed
+// è esattamente quella che l'elenco di larghezze della sonda saltava passando
+// da 1280 a 1024 — per questo il difetto non l'aveva mai visto nessuno.
+//
+// Misurato su `/admin/lezioni` a 1100px: col tetto pieno la sola cella
+// d'identità vale 435px, le altre quattro colonne sono già al minimo
+// intrinseco, e la tabella sfondava di 71px. Stringendo il tetto la riga resta
+// alta 45px e il testo tagliato si legge col `title`, che è la convenzione
+// dichiarata due volte in questo foglio.
+//
+// ⚠️ Va DOPO la regola base: le due valgono entrambe (0,1,0) e a decidere è
+// l'ordine nel file — la stessa cascata già spiegata sopra su
+// `.admin-table__ident-riga`.
+@media (min-width: #{s.$bp-tabella-blocchi + 1}) and (max-width: 1200px) {
+  .admin-table__ident {
+    max-width: 20rem;
+  }
+}

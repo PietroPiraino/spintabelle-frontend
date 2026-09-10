@@ -12,49 +12,29 @@
   }
 }
 
-// La striscia dei totali, sopra la tabella: la risposta alla prima domanda che
-// si fa a un registro di soldi — quanto ne è fuori, e quanto EV resta.
-// ⚠️ Modellata su `.fnt__summary` di `/admin/fonti`, ed è la SECONDA copia di
-// questa striscia: alla terza va promossa in `admin-shared.scss`, prima che
-// diventi la storia già pagata delle cinque pastiglie di stato.
-// ⚠️ Sta SOPRA la tabella e non in un `<tfoot>`: sotto i 720px la tabella
-// diventa blocchi impilati e una riga di piede si leggerebbe come un giocatore
-// in più — e comunque un totale va visto senza scorrere fino in fondo.
-.stk__totali {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.3rem 1.4rem;
-  margin: 0 0 0.9rem;
-  font-size: 0.92rem;
-  color: var(--text-muted);
+// ⚠️ La striscia dei totali NON e' piu' dichiarata qui: e' salita in
+// `admin-shared.scss` come `.admin-totali` il 10/09/2026, alla terza copia,
+// come il commento che stava in questo punto prescriveva. Restano solo le due
+// differenze VERE di questo registro.
+//
+// ⚠️ `/admin/fonti` NON e' stata convertita, e non e' una dimenticanza: la sua
+// `.fnt__summary` sembra la stessa cosa ma non lo e' — conta stati di salute
+// con cifre monospaziate colorate per stato, non importi. Le cinque pastiglie
+// di stato erano cinque dichiarazioni IDENTICHE; qui le forme sono due perche'
+// le cose sono due, e unificarle cambierebbe una sezione viva per far tornare
+// un nome.
+.admin-totali .is-debito {
+  // ⚠️ Solo l'EV prende colore, come nella colonna. Il totale dei fondi puo'
+  // essere negativo (anticipi bruciati) e resta neutro: colorarlo qui
+  // inventerebbe un segnale che la tabella sotto non da'.
+  color: var(--copper-600);
 }
 
-.stk__tot {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.45rem;
-
-  strong {
-    // Le due cifre stanno una sopra l'altra rispetto alla colonna della
-    // tabella: senza, le migliaia ballano.
-    font-variant-numeric: tabular-nums;
-    color: var(--text);
-    font-size: 1.05rem;
-
-    // ⚠️ Solo l'EV prende colore, come nella colonna. Il totale dei fondi può
-    // essere negativo (anticipi bruciati) e resta neutro: colorarlo qui
-    // inventerebbe un segnale che la tabella sotto non dà.
-    &.is-debito {
-      color: var(--copper-600);
-    }
-  }
-}
-
-// ⚠️ La frase che dice COSA si sta sommando. Senza, la stessa cifra si legge
-// come «tutto il registro» qualunque filtro sia attivo.
-.stk__ambito {
-  color: var(--text-faint);
+// Lo stacco dalla tabella che segue. ⚠️ Vive qui e non nel primitivo condiviso
+// perche' e' spaziatura del CHIAMANTE: questa sezione non dichiara un ritmo
+// verticale proprio, altre si'.
+.stk__totali-spazio {
+  margin-bottom: 0.9rem;
 }
 
 // I due saldi in testa alla modale: la risposta alla prima domanda che si fa

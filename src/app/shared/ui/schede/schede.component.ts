@@ -51,6 +51,7 @@ let seq = 0;
   template: `<div
     class="schede"
     role="tablist"
+    [class.schede--primarie]="primarie()"
     [attr.aria-label]="etichetta()"
     (keydown)="onTasto($event)"
   >
@@ -68,7 +69,15 @@ let seq = 0;
       >
         {{ v.etichetta }}
         @if (v.conteggio) {
+          <!--
+            ⚠️ Il numero da solo si legge «Rakeback 7»: uno screen reader non
+            ha modo di sapere che 7 è un CONTEGGIO e non parte del nome. La
+            parola sta in un visually-hidden, che è la utility del progetto
+            (sr-only ne è l'alias).
+          -->
+          <span class="visually-hidden">, </span>
           <span class="schede__n">{{ v.conteggio }}</span>
+          <span class="visually-hidden">elementi</span>
         }
       </button>
     }
@@ -79,6 +88,34 @@ let seq = 0;
       flex-wrap: wrap;
       gap: 0.5rem;
       margin-bottom: 1.4rem;
+    }
+
+    /*
+     * ⚠️ La variante \`[primarie]\` cambia SOLO la resa del TESTO. Padding,
+     * \`min-height: 44px\` e la ricetta di \`.is-active\` restano quelli di
+     * \`button.badge--tag\`: la scatola non cambia di un pixel, e i 44px sono
+     * uno dei nove punti sorvegliati da \`scripts/lib/bersagli-tocco.test.mjs\`.
+     *
+     * Perché serve: a riposo una scheda eredita la livrea di \`.badge--tag\` —
+     * mono 0,68rem (10,88px), MAIUSCOLO, \`letter-spacing: .14em\`,
+     * \`--text-muted\`. È esattamente il vestito di \`.admin-stato\`, cioè
+     * dell'etichetta di SOLA LETTURA più piccola della schermata, mentre queste
+     * sono l'unico comando che cambia il genere di cosa che si vede. Nelle
+     * sezioni a schede la navigazione principale finiva così al rango
+     * tipografico più basso della pagina, col 60% del controllo vuoto.
+     *
+     * ⚠️ Perché è una VARIANTE e non il default: \`admin-news\` usa le schede
+     * come micro-interruttore Scrivi/Anteprima DENTRO la modale dell'articolo,
+     * appoggiato a un \`<label>\` in \`align-items: baseline\` — lì ingrandire
+     * stringe una modale già fitta. È il precedente di \`[compatta]\` su
+     * \`app-multi-select\`.
+     */
+    .schede--primarie button {
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--text);
     }
 
     .schede__n {
@@ -93,6 +130,35 @@ export class SchedeComponent<T extends string> {
   readonly voci = input.required<readonly VoceScheda<T>[]>();
   readonly scelto = input.required<T>();
   readonly scegli = output<T>();
+
+  /**
+   * Schede come NAVIGAZIONE DI SEZIONE invece che come micro-interruttore.
+   *
+   * ⚠️ Sta QUI e non nel foglio del chiamante perché una regola del genitore su
+   * `.badge--tag` sarebbe INERTE: i bottoni nascono in questo template e
+   * portano il suo attributo di scope, mentre l'incapsulamento riscrive il
+   * selettore del genitore aggiungendogli il PROPRIO attributo. Dal foglio del
+   * chiamante è raggiungibile solo l'host `<app-schede>`. È la stessa ragione
+   * scritta su `[compatta]` in `multi-select.component.ts`.
+   *
+   * ⚠️ Cambia SOLO la tipografia, e non il margine sotto: `admin-affiliations`
+   * e `admin-shop` hanno `<app-schede>` come elemento RADICE del template,
+   * senza alcun contenitore, quindi il `margin-bottom: 1.4rem` del primitivo è
+   * l'unica cosa che le stacca dal pannello. Azzerarlo qui le romperebbe
+   * entrambe. Lo stacco sotto le schede resta perciò più largo del ritmo
+   * generale della sezione — che su un confine di navigazione è giusto così, ed
+   * è quello che `admin-participation` mostra da sempre.
+   *
+   * ⚠️⚠️ Si passa **`[primarie]="true"`**, MAI l'attributo nudo `primarie`: un
+   * attributo statico lega l'input alla stringa `''`, che è falsa, quindi
+   * `[class.schede--primarie]` non si applica e la variante è **inerte**. Non
+   * c'è alcun `booleanAttribute` a raccoglierla — nel progetto quella
+   * trasformazione non è usata da nessuna parte, e il precedente è
+   * `[compatta]="true"` in `drill-config.component.html`. Le prime tre sezioni
+   * convertite erano scritte così e non cambiavano di un pixel: build verde,
+   * Karma verde, nessun errore.
+   */
+  readonly primarie = input(false);
 
   private readonly base = `sch-${(seq += 1)}`;
 

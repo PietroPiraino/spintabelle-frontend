@@ -106,11 +106,14 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     label: 'Finanze',
     items: [
       { path: 'stakings', label: 'Stakings', icon: 'hand-coins' },
+      // ⚠️ Il chip «Presto» è stato tolto il 10/09/2026, con la sezione. Il
+      // commento di `admin.component.spec.ts` lo dice al contrario e vale:
+      // «un chip lasciato su una voce che funziona è peggio di un chip
+      // mancante — dice all'owner di non aprirla».
       {
         path: 'conteggi-mensili',
         label: 'Conteggi mensili',
         icon: 'calendar-days',
-        soon: true,
       },
     ],
   },

@@ -31,13 +31,18 @@ const BASE = process.env.BASE ?? 'http://localhost:4200';
 const EMAIL = process.env.ADMIN_EMAIL ?? 'qa@bff.local';
 const PASS = process.env.ADMIN_PASS ?? 'password123';
 
-// Le larghezze contano tre cose diverse, non tre gusti:
+// Le larghezze contano quattro cose diverse, non quattro gusti:
 //  1440 = un portatile largo, dove la tabella ha più spazio di quanto le serva;
 //  1280 = la misura su cui è stato trovato il difetto;
+//  1100 = ⚠️ la STRETTA VERA: la sidebar del pannello collassa a 1024, quindi
+//         appena sopra quella soglia la colonna di contenuto è al minimo pur
+//         restando affiancata alla sidebar — è lì che una tabella sfonda per
+//         prima, e finché l'elenco saltava da 1280 a 1024 quella fascia non
+//         veniva guardata da nessuno;
 //  1024 = la soglia in cui la sidebar è ancora affiancata e lo spazio è minimo;
 //   390 = sotto i 720 la tabella diventa blocchi impilati, quindi lì non si
 //         misura la tabella ma la PAGINA: non deve scorrere in orizzontale.
-const LARGHE = [1440, 1280, 1024];
+const LARGHE = [1440, 1280, 1100, 1024];
 const STRETTO = 390;
 
 // ⚠️ L'altezza è un tetto, non un valore atteso: 44px sono dichiarati su
@@ -65,6 +70,11 @@ const SEZIONI = [
   // un solo foglio condiviso. Una sonda che non nomina una sezione non la
   // promuove: non la guarda affatto, che è peggio.
   'replayer',
+  // ⚠️ Aggiunta il 10/09/2026 con la sezione. La sonda NON promuove ciò che non
+  // nomina: non lo guarda affatto — è la lezione scritta due righe sopra su
+  // `replayer`. Qui conta più che altrove, perché la tabella del rakeback ha
+  // dieci colonne e due campi editabili per riga.
+  'conteggi-mensili',
 ];
 
 /** Misura ogni `.admin-table__scroll` presente nella pagina. */
@@ -92,6 +102,41 @@ const misura = (page) =>
     });
     return out;
   });
+
+/**
+ * Esegue `azione` una volta per SCHEDA, e una sola volta se la schermata non
+ * ne ha (in quel caso il nome passato è `null`).
+ *
+ * ⚠️⚠️ Prima si fermava alla PRIMA scheda che conteneva una tabella, e su una
+ * sezione a quattro schede questo vuol dire misurarne una e dichiararne
+ * quattro. Su `/admin/conteggi-mensili` si fermava su «Rakeback» e non apriva
+ * mai «Spese ed entrate» né le due tabelle di «Anagrafiche» — tre tabelle su
+ * quattro non erano coperte da niente di committato. Ed è generico: qualunque
+ * schermata a schede, oggi o domani, viene misurata su OGNI scheda.
+ *
+ * ⚠️ Gli handle si riprendono a ogni giro: cambiando scheda il pannello si
+ * ridisegna, e un handle preso prima può puntare a un nodo staccato.
+ */
+async function perOgniScheda(page, azione) {
+  const quante = (await page.$$('button[role="tab"]')).length;
+  if (!quante) {
+    await azione(null);
+    return;
+  }
+  for (let i = 0; i < quante; i += 1) {
+    const schede = await page.$$('button[role="tab"]');
+    const s = schede[i];
+    if (!s) break;
+    const nome =
+      (await s.textContent().catch(() => null))?.trim().split('\n')[0].trim() ??
+      `scheda ${i + 1}`;
+    await s.click().catch(() => undefined);
+    await page
+      .waitForSelector('table.admin-table tbody tr', { timeout: 4000 })
+      .catch(() => undefined);
+    await azione(nome);
+  }
+}
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -148,35 +193,46 @@ for (const larghezza of LARGHE) {
     await page
       .waitForSelector('table.admin-table tbody tr', { timeout: 6000 })
       .catch(() => undefined);
-    const tabelle = await misura(page);
+    // ⚠️ Una sezione a SCHEDE nasconde la tabella dietro un pannello, e senza
+    // aprirle la sonda la classificava «senza tabella per progetto» — cioè
+    // annunciava come una scelta di design una tabella che non aveva guardato.
+    // È lo stesso falso negativo di `replayer`, in un'altra forma: là la
+    // sezione non era nell'elenco, qui era la tabella a non essere in pagina.
+    // Il ciclo è GENERICO e non nomina alcuna sezione: qualunque schermata a
+    // schede, oggi o domani, viene misurata su ogni scheda.
+    await perOgniScheda(page, async (nomeScheda) => {
+      const tabelle = await misura(page);
 
-    if (!tabelle.length) continue;
-    conTabella.add(sez);
-    if (tabelle.every((t) => t.righe === 0)) continue;
-    conRighe.add(sez);
+      if (!tabelle.length) return;
+      conTabella.add(sez);
+      if (tabelle.every((t) => t.righe === 0)) return;
+      conRighe.add(sez);
 
-    for (const t of tabelle) {
-      if (t.righe === 0) continue;
-      misurate += 1;
-      const dove = `/${sez}${tabelle.length > 1 ? ` (tabella ${t.i + 1})` : ''} a ${larghezza}px`;
-      if (t.over > 0) {
-        const larga = t.colonne.reduce((a, c) => (c.w > a.w ? c : a), t.colonne[0]);
-        guasti.push(
-          `${dove}: la tabella sfonda di ${t.over}px. ` +
-            `La colonna più larga è «${larga.nome}» con ${larga.w}px. ` +
-            'Il tetto va su un elemento INTERNO alla cella, mai sulla cella: ' +
-            'su un <td> limita la scatola e lascia uscire il testo.',
-        );
+      for (const t of tabelle) {
+        if (t.righe === 0) continue;
+        misurate += 1;
+        const dove =
+          `/${sez}${nomeScheda ? ` · ${nomeScheda}` : ''}` +
+          `${tabelle.length > 1 ? ` (tabella ${t.i + 1})` : ''} a ${larghezza}px`;
+        if (t.over > 0) {
+          const larga = t.colonne.reduce((a, c) => (c.w > a.w ? c : a), t.colonne[0]);
+          guasti.push(
+            `${dove}: la tabella sfonda di ${t.over}px. ` +
+              `La colonna più larga è «${larga.nome}» con ${larga.w}px. ` +
+              'Il tetto va su un elemento INTERNO alla cella, mai sulla cella: ' +
+              'su un <td> limita la scatola e lascia uscire il testo.',
+          );
+        }
+        if (t.alta > RIGA_MAX) {
+          guasti.push(
+            `${dove}: una riga è alta ${t.alta}px (massimo ${RIGA_MAX}). ` +
+              'Di solito è l\'interlinea della cella d\'identità tornata a quella del ' +
+              'body, un badge che ha ripreso il padding verticale, o un\'immagine ' +
+              'più alta della riga.',
+          );
+        }
       }
-      if (t.alta > RIGA_MAX) {
-        guasti.push(
-          `${dove}: una riga è alta ${t.alta}px (massimo ${RIGA_MAX}). ` +
-            'Di solito è l\'interlinea della cella d\'identità tornata a quella del ' +
-            'body, un badge che ha ripreso il padding verticale, o un\'immagine ' +
-            'più alta della riga.',
-        );
-      }
-    }
+    });
   }
 }
 
@@ -185,17 +241,25 @@ await page.setViewportSize({ width: STRETTO, height: 844 });
 for (const sez of SEZIONI) {
   await page.goto(`${BASE}/admin/${sez}`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1400);
-  const scorre = await page.evaluate(() => {
-    const d = document.documentElement;
-    return d.scrollWidth > d.clientWidth + 1;
+  // ⚠️ Anche qui si passa da OGNI scheda, e non è una simmetria gratuita: il
+  // giro stretto non ne apriva nessuna, quindi di una sezione a schede misurava
+  // sempre e solo la prima — su `/admin/conteggi-mensili` il Riepilogo, che è
+  // l'unico pannello senza tabella. Tutto il ramo a blocchi (le etichette per
+  // riga, i campi a piena larghezza) non era coperto da niente.
+  await perOgniScheda(page, async (nomeScheda) => {
+    const scorre = await page.evaluate(() => {
+      const d = document.documentElement;
+      return d.scrollWidth > d.clientWidth + 1;
+    });
+    if (scorre) {
+      guasti.push(
+        `/${sez}${nomeScheda ? ` · ${nomeScheda}` : ''} a ${STRETTO}px: ` +
+          'la PAGINA scorre in orizzontale. ' +
+          'Sotto i 720px la tabella diventa blocchi impilati: se la pagina scorre, ' +
+          'qualcosa è rimasto largo — di solito un `nowrap` non spento o un tetto in px.',
+      );
+    }
   });
-  if (scorre) {
-    guasti.push(
-      `/${sez} a ${STRETTO}px: la PAGINA scorre in orizzontale. ` +
-        'Sotto i 720px la tabella diventa blocchi impilati: se la pagina scorre, ' +
-        'qualcosa è rimasto largo — di solito un `nowrap` non spento o un tetto in px.',
-    );
-  }
 }
 
 await browser.close();

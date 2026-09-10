@@ -1,0 +1,318 @@
+// Conteggi mensili — il pezzo SPECIFICO di questa sezione.
+//
+// ⚠️ Tutto il resto (barra, tabella col ripiegamento a blocchi, comando
+// solo-icona, pastiglia di stato, striscia dei totali, modale) arriva dai tre
+// fogli condivisi dichiarati in `styleUrls`. Qui non si ricopia niente di
+// quello: una riscrittura locale di un primitivo lo BATTE per specificità e
+// produce una schermata che sembra allineata e non lo è.
+
+@use '../soglie' as s;
+
+// ── Il ritmo verticale ──────────────────────────────────────────────────────
+//
+// ⚠️ Il contenitore porta `class="admin-users"`, cioè il ritmo condiviso
+// (`display:flex; flex-direction:column; gap:1rem`) che tredici sezioni su
+// diciotto usano già. Prima non ce l'aveva, e `.cm` non è dichiarata in nessun
+// foglio del progetto: col reset globale `* { margin: 0 }` i blocchi di primo
+// livello erano adiacenti a 0px, e i quattro pannelli partivano da quattro
+// offset diversi (0 · 4 · 12 · 24px) — quindi il contenuto SALTAVA fino a 24px
+// al cambio scheda.
+//
+// ⚠️ Da qui in poi i margini a mano si AZZERANO: in un contenitore a `gap` un
+// margine non si fonde col vicino, ci si somma.
+
+.cm__pannello {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  // Il pannello delle schede è focalizzabile (`tabindex="0"`): senza un
+  // contorno visibile, chi arriva da tastiera non sa dov'è finito.
+  &:focus-visible {
+    outline: 2px solid var(--copper-600);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+// ⚠️ Titolo, contenuto e nota sono UN blocco, e ciò che li tiene insieme deve
+// essere più stretto di ciò che separa i blocchi. Col solo `gap: 1rem` del
+// pannello un `<h3>` disterebbe dalla propria tabella (16 + gli 8 del suo
+// margine = 24px) PIÙ di quanto disti dal blocco precedente (16px): è il
+// titolo orfano, e il ritmo si legge al contrario.
+.cm__gruppo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+// ⚠️ `1.05rem` a colore pieno, la stessa forma di `.fnt__h3` e
+// `.admin-stats__h3`. Era `1rem` in `--text-muted`, cioè un titolo che pesa
+// MENO del corpo che introduce — lo stesso difetto che il piano segnala sulle
+// due tabelle di Anagrafiche, dove la barra condivisa lo ha già corretto.
+.cm__h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.cm__azioni {
+  margin-top: 0;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+// ── Il selettore del mese e la sua pastiglia ────────────────────────────────
+//
+// ⚠️⚠️ Il `>` è OBBLIGATORIO ed è la trappola scritta per esteso in
+// `admin-shared.scss`: l'incapsulamento di Angular attacca un attributo a OGNI
+// pezzo del selettore, quindi il catch-all `.admin-barra > *` (che mette tutti
+// a `order: 3`) vale (0,3,0) e batterebbe una `.cm__mese` sciolta, che vale
+// (0,2,0). Col combinatore siamo a (0,4,0) e l'ordine è quello che si legge.
+.admin-barra > .cm__mese {
+  order: 2;
+}
+
+// ⚠️ `flex: 1` non è per allargare il selettore — che resta a 360px per via di
+// `.admin-barra__campo` — ma per ASSORBIRE lo spazio libero della barra: senza,
+// `space-between` lo spalma nei buchi fra i figli, e siccome le tre barre non
+// hanno lo stesso numero di figli (solo il Riepilogo porta il `+`), cambiando
+// scheda il selettore del mese si spostava di circa 200px.
+.cm__mese {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 12rem;
+}
+
+@media (max-width: s.$bp-tabella-blocchi) {
+  .cm__mese {
+    flex: 1 1 100%;
+  }
+}
+
+// ── Il conto economico ──────────────────────────────────────────────────────
+
+// ⚠️ Griglia PROPRIA e non `.admin-modale__anagrafica`, che era la prima
+// stesura e si è vista subito sbagliata guardando la pagina: quella è tarata
+// per la colonna STRETTA di una modale, e a piena larghezza il flusso mette
+// quattro celle per riga — «Abbonamenti 80,00 € Gadget 0,00 €» tutto in fila.
+// Un conto economico si legge incolonnando le cifre; con le voci appaiate a due
+// a due non si somma niente a occhio, che è l'unica cosa per cui lo si guarda.
+.cm__conto {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  // ⚠️⚠️ COLUMN-GAP ZERO, e la distanza fra etichetta e cifra la dà il
+  // `padding-right` del `dt`. Con un gap vero i filetti di `.cm__somma` e
+  // `.cm__margine` — che stanno su due celle distinte — si disegnavano come DUE
+  // segmenti separati da un buco di 32px: una riga di totale spezzata a metà,
+  // che si vede a colpo d'occhio e non la segnala nessun test. Il bordo di una
+  // cella copre anche il suo padding, quindi così il filetto è continuo.
+  gap: 0.4rem 0;
+  // Una colonna di lettura, non tutta la larghezza del pannello: i 1440px di un
+  // portatile largo metterebbero l'etichetta e la cifra agli antipodi.
+  max-width: 34rem;
+  margin: 0;
+
+  dt {
+    margin: 0;
+    padding-right: 2rem;
+    color: var(--text-muted);
+  }
+
+  dd {
+    margin: 0;
+    text-align: right;
+    // ⚠️ `tabular-nums` non è cosmesi: è una colonna di importi che si legge
+    // sommandoli a occhio, e con le cifre a larghezza variabile le virgole non
+    // si allineano.
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.cm__somma {
+  // ⚠️⚠️ Era `var(--border)`, e `--border` NON ESISTE fra i token del progetto
+  // (ci sono `--line` e `--line-strong`): in una shorthand un `var()` irrisolto
+  // rende invalida l'intera dichiarazione, quindi `border-style` restava
+  // `none`. Il `padding-top` invece si applicava — cioè restava lo spazio di
+  // una separazione che non c'era, e a occhio si legge come un margine
+  // sbagliato. `--line-strong` è lo stesso token del filetto dell'intestazione
+  // sticky, quindi questo filetto e quello della tabella accanto pesano uguale.
+  border-top: 1px solid var(--line-strong);
+  padding-top: 0.4rem;
+  font-weight: 600;
+}
+
+.cm__margine {
+  border-top: 2px solid var(--copper-600);
+  padding-top: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+// ⚠️ Una perdita si dichiara col colore E col segno meno che il template già
+// stampa: il solo colore non arriva a chi non lo distingue.
+//
+// ⚠️ Niente ripiego dietro a `--danger`: è definito in tutti e tre i temi,
+// quindi il `#c0392b` che stava qui non poteva scattare — e se fosse scattato
+// avrebbe portato un rosso fuori palette (in Notte il danger è un corallo). Un
+// ripiego irraggiungibile mente a chi legge il foglio.
+.is-perdita {
+  color: var(--danger);
+}
+
+// ── La tabella del rakeback ─────────────────────────────────────────────────
+
+.cm__rakeback {
+  .is-num {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  // ⚠️⚠️ Vanno a capo le sole INTESTAZIONI, e solo di questa tabella. Otto
+  // colonne di cui sei di numeri, con etichette lunghe («Erogata in bonus»,
+  // «Spetta al player»), imponevano alla tabella un minimo di 879px: misurato a
+  // **1100px** — la stretta vera del pannello, dove la sidebar è ancora
+  // affiancata e la colonna di contenuto è al minimo — ne restano 788, e la
+  // tabella sfondava di 91px. A 1024 la sidebar collassa e lo spazio TORNA a
+  // 984: per questo l'elenco di larghezze che saltava da 1280 a 1024 non
+  // vedeva niente.
+  //
+  // ⚠️ Le celle del CORPO restano `nowrap`: una riga che si sdoppia distrugge
+  // la densità, che è l'unica ragione per cui questa è una tabella e non un
+  // elenco di card. L'intestazione si scrive una volta sola e non paga densità.
+  thead th {
+    white-space: normal;
+  }
+
+  // Le celle calcolate si distinguono da quelle che si compilano: sono in sola
+  // lettura, e senza una differenza visiva si prova a cliccarci dentro.
+  .cm__calcolata {
+    color: var(--text-muted);
+  }
+
+  // ⚠️⚠️ Questa riga esiste per una trappola di specificità, non per gusto:
+  // `.cm__rakeback .cm__calcolata` vale (0,4,0) — l'incapsulamento di Angular
+  // attacca un attributo a OGNI pezzo del selettore — contro lo (0,2,0) di
+  // `.is-perdita`. Il grigio vinceva sul rosso, e in tabella un importo
+  // negativo NON diventava mai rosso. Difetto muto: HTML valido, build verde,
+  // Karma verde — c'è ora una spec apposta.
+  .cm__calcolata.is-perdita {
+    color: var(--danger);
+  }
+
+  // ⚠️ Il RISULTATO della riga non è una cella spenta come le altre calcolate:
+  // il colore qui dice da dove viene il numero, non quanto conta. Col solo
+  // `--text-muted` il margine pesava meno dei campi che lo producono, mentre
+  // nella striscia dei totali lo stesso valore è a colore pieno — due rese per
+  // lo stesso concetto, con la gerarchia rovesciata.
+  .cm__esito {
+    color: var(--text);
+  }
+}
+
+// ⚠️ I campi della griglia sono a 44px come tutto il pannello, NON a 54,5px
+// come `.input` dei form pubblici: accanto a una riga di tabella alta 45px un
+// campo più alto la sfonderebbe.
+.cm__cella {
+  // ⚠️⚠️ SERVONO padding e font-size, non il solo `min-height`. `.input` è la
+  // primitiva dei form PUBBLICI (54,5px, carattere 16px) e `min-height` è un
+  // PAVIMENTO: non stringe niente, perché l'altezza vera nasce dal padding.
+  // Con il solo `min-height` la riga misurava 50px contro il tetto di 46 di
+  // `check-admin-tabelle.mjs`. È la stessa ricetta che `admin-modale.scss`
+  // applica per la stessa ragione, ed è lì che è scritta per esteso.
+  min-height: 44px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.875rem;
+  // ⚠️ Il rientro negativo vale ESATTAMENTE il padding verticale della cella
+  // (0.3rem in `admin-table.scss`), ed è lo stesso trucco già scritto per
+  // `.admin-ico`: senza, 44px di campo più 9,6 di padding fanno una riga da
+  // 53,6px.
+  margin-block: -0.3rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  max-width: 7rem;
+  // ⚠️ Lo sfondo del campo NON segue quello della riga: `.input` dichiara
+  // `background: var(--surface-1)` mentre l'hover colora la CELLA — in Notte
+  // due riquadri spenti dentro una riga accesa, e in Ghiaccio un `#ffffff` su
+  // cella `#f7f5f0`. Quel bianco è per giunta lo stesso delle due colonne
+  // ferme, quindi lo stesso colore direbbe insieme «colonna congelata» e «qui
+  // si scrive». Trasparente: il campo si riconosce dal bordo e segue la riga.
+  background: transparent;
+
+  // ⚠️ Sotto i 560px il carattere torna a 16px: iOS ingrandisce la pagina
+  // quando il fuoco entra in un campo più piccolo, e da quello zoom non si
+  // torna indietro. È la stessa regola di `admin-modale.scss`.
+  @media (max-width: s.$bp-modale-piena) {
+    font-size: 16px;
+  }
+
+  // ⚠️ `--glow-cyan` è `0 0 0 3px` SENZA sfocatura, e col rientro negativo qui
+  // sopra il bordo del campo coincide con quello della cella: l'anello di fuoco
+  // si disegnava SOPRA le righe vicine. Un `outline` rientrato di 2px sta
+  // dentro la cella e resta perfettamente visibile a chi naviga con Tab.
+  &:focus {
+    box-shadow: none;
+    outline: 2px solid var(--neon-cyan);
+    outline-offset: -2px;
+  }
+
+  &.is-error {
+    border-color: var(--danger);
+  }
+}
+
+// ⚠️ `.cm__metodo` non esiste piu': il selettore della forma di pagamento
+// stava DENTRO la cella accanto all'importo, e i due controlli affiancati
+// portavano la tabella a sfondare di 119px a 1024 e la riga a 62px. Ora vive
+// nella scheda di riga, che e' la grammatica di tutte le altre tabelle del
+// pannello.
+//
+// ⚠️ La misura si rifà con `shot-conteggi.mjs`, che è GITIGNORATO come tutta la
+// famiglia `shot-*`/`e2e-*`: il repo NON lo contiene, e citarlo come prova
+// manda a cercare un file che non c'è. La prova committata è
+// `scripts/check-admin-tabelle.mjs`.
+
+// Sotto la soglia di ripiegamento la tabella diventa un elenco di blocchi: i
+// campi possono prendersi tutta la larghezza, che è quella che serve col dito.
+@media (max-width: s.$bp-tabella-blocchi) {
+  // ⚠️⚠️ LE ETICHETTE SERVONO SOLO QUI, e sono la correzione di un difetto vero
+  // trovato guardando la pagina a 390px. Il foglio condiviso spegne `thead` con
+  // una premessa scritta a chiare lettere: «ogni blocco si legge da sé, perché
+  // ogni valore porta con sé la propria etichetta». Vale per le altre tabelle
+  // del pannello, dove le celle contengono badge, date e testo che si spiegano;
+  // qui sono SEI CIFRE NUDE, e ripiegate diventavano «86,80 · 26,98 € · 16,56 €
+  // · 0,00 · 10,42 €» — cinque numeri di cui non si sa quale sia quale, su una
+  // schermata di contabilità.
+  //
+  // ⚠️ Sta nel foglio LOCALE e non in `admin-table.scss`: quello è importato da
+  // sedici componenti, e un `::before` generico lì cambierebbe tredici tabelle
+  // che il problema non ce l'hanno.
+  .cm__rakeback td[data-etichetta] {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 100%;
+    text-align: left;
+
+    &::before {
+      content: attr(data-etichetta);
+      flex: 0 0 9rem;
+      color: var(--text-faint);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  .cm__cella {
+    max-width: none;
+    width: 100%;
+    text-align: left;
+    // ⚠️ Qui la cella ha `padding: 0` (ripiegamento a blocchi), quindi il
+    // rientro negativo non ha piu' niente da compensare e va AZZERATO, o il
+    // campo sale sopra l'etichetta della riga.
+    margin-block: 0;
+  }
+}

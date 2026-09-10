@@ -1,0 +1,182 @@
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import {
+  ContoRakeback,
+  ContoRakebackPayload,
+  DettaglioMese,
+  MeseContabile,
+  RigaRakebackPayload,
+  SpesaRicorrente,
+  SpesaRicorrentePayload,
+  VoceMese,
+  VocePayload,
+} from '../models/api.models';
+
+const API = environment.API_URL;
+
+/**
+ * I conteggi mensili (rotte ADMIN-only su /admin/conteggi).
+ *
+ * ⚠️ Gli importi viaggiano in CENTESIMI INTERI e le percentuali in PUNTI BASE
+ * in entrambe le direzioni: la conversione vive in un punto solo,
+ * `features/admin/denaro.ts`, sul bordo dell'interfaccia.
+ *
+ * ⚠️ Ogni mutazione restituisce il DETTAGLIO DEL MESE ricalcolato, non solo la
+ * riga toccata: righe, totali e conto economico nascono da una lettura sola e
+ * quindi non possono dissentire fra loro. Il client non somma mai niente da sé.
+ */
+@Injectable({ providedIn: 'root' })
+export class AdminConteggiService {
+  private readonly http = inject(HttpClient);
+
+  // ── Mesi ─────────────────────────────────────────────────────────────────
+
+  listMesi(): Observable<MeseContabile[]> {
+    return this.http.get<MeseContabile[]>(`${API}/admin/conteggi/mesi`);
+  }
+
+  /**
+   * ⚠️ È idempotente: apre il mese se non c'è e in ogni caso sincronizza le
+   * spese ricorrenti attive e i conti attivi. Chiamarla due volte non duplica
+   * niente — lo impediscono i due indici unique, non un controllo nel codice.
+   */
+  apriMese(
+    anno: number,
+    mese: number,
+    quotaTitolareBp?: number,
+  ): Observable<DettaglioMese> {
+    return this.http.post<DettaglioMese>(`${API}/admin/conteggi/mesi`, {
+      anno,
+      mese,
+      ...(quotaTitolareBp !== undefined ? { quotaTitolareBp } : {}),
+    });
+  }
+
+  dettaglio(meseId: string): Observable<DettaglioMese> {
+    return this.http.get<DettaglioMese>(
+      `${API}/admin/conteggi/mesi/${meseId}`,
+    );
+  }
+
+  sincronizza(
+    meseId: string,
+  ): Observable<{ vociCreate: number; righeCreate: number }> {
+    return this.http.post<{ vociCreate: number; righeCreate: number }>(
+      `${API}/admin/conteggi/mesi/${meseId}/sincronizza`,
+      {},
+    );
+  }
+
+  chiudiMese(meseId: string): Observable<DettaglioMese> {
+    return this.http.post<DettaglioMese>(
+      `${API}/admin/conteggi/mesi/${meseId}/chiudi`,
+      {},
+    );
+  }
+
+  riapriMese(meseId: string): Observable<DettaglioMese> {
+    return this.http.post<DettaglioMese>(
+      `${API}/admin/conteggi/mesi/${meseId}/riapri`,
+      {},
+    );
+  }
+
+  notaMese(meseId: string, nota: string): Observable<MeseContabile> {
+    return this.http.patch<MeseContabile>(
+      `${API}/admin/conteggi/mesi/${meseId}/nota`,
+      { nota },
+    );
+  }
+
+  // ── Voci ─────────────────────────────────────────────────────────────────
+
+  creaVoce(meseId: string, body: VocePayload): Observable<VoceMese> {
+    return this.http.post<VoceMese>(
+      `${API}/admin/conteggi/mesi/${meseId}/voci`,
+      body,
+    );
+  }
+
+  aggiornaVoce(voceId: string, body: VocePayload): Observable<VoceMese> {
+    return this.http.patch<VoceMese>(
+      `${API}/admin/conteggi/voci/${voceId}`,
+      body,
+    );
+  }
+
+  eliminaVoce(voceId: string): Observable<void> {
+    return this.http.delete<void>(`${API}/admin/conteggi/voci/${voceId}`);
+  }
+
+  // ── La colonna del rakeback ──────────────────────────────────────────────
+
+  /**
+   * ⚠️ UNA chiamata per tutta la colonna, non una per cella: il calcolo del
+   * rakeback vive solo sul server e questo client non ne ha una copia. La
+   * risposta è il mese ricalcolato, totali compresi.
+   */
+  salvaRakeback(
+    meseId: string,
+    righe: RigaRakebackPayload[],
+  ): Observable<DettaglioMese> {
+    return this.http.put<DettaglioMese>(
+      `${API}/admin/conteggi/mesi/${meseId}/rakeback`,
+      { righe },
+    );
+  }
+
+  // ── Anagrafiche ──────────────────────────────────────────────────────────
+
+  listRicorrenti(): Observable<SpesaRicorrente[]> {
+    return this.http.get<SpesaRicorrente[]>(
+      `${API}/admin/conteggi/ricorrenti`,
+    );
+  }
+
+  creaRicorrente(
+    body: SpesaRicorrentePayload,
+  ): Observable<SpesaRicorrente> {
+    return this.http.post<SpesaRicorrente>(
+      `${API}/admin/conteggi/ricorrenti`,
+      body,
+    );
+  }
+
+  aggiornaRicorrente(
+    id: string,
+    body: SpesaRicorrentePayload,
+  ): Observable<SpesaRicorrente> {
+    return this.http.patch<SpesaRicorrente>(
+      `${API}/admin/conteggi/ricorrenti/${id}`,
+      body,
+    );
+  }
+
+  eliminaRicorrente(id: string): Observable<void> {
+    return this.http.delete<void>(`${API}/admin/conteggi/ricorrenti/${id}`);
+  }
+
+  listConti(): Observable<ContoRakeback[]> {
+    return this.http.get<ContoRakeback[]>(`${API}/admin/conteggi/conti`);
+  }
+
+  creaConto(body: ContoRakebackPayload): Observable<ContoRakeback> {
+    return this.http.post<ContoRakeback>(`${API}/admin/conteggi/conti`, body);
+  }
+
+  aggiornaConto(
+    id: string,
+    body: ContoRakebackPayload,
+  ): Observable<ContoRakeback> {
+    return this.http.patch<ContoRakeback>(
+      `${API}/admin/conteggi/conti/${id}`,
+      body,
+    );
+  }
+
+  eliminaConto(id: string): Observable<void> {
+    return this.http.delete<void>(`${API}/admin/conteggi/conti/${id}`);
+  }
+}

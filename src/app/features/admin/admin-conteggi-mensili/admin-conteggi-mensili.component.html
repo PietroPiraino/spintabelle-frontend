@@ -1,0 +1,1526 @@
+<!--
+  ⚠️ `admin-users` è il RITMO condiviso (colonna + `gap: 1rem`), non «la classe
+  di /admin/iscritti»: la usano tredici sezioni su diciotto. Senza, `.cm` non è
+  dichiarata in nessun foglio e col reset globale i blocchi restavano adiacenti
+  a 0px, con i quattro pannelli a quattro offset diversi.
+-->
+<div class="cm admin-users">
+  @if (error()) {
+    <div class="form-feedback is-error" role="alert">
+      {{ error() }}
+      <button type="button" class="btn btn--ghost btn--sm" (click)="carica()">
+        Riprova
+      </button>
+    </div>
+  }
+
+  @if (dett(); as d) {
+    @if (d.troncato) {
+      <!--
+        ⚠️ Un tetto raggiunto si DICE. Le letture di questa sezione non
+        paginano — un conto economico letto a metà è un totale sbagliato — e
+        l'unico modo onesto di avere un tetto è dichiarare quando scatta.
+      -->
+      <p class="form-feedback is-error" role="alert">
+        Questo mese ha più righe di quante questa schermata ne mostri: i totali
+        qui sotto NON sono completi.
+      </p>
+    }
+
+    <!--
+      ⚠️ Le schede stanno IN CIMA e la barra vive dentro ogni pannello, come
+      nelle altre tre sezioni a schede (affiliazioni, negozio, partecipazione).
+      Invertito com'era prima, sopra il pannello Anagrafiche restavano il
+      selettore del mese, la pastiglia Aperto/Chiuso e un `+` — tre comandi che
+      su quel pannello non fanno niente, perché conti e spese fisse sono dati
+      GLOBALI e non appartengono a nessun mese.
+
+      ⚠️ `[primarie]="true"` e mai l'attributo nudo: un attributo statico lega
+      l'input alla stringa vuota, che è falsa, e la variante resta inerte.
+    -->
+    <app-schede
+      #sch
+      etichetta="Sezioni dei conteggi"
+      [primarie]="true"
+      [voci]="viste()"
+      [scelto]="vista()"
+      (scegli)="vista.set($event)"
+    />
+
+    <div
+      role="tabpanel"
+      tabindex="0"
+      class="cm__pannello"
+      [id]="sch.idPannello()"
+      [attr.aria-labelledby]="sch.idSchedaAttiva()"
+    >
+      <!--
+        ⚠️ La barra è UNA per i tre pannelli legati al mese. Anagrafiche non
+        l'ha: là il mese non c'entra, e i suoi due elenchi prendono una barra
+        PROPRIA ciascuno, col titolo che nomina la tabella sotto e il `+` che
+        crea la riga di quella tabella.
+
+        ⚠️ Il titolo dice in che SCHEDA si è, non come si chiama la sezione:
+        «Conteggi mensili» la stampa già la topbar della shell, e ripeterlo qui
+        lo scriveva due volte nella stessa schermata. Su sedici sezioni,
+        quattordici differenziano.
+      -->
+      @if (vista() !== 'anagrafiche') {
+        <div class="admin-barra">
+          <h2 class="admin-barra__titolo">{{ titoloPannello() }}</h2>
+
+          <!--
+            ⚠️ Selettore e pastiglia stanno in UN elemento solo, e non è un
+            raggruppamento estetico: `.admin-barra` è `space-between`, quindi lo
+            spazio libero si spalma nei buchi FRA i figli — e siccome le tre
+            barre hanno un numero diverso di figli (il Riepilogo ha anche il
+            `+`), passando da una scheda all'altra il selettore del mese si
+            spostava di ~200px. Un solo figlio con `flex: 1` assorbe lo spazio,
+            e i controlli restano dove erano.
+          -->
+          <div class="cm__mese">
+            @if (mesi(); as elenco) {
+              @if (elenco.length) {
+                <select
+                  class="input admin-barra__campo"
+                  aria-label="Mese contabile"
+                  [value]="mese()?.id ?? ''"
+                  (change)="scegliMese($any($event.target).value)"
+                >
+                  @for (m of elenco; track m.id) {
+                    <option [value]="m.id">{{ m.etichetta }}</option>
+                  }
+                </select>
+              }
+            }
+
+            @if (mese(); as m) {
+              <!--
+                ⚠️ `.admin-stato` e non un `.badge`: lo stato del mese CAMBIA da
+                sé (aperto → chiuso → riaperto). I badge portano i fatti
+                immutabili — è la regola di confine scritta in
+                `admin-lessons.component.html`.
+              -->
+              <span class="admin-stato" [attr.data-tono]="tonoMese()">
+                {{ m.stato === 'APERTO' ? 'Aperto' : 'Chiuso' }}
+              </span>
+            }
+          </div>
+
+          <!--
+            ⚠️ Il `+` del Riepilogo apre un MESE, ed è l'unico pannello in cui
+            può stare senza mentire: sotto non c'è alcuna tabella di cui possa
+            sembrare la riga nuova. Negli altri pannelli il `+` crea la riga
+            dell'elenco che ha sotto, come in otto sezioni su otto.
+          -->
+          @if (vista() === 'riepilogo') {
+            <button
+              type="button"
+              class="admin-ico admin-barra__crea"
+              aria-haspopup="dialog"
+              aria-label="Apri un altro mese contabile"
+              title="Apri un mese"
+              (click)="apriModaleMese()"
+            >
+              <app-icon name="plus" [size]="18" />
+            </button>
+          }
+
+          @if (vista() === 'voci') {
+            <button
+              type="button"
+              class="admin-ico admin-barra__crea"
+              aria-haspopup="dialog"
+              aria-label="Aggiungi una voce a questo mese"
+              title="Aggiungi una voce"
+              [disabled]="d.mese.stato !== 'APERTO'"
+              (click)="apriVoce('nuova')"
+            >
+              <app-icon name="plus" [size]="18" />
+            </button>
+          }
+        </div>
+      }
+
+      <!-- ══ Riepilogo ═══════════════════════════════════════════════════ -->
+      @if (vista() === 'riepilogo') {
+        @if (!d.mese.riepilogoCongelato && d.mese.stato === 'CHIUSO') {
+          <p class="admin-nota">
+            Questo mese è chiuso ma i numeri sono ricalcolati al momento: lo
+            scatto congelato non è stato scritto. Chiudilo di nuovo per
+            fissarlo.
+          </p>
+        } @else if (d.mese.riepilogoCongelato) {
+          <p class="admin-nota">
+            Numeri <strong>congelati</strong> alla chiusura
+            @if (d.mese.chiusoDaAdminEmail) { da {{ d.mese.chiusoDaAdminEmail }} }.
+            Riaprendo il mese tornano a ricalcolarsi.
+          </p>
+        }
+
+        <dl class="cm__conto">
+          <dt>Abbonamenti in euro</dt>
+          <dd class="is-num">{{ eur(d.riepilogo.entrate.abbonamentiCent) }}</dd>
+          <dt>Gadget in euro</dt>
+          <dd class="is-num">{{ eur(d.riepilogo.entrate.gadgetCent) }}</dd>
+          <dt>Commissioni rakeback</dt>
+          <dd class="is-num">
+            {{ eur(d.riepilogo.entrate.commissioniRakebackCent) }}
+          </dd>
+          <!--
+            ⚠️ Lo staking ha una riga PROPRIA e non finisce in «Altre entrate»:
+            è l'unica categoria di entrata a mano che il riepilogo separa, e
+            senza questa riga non si saprebbe mai quanto ha reso in un mese.
+            ⚠️ Il numero arriva da voci scritte a mano, NON dal registro
+            `/admin/stakings`: quel modulo conosce solo i fondi erogati e l'EV
+            da recuperare, e un giocatore in profitto non sa rappresentarlo.
+          -->
+          <dt>Staking</dt>
+          <dd class="is-num">{{ eur(d.riepilogo.entrate.stakingCent) }}</dd>
+          <dt>Altre entrate</dt>
+          <dd class="is-num">{{ eur(d.riepilogo.entrate.altreCent) }}</dd>
+          <dt class="cm__somma">Totale entrate</dt>
+          <dd class="is-num cm__somma">
+            {{ eur(d.riepilogo.entrate.totaleCent) }}
+          </dd>
+
+          <dt>Spese</dt>
+          <dd class="is-num">− {{ eur(d.riepilogo.uscite.speseCent) }}</dd>
+
+          <dt class="cm__margine">Margine netto della scuola</dt>
+          <dd class="is-num cm__margine" [class.is-perdita]="d.riepilogo.margineNettoCent < 0">
+            {{ eur(d.riepilogo.margineNettoCent) }}
+          </dd>
+        </dl>
+
+        <section class="cm__gruppo">
+          <h3 class="cm__h3">Come si divide</h3>
+          <dl class="cm__conto">
+            <dt>
+              Quota titolare ({{ pct(d.riepilogo.ripartizione.quotaTitolareBp) }})
+            </dt>
+            <dd class="is-num">{{ eur(d.riepilogo.ripartizione.titolareCent) }}</dd>
+            <dt>
+              Quota socio ({{ pct(10000 - d.riepilogo.ripartizione.quotaTitolareBp) }})
+            </dt>
+            <dd class="is-num">{{ eur(d.riepilogo.ripartizione.socioCent) }}</dd>
+          </dl>
+          <p class="admin-nota">
+            La percentuale è quella <strong>scritta su questo mese</strong>:
+            cambiarla d'ora in poi non riscrive i mesi già aperti.
+          </p>
+        </section>
+
+        @if (d.riepilogo.marginePersonaleCent !== 0) {
+          <section class="cm__gruppo">
+            <h3 class="cm__h3">Fuori dalla divisione</h3>
+            <dl class="cm__conto">
+              <dt>Margine personale</dt>
+              <dd class="is-num">{{ eur(d.riepilogo.marginePersonaleCent) }}</dd>
+            </dl>
+            <p class="admin-nota">
+              Sono i conti marcati «Personale»: il loro margine non appartiene
+              alla scuola e non entra nella divisione qui sopra.
+            </p>
+          </section>
+        }
+
+        <section class="cm__gruppo">
+          <h3 class="cm__h3">Cassa verso i giocatori</h3>
+          <dl class="cm__conto">
+            <dt>Atteso dall'agente</dt>
+            <dd class="is-num">
+              {{ eur(d.riepilogo.cassaGiocatori.attesoDaAgenteCent) }}
+            </dd>
+            <dt>Pagato ai giocatori</dt>
+            <dd class="is-num">
+              {{ eur(d.riepilogo.cassaGiocatori.pagatoAiGiocatoriCent) }}
+            </dd>
+            <!--
+              ⚠️⚠️ «di questo mese» NON è una precisazione di stile: il conto col
+              giocatore non si trascina, per decisione. Misurato — dato a Gwent23
+              un ticket da 270 € contro 267,01 dovuti, il residuo va a −2,99 e il
+              mese dopo riparte da 267,01: la differenza EVAPORA. Vale nei due
+              versi: tre mesi senza pagare nessuno dicono ogni volta «resta da
+              dare 267,01», mai 801,03. Un'etichetta che si legge «in tutto»
+              mentre vale «di questo mese» è la stessa classe di difetto di un
+              totale che non nomina il proprio insieme.
+            -->
+            <dt>Resta da dare (di questo mese)</dt>
+            <dd class="is-num">
+              {{ eur(d.riepilogo.cassaGiocatori.residuoDovutoCent) }}
+            </dd>
+          </dl>
+          <!--
+            ⚠️ La distinzione non è pedanteria: sui dati veri il margine di
+            competenza e il netto di cassa differiscono di oltre cento euro, e
+            dividendo la cassa un mese in cui non si paga nessuno sembrerebbe un
+            mese ricco.
+          -->
+          <p class="admin-nota">
+            Sono <strong>partite di giro</strong>, non guadagno: il rakeback entra
+            nel margine qui sopra per quanto è <em>maturato</em>, non per quanto è
+            già passato di mano.
+          </p>
+          <p class="admin-nota">
+            Il conto <strong>non si trascina</strong>: quello che resta da dare o
+            che è stato dato in più si legge su questo mese e basta. Il mese
+            prossimo riparte dal rake del mese prossimo.
+          </p>
+        </section>
+
+        @if (d.riepilogo.abbonamentiStimati > 0) {
+          <p class="admin-nota">
+            ⚠️ {{ d.riepilogo.abbonamentiStimati }}
+            {{ d.riepilogo.abbonamentiStimati === 1 ? 'abbonamento non ha' : 'abbonamenti non hanno' }}
+            il prezzo registrato: {{ d.riepilogo.abbonamentiStimati === 1 ? 'è stato ricostruito' : 'sono stati ricostruiti' }}
+            dal listino in vigore quel giorno. È una stima.
+          </p>
+        }
+
+        <div class="row cm__azioni">
+          @if (d.mese.stato === 'APERTO') {
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="sincronizza()"
+            >
+              Sincronizza anagrafiche
+            </button>
+            @if (conferma() === 'chiudi') {
+              <span class="admin-nota">
+                Chiudendo, i numeri si congelano e il mese non si potrà più
+                modificare.
+              </span>
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                (click)="chiudiMese()"
+              >
+                Chiudi davvero
+              </button>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="annulla()"
+              >
+                Annulla
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                (click)="chiedi('chiudi')"
+              >
+                Chiudi il mese
+              </button>
+            }
+          } @else {
+            @if (conferma() === 'riapri') {
+              <span class="admin-nota">
+                Riaprendo, i numeri congelati si perdono e tornano a
+                ricalcolarsi.
+              </span>
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                (click)="riapriMese()"
+              >
+                Riapri davvero
+              </button>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="annulla()"
+              >
+                Annulla
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="chiedi('riapri')"
+              >
+                Riapri il mese
+              </button>
+            }
+          }
+        </div>
+      }
+
+      <!-- ══ Rakeback ════════════════════════════════════════════════════ -->
+      @if (vista() === 'rakeback') {
+        @if (!d.righe.length) {
+          <p class="admin-nota">
+            Nessun conto in questo mese. I conti si aggiungono da
+            <strong>Anagrafiche</strong>, poi si usa «Sincronizza anagrafiche»
+            nel Riepilogo per farli entrare nel mese.
+          </p>
+        } @else {
+          <!--
+            ⚠️ Un dato che sparisce senza spiegazione fa cercare un guasto: le
+            percentuali pattuite, il conteggio degli scaglioni e il netto di
+            cassa NON sono in tabella e la riga qui sotto dice dove sono. Sono
+            usciti per una misura, non per gusto — con undici colonne la tabella
+            sfondava di 182px a 1024 e la riga arrivava a 62px contro il tetto
+            di 46 del pannello.
+          -->
+          <p class="admin-nota">
+            Percentuali, scaglioni maturati e netto di cassa sono nella scheda
+            di ogni riga: aprila con <strong>⋮</strong>.
+          </p>
+
+          <!--
+            ⚠️ I totali sono una STRISCIA SOPRA la tabella e non più un
+            `<tfoot>`, e la ragione è che il piede non si vedeva come doveva:
+            `border-top` su un `<tr>` è IGNORATO dal browser nel modello a bordi
+            separati, e questa tabella è `border-collapse: separate` per scelta
+            esplicita (una cella sticky coi bordi fusi perde il proprio bordo).
+            Passava il solo `font-weight`, quindi sembrava «quasi giusto». E
+            sotto i 720px le celle del piede non portano `data-etichetta`: la
+            riga più importante era l'unica illeggibile.
+
+            ⚠️ La striscia NOMINA l'insieme che somma (`admin-totali__ambito`):
+            un totale che non dice cosa sta sommando si legge come «tutto».
+          -->
+          <p class="admin-totali">
+            <span class="admin-totali__voce">
+              Rake generato <strong>{{ eur(d.totaliRakeback.rakeGeneratoCent) }}</strong>
+            </span>
+            <span class="admin-totali__voce">
+              Pagato <strong>{{ eur(d.totaliRakeback.pagatoAlPlayerCent) }}</strong>
+            </span>
+            <span class="admin-totali__voce">
+              Erogata in bonus <strong>{{ eur(d.totaliRakeback.erogatoBonusCent) }}</strong>
+            </span>
+            <span class="admin-totali__voce">
+              Da incassare <strong>{{ eur(d.totaliRakeback.spettanteDaAgenteCent) }}</strong>
+            </span>
+            <span class="admin-totali__voce">
+              Spetta ai player <strong>{{ eur(d.totaliRakeback.spettanteAlPlayerCent) }}</strong>
+            </span>
+            <span class="admin-totali__voce">
+              Margine <strong>{{ eur(d.totaliRakeback.profittoAgenteCent) }}</strong>
+            </span>
+            <span class="admin-totali__ambito">{{ ambito() }}</span>
+          </p>
+
+          <p class="admin-nota admin-table__nota-mobile">
+            Su schermi stretti la colonna «Erogata in bonus» è nascosta: la
+            trovi nella scheda della riga.
+          </p>
+
+          <div class="admin-table__scroll">
+            <table class="admin-table cm__rakeback">
+              <caption class="visually-hidden">
+                Rakeback del mese: si compilano solo rake generato e pagato
+              </caption>
+              <thead>
+                <!--
+                  ⚠️ L'ordine delle colonne è quello di un libro mastro: prima
+                  ciò che si INSERISCE, poi ciò che se ne DERIVA. Rake e pagato
+                  erano separati da tre colonne calcolate e dal `⋮`, quindi il
+                  Tab da un campo al successivo attraversava il comando della
+                  riga e il campo della riga DOPO.
+                -->
+                <tr>
+                  <th scope="col" class="admin-table__c-primo">Giocatore</th>
+                  <th scope="col" class="is-num">Rake generato</th>
+                  <th scope="col" class="is-num">Pagato</th>
+                  <th scope="col" class="is-num admin-table__solo-largo">
+                    Erogata in bonus
+                  </th>
+                  <th scope="col" class="is-num">Da incassare</th>
+                  <th scope="col" class="is-num">Spetta al player</th>
+                  <th scope="col" class="is-num">Margine</th>
+                  <th scope="col" class="admin-table__c-ultimo">
+                    <span class="visually-hidden">Azioni</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of d.righe; track r.contoId) {
+                  <tr>
+                    <th scope="row" class="admin-table__c-primo">
+                      <span class="admin-table__ident">
+                        <span class="admin-table__ident-riga">
+                          <strong [title]="r.username">{{ r.username }}</strong>
+                          @if (r.destinazione === 'PERSONALE') {
+                            <!--
+                              ⚠️ `.badge` e non `.admin-stato`: la destinazione
+                              di un conto è un FATTO, non uno stato che cambia
+                              da sé.
+                            -->
+                            <span class="badge badge--tag">Personale</span>
+                          }
+                        </span>
+                        @if (r.nomeReale) {
+                          <span class="admin-table__sub" [title]="r.nomeReale">
+                            {{ r.nomeReale }}
+                          </span>
+                        }
+                      </span>
+                    </th>
+
+                    <!--
+                      ⚠️⚠️ A mese CHIUSO non si rende alcun `<input>`: si stampa
+                      il valore come in ogni altra colonna. Erano trenta
+                      controlli `[disabled]`, disegnati dal foglio del browser
+                      perché il progetto non ha alcuno stile `:disabled` per
+                      `.input` — e non va inventato qui. Così la tabella torna
+                      di sola lettura come le altre tredici del pannello, e che
+                      il mese sia chiuso si legge dalla FORMA e non da un grigio.
+                    -->
+                    <td class="is-num" data-etichetta="Rake generato">
+                      @if (d.mese.stato === 'APERTO') {
+                        <label class="visually-hidden" [attr.for]="'rake-' + r.contoId">
+                          Rake generato da {{ r.username }}
+                        </label>
+                        <input
+                          [id]="'rake-' + r.contoId"
+                          type="text"
+                          inputmode="decimal"
+                          class="input cm__cella"
+                          [class.is-error]="righeNonValide().includes(r.contoId)"
+                          [value]="bozza()[r.contoId]?.rake ?? ''"
+                          (input)="scriviRake(r.contoId, $any($event.target).value)"
+                          autocomplete="off"
+                          placeholder="0,00"
+                        />
+                      } @else {
+                        {{ eur(r.rakeGeneratoCent) }}
+                      }
+                    </td>
+
+                    <td class="is-num" data-etichetta="Pagato">
+                      @if (d.mese.stato === 'APERTO') {
+                        <label class="visually-hidden" [attr.for]="'pag-' + r.contoId">
+                          Pagato a {{ r.username }}
+                        </label>
+                        <input
+                          [id]="'pag-' + r.contoId"
+                          type="text"
+                          inputmode="decimal"
+                          class="input cm__cella"
+                          [class.is-error]="righeNonValide().includes(r.contoId)"
+                          [value]="bozza()[r.contoId]?.pagato ?? ''"
+                          (input)="scriviPagato(r.contoId, $any($event.target).value)"
+                          autocomplete="off"
+                          placeholder="0,00"
+                        />
+                      } @else {
+                        {{ eur(r.pagatoAlPlayerCent) }}
+                      }
+                    </td>
+
+                    <!--
+                      ⚠️ Il conteggio degli scaglioni sta nel `title` e non su
+                      una seconda riga: la riga di tabella deve restare sotto i
+                      46px (`RIGA_MAX` di `check-admin-tabelle.mjs`), e con la
+                      sotto-riga misurava 62. Il numero resta leggibile col
+                      puntatore, e per intero nella scheda di riga — che sul
+                      telefono è la strada, perché il `title` col dito non si
+                      apre.
+                    -->
+                    <td
+                      class="is-num admin-table__solo-largo cm__calcolata"
+                      [title]="
+                        r.scaglioni +
+                        (r.scaglioni === 1 ? ' scaglione' : ' scaglioni') +
+                        ' maturati'
+                      "
+                    >
+                      {{ eur(r.erogatoBonusCent) }}
+                    </td>
+                    <td class="is-num cm__calcolata" data-etichetta="Da incassare">
+                      {{ eur(r.spettanteDaAgenteCent) }}
+                    </td>
+                    <td
+                      class="is-num cm__calcolata"
+                      data-etichetta="Spetta al player"
+                      [class.is-perdita]="r.spettanteAlPlayerCent < 0"
+                    >
+                      {{ eur(r.spettanteAlPlayerCent) }}
+                    </td>
+                    <td
+                      class="is-num cm__calcolata cm__esito"
+                      data-etichetta="Margine"
+                      [class.is-perdita]="r.profittoAgenteCent < 0"
+                    >
+                      <strong>{{ eur(r.profittoAgenteCent) }}</strong>
+                    </td>
+                    <td class="admin-table__c-ultimo">
+                      <!--
+                        ⚠️ Comando solo-icona, quindi il nome accessibile NOMINA
+                        LA RIGA: `app-icon` porta `aria-hidden` sull'host, e
+                        quindici bottoni con la stessa etichetta sarebbero
+                        quindici bottoni anonimi.
+                        ⚠️ `aria-haspopup="dialog"` e non «menu»: i tre puntini
+                        in giro per il mondo aprono un menu, qui una scheda.
+                      -->
+                      <button
+                        type="button"
+                        class="admin-ico"
+                        aria-haspopup="dialog"
+                        [attr.aria-label]="'Apri la scheda di ' + r.username"
+                        title="Apri la scheda"
+                        (click)="apriRiga(r)"
+                      >
+                        <app-icon name="more-vertical" [size]="18" />
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!--
+            ⚠️ I totali arrivano dal SERVER, riga per riga e in coda: il client
+            non ne somma nessuno. E il salvataggio è UNO per tutta la colonna,
+            non uno per cella — il calcolo del rakeback vive solo sul server.
+          -->
+          @if (d.mese.stato === 'APERTO') {
+            <div class="row cm__azioni">
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                [disabled]="!sporcoRakeback() || salvando()"
+                (click)="salvaRakeback()"
+              >
+                {{ salvando() ? 'Salvo…' : 'Salva la colonna' }}
+              </button>
+              @if (sporcoRakeback()) {
+                <span class="admin-nota">
+                  Ci sono modifiche non salvate.
+                </span>
+              }
+            </div>
+            <!--
+              ⚠️⚠️ La banda di validazione sta QUI, accanto al pulsante, e NON
+              offre «Riprova»: quella in cima alla pagina ce l'ha, e chiama
+              `carica()` → il mese si rilegge → la bozza si risemina. Chi
+              digitava quindici righe, sbagliava un importo e premeva il pulsante
+              che gli era stato offerto COME LA RIPARAZIONE le perdeva tutte.
+              Due signal distinti, e l'errore che compare mentre la superficie di
+              lavoro è aperta non porta via il pulsante di riparazione — è la
+              stessa regola già scritta per le modali.
+            -->
+            @if (erroreValidazione()) {
+              <p class="form-feedback is-error" role="alert">
+                {{ erroreValidazione() }}
+              </p>
+            }
+          }
+        }
+      }
+
+      <!-- ══ Spese ed entrate ════════════════════════════════════════════ -->
+      @if (vista() === 'voci') {
+        <p class="admin-nota admin-table__nota-mobile">
+          La forma del pagamento è visibile su schermi più larghi.
+        </p>
+
+        <div class="admin-table__scroll">
+          <table class="admin-table">
+            <caption class="visually-hidden">
+              Spese ed entrate del mese
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col" class="admin-table__c-primo">Voce</th>
+                <th scope="col">Categoria</th>
+                <th scope="col" class="admin-table__solo-largo">Come</th>
+                <th scope="col" class="is-num">Importo</th>
+                <th scope="col" class="admin-table__c-ultimo">
+                  <span class="visually-hidden">Azioni</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of d.voci; track v.id) {
+                <tr>
+                  <th scope="row" class="admin-table__c-primo">
+                    <span class="admin-table__ident">
+                      <span class="admin-table__ident-riga">
+                        <strong [title]="v.descrizione">{{ v.descrizione }}</strong>
+                        @if (v.ricorrenteId) {
+                          <span class="badge badge--tag">Ricorrente</span>
+                        }
+                      </span>
+                      @if (v.controparte) {
+                        <span class="admin-table__sub" [title]="v.controparte">
+                          {{ v.controparte }}
+                        </span>
+                      }
+                    </span>
+                  </th>
+                  <td>{{ categoriaLabel(v.categoria) }}</td>
+                  <td class="admin-table__solo-largo">
+                    {{ v.metodo ? metodoLabel(v.metodo) : '—' }}
+                  </td>
+                  <td class="is-num" [class.is-perdita]="v.verso === 'USCITA'">
+                    {{ v.verso === 'USCITA' ? '− ' : '+ ' }}{{ eur(v.importoCent) }}
+                  </td>
+                  <td class="admin-table__c-ultimo">
+                    <button
+                      type="button"
+                      class="admin-ico"
+                      aria-haspopup="dialog"
+                      [attr.aria-label]="'Modifica ' + v.descrizione"
+                      title="Modifica"
+                      [disabled]="d.mese.stato !== 'APERTO'"
+                      (click)="apriVoce(v)"
+                    >
+                      <app-icon name="pencil" [size]="18" />
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="admin-table__vuota">
+                    Nessuna spesa e nessuna entrata in questo mese. Le spese
+                    fisse compaiono da sole quando si apre il mese, se sono
+                    state configurate in <strong>Anagrafiche</strong>.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- ══ Anagrafiche ═════════════════════════════════════════════════ -->
+      @if (vista() === 'anagrafiche') {
+        <!--
+          ⚠️ Due elenchi, due barre condivise: prima ognuno aveva un `<h3>` a
+          1rem in `--text-muted` più un `btn--primary btn--sm` in una riga a
+          parte — cioè un titolo che pesa MENO del corpo tabella che introduce,
+          e un comando a 38,1px dove tutto il pannello ne dichiara 44.
+          Precedente: `admin-participation.component.html`.
+        -->
+        <section class="cm__gruppo">
+          <div class="admin-barra">
+            <h2 class="admin-barra__titolo">Conti rakeback</h2>
+            <button
+              type="button"
+              class="admin-ico admin-barra__crea"
+              aria-haspopup="dialog"
+              aria-label="Aggiungi un conto rakeback"
+              title="Aggiungi un conto"
+              (click)="apriConto('nuovo')"
+            >
+              <app-icon name="plus" [size]="18" />
+            </button>
+          </div>
+
+          <p class="admin-nota admin-table__nota-mobile">
+            Il taglio degli scaglioni è visibile su schermi più larghi.
+          </p>
+
+          <div class="admin-table__scroll">
+            <table class="admin-table">
+              <caption class="visually-hidden">
+                Anagrafica dei conti giocatore
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="admin-table__c-primo">Giocatore</th>
+                  <th scope="col" class="is-num">% agente</th>
+                  <th scope="col" class="is-num">% player</th>
+                  <th scope="col" class="admin-table__solo-largo">Scaglione</th>
+                  <th scope="col">Margine a</th>
+                  <th scope="col" class="admin-table__c-ultimo">
+                    <span class="visually-hidden">Azioni</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of conti() ?? []; track c.id) {
+                  <tr>
+                    <th scope="row" class="admin-table__c-primo">
+                      <span class="admin-table__ident">
+                        <span class="admin-table__ident-riga">
+                          <strong [title]="c.username">{{ c.username }}</strong>
+                          @if (!c.attivo) {
+                            <span class="badge badge--tag">Disattivato</span>
+                          }
+                          @if (c.anonimizzato) {
+                            <span class="badge badge--tag">Anonimizzato</span>
+                          }
+                        </span>
+                        @if (c.nomeReale) {
+                          <span class="admin-table__sub" [title]="c.nomeReale">
+                            {{ c.nomeReale }}
+                          </span>
+                        }
+                      </span>
+                    </th>
+                    <td class="is-num">{{ pct(c.backAgenteBp) }}</td>
+                    <td class="is-num">{{ pct(c.backPlayerBp) }}</td>
+                    <td class="admin-table__solo-largo">
+                      {{ pct(c.scaglioneBaseBp) }} a blocchi da
+                      {{ eur(c.scaglionePassoCent) }}
+                    </td>
+                    <td>
+                      {{ c.destinazione === 'PERSONALE' ? 'Personale' : 'Scuola' }}
+                    </td>
+                    <td class="admin-table__c-ultimo">
+                      <button
+                        type="button"
+                        class="admin-ico"
+                        aria-haspopup="dialog"
+                        [attr.aria-label]="'Modifica il conto di ' + c.username"
+                        title="Modifica"
+                        (click)="apriConto(c)"
+                      >
+                        <app-icon name="pencil" [size]="18" />
+                      </button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="admin-table__vuota">
+                      Nessun conto configurato. Ogni conto si scrive una volta
+                      sola: poi, ogni mese, si compila solo il rake generato.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="cm__gruppo">
+          <div class="admin-barra">
+            <h2 class="admin-barra__titolo">Spese ricorrenti</h2>
+            <button
+              type="button"
+              class="admin-ico admin-barra__crea"
+              aria-haspopup="dialog"
+              aria-label="Aggiungi una spesa fissa"
+              title="Aggiungi una spesa fissa"
+              (click)="apriRicorrente('nuova')"
+            >
+              <app-icon name="plus" [size]="18" />
+            </button>
+          </div>
+
+          <div class="admin-table__scroll">
+            <table class="admin-table">
+              <caption class="visually-hidden">
+                Spese che tornano ogni mese
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="admin-table__c-primo">Spesa</th>
+                  <th scope="col">Categoria</th>
+                  <th scope="col" class="is-num">Importo di listino</th>
+                  <th scope="col" class="admin-table__c-ultimo">
+                    <span class="visually-hidden">Azioni</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of ricorrenti() ?? []; track r.id) {
+                  <tr>
+                    <th scope="row" class="admin-table__c-primo">
+                      <span class="admin-table__ident">
+                        <span class="admin-table__ident-riga">
+                          <strong [title]="r.descrizione">{{ r.descrizione }}</strong>
+                          @if (!r.attiva) {
+                            <span class="badge badge--tag">Sospesa</span>
+                          }
+                        </span>
+                        @if (r.controparte) {
+                          <span class="admin-table__sub" [title]="r.controparte">
+                            {{ r.controparte }}
+                          </span>
+                        }
+                      </span>
+                    </th>
+                    <td>{{ categoriaLabel(r.categoria) }}</td>
+                    <td class="is-num">{{ eur(r.importoCentPredefinito) }}</td>
+                    <td class="admin-table__c-ultimo">
+                      <button
+                        type="button"
+                        class="admin-ico"
+                        aria-haspopup="dialog"
+                        [attr.aria-label]="'Modifica ' + r.descrizione"
+                        title="Modifica"
+                        (click)="apriRicorrente(r)"
+                      >
+                        <app-icon name="pencil" [size]="18" />
+                      </button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="admin-table__vuota">
+                      Nessuna spesa fissa. Quelle che aggiungi qui compaiono da
+                      sole in ogni mese che apri, e restano modificabili.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <p class="admin-nota">
+            L'importo è un <strong>valore predefinito</strong>, non un vincolo: la
+            voce che genera resta modificabile mese per mese.
+          </p>
+        </section>
+      }
+    </div>
+  } @else if (loading()) {
+    <div class="spinner" role="status" aria-label="Caricamento conteggi"></div>
+  } @else if (!error()) {
+    <!--
+      ⚠️ Senza alcun mese non esiste nessun pannello, quindi nemmeno la barra
+      che porta il `+`: il comando per aprire il primo mese vive QUI, per esteso.
+    -->
+    <p class="admin-nota">
+      Nessun mese contabile. Aprine uno: le spese fisse e i conti rakeback già
+      configurati ci entreranno da soli.
+    </p>
+    <div class="row cm__azioni">
+      <button
+        type="button"
+        class="btn btn--primary btn--sm"
+        aria-haspopup="dialog"
+        (click)="apriModaleMese()"
+      >
+        Apri un mese contabile
+      </button>
+    </div>
+  }
+</div>
+
+<!-- ══ Modale: apri un mese ═══════════════════════════════════════════════ -->
+@if (apriMeseAperto()) {
+  <app-modal
+    titolo="Apri un mese contabile"
+    sottotitolo="Ci entreranno le spese fisse attive e i conti rakeback attivi"
+    [salvando]="salvando()"
+    taglia="stretta"
+    (chiusa)="apriMeseAperto.set(false)"
+  >
+    <!--
+      ⚠️ `app-modal` PROIETTA il contenuto e non aggiunge alcuna classe: i 44px
+      dei controlli arrivano solo dal wrapper `.admin-modale`, che il chiamante
+      deve mettere. Senza, i pulsanti stanno a 38,1px e i campi a 54,5px — cioè
+      due altezze diverse sulla stessa riga, contro la regola scritta due volte
+      nel progetto e osservata da diciassette modali su diciassette.
+    -->
+    <div class="admin-modale">
+      <form id="cm-form-mese" [formGroup]="formMese" (ngSubmit)="confermaApriMese()">
+        <div class="row">
+          <div class="field">
+            <label for="cm-anno">Anno</label>
+            <input
+              id="cm-anno"
+              type="number"
+              class="input"
+              formControlName="anno"
+              min="2020"
+              max="2100"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-mese-n">Mese</label>
+            <input
+              id="cm-mese-n"
+              type="number"
+              class="input"
+              formControlName="mese"
+              min="1"
+              max="12"
+            />
+          </div>
+        </div>
+        @if (erroreModale()) {
+          <p class="form-feedback is-error" role="alert">{{ erroreModale() }}</p>
+        }
+      </form>
+    </div>
+    <!--
+      ⚠️ Il submit sta nel PIEDE, cioè FUORI dal `<form>`: senza `form="…"` sul
+      bottone il clic non invia niente, con la console pulita — un «Apri» che
+      non fa nulla.
+    -->
+    <div moPiede>
+      <button
+        type="submit"
+        form="cm-form-mese"
+        class="btn btn--primary btn--sm"
+        [disabled]="salvando()"
+      >
+        {{ salvando() ? 'Apro…' : 'Apri il mese' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<!-- ══ Modale: voce ═══════════════════════════════════════════════════════ -->
+@if (voceAperta(); as v) {
+  <app-modal
+    [titolo]="v === 'nuova' ? 'Nuova voce' : 'Modifica la voce'"
+    [sottotitolo]="mese()?.etichetta ?? null"
+    [sporco]="voceSporca()"
+    [salvando]="salvando()"
+    (chiusa)="voceAperta.set(null)"
+  >
+    <div class="admin-modale">
+      <form id="cm-form-voce" [formGroup]="formVoce" (ngSubmit)="salvaVoce()">
+        <div class="row">
+          <div class="field">
+            <label for="cm-verso">Tipo</label>
+            <select id="cm-verso" class="input" formControlName="verso">
+              <option value="USCITA">Spesa</option>
+              <option value="ENTRATA">Entrata</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="cm-cat">Categoria</label>
+            <select id="cm-cat" class="input" formControlName="categoria">
+              @for (c of categorieDelVerso(); track c) {
+                <option [value]="c">{{ categoriaLabel(c) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="cm-desc">Descrizione</label>
+          <!--
+            ⚠️ Il segnaposto SEGUE il verso: «es. LiveKit» è una spesa e su
+            un'entrata suggeriva l'esempio sbagliato. Qui il tipo lo decide una
+            sola tendina, e l'esempio è metà del segnale.
+          -->
+          <input
+            id="cm-desc"
+            type="text"
+            class="input"
+            formControlName="descrizione"
+            maxlength="200"
+            [placeholder]="esempioDescrizione()"
+          />
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="cm-contro">A chi / da chi</label>
+            <input
+              id="cm-contro"
+              type="text"
+              class="input"
+              formControlName="controparte"
+              maxlength="200"
+              placeholder="facoltativo"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-imp">Importo in €</label>
+            <input
+              id="cm-imp"
+              type="text"
+              inputmode="decimal"
+              class="input"
+              formControlName="importo"
+              placeholder="es. 300 oppure 59,90"
+              autocomplete="off"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-met">Come</label>
+            <select id="cm-met" class="input" formControlName="metodo">
+              <option value="">non specificato</option>
+              @for (m of METODI; track m) {
+                <option [value]="m">{{ metodoLabel(m) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <p class="admin-nota">
+          L'importo è sempre <strong>positivo</strong>: a dire se entra o esce è
+          il tipo qui sopra. Un rimborso ricevuto è un'entrata, non una spesa
+          negativa.
+        </p>
+        @if (erroreModale()) {
+          <p class="form-feedback is-error" role="alert">{{ erroreModale() }}</p>
+        }
+      </form>
+
+      @if (v !== 'nuova') {
+        <details class="admin-modale__sez admin-modale__sez--rischio">
+          <summary class="admin-modale__sum">Elimina</summary>
+          <div class="admin-modale__corpo">
+            @if (conferma() === 'voce') {
+              <p class="admin-nota">
+                La voce sparisce dal mese e dal conto economico.
+              </p>
+              <div class="row">
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  (click)="eliminaVoce(v)"
+                >
+                  Elimina davvero
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="annulla()"
+                >
+                  Annulla
+                </button>
+              </div>
+            } @else {
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="chiedi('voce')"
+              >
+                Elimina questa voce
+              </button>
+            }
+          </div>
+        </details>
+      }
+    </div>
+
+    <div moPiede>
+      <button
+        type="submit"
+        form="cm-form-voce"
+        class="btn btn--primary btn--sm"
+        [disabled]="formVoce.invalid || salvando()"
+      >
+        {{ salvando() ? 'Salvo…' : 'Salva' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<!-- ══ Modale: conto rakeback ═════════════════════════════════════════════ -->
+@if (contoAperto(); as c) {
+  <app-modal
+    [titolo]="c === 'nuovo' ? 'Nuovo conto rakeback' : 'Modifica il conto'"
+    sottotitolo="Lottomatica"
+    [sporco]="contoSporco()"
+    [salvando]="salvando()"
+    (chiusa)="contoAperto.set(null)"
+  >
+    <div class="admin-modale">
+      <form id="cm-form-conto" [formGroup]="formConto" (ngSubmit)="salvaConto()">
+        <div class="row">
+          <div class="field">
+            <label for="cm-user">Username sulla sala</label>
+            <input
+              id="cm-user"
+              type="text"
+              class="input"
+              formControlName="username"
+              maxlength="60"
+              autocomplete="off"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-nome">Nome e cognome</label>
+            <input
+              id="cm-nome"
+              type="text"
+              class="input"
+              formControlName="nomeReale"
+              maxlength="120"
+              placeholder="facoltativo"
+            />
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="cm-ba">% back agente</label>
+            <input
+              id="cm-ba"
+              type="text"
+              inputmode="decimal"
+              class="input"
+              formControlName="backAgente"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-bp">% back player</label>
+            <input
+              id="cm-bp"
+              type="text"
+              inputmode="decimal"
+              class="input"
+              formControlName="backPlayer"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-dest">Margine a</label>
+            <select id="cm-dest" class="input" formControlName="destinazione">
+              <option value="SCUOLA">Scuola</option>
+              <option value="PERSONALE">Personale</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="cm-sb">% su cui maturano gli scaglioni</label>
+            <input
+              id="cm-sb"
+              type="text"
+              inputmode="decimal"
+              class="input"
+              formControlName="scaglioneBase"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-sp">Taglio di uno scaglione in €</label>
+            <input
+              id="cm-sp"
+              type="text"
+              inputmode="decimal"
+              class="input"
+              formControlName="scaglionePasso"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-ord">Ordine in tabella</label>
+            <input
+              id="cm-ord"
+              type="number"
+              class="input"
+              formControlName="ordine"
+              min="0"
+            />
+          </div>
+        </div>
+        <!--
+          ⚠️ `class="check"` da sola NON esiste: nel progetto è dichiarata solo
+          come `.field--check .check`, quindi la casella restava il quadratino
+          nativo (~13px), cioè il bersaglio più piccolo della sezione. La forma
+          buona è `.row.admin-panel__check` col testo in uno `<span>` — la
+          stessa di admin-shop, admin-lessons e admin-users.
+        -->
+        <label class="row admin-panel__check">
+          <input type="checkbox" formControlName="attivo" />
+          <span>Attivo (entra nei mesi nuovi)</span>
+        </label>
+        <div class="field">
+          <label for="cm-nota-conto">Nota interna</label>
+          <input
+            id="cm-nota-conto"
+            type="text"
+            class="input"
+            formControlName="nota"
+            maxlength="2000"
+          />
+        </div>
+        <p class="admin-nota">
+          «Personale» tiene il margine di questo conto <strong>fuori</strong> dalla
+          divisione col socio. Le percentuali qui valgono per i mesi che si
+          apriranno: quelli già aperti conservano quelle con cui sono nati.
+        </p>
+        @if (erroreModale()) {
+          <p class="form-feedback is-error" role="alert">{{ erroreModale() }}</p>
+        }
+      </form>
+
+      @if (c !== 'nuovo') {
+        <details class="admin-modale__sez admin-modale__sez--rischio">
+          <summary class="admin-modale__sum">Rimuovi</summary>
+          <div class="admin-modale__corpo">
+            <p class="admin-nota">
+              Un conto che compare già in un mese registrato <strong>non si può
+              rimuovere</strong>: disattivalo, così non entra nei mesi nuovi e lo
+              storico resta leggibile.
+            </p>
+            @if (conferma() === 'conto') {
+              <div class="row">
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  (click)="eliminaConto(c)"
+                >
+                  Rimuovi davvero
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="annulla()"
+                >
+                  Annulla
+                </button>
+              </div>
+            } @else {
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="chiedi('conto')"
+              >
+                Rimuovi questo conto
+              </button>
+            }
+          </div>
+        </details>
+      }
+    </div>
+
+    <div moPiede>
+      <button
+        type="submit"
+        form="cm-form-conto"
+        class="btn btn--primary btn--sm"
+        [disabled]="formConto.invalid || salvando()"
+      >
+        {{ salvando() ? 'Salvo…' : 'Salva' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<!-- ══ Modale: spesa ricorrente ═══════════════════════════════════════════ -->
+@if (ricorrenteAperta(); as r) {
+  <app-modal
+    [titolo]="r === 'nuova' ? 'Nuova spesa fissa' : 'Modifica la spesa fissa'"
+    [sporco]="ricorrenteSporca()"
+    [salvando]="salvando()"
+    (chiusa)="ricorrenteAperta.set(null)"
+  >
+    <div class="admin-modale">
+      <form
+        id="cm-form-ric"
+        [formGroup]="formRicorrente"
+        (ngSubmit)="salvaRicorrente()"
+      >
+        <div class="field">
+          <label for="cm-ric-desc">Descrizione</label>
+          <input
+            id="cm-ric-desc"
+            type="text"
+            class="input"
+            formControlName="descrizione"
+            maxlength="200"
+            placeholder="es. LiveKit"
+          />
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="cm-ric-cat">Categoria</label>
+            <select id="cm-ric-cat" class="input" formControlName="categoria">
+              @for (c of CATEGORIE_USCITA; track c) {
+                <option [value]="c">{{ categoriaLabel(c) }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label for="cm-ric-contro">A chi</label>
+            <input
+              id="cm-ric-contro"
+              type="text"
+              class="input"
+              formControlName="controparte"
+              maxlength="200"
+              placeholder="facoltativo"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-ric-imp">Importo in €</label>
+            <input
+              id="cm-ric-imp"
+              type="text"
+              inputmode="decimal"
+              class="input"
+              formControlName="importo"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+        <label class="row admin-panel__check">
+          <input type="checkbox" formControlName="attiva" />
+          <span>Attiva (compare nei mesi che apri)</span>
+        </label>
+        <div class="field">
+          <label for="cm-ric-nota">Nota interna</label>
+          <input
+            id="cm-ric-nota"
+            type="text"
+            class="input"
+            formControlName="nota"
+            maxlength="2000"
+          />
+        </div>
+        @if (erroreModale()) {
+          <p class="form-feedback is-error" role="alert">{{ erroreModale() }}</p>
+        }
+      </form>
+
+      @if (r !== 'nuova') {
+        <details class="admin-modale__sez admin-modale__sez--rischio">
+          <summary class="admin-modale__sum">Rimuovi</summary>
+          <div class="admin-modale__corpo">
+            <p class="admin-nota">
+              Le voci già generate nei mesi passati <strong>restano</strong>: sono
+              spese davvero sostenute, e toglierle riscriverebbe quei conti.
+            </p>
+            @if (conferma() === 'ric') {
+              <div class="row">
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  (click)="eliminaRicorrente(r)"
+                >
+                  Rimuovi davvero
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="annulla()"
+                >
+                  Annulla
+                </button>
+              </div>
+            } @else {
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="chiedi('ric')"
+              >
+                Rimuovi questa spesa fissa
+              </button>
+            }
+          </div>
+        </details>
+      }
+    </div>
+
+    <div moPiede>
+      <button
+        type="submit"
+        form="cm-form-ric"
+        class="btn btn--primary btn--sm"
+        [disabled]="formRicorrente.invalid || salvando()"
+      >
+        {{ salvando() ? 'Salvo…' : 'Salva' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<!-- ══ Scheda di una riga di rakeback ═════════════════════════════════════ -->
+@if (rigaInScheda(); as r) {
+  <app-modal
+    [titolo]="r.username"
+    [sottotitolo]="r.nomeReale ?? null"
+    (chiusa)="rigaAperta.set(null)"
+  >
+    <div class="admin-modale">
+      <details class="admin-modale__sez" open>
+        <summary class="admin-modale__sum">Come è stato calcolato</summary>
+        <div class="admin-modale__corpo">
+          <dl class="cm__conto">
+            <dt>Rake generato</dt>
+            <dd class="is-num">{{ eur(r.rakeGeneratoCent) }}</dd>
+            <dt>Maturato al {{ pct(r.scaglioneBaseBp) }}, a blocchi da
+              {{ eur(r.scaglionePassoCent) }}</dt>
+            <dd class="is-num">
+              {{ r.scaglioni }}
+              {{ r.scaglioni === 1 ? 'scaglione' : 'scaglioni' }}
+            </dd>
+            <dt>Già erogato dalla sala</dt>
+            <dd class="is-num">{{ eur(r.erogatoBonusCent) }}</dd>
+            <dt>Da incassare dall'agente ({{ pct(r.backAgenteBp) }})</dt>
+            <dd class="is-num">{{ eur(r.spettanteDaAgenteCent) }}</dd>
+            <dt>Spetta al giocatore ({{ pct(r.backPlayerBp) }})</dt>
+            <dd class="is-num" [class.is-perdita]="r.spettanteAlPlayerCent < 0">
+              {{ eur(r.spettanteAlPlayerCent) }}
+            </dd>
+            <dt class="cm__margine">Margine</dt>
+            <dd class="is-num cm__margine">{{ eur(r.profittoAgenteCent) }}</dd>
+            <dt>Già pagato</dt>
+            <dd class="is-num">{{ eur(r.pagatoAlPlayerCent) }}</dd>
+            <dt>Resta da dargli (di questo mese)</dt>
+            <dd class="is-num" [class.is-perdita]="r.residuoAlPlayerCent < 0">
+              {{ eur(r.residuoAlPlayerCent) }}
+            </dd>
+          </dl>
+          @if (r.residuoAlPlayerCent < 0) {
+            <!--
+              ⚠️ Un residuo negativo vuol dire che gli si è dato PIÙ del dovuto
+              (un ticket arrotondato ai 10 €), e quel credito NON si trascina: il
+              mese prossimo il conto riparte da zero. Detto qui perché è l'unico
+              punto in cui il numero negativo si vede, e senza la frase si legge
+              come un anticipo che verrà scalato.
+            -->
+            <p class="admin-nota">
+              Gli è stato dato <strong>più del dovuto</strong> per questo mese.
+              La differenza non si riporta al mese prossimo: se vuoi tenerne
+              conto, scalala a mano dal prossimo ticket.
+            </p>
+          }
+          @if (r.spettanteAlPlayerCent < 0) {
+            <p class="admin-nota">
+              Spettante <strong>negativo</strong>: la sala gli ha già erogato più
+              di quanto gli spetti col deal attuale.
+            </p>
+          }
+          @if (r.destinazione === 'PERSONALE') {
+            <p class="admin-nota">
+              Conto marcato <strong>Personale</strong>: questo margine resta
+              fuori dalla divisione col socio.
+            </p>
+          }
+        </div>
+      </details>
+
+      <details class="admin-modale__sez" open>
+        <summary class="admin-modale__sum">Come gli è stato pagato</summary>
+        <div class="admin-modale__corpo">
+          @if (mese()?.stato !== 'APERTO') {
+            <p class="admin-nota">
+              Il mese è chiuso: riaprilo dal Riepilogo per modificarlo.
+            </p>
+          } @else {
+            <div class="field">
+              <label [attr.for]="'met-' + r.contoId">Forma del pagamento</label>
+              <select
+                [id]="'met-' + r.contoId"
+                class="input"
+                [value]="bozza()[r.contoId]?.metodo ?? ''"
+                (change)="scriviMetodo(r.contoId, $any($event.target).value)"
+              >
+                <option value="">non specificata</option>
+                @for (m of METODI; track m) {
+                  <option [value]="m">{{ metodoLabel(m) }}</option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <label [attr.for]="'nota-' + r.contoId">Nota</label>
+              <input
+                [id]="'nota-' + r.contoId"
+                type="text"
+                class="input"
+                maxlength="500"
+                [value]="bozza()[r.contoId]?.nota ?? ''"
+                (input)="scriviNota(r.contoId, $any($event.target).value)"
+              />
+            </div>
+            <!--
+              ⚠️ Nessun pulsante «salva» qui: la scheda scrive nella STESSA
+              bozza della colonna, e a persistere è «Salva la colonna». Un
+              secondo salvataggio vorrebbe dire due strade con cui la riga può
+              cambiare, e una delle due dimenticata.
+            -->
+            <p class="admin-nota">
+              Le modifiche entrano nella colonna: si salvano con
+              <strong>«Salva la colonna»</strong> insieme al resto del mese.
+            </p>
+          }
+        </div>
+      </details>
+    </div>
+  </app-modal>
+}
