@@ -16,6 +16,7 @@ import {
   AffiliationAdmin,
   AffiliazioneCompatta,
   DiscountCode,
+  Incassante,
   LessonViewSummary,
   PokerRoomAdmin,
   Role,
@@ -33,6 +34,11 @@ import { apiErrorMessage } from '../../../core/utils/http-error';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { ModalComponent } from '../../../shared/ui/modal/modal.component';
 import { actionLabel } from '../action-labels';
+import { parseImportoInCent } from '../denaro';
+import {
+  incassanteLabel,
+  metodoPagamentoLabel,
+} from '../metodo-pagamento';
 import { ROLE_LABELS } from '../role-labels';
 
 /**
@@ -108,6 +114,13 @@ export class AdminUsersComponent {
     concediData: '',
     concediNota: '',
     concediSostituisci: false,
+    // ⚠️ I campi dell'incasso in CONTANTI: il server li accetta dal 10/09/2026,
+    // ma fino a oggi nessun client glieli mandava — dall'interfaccia un
+    // contante non si poteva registrare affatto.
+    concediMetodo: '' as '' | 'contanti',
+    concediImporto: '',
+    concediIncassatoDa: '' as Incassante | '',
+    concediDataIncasso: '',
     email: '',
     nickname: '',
     verificato: false,
@@ -172,6 +185,21 @@ export class AdminUsersComponent {
   protected readonly tiers: SubscriptionTier[] = ['PESCE_ROSSO', 'SQUALO'];
   protected readonly etichetteRuolo = ROLE_LABELS;
   protected readonly actionLabel = actionLabel;
+  protected readonly INCASSANTI: readonly Incassante[] = ['PIETRO', 'EXIVEZZZ'];
+  protected readonly incassanteLabel = incassanteLabel;
+  protected readonly metodoPagamentoLabel = metodoPagamentoLabel;
+
+  /** ⚠️ Lo stato della richiesta si mostrava come SLUG grezzo (`approved`). */
+  protected statoRichiesta(s: SubscriptionRequest['status']): string {
+    switch (s) {
+      case 'pending':
+        return 'In attesa';
+      case 'approved':
+        return 'Approvata';
+      case 'rejected':
+        return 'Rifiutata';
+    }
+  }
 
   /** L'admin loggato: non può agire sul proprio account. */
   protected readonly ioStesso = computed(() => this.auth.user()?.id ?? null);
@@ -289,6 +317,11 @@ export class AdminUsersComponent {
       concediData: this.aInput(this.piuGiorni(new Date(), 30)),
       concediNota: '',
       concediSostituisci: false,
+      concediMetodo: '',
+      concediImporto: '',
+      concediIncassatoDa: '',
+      // Oggi: la data in cui il contante è stato preso, che decide il mese.
+      concediDataIncasso: this.aInput(new Date()),
       email: user.email,
       nickname: user.nickname ?? '',
       verificato: user.verified,
@@ -518,9 +551,55 @@ export class AdminUsersComponent {
     );
   }
 
+  /**
+   * ⚠️ Con metodo «contanti» servono importo e incassante, e il pulsante resta
+   * spento senza: il server li pretende (409 altrimenti) perché chi registra un
+   * contante deve snapshottare i due prezzi — senza, l'espressione dell'incasso
+   * ricade sul listino e **un contante da 80 € risulta 125 €**.
+   */
+  protected readonly incassoCompleto = computed(() => {
+    // ⚠️ Si legge `valori()` per creare la DIPENDENZA — un `FormGroup` non è un
+    // signal, quindi senza questa riga il computed non si ricalcolerebbe mai —
+    // e poi si prende il valore TIPIZZATO dal form: `valori()` è un
+    // `Record<string, unknown>` e leggerne i campi darebbe `unknown`.
+    this.valori();
+    const v = this.form.getRawValue();
+    if (v.concediMetodo !== 'contanti') return true;
+    return (
+      !!v.concediIncassatoDa && (parseImportoInCent(v.concediImporto) ?? 0) > 0
+    );
+  });
+
   protected concedi(user: AdminUser): void {
     const v = this.form.getRawValue();
     if (!v.concediData || this.salvando()) return;
+
+    let incasso:
+      | {
+          paymentMethod: 'contanti';
+          importoEur: number;
+          incassatoDa: Incassante;
+          dataIncasso?: string;
+        }
+      | undefined;
+    if (v.concediMetodo === 'contanti') {
+      const cent = parseImportoInCent(v.concediImporto);
+      if (cent === null || cent <= 0 || !v.concediIncassatoDa) {
+        this.error.set(
+          'Per un incasso in contanti servono l’importo e chi l’ha incassato.',
+        );
+        return;
+      }
+      incasso = {
+        paymentMethod: 'contanti',
+        importoEur: cent / 100,
+        incassatoDa: v.concediIncassatoDa,
+        ...(v.concediDataIncasso
+          ? { dataIncasso: this.aIso(v.concediDataIncasso) }
+          : {}),
+      };
+    }
+
     this.salvando.set(true);
     this.error.set(null);
     this.feedback.set(null);
@@ -531,6 +610,7 @@ export class AdminUsersComponent {
         this.aIso(v.concediData),
         v.concediNota.trim() || undefined,
         v.concediSostituisci,
+        incasso,
       )
       .subscribe({
         next: (updated) => {

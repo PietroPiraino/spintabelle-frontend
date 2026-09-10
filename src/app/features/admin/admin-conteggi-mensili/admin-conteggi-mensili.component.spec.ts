@@ -64,6 +64,7 @@ const dettaglio = (
   mese: mese(),
   voci: [],
   righe,
+  abbonamenti: [],
   totaliRakeback: {
     rakeGeneratoCent: righe.reduce((t, r) => t + r.rakeGeneratoCent, 0),
     erogatoBonusCent: righe.reduce((t, r) => t + r.erogatoBonusCent, 0),
@@ -82,6 +83,12 @@ const dettaglio = (
   riepilogo: {
     entrate: {
       abbonamentiCent: 25_000,
+      abbonamentiPerDestinazione: {
+        pietroCent: 25_000,
+        exivezzzCent: 0,
+        onlineCent: 0,
+        nonAttribuitoCent: 0,
+      },
       gadgetCent: 0,
       commissioniRakebackCent: 30_290,
       stakingCent: 0,
@@ -176,12 +183,21 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(pastiglia?.textContent?.trim()).toBe('Aperto');
   });
 
-  it('le quattro sezioni sono SCHEDE, con un pannello raggiungibile', async () => {
+  it('le cinque sezioni sono SCHEDE, con un pannello raggiungibile', async () => {
     await avvia();
     const schede = fixture.nativeElement.querySelectorAll(
       'button[role="tab"]',
     ) as NodeListOf<HTMLButtonElement>;
-    expect(schede.length).toBe(4);
+    expect(schede.length).toBe(5);
+    // ⚠️ L'ordine è quello del conto economico: prima il riepilogo, poi le tre
+    // fonti di denaro, infine le anagrafiche che non appartengono a un mese.
+    expect([...schede].map((b) => b.textContent?.trim().split(/\s+/)[0])).toEqual([
+      'Riepilogo',
+      'Rakeback',
+      'Abbonamenti',
+      'Spese',
+      'Anagrafiche',
+    ]);
 
     // ⚠️ `aria-selected` e non `aria-pressed`: la grammatica di una scelta
     // esclusiva. `aria-pressed` annuncerebbe «N interruttori, uno premuto».
@@ -561,6 +577,120 @@ describe('AdminConteggiMensiliComponent', () => {
 
     expect(c.formVoce.getRawValue()['categoria']).toBe('STAKING');
     expect(c.voceSporca()).toBeFalse();
+  });
+
+  it('la scheda Abbonamenti mostra la destinazione, e il trattino su chi non è cassa', async () => {
+    const d = dettaglio();
+    d.riepilogo.entrate.abbonamentiCent = 13_000;
+    d.riepilogo.entrate.abbonamentiPerDestinazione = {
+      pietroCent: 8000,
+      exivezzzCent: 5000,
+      onlineCent: 0,
+      nonAttribuitoCent: 0,
+    };
+    d.abbonamenti = [
+      {
+        id: 'a1',
+        userEmail: 'cavia@bff.local',
+        userNickname: 'Cavia',
+        tier: 'SQUALO',
+        metodo: 'contanti',
+        incassatoDa: 'PIETRO',
+        importoCent: 8000,
+        portaCassa: true,
+        stimato: false,
+      },
+      {
+        id: 'a2',
+        userEmail: 'marco@bff.local',
+        tier: 'SQUALO',
+        metodo: 'manuale',
+        importoCent: 12_500,
+        portaCassa: false,
+        stimato: true,
+      },
+    ];
+    await avvia(d);
+    await vaiA('Abbonamenti');
+
+    const t = testo();
+    expect(t).toContain('Pietro');
+    expect(t).toContain('Exivezzz');
+    // ⚠️ La riga senza cassa porta il MOTIVO e non un importo: «concessione».
+    expect(t).toContain('concessione');
+    expect(t).toContain('stimato');
+
+    const corpo =
+      fixture.nativeElement.querySelector('tbody')?.textContent ?? '';
+    expect(corpo).toContain('80,00');
+    // ⚠️⚠️ E NON stampa i 125,00 della riga manuale: quel numero esiste sul
+    // payload (l'espressione dell'incasso ricade sul listino) ma non è cassa, e
+    // mostrarlo direbbe che sono entrati 125 € che non sono entrati.
+    expect(corpo).not.toContain('125,00');
+  });
+
+  it('la striscia degli abbonamenti NOMINA quante righe non sono cassa', async () => {
+    const d = dettaglio();
+    d.abbonamenti = [
+      {
+        id: 'a1',
+        userEmail: 'a@bff.local',
+        tier: 'SQUALO',
+        metodo: 'contanti',
+        incassatoDa: 'PIETRO',
+        importoCent: 8000,
+        portaCassa: true,
+        stimato: false,
+      },
+      {
+        id: 'a2',
+        userEmail: 'b@bff.local',
+        tier: 'SQUALO',
+        metodo: 'manuale',
+        importoCent: 0,
+        portaCassa: false,
+        stimato: true,
+      },
+    ];
+    await avvia(d);
+    await vaiA('Abbonamenti');
+    // ⚠️ Senza la seconda metà della frase, «2 abbonamenti» sopra un totale di
+    // 80 € si legge come «due abbonamenti hanno fatto 80 €» — falso: uno solo.
+    expect(
+      fixture.nativeElement.querySelector('.admin-totali__ambito')?.textContent,
+    ).toContain('1 senza cassa');
+  });
+
+  it('su un mese CHIUSO non si corregge, e si dice perché', async () => {
+    const d = dettaglio([], {
+      mese: mese({ stato: 'CHIUSO', riepilogoCongelato: true }),
+    });
+    d.abbonamenti = [
+      {
+        id: 'a1',
+        userEmail: 'a@bff.local',
+        tier: 'SQUALO',
+        metodo: 'contanti',
+        incassatoDa: 'PIETRO',
+        importoCent: 8000,
+        portaCassa: true,
+        stimato: false,
+      },
+    ];
+    await avvia(d);
+    await vaiA('Abbonamenti');
+
+    // ⚠️ Il comando sparisce invece di restare spento: su un mese chiuso il
+    // totale è congelato, quindi una correzione non si vedrebbe da nessuna
+    // parte — e un pulsante che non fa niente si legge come rotto.
+    const comandi = [
+      ...fixture.nativeElement.querySelectorAll('tbody button.admin-ico'),
+    ];
+    expect(comandi.length).toBe(0);
+    expect(testo()).toContain('riapri il mese');
+    // ⚠️ E si dichiara che elenco e totale possono divergere: le richieste
+    // vengono cancellate alla chiusura di un account.
+    expect(testo()).toContain('congelati alla chiusura');
   });
 
   it('dice che il conto col giocatore NON si trascina', async () => {

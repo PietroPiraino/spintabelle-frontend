@@ -2514,9 +2514,54 @@ export interface TotaliRakeback {
   nettoCassaCent: number;
 }
 
+/**
+ * Dove sono materialmente finiti gli euro degli abbonamenti.
+ *
+ * ⚠️ `nonAttribuitoCent` sono contanti di cui non si sa chi li ha presi: si
+ * mostra SOLO se > 0. Farli cadere fra gli «online» direbbe che dei contanti
+ * sono arrivati su PayPal — una riga sbagliata invece di una riga che chiede di
+ * essere sistemata.
+ *
+ * ⚠️ I quattro campi SOMMANO `abbonamentiCent`: righe rientrate che non tornano
+ * col totale sopra si leggono come un buco.
+ */
+export interface AbbonamentiPerDestinazione {
+  pietroCent: number;
+  exivezzzCent: number;
+  onlineCent: number;
+  nonAttribuitoCent: number;
+}
+
+/** Un abbonamento del mese, dal punto di vista della CASSA. */
+export interface RigaAbbonamento {
+  id: string;
+  userEmail: string;
+  userNickname?: string;
+  tier: string;
+  metodo: PaymentMethod;
+  /** Chi ha materialmente preso i contanti. Assente su tutto il resto. */
+  incassatoDa?: Incassante;
+  /**
+   * ⚠️ Vale 0 sulle righe che non sono cassa: a distinguerle è `portaCassa`,
+   * non l'importo. «Zero incassato» e «non è cassa» sono due cose diverse, e la
+   * tabella le mostra diverse — zero contro trattino.
+   */
+  importoCent: number;
+  portaCassa: boolean;
+  /** Il prezzo è ricostruito dal listino storico, non snapshottato. */
+  stimato: boolean;
+  paymentReference?: string;
+  decidedAt?: string;
+}
+
 export interface RiepilogoMese {
   entrate: {
     abbonamentiCent: number;
+    /**
+     * ⚠️ Su un mese chiuso PRIMA del 10/09/2026 lo snapshot non ha questo
+     * campo: il server lo riempie a zeri in lettura (`snapshotCompleto`).
+     */
+    abbonamentiPerDestinazione: AbbonamentiPerDestinazione;
     gadgetCent: number;
     commissioniRakebackCent: number;
     /**
@@ -2561,6 +2606,14 @@ export interface DettaglioMese {
   mese: MeseContabile;
   voci: VoceMese[];
   righe: RigaRakeback[];
+  /**
+   * ⚠️ Si legge sempre DAL VIVO, anche su un mese chiuso, mentre
+   * `riepilogo.entrate.abbonamentiCent` è congelato. Possono divergere: una
+   * richiesta viene CANCELLATA alla chiusura dell'account, quindi se un iscritto
+   * chiude dopo la chiusura del mese la riga sparisce e il totale no. La
+   * schermata lo dice.
+   */
+  abbonamenti: RigaAbbonamento[];
   totaliRakeback: TotaliRakeback;
   riepilogo: RiepilogoMese;
   /** ⚠️ Un tetto raggiunto si DICE, mai si tronca in silenzio. */

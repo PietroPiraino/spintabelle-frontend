@@ -19,6 +19,7 @@ import { apiErrorMessage } from '../../../core/utils/http-error';
 import { FiltroComponent, VoceFiltro } from '../../../shared/ui/filtro/filtro.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { ModalComponent } from '../../../shared/ui/modal/modal.component';
+import { metodoPagamentoLabel } from '../metodo-pagamento';
 
 const PAGE_SIZE = 25;
 type StatusFilter = 'all' | SubscriptionRequestStatus;
@@ -196,15 +197,13 @@ export class AdminSubscriptionRequestsComponent {
     });
   }
 
-  protected methodLabel(m: string): string {
-    if (m === 'skrill') return 'Skrill';
-    if (m === 'manuale') return 'Concesso da admin';
-    // ⚠️ Senza questo ramo una richiesta pagata in punti compariva come
-    // «PayPal»: il default silenzioso e' il modo piu' rapido di mostrare una
-    // cosa falsa senza che niente si rompa.
-    if (m === 'punti') return 'Punti BFF';
-    return 'PayPal';
-  }
+  /**
+   * ⚠️ Era una catena di `if` con `return 'PayPal'` in fondo, e il difetto che
+   * il suo stesso commento descriveva per `punti` si è ripetuto su `contanti`:
+   * un incasso in contanti si leggeva **«PayPal»**. Ora passa dallo `switch`
+   * esaustivo condiviso, dove un metodo nuovo non compila senza etichetta.
+   */
+  protected readonly methodLabel = metodoPagamentoLabel;
 
   protected fmtPunti(n: number): string {
     return new Intl.NumberFormat('it-IT').format(n);

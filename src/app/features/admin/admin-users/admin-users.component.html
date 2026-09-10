@@ -385,6 +385,73 @@
             contropartita, e approvandola dopo il periodo raddoppierebbe. Senza
             la spunta il server risponde 409 dicendolo.
           -->
+          <!--
+            ⚠️⚠️ Da qui si REGISTRA un incasso in contanti, e fino al 10/09/2026
+            non si poteva: il server accettava questi campi da sempre, ma nessun
+            client glieli mandava — il lotto dei contanti era completo dietro e
+            muto davanti.
+            ⚠️ Con «Contanti» importo e incassante sono OBBLIGATORI, e non è
+            pignoleria: chi registra un contante deve snapshottare i due prezzi,
+            o l'espressione dell'incasso ricade sul listino e un contante da
+            80 € risulta 125 €.
+          -->
+          <div class="row admin-panel__row" style="margin: 0.6rem 0 0">
+            <div class="field" style="margin: 0">
+              <label for="mod-conc-metodo">Pagamento</label>
+              <select
+                id="mod-conc-metodo"
+                class="input"
+                formControlName="concediMetodo"
+              >
+                <option value="">Nessun incasso da registrare</option>
+                <option value="contanti">Contanti</option>
+              </select>
+            </div>
+            @if (form.controls.concediMetodo.value === 'contanti') {
+              <div class="field" style="margin: 0">
+                <label for="mod-conc-imp">Importo in €</label>
+                <input
+                  id="mod-conc-imp"
+                  type="text"
+                  inputmode="decimal"
+                  class="input"
+                  formControlName="concediImporto"
+                  placeholder="es. 80"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="field" style="margin: 0">
+                <label for="mod-conc-inc">Incassato da</label>
+                <select
+                  id="mod-conc-inc"
+                  class="input"
+                  formControlName="concediIncassatoDa"
+                >
+                  <option value="">scegli…</option>
+                  @for (i of INCASSANTI; track i) {
+                    <option [value]="i">{{ incassanteLabel(i) }}</option>
+                  }
+                </select>
+              </div>
+              <div class="field" style="margin: 0">
+                <label for="mod-conc-data">Quando</label>
+                <input
+                  id="mod-conc-data"
+                  type="date"
+                  class="input"
+                  formControlName="concediDataIncasso"
+                />
+              </div>
+            }
+          </div>
+          @if (form.controls.concediMetodo.value === 'contanti') {
+            <p class="admin-nota">
+              L’importo è quello <strong>davvero ricevuto</strong>, non il
+              listino: è il numero che finisce nei Conteggi mensili. E la data
+              decide <strong>in che mese</strong> l’incasso viene contato.
+            </p>
+          }
+
           <label class="admin-panel__check" style="margin: 0.6rem 0 0">
             <input type="checkbox" formControlName="concediSostituisci" />
             Sostituisci la richiesta in attesa (la chiude e restituisce i punti
@@ -395,7 +462,10 @@
               type="button"
               class="btn btn--primary btn--sm"
               [disabled]="
-                salvando() || sonoIo(u) || !form.controls.concediData.value
+                salvando() ||
+                sonoIo(u) ||
+                !form.controls.concediData.value ||
+                !incassoCompleto()
               "
               (click)="concedi(u)"
             >
@@ -744,8 +814,16 @@
             <ul class="admin-history">
               @for (r of storicoRichieste()!; track r.id) {
                 <li>
-                  <span class="badge badge--tag">{{ r.status }}</span>
-                  {{ r.tierLabel }} · {{ r.paymentMethod }}
+                  <!--
+                    ⚠️ Erano SLUG grezzi (`approved`, `paypal`): l'unica riga del
+                    pannello che mostrava il valore del database invece della
+                    sua etichetta.
+                  -->
+                  <span class="badge badge--tag">{{ statoRichiesta(r.status) }}</span>
+                  {{ r.tierLabel }} · {{ metodoPagamentoLabel(r.paymentMethod) }}
+                  @if (r.incassatoDa) {
+                    · incassato da {{ incassanteLabel(r.incassatoDa) }}
+                  }
                   @if (r.discountCode) { · sconto {{ r.discountCode }} }
                   @if (r.discountedPriceEur != null) { (€{{ r.discountedPriceEur }}) }
                   @if (r.pointsSpent) { · {{ r.pointsSpent }} pt }

@@ -131,6 +131,16 @@
   }
 }
 
+// ⚠️ Le righe «di cui …»: rientrate e in tono minore, perché SPIEGANO la riga
+// sopra invece di aggiungersi a lei. Senza il rientro si leggerebbero come
+// quattro entrate in più, e il totale non tornerebbe più a occhio — che è
+// l'unica cosa per cui un conto economico si guarda.
+.cm__didi {
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+  color: var(--text-faint);
+}
+
 .cm__somma {
   // ⚠️⚠️ Era `var(--border)`, e `--border` NON ESISTE fra i token del progetto
   // (ci sono `--line` e `--line-strong`): in una shorthand un `var()` irrisolto

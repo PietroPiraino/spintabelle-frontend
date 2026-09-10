@@ -15,14 +15,17 @@ import {
   ContoRakeback,
   DestinazioneMargine,
   DettaglioMese,
+  Incassante,
   MeseContabile,
   MetodoMovimento,
+  RigaAbbonamento,
   RigaRakebackPayload,
   SpesaRicorrente,
   VersoVoce,
   VoceMese,
 } from '../../../core/models/api.models';
 import { AdminConteggiService } from '../../../core/services/admin-conteggi.service';
+import { SubscriptionsService } from '../../../core/services/subscriptions.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { ModalComponent } from '../../../shared/ui/modal/modal.component';
@@ -33,8 +36,18 @@ import {
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { TonoStato } from '../admin-stato';
 import { formattaBp, formattaCent, parseImportoInCent } from '../denaro';
+import {
+  incassanteLabel,
+  metodoPagamentoLabel,
+  motivoSenzaCassa,
+} from '../metodo-pagamento';
 
-type Vista = 'riepilogo' | 'rakeback' | 'voci' | 'anagrafiche';
+type Vista =
+  | 'riepilogo'
+  | 'rakeback'
+  | 'abbonamenti'
+  | 'voci'
+  | 'anagrafiche';
 
 /** Quello che si sta digitando nella colonna del rakeback, prima di salvare. */
 interface BozzaRiga {
@@ -110,6 +123,7 @@ const METODI: readonly MetodoMovimento[] = [
 })
 export class AdminConteggiMensiliComponent {
   private readonly api = inject(AdminConteggiService);
+  private readonly abbonamentiApi = inject(SubscriptionsService);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
 
@@ -147,6 +161,11 @@ export class AdminConteggiMensiliComponent {
   protected readonly CATEGORIE_USCITA = CATEGORIE_USCITA;
   protected readonly CATEGORIE_ENTRATA = CATEGORIE_ENTRATA;
   protected readonly METODI = METODI;
+  protected readonly INCASSANTI: readonly Incassante[] = ['PIETRO', 'EXIVEZZZ'];
+
+  protected readonly metodoPagamentoLabel = metodoPagamentoLabel;
+  protected readonly incassanteLabel = incassanteLabel;
+  protected readonly motivoSenzaCassa = motivoSenzaCassa;
 
   // ── Le schede ────────────────────────────────────────────────────────────
 
@@ -164,6 +183,11 @@ export class AdminConteggiMensiliComponent {
         valore: 'rakeback',
         etichetta: 'Rakeback',
         conteggio: d?.righe.length ?? null,
+      },
+      {
+        valore: 'abbonamenti',
+        etichetta: 'Abbonamenti',
+        conteggio: d?.abbonamenti.length ?? null,
       },
       {
         valore: 'voci',
@@ -205,6 +229,8 @@ export class AdminConteggiMensiliComponent {
         return 'Riepilogo del mese';
       case 'rakeback':
         return 'Rakeback';
+      case 'abbonamenti':
+        return 'Abbonamenti';
       case 'voci':
         return 'Spese ed entrate';
       case 'anagrafiche':
@@ -224,6 +250,22 @@ export class AdminConteggiMensiliComponent {
     const n = this.dett()?.righe.length ?? 0;
     const mese = this.mese()?.etichetta ?? '';
     return `su ${n} ${n === 1 ? 'conto' : 'conti'} di ${mese}`;
+  });
+
+  /**
+   * L'ambito della striscia degli abbonamenti.
+   *
+   * ⚠️ Nomina DUE insiemi e non uno: quanti abbonamenti ci sono e quanti non
+   * portano cassa. Il totale sopra somma solo i secondi, quindi senza la
+   * seconda metà della frase si legge come «quattro abbonamenti hanno fatto
+   * 80 €» — che è falso: uno solo li ha fatti.
+   */
+  protected readonly ambitoAbbonamenti = computed(() => {
+    const righe = this.dett()?.abbonamenti ?? [];
+    const mese = this.mese()?.etichetta ?? '';
+    const senza = righe.filter((r) => !r.portaCassa).length;
+    const base = `su ${righe.length} ${righe.length === 1 ? 'abbonamento' : 'abbonamenti'} di ${mese}`;
+    return senza ? `${base}, ${senza} senza cassa` : base;
   });
 
   // ── La colonna del rakeback ──────────────────────────────────────────────
@@ -346,6 +388,24 @@ export class AdminConteggiMensiliComponent {
     SpesaRicorrente | 'nuova' | null
   >(null);
   protected readonly apriMeseAperto = signal(false);
+
+  /** La riga di abbonamento aperta nella scheda di correzione. */
+  protected readonly abbonamentoAperto = signal<RigaAbbonamento | null>(null);
+
+  /**
+   * ⚠️ `motivo` è l'unico campo OBBLIGATORIO, e non è burocrazia: la correzione
+   * è in place, quindi senza la coppia before/after dell'audit «quanto c'era
+   * scritto prima» sarebbe perduto per sempre — e su un contante non esiste
+   * alcun estratto conto da cui ricostruirlo.
+   */
+  protected readonly formCorrezione = this.fb.nonNullable.group({
+    importo: [''],
+    incassatoDa: ['' as Incassante | ''],
+    paymentReference: [''],
+    dataIncasso: [''],
+    motivo: ['', [Validators.required, Validators.minLength(3)]],
+  });
+
 
   protected readonly formMese = this.fb.nonNullable.group({
     anno: [new Date().getFullYear(), Validators.required],
@@ -1011,5 +1071,88 @@ export class AdminConteggiMensiliComponent {
 
   protected annulla(): void {
     this.conferma.set(null);
+  }
+
+  // ── Abbonamenti: la correzione dell'incasso ──────────────────────────────
+
+  protected apriAbbonamento(r: RigaAbbonamento): void {
+    this.erroreModale.set(null);
+    this.conferma.set(null);
+    this.formCorrezione.reset({
+      // ⚠️ Precompilato con quello che c'è: una correzione parte dal valore
+      // esistente, non da un campo vuoto che invita a riscrivere tutto.
+      importo: r.portaCassa ? this.euro(r.importoCent) : '',
+      incassatoDa: r.incassatoDa ?? '',
+      paymentReference: r.paymentReference ?? '',
+      dataIncasso: r.decidedAt ? r.decidedAt.slice(0, 10) : '',
+      // ⚠️ Il motivo NON si precompila: è la sola cosa che chi corregge deve
+      // scrivere di suo, e un valore suggerito lo farebbe accettare com'è.
+      motivo: '',
+    });
+    this.abbonamentoAperto.set(r);
+  }
+
+  /** ⚠️ L'importo si corregge SOLO sui contanti: il server risponde 409 sugli altri. */
+  protected readonly importoCorreggibile = computed(
+    () => this.abbonamentoAperto()?.metodo === 'contanti',
+  );
+
+  protected salvaCorrezione(): void {
+    const r = this.abbonamentoAperto();
+    const m = this.mese();
+    if (!r || !m) return;
+    const v = this.formCorrezione.getRawValue();
+
+    const patch: {
+      importoEur?: number;
+      incassatoDa?: Incassante;
+      paymentReference?: string;
+      dataIncasso?: string;
+    } = {};
+
+    if (this.importoCorreggibile() && v.importo.trim()) {
+      const cent = parseImportoInCent(v.importo);
+      if (cent === null) {
+        this.erroreModale.set('Non riesco a leggere l’importo.');
+        return;
+      }
+      if (cent <= 0) {
+        // Il server lo rifiuta comunque; dirlo qui evita un giro di rete per
+        // sapere una cosa che si sa già.
+        this.erroreModale.set('L’importo incassato dev’essere maggiore di zero.');
+        return;
+      }
+      patch.importoEur = cent / 100;
+    }
+    if (v.incassatoDa) patch.incassatoDa = v.incassatoDa;
+    if (v.paymentReference.trim()) {
+      patch.paymentReference = v.paymentReference.trim();
+    }
+    if (v.dataIncasso) patch.dataIncasso = v.dataIncasso;
+
+    if (!Object.keys(patch).length) {
+      this.erroreModale.set('Non c’è niente da correggere.');
+      return;
+    }
+
+    this.salvando.set(true);
+    this.erroreModale.set(null);
+    this.abbonamentiApi.correggiIncasso(r.id, patch, v.motivo.trim()).subscribe({
+      next: () => {
+        this.salvando.set(false);
+        this.abbonamentoAperto.set(null);
+        // ⚠️ Si RICARICA il mese, non si toppa la riga: l'importo cambia i
+        // totali e la data può spostare la riga in un ALTRO mese — toccare solo
+        // la riga lascerebbe a schermo un elenco che non le contiene più.
+        this.scegliMese(m.id);
+        this.toast.success('Incasso corretto.');
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a correggere l’incasso.'),
+        );
+      },
+    });
   }
 }

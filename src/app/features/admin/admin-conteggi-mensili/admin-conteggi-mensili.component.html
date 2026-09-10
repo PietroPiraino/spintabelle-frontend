@@ -161,6 +161,36 @@
         <dl class="cm__conto">
           <dt>Abbonamenti in euro</dt>
           <dd class="is-num">{{ eur(d.riepilogo.entrate.abbonamentiCent) }}</dd>
+          <!--
+            ⚠️ Le righe rientrate SOMMANO la riga sopra: righe di dettaglio che
+            non tornano col totale che spiegano si leggono come un buco.
+            ⚠️ «Senza incassante» compare solo se c'è: sono contanti di cui non
+            si sa chi li ha presi, e mostrarlo a zero tutti i mesi insegnerebbe a
+            ignorarlo proprio il giorno in cui non è zero.
+          -->
+          <dt class="cm__didi">di cui a Pietro</dt>
+          <dd class="is-num cm__didi">
+            {{ eur(d.riepilogo.entrate.abbonamentiPerDestinazione.pietroCent) }}
+          </dd>
+          <dt class="cm__didi">di cui a Exivezzz</dt>
+          <dd class="is-num cm__didi">
+            {{ eur(d.riepilogo.entrate.abbonamentiPerDestinazione.exivezzzCent) }}
+          </dd>
+          <dt class="cm__didi">di cui su PayPal o Skrill</dt>
+          <dd class="is-num cm__didi">
+            {{ eur(d.riepilogo.entrate.abbonamentiPerDestinazione.onlineCent) }}
+          </dd>
+          @if (d.riepilogo.entrate.abbonamentiPerDestinazione.nonAttribuitoCent) {
+            <dt class="cm__didi">di cui in contanti senza incassante</dt>
+            <dd class="is-num cm__didi is-perdita">
+              {{
+                eur(
+                  d.riepilogo.entrate.abbonamentiPerDestinazione
+                    .nonAttribuitoCent
+                )
+              }}
+            </dd>
+          }
           <dt>Gadget in euro</dt>
           <dd class="is-num">{{ eur(d.riepilogo.entrate.gadgetCent) }}</dd>
           <dt>Commissioni rakeback</dt>
@@ -611,6 +641,194 @@
                 {{ erroreValidazione() }}
               </p>
             }
+          }
+        }
+      }
+
+      <!-- ══ Abbonamenti ═════════════════════════════════════════════════ -->
+      @if (vista() === 'abbonamenti') {
+        @if (!d.abbonamenti.length) {
+          <p class="admin-nota">
+            Nessun abbonamento approvato in questo mese. Le righe compaiono da
+            sole: un abbonamento entra qui il giorno in cui viene
+            <strong>approvato</strong>, e i contanti si registrano da
+            <strong>Iscritti</strong> → «Concedi abbonamento».
+          </p>
+        } @else {
+          <!--
+            ⚠️ La striscia legge gli STESSI numeri del Riepilogo — vengono dal
+            medesimo `riepilogo.entrate` — quindi le due schermate non possono
+            dissentire su una cifra di denaro.
+          -->
+          <p class="admin-totali">
+            <span class="admin-totali__voce">
+              Incassato in euro
+              <strong>{{ eur(d.riepilogo.entrate.abbonamentiCent) }}</strong>
+            </span>
+            <span class="admin-totali__voce">
+              Pietro
+              <strong>
+                {{ eur(d.riepilogo.entrate.abbonamentiPerDestinazione.pietroCent) }}
+              </strong>
+            </span>
+            <span class="admin-totali__voce">
+              Exivezzz
+              <strong>
+                {{ eur(d.riepilogo.entrate.abbonamentiPerDestinazione.exivezzzCent) }}
+              </strong>
+            </span>
+            <span class="admin-totali__voce">
+              Online
+              <strong>
+                {{ eur(d.riepilogo.entrate.abbonamentiPerDestinazione.onlineCent) }}
+              </strong>
+            </span>
+            @if (d.riepilogo.entrate.abbonamentiPerDestinazione.nonAttribuitoCent) {
+              <span class="admin-totali__voce">
+                Da attribuire
+                <strong class="is-perdita">
+                  {{
+                    eur(
+                      d.riepilogo.entrate.abbonamentiPerDestinazione
+                        .nonAttribuitoCent
+                    )
+                  }}
+                </strong>
+              </span>
+            }
+            <span class="admin-totali__ambito">{{ ambitoAbbonamenti() }}</span>
+          </p>
+
+          @if (d.mese.stato === 'CHIUSO') {
+            <!--
+              ⚠️ Non è una postilla difensiva: una richiesta di abbonamento viene
+              CANCELLATA alla chiusura di un account, quindi su un mese chiuso
+              l'elenco può contenere meno righe di quante il totale congelato ne
+              sommi. Detto, è un fatto; non detto, si legge come un errore di
+              calcolo — e manda a cercare un guasto che non c'è.
+            -->
+            <p class="admin-nota">
+              Il mese è <strong>chiuso</strong>: i totali qui sopra sono quelli
+              congelati alla chiusura, mentre l'elenco si legge dal vivo. Se un
+              iscritto ha chiuso il proprio account dopo la chiusura del mese, la
+              sua riga non c'è più ma il totale la contiene ancora.
+            </p>
+          }
+
+          <p class="admin-nota admin-table__nota-mobile">
+            Il piano è visibile su schermi più larghi; il riferimento del
+            pagamento e la data sono nella scheda della riga.
+          </p>
+
+          <div class="admin-table__scroll">
+            <table class="admin-table">
+              <caption class="visually-hidden">
+                Abbonamenti approvati nel mese, con la destinazione dell'incasso
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="admin-table__c-primo">Iscritto</th>
+                  <th scope="col" class="admin-table__solo-largo">Piano</th>
+                  <th scope="col">Come</th>
+                  <th scope="col">Incassato da</th>
+                  <th scope="col" class="is-num">Importo</th>
+                  <th scope="col" class="admin-table__c-ultimo">
+                    <span class="visually-hidden">Azioni</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of d.abbonamenti; track a.id) {
+                  <tr>
+                    <th scope="row" class="admin-table__c-primo">
+                      <span class="admin-table__ident">
+                        <span class="admin-table__ident-riga">
+                          <strong [title]="a.userNickname || a.userEmail">
+                            {{ a.userNickname || a.userEmail }}
+                          </strong>
+                          @if (motivoSenzaCassa(a.metodo, a.portaCassa); as m) {
+                            <!--
+                              ⚠️ `.badge` e non `.admin-stato`: «non è cassa» è
+                              un FATTO della riga, non uno stato che cambia da
+                              sé. È la regola di confine del pannello.
+                            -->
+                            <span class="badge badge--tag">{{ m }}</span>
+                          }
+                          @if (a.stimato) {
+                            <span
+                              class="badge badge--tag"
+                              title="Prezzo ricostruito dal listino di allora, non registrato sulla riga"
+                            >
+                              stimato
+                            </span>
+                          }
+                        </span>
+                        @if (a.userNickname) {
+                          <span class="admin-table__sub" [title]="a.userEmail">
+                            {{ a.userEmail }}
+                          </span>
+                        }
+                      </span>
+                    </th>
+                    <td class="admin-table__solo-largo">
+                      {{ a.tier === 'SQUALO' ? 'Squalo' : 'Pesce Rosso' }}
+                    </td>
+                    <td>{{ metodoPagamentoLabel(a.metodo) }}</td>
+                    <td>
+                      @if (a.incassatoDa) {
+                        {{ incassanteLabel(a.incassatoDa) }}
+                      } @else if (a.metodo === 'contanti') {
+                        <!--
+                          ⚠️ Contanti senza incassante non sono «online»: sono
+                          una riga da sistemare, e dirlo qui è ciò che la fa
+                          sistemare.
+                        -->
+                        <span class="is-perdita">da attribuire</span>
+                      } @else {
+                        <span class="is-vuota">—</span>
+                      }
+                    </td>
+                    <!--
+                      ⚠️ Trattino e non «0,00 €» sulle righe senza cassa: zero
+                      significa «ho incassato zero», il trattino «non è cassa».
+                      Sono due cose diverse, e la colonna le mostra diverse.
+                    -->
+                    <td class="is-num">
+                      @if (a.portaCassa) {
+                        {{ eur(a.importoCent) }}
+                      } @else {
+                        <span class="is-vuota">—</span>
+                      }
+                    </td>
+                    <td class="admin-table__c-ultimo">
+                      @if (d.mese.stato === 'APERTO') {
+                        <button
+                          type="button"
+                          class="admin-ico"
+                          aria-haspopup="dialog"
+                          [attr.aria-label]="
+                            'Correggi l’incasso di ' +
+                            (a.userNickname || a.userEmail)
+                          "
+                          title="Correggi l’incasso"
+                          (click)="apriAbbonamento(a)"
+                        >
+                          <app-icon name="more-vertical" [size]="18" />
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (d.mese.stato !== 'APERTO') {
+            <p class="admin-nota">
+              Per correggere un incasso <strong>riapri il mese</strong>: su un
+              mese chiuso il totale resta congelato, quindi la correzione non si
+              vedrebbe da nessuna parte.
+            </p>
           }
         }
       }
@@ -1404,6 +1622,124 @@
         [disabled]="formRicorrente.invalid || salvando()"
       >
         {{ salvando() ? 'Salvo…' : 'Salva' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<!-- ══ Modale: correzione di un incasso ═══════════════════════════════════ -->
+@if (abbonamentoAperto(); as a) {
+  <app-modal
+    titolo="Correggi l’incasso"
+    [sottotitolo]="a.userNickname || a.userEmail"
+    [salvando]="salvando()"
+    (chiusa)="abbonamentoAperto.set(null)"
+  >
+    <div class="admin-modale">
+      <form
+        id="cm-form-incasso"
+        [formGroup]="formCorrezione"
+        (ngSubmit)="salvaCorrezione()"
+      >
+        <div class="row">
+          @if (importoCorreggibile()) {
+            <!--
+              ⚠️ L'importo compare SOLO sui contanti, e non disabilitato: il
+              server risponde 409 su ogni altro metodo («gli altri hanno un
+              riscontro fuori dal sito»), e un campo spento senza spiegazione si
+              legge come un guasto.
+            -->
+            <div class="field">
+              <label for="cm-inc-imp">Importo incassato in €</label>
+              <input
+                id="cm-inc-imp"
+                type="text"
+                inputmode="decimal"
+                class="input"
+                formControlName="importo"
+                autocomplete="off"
+              />
+            </div>
+          }
+          <div class="field">
+            <label for="cm-inc-da">Incassato da</label>
+            <select id="cm-inc-da" class="input" formControlName="incassatoDa">
+              <option value="">non specificato</option>
+              @for (i of INCASSANTI; track i) {
+                <option [value]="i">{{ incassanteLabel(i) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="cm-inc-rif">Riferimento del pagamento</label>
+            <input
+              id="cm-inc-rif"
+              type="text"
+              class="input"
+              formControlName="paymentReference"
+              maxlength="200"
+              placeholder="facoltativo"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-inc-data">Data dell’incasso</label>
+            <input
+              id="cm-inc-data"
+              type="date"
+              class="input"
+              formControlName="dataIncasso"
+            />
+          </div>
+        </div>
+        <!--
+          ⚠️⚠️ La data non è un dettaglio: è l'orologio con cui la riga viene
+          contata in un mese. Cambiandola, l'abbonamento SPARISCE da questo mese
+          e ricompare in un altro — e senza questa frase sembrerebbe cancellato.
+        -->
+        <p class="admin-nota">
+          La data decide <strong>in che mese</strong> questo incasso viene
+          contato: cambiandola, la riga si sposta e non la troverai più qui.
+        </p>
+
+        <div class="field">
+          <label for="cm-inc-motivo">Motivo della correzione</label>
+          <input
+            id="cm-inc-motivo"
+            type="text"
+            class="input"
+            formControlName="motivo"
+            maxlength="300"
+            placeholder="es. erano 90 e non 80"
+          />
+        </div>
+        <!--
+          ⚠️ Il motivo è obbligatorio e non è burocrazia: la correzione è IN
+          PLACE, quindi la coppia prima/dopo del registro di audit È l'unica
+          traccia di che cosa c'era scritto — e su un contante non esiste alcun
+          estratto conto da cui ricostruirlo.
+        -->
+        <p class="admin-nota">
+          Serve a ricostruire la rettifica: la correzione sovrascrive il valore
+          vecchio, e il <strong>registro</strong> è l’unico posto in cui resta.
+        </p>
+
+        @if (erroreModale()) {
+          <p class="form-feedback is-error" role="alert">{{ erroreModale() }}</p>
+        }
+      </form>
+    </div>
+
+    <div moPiede>
+      <button
+        type="submit"
+        form="cm-form-incasso"
+        class="btn btn--primary btn--sm"
+        [disabled]="formCorrezione.invalid || salvando()"
+      >
+        {{ salvando() ? 'Correggo…' : 'Correggi' }}
       </button>
     </div>
   </app-modal>

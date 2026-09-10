@@ -23,6 +23,7 @@ import {
   VoceFiltro,
 } from '../../../shared/ui/filtro/filtro.component';
 import { ROLE_LABELS } from '../role-labels';
+import { metodoLabelDaSlug } from '../metodo-pagamento';
 
 /** Profondità della serie mensile (il DTO backend accetta 1..24). */
 const MESI_RANGES = [6, 12, 24] as const;
@@ -34,11 +35,6 @@ const VISIBILITY_LABELS: Record<string, string> = {
   USER: 'Gratis',
   PESCE_ROSSO: 'Pesce Rosso',
   SQUALO: 'Squalo',
-};
-
-const METODO_LABELS: Record<string, string> = {
-  paypal: 'PayPal',
-  skrill: 'Skrill',
 };
 
 const NF = new Intl.NumberFormat('it-IT');
@@ -548,9 +544,15 @@ export class AdminStatsComponent {
     return VISIBILITY_LABELS[v] ?? v;
   }
 
-  protected metodoLabel(m: string): string {
-    return METODO_LABELS[m] ?? m;
-  }
+  /**
+   * ⚠️ Era una mappa di DUE voci (paypal, skrill) con ripiego sullo slug: non
+   * conosceva né `manuale`, né `punti`, né `contanti`. Ora passa dalla funzione
+   * condivisa, che il ripiego sullo slug lo conserva — qui il metodo arriva
+   * dentro un'aggregazione come `string`, e davanti a un valore ignoto la
+   * stringa grezza è una domanda, mentre un metodo plausibile sarebbe
+   * un'affermazione falsa.
+   */
+  protected readonly metodoLabel = metodoLabelDaSlug;
 
   /** Secondi → "1h 23m" / "12m 30s" / "45s". */
   protected durata(secondi: number): string {

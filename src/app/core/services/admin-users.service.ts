@@ -6,6 +6,7 @@ import {
   AdminActionLogEntry,
   AdminUser,
   AdminUsersPage,
+  Incassante,
   LessonViewSummary,
   Paginated,
   Role,
@@ -54,12 +55,39 @@ export class AdminUsersService {
   }
 
   /** Concessione manuale di un abbonamento (tier + scadenza assoluta). */
+  /**
+   * Concede un abbonamento a mano, e — se in contanti — ne REGISTRA l'incasso.
+   *
+   * ⚠️ I quattro campi del contante sono arrivati qui il 10/09/2026, e fino ad
+   * allora questa chiamata non li mandava: il server li accettava da sempre, ma
+   * **dall'interfaccia un incasso in contanti non si poteva registrare**. Il
+   * lotto dei contanti era completo lato backend e muto lato UI.
+   *
+   * ⚠️ Si mandano SOLO se presenti, come già per `sostituisciRichiestaInAttesa`:
+   * `forbidNonWhitelisted` è globale, e un campo che il server non conosce fa
+   * fallire l'INTERA chiamata con un 400.
+   *
+   * ⚠️ Con `metodo: 'contanti'` importo e incassante sono OBBLIGATORI lato
+   * server, e per una ragione che vale la pena conoscere: chi registra un
+   * contante deve snapshottare i due prezzi, o l'espressione dell'incasso
+   * ricade sul listino e un contante da 80 € risulta 125 €.
+   */
   grantSubscription(
     id: string,
     tier: SubscriptionTier,
     expiresAt: string,
     note?: string,
     sostituisciRichiestaInAttesa?: boolean,
+    incasso?: {
+      // ⚠️ Il campo del DTO si chiama `paymentMethod`, non `metodo`: con il
+      // nome sbagliato `forbidNonWhitelisted` risponde 400 «property metodo
+      // should not exist» sull'INTERA chiamata. Nessun tipo lo coglie — il
+      // corpo è un oggetto libero — e infatti l'ha colto solo la prova a mano.
+      paymentMethod: 'contanti';
+      importoEur: number;
+      incassatoDa: Incassante;
+      dataIncasso?: string;
+    },
   ): Observable<AdminUser> {
     return this.http.post<AdminUser>(
       `${API}/admin/users/${id}/grant-subscription`,
@@ -67,6 +95,16 @@ export class AdminUsersService {
         tier,
         expiresAt,
         ...(note ? { note } : {}),
+        ...(incasso
+          ? {
+              paymentMethod: incasso.paymentMethod,
+              importoEur: incasso.importoEur,
+              incassatoDa: incasso.incassatoDa,
+              ...(incasso.dataIncasso
+                ? { dataIncasso: incasso.dataIncasso }
+                : {}),
+            }
+          : {}),
         // Solo se true: un `false` mandato sempre farebbe fallire l'INTERA
         // chiamata (400 da `forbidNonWhitelisted`) contro un backend piu'
         // vecchio, cioe' anche la concessione normale.

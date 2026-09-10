@@ -6,6 +6,7 @@ import {
   CreateSubscriptionRequest,
   DiscountValidation,
   DiscountsValidation,
+  Incassante,
   MySubscription,
   Paginated,
   PaymentInfo,
@@ -110,6 +111,51 @@ export class SubscriptionsService {
     return this.http.post<SubscriptionRequest>(
       `${API}/admin/subscription-requests/${id}/reject`,
       note ? { note } : {},
+    );
+  }
+
+  /**
+   * Corregge un incasso già registrato.
+   *
+   * ⚠️ È la **prima** interfaccia di una rotta che esisteva dal 10/09/2026 e che
+   * nessun client chiamava: `incassatoDa` era raccolto, dichiarato nel registro
+   * dei trattamenti e **invisibile in tutto il sito**.
+   *
+   * ⚠️ `motivo` è obbligatorio e non è burocrazia: la correzione è IN PLACE,
+   * quindi senza la coppia before/after dell'audit «quanto c'era scritto prima»
+   * sarebbe perduto per sempre — e su un contante non esiste alcun estratto
+   * conto da cui ricostruirlo.
+   *
+   * ⚠️ I campi facoltativi si mandano SOLO se presenti: `forbidNonWhitelisted`
+   * è globale e un `undefined` esplicito farebbe fallire l'INTERA chiamata.
+   *
+   * ⚠️⚠️ `dataIncasso` scrive `decidedAt`, cioè **sposta la riga di MESE**: chi
+   * la usa deve ricaricare il mese, o resta a guardare un elenco che non
+   * contiene più quella riga.
+   */
+  correggiIncasso(
+    id: string,
+    patch: {
+      importoEur?: number;
+      incassatoDa?: Incassante;
+      paymentReference?: string;
+      dataIncasso?: string;
+    },
+    motivo: string,
+  ): Observable<SubscriptionRequest> {
+    return this.http.patch<SubscriptionRequest>(
+      `${API}/admin/subscription-requests/${id}/incasso`,
+      {
+        ...(patch.importoEur !== undefined
+          ? { importoEur: patch.importoEur }
+          : {}),
+        ...(patch.incassatoDa ? { incassatoDa: patch.incassatoDa } : {}),
+        ...(patch.paymentReference !== undefined
+          ? { paymentReference: patch.paymentReference }
+          : {}),
+        ...(patch.dataIncasso ? { dataIncasso: patch.dataIncasso } : {}),
+        motivo,
+      },
     );
   }
 }
