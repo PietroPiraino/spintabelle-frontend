@@ -131,6 +131,24 @@ async function perOgniScheda(page, azione) {
       (await s.textContent().catch(() => null))?.trim().split('\n')[0].trim() ??
       `scheda ${i + 1}`;
     await s.click().catch(() => undefined);
+    // ⚠️⚠️ Prima si aspettava «una tabella qualunque», e la tabella della
+    // scheda PRECEDENTE è ancora nel DOM nell'istante dopo il clic: la sonda
+    // misurava quella e la annunciava col nome della scheda nuova. Un 54px
+    // dello Stakati è finito sotto «Spese ed entrate» (11/09/2026) — numero
+    // giusto, nome sbagliato, cioè una diagnosi che manda a cercare altrove.
+    // Si aspetta che la scheda cliccata risulti SELEZIONATA: in zoneless il
+    // pannello nuovo entra nello stesso giro di change detection di
+    // `aria-selected`, quindi da lì in poi la tabella che si vede è la sua.
+    await page
+      .waitForFunction(
+        (k) =>
+          document
+            .querySelectorAll('button[role="tab"]')
+            [k]?.getAttribute('aria-selected') === 'true',
+        i,
+        { timeout: 4000 },
+      )
+      .catch(() => undefined);
     await page
       .waitForSelector('table.admin-table tbody tr', { timeout: 4000 })
       .catch(() => undefined);
