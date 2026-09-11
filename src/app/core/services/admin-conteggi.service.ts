@@ -16,6 +16,7 @@ import {
   VocePayload,
 ContoRakeback,
   ProspettoMese,
+  AnteprimaPunti,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -195,6 +196,20 @@ export class AdminConteggiService {
     return this.http.post<void>(
       `${API}/admin/conteggi/mesi/${meseId}/prospetto`,
       { userId },
+    );
+  }
+
+  anteprimaPunti(meseId: string): Observable<AnteprimaPunti> {
+    return this.http.get<AnteprimaPunti>(
+      `${API}/admin/conteggi/mesi/${meseId}/punti`,
+    );
+  }
+
+  /** ⚠️ Idempotente per marcatore: premuto due volte non raddoppia. */
+  accreditaPunti(meseId: string): Observable<AnteprimaPunti> {
+    return this.http.post<AnteprimaPunti>(
+      `${API}/admin/conteggi/mesi/${meseId}/punti`,
+      {},
     );
   }
 

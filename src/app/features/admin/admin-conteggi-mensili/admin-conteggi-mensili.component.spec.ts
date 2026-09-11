@@ -15,6 +15,7 @@ import {
   RigaStakato,
   Stakato,
   AdminUser,
+  AnteprimaPunti,
 } from '../../../core/models/api.models';
 import { AdminConteggiMensiliComponent } from './admin-conteggi-mensili.component';
 
@@ -1051,6 +1052,83 @@ describe('AdminConteggiMensiliComponent', () => {
     } as AdminUser);
     await stabilizza();
     expect(fixture.componentInstance['contoSporco']()).toBeTrue();
+  });
+
+  it('i punti: anteprima PRIMA della conferma, esclusi visibili, e un solo accredito', async () => {
+    await avvia();
+    fixture.componentInstance['apriPunti']();
+    await stabilizza();
+
+    const anteprima: AnteprimaPunti = {
+      righe: [
+        {
+          contoId: 'c1',
+          username: 'MadRoxKO',
+          utente: { id: 'u1', nickname: 'MadRoxKO', email: 'r@x.it' },
+          margineCent: 3228,
+          punti: 16_140,
+          disallineato: false,
+        },
+        {
+          contoId: 'c2',
+          username: 'Senza',
+          margineCent: 3228,
+          punti: 16_140,
+          disallineato: false,
+          motivoEsclusione:
+            'Non collegato a un account del sito: collegalo da Anagrafiche.',
+        },
+      ],
+      totalePunti: 16_140,
+      daAccreditare: 1,
+      provvisorio: true,
+    };
+    http
+      .expectOne(`${API}/admin/conteggi/mesi/m1/punti`)
+      .flush(anteprima);
+    await stabilizza();
+
+    const testo = () => fixture.nativeElement.textContent as string;
+    // ⚠️ La formula è scritta per esteso PRIMA di poter confermare: è una
+    // garanzia del test di compatibilità dell'art. 6.4, non una didascalia.
+    expect(testo()).toContain('1.000 punti ogni 2');
+    expect(testo()).toContain('16.140');
+    // ⚠️ La riga esclusa RESTA, col motivo: una che sparisce fa cercare un guasto.
+    expect(testo()).toContain('Senza');
+    expect(testo()).toContain('collegalo da Anagrafiche');
+    // ⚠️ Il mese aperto è dichiarato.
+    expect(testo()).toContain('ancora');
+
+    const bottone = (t: string) =>
+      [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) => b.textContent?.trim().startsWith(t),
+      ) as HTMLButtonElement | undefined;
+
+    // ⚠️ Passa da una conferma: i punti, una volta dati, non si tolgono da qui.
+    expect(bottone('Accredita davvero')).toBeUndefined();
+    bottone('Accredita 16.140')!.click();
+    await stabilizza();
+    bottone('Accredita davvero')!.click();
+    await stabilizza();
+
+    const req = http.expectOne(`${API}/admin/conteggi/mesi/m1/punti`);
+    expect(req.request.method).toBe('POST');
+    req.flush({
+      ...anteprima,
+      righe: [
+        { ...anteprima.righe[0], giaAccreditati: 16_140 },
+        anteprima.righe[1],
+      ],
+      totalePunti: 0,
+      daAccreditare: 0,
+    });
+    await stabilizza();
+
+    // ⚠️ La modale RESTA aperta: l'esito è la tabella che c'è dentro, e un
+    // toast con un `<dialog>` aperto dipinge dietro il fondale.
+    expect(testo()).toContain('già accreditati');
+    expect(testo()).toContain('Niente da accreditare');
+    expect(bottone('Accredita davvero')).toBeUndefined();
   });
 
   it('il mese scelto SOPRAVVIVE al cambio di scheda', async () => {

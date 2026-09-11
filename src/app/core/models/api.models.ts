@@ -2659,6 +2659,28 @@ export interface ProspettoMese {
   stakato?: ProspettoStakato;
 }
 
+/** Una riga dell'anteprima dei punti sul rakeback. */
+export interface RigaPunti {
+  contoId: string;
+  username: string;
+  utente?: UtenteCollegato;
+  margineCent: number;
+  punti: number;
+  giaAccreditati?: number;
+  /** Accreditati, ma la cifra di oggi non corrisponde più. */
+  disallineato: boolean;
+  /** Perché questa riga NON prende punti. La riga resta, spenta. */
+  motivoEsclusione?: string;
+}
+
+export interface AnteprimaPunti {
+  righe: RigaPunti[];
+  totalePunti: number;
+  daAccreditare: number;
+  /** Il mese è ancora aperto: il margine può cambiare dopo l'accredito. */
+  provvisorio: boolean;
+}
+
 export interface UtenteCollegato {
   id: string;
   nickname?: string;

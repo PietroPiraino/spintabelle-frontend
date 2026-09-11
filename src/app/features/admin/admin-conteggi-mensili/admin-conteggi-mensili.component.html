@@ -525,6 +525,23 @@
             </button>
           </div>
         }
+        <!--
+          ⚠️ Il comando dei punti c'è anche a mese CHIUSO, ed è il caso NORMALE:
+          si chiude il mese e poi si accreditano. Il marcatore dell'accredito
+          non è un dato contabile — non entra in nessun totale — quindi quella
+          scrittura non viola il congelamento.
+        -->
+        @if (d.righe.length) {
+          <div class="row cm__azioni">
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="apriPunti()"
+            >
+              Punti BFF del mese
+            </button>
+          </div>
+        }
         @if (!d.righe.length) {
           <p class="admin-nota">
             Nessun conto in questo mese. I conti si aggiungono da
@@ -2587,6 +2604,153 @@
       >
         {{ salvando() ? 'Correggo…' : 'Correggi' }}
       </button>
+    </div>
+  </app-modal>
+}
+
+<!-- ══ Modale: i punti BFF del mese ══════════════════════════════════════ -->
+@if (puntiAperti()) {
+  <app-modal
+    titolo="Punti BFF del mese"
+    [sottotitolo]="mese()?.etichetta ?? null"
+    [salvando]="salvando()"
+    (chiusa)="puntiAperti.set(false)"
+  >
+    <div class="admin-modale">
+      <!--
+        ⚠️⚠️ L'ANTEPRIMA PRIMA DELLA CONFERMA, e la formula scritta per esteso:
+        è una delle garanzie su cui poggia il test di compatibilità dell'art.
+        6.4 (`gdpr/valutazione-prospetto-e-punti.md` §C). Un comando che
+        accredita e poi mostra il risultato è un comando che si preme alla
+        cieca.
+      -->
+      <p class="admin-nota">
+        <strong>1.000 punti ogni 2 €</strong> di margine, sui conti
+        <strong>Scuola</strong> non stakati e collegati a un account. Nel
+        Negozio 1.000 punti valgono 1 €.
+      </p>
+
+      @if (punti(); as a) {
+        @if (a.provvisorio) {
+          <p class="admin-nota">
+            ⚠️ Il mese è ancora <strong>aperto</strong>: se il rake cambia dopo
+            l'accredito, i punti dati non corrisponderanno più — il pannello te
+            lo dirà, ma i punti non si tolgono.
+          </p>
+        }
+
+        <div class="admin-table__scroll">
+          <table class="admin-table">
+            <caption class="visually-hidden">Punti per giocatore</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="admin-table__c-primo">Giocatore</th>
+                <th scope="col" class="is-num">Margine</th>
+                <th scope="col" class="is-num">Punti</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of a.righe; track r.contoId) {
+                <tr>
+                  <th scope="row" class="admin-table__c-primo">
+                    <span class="admin-table__ident">
+                      <span class="admin-table__ident-riga">
+                        <strong>{{ r.username }}</strong>
+                        @if (r.giaAccreditati !== undefined) {
+                          <span class="admin-stato" data-tono="ok">
+                            già accreditati
+                          </span>
+                        }
+                        @if (r.disallineato) {
+                          <span class="admin-stato" data-tono="allarme">
+                            non corrisponde più
+                          </span>
+                        }
+                      </span>
+                      <!--
+                        ⚠️ La riga esclusa RESTA, spenta, col motivo accanto:
+                        una che sparisce fa cercare un guasto, una spenta senza
+                        motivo fa chiedere perché.
+                      -->
+                      @if (r.motivoEsclusione) {
+                        <span class="admin-table__sub">
+                          {{ r.motivoEsclusione }}
+                        </span>
+                      } @else if (r.utente) {
+                        <span class="admin-table__sub">
+                          {{ etichettaUtente(r.utente) }}
+                        </span>
+                      }
+                    </span>
+                  </th>
+                  <td class="is-num">{{ eur(r.margineCent) }}</td>
+                  <td class="is-num">
+                    @if (r.motivoEsclusione) {
+                      <span class="cm__senza-back">—</span>
+                    } @else {
+                      <strong>{{ r.punti.toLocaleString('it-IT') }}</strong>
+                      @if (r.giaAccreditati !== undefined && r.disallineato) {
+                        <span class="admin-table__sub">
+                          dati: {{ r.giaAccreditati.toLocaleString('it-IT') }}
+                        </span>
+                      }
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (erroreModale()) {
+          <p class="form-feedback is-error" role="alert">{{ erroreModale() }}</p>
+        }
+      } @else if (erroreModale()) {
+        <p class="form-feedback is-error" role="alert">{{ erroreModale() }}</p>
+      } @else {
+        <p class="admin-nota">Calcolo…</p>
+      }
+    </div>
+
+    <div moPiede>
+      @if (punti(); as a) {
+        @if (a.daAccreditare === 0) {
+          <span class="admin-nota">
+            Niente da accreditare in questo mese.
+          </span>
+        } @else if (conferma() === 'punti') {
+          <span class="admin-nota">
+            <!-- ⚠️ La conferma NOMINA la cifra: i punti, una volta dati, non si
+                 tolgono da qui. -->
+            Accredito <strong>{{ a.totalePunti.toLocaleString('it-IT') }}</strong>
+            punti a {{ a.daAccreditare }}
+            {{ a.daAccreditare === 1 ? 'giocatore' : 'giocatori' }}.
+          </span>
+          <button
+            type="button"
+            class="btn btn--primary btn--sm"
+            [disabled]="salvando()"
+            (click)="accreditaPunti()"
+          >
+            {{ salvando() ? 'Accredito…' : 'Accredita davvero' }}
+          </button>
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            (click)="annulla()"
+          >
+            Annulla
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="btn btn--primary btn--sm"
+            (click)="chiedi('punti')"
+          >
+            Accredita {{ a.totalePunti.toLocaleString('it-IT') }} punti
+          </button>
+        }
+      }
     </div>
   </app-modal>
 }

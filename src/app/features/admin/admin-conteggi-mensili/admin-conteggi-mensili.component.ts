@@ -46,6 +46,7 @@ import {
   VoceMese,
   AdminUser,
   UtenteCollegato,
+  AnteprimaPunti,
 } from '../../../core/models/api.models';
 import { AdminConteggiService } from '../../../core/services/admin-conteggi.service';
 import { AdminUsersService } from '../../../core/services/admin-users.service';
@@ -208,6 +209,16 @@ export class AdminConteggiMensiliComponent {
   protected readonly stakati = signal<Stakato[] | null>(null);
   protected readonly bozzaStakati = signal<Record<string, BozzaStakato>>({});
   protected readonly stakatoAperto = signal<Stakato | 'nuovo' | null>(null);
+
+  // ── I punti BFF sul rakeback ─────────────────────────────────────────────
+  //
+  // ⚠️⚠️ Il comando apre una modale con l'ANTEPRIMA e non accredita niente
+  // finché non si conferma: la formula dev'essere visibile prima, ed è una
+  // delle garanzie del test di compatibilità dell'art. 6.4
+  // (`gdpr/valutazione-prospetto-e-punti.md`). Un comando che accredita e poi
+  // mostra il risultato è un comando che si preme alla cieca.
+  protected readonly puntiAperti = signal(false);
+  protected readonly punti = signal<AnteprimaPunti | null>(null);
 
   // ── Il collegamento a un account del sito ────────────────────────────────
   //
@@ -1538,6 +1549,45 @@ export class AdminConteggiMensiliComponent {
         this.salvando.set(false);
         this.erroreModale.set(
           apiErrorMessage(err, 'Non riesco a mandare il prospetto.'),
+        );
+      },
+    });
+  }
+
+  protected apriPunti(): void {
+    const mese = this.mese();
+    if (!mese) return;
+    this.erroreModale.set(null);
+    this.conferma.set(null);
+    this.punti.set(null);
+    this.puntiAperti.set(true);
+    this.api.anteprimaPunti(mese.id).subscribe({
+      next: (a) => this.punti.set(a),
+      error: (err) =>
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a calcolare i punti.'),
+        ),
+    });
+  }
+
+  protected accreditaPunti(): void {
+    const mese = this.mese();
+    if (!mese) return;
+    this.salvando.set(true);
+    this.api.accreditaPunti(mese.id).subscribe({
+      next: (a) => {
+        this.salvando.set(false);
+        this.conferma.set(null);
+        this.punti.set(a);
+        // ⚠️ La modale RESTA aperta: l'esito è proprio la tabella che c'è
+        // dentro, e un toast con un `<dialog>` aperto dipinge dietro il
+        // fondale. Si legge «già accreditati» riga per riga.
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.conferma.set(null);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco ad accreditare i punti.'),
         );
       },
     });
