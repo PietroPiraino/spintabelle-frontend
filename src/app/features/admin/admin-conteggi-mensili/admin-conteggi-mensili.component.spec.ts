@@ -646,6 +646,136 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(etichetta()).toBe('Chi ha pagato');
   });
 
+  it('il mese scelto SOPRAVVIVE al cambio di scheda', async () => {
+    // ⚠️⚠️ Difetto trovato dall'owner in produzione l'11/09/2026: scelto agosto
+    // dalla tendina e cambiata scheda, tornando indietro il selettore diceva
+    // «settembre» mentre i dati mostrati erano ancora quelli di agosto — la
+    // tendina MENTIVA sul mese che si stava guardando.
+    //
+    // La causa: `[value]` su un `<select>` le cui `<option>` nascono da un
+    // `@for`. Il binding si applica quando le opzioni NON ESISTONO ANCORA, il
+    // browser ripiega sulla prima e la scelta si perde. È invisibile finché il
+    // mese scelto È il primo dell'elenco, cioè nello stato predefinito: per
+    // questo la sezione è stata in produzione un giorno senza che si vedesse.
+    const settembre = mese();
+    const agosto = mese({ id: 'm0', mese: 8, etichetta: 'agosto 2026' });
+
+    await stabilizza();
+    // L'elenco ha il più recente PER PRIMO, come in produzione.
+    http
+      .expectOne(`${API}/admin/conteggi/mesi`)
+      .flush([settembre, agosto]);
+    http.expectOne(`${API}/admin/conteggi/conti`).flush([]);
+    http.expectOne(`${API}/admin/conteggi/ricorrenti`).flush([]);
+    await stabilizza();
+    http
+      .expectOne(`${API}/admin/conteggi/mesi/${settembre.id}`)
+      .flush(dettaglio());
+    await stabilizza();
+
+    // Si sceglie AGOSTO, cioè il secondo dell'elenco.
+    fixture.componentInstance['scegliMese']('m0');
+    await stabilizza();
+    http
+      .expectOne(`${API}/admin/conteggi/mesi/m0`)
+      .flush(dettaglio([], { mese: agosto }));
+    await stabilizza();
+
+    const tendina = () =>
+      fixture.nativeElement.querySelector(
+        'select[aria-label="Mese contabile"]',
+      ) as HTMLSelectElement;
+    expect(tendina().value).toBe('m0');
+
+    // ⚠️ Si passa da ANAGRAFICHE, e il percorso non è indifferente: la barra
+    // del mese vive sotto `@if (vista() !== 'anagrafiche')`, quindi fra le
+    // quattro schede legate al mese NON viene ricreata e il difetto non si
+    // vede. È l'unica scheda che la distrugge — e provando con «rakeback» in
+    // mezzo questa spec passava su un difetto vivo.
+    fixture.componentInstance['vista'].set('anagrafiche');
+    await stabilizza();
+    fixture.componentInstance['vista'].set('riepilogo');
+    await stabilizza();
+
+    expect(fixture.componentInstance['mese']()?.id).toBe('m0');
+    // ⚠️ L'asserzione che coglie il difetto: il DOM, non il signal. Il signal
+    // era GIÀ giusto — a mentire era la tendina.
+    expect(tendina().value).toBe('m0');
+    expect(tendina().selectedOptions[0]?.textContent?.trim()).toBe(
+      'agosto 2026',
+    );
+  });
+
+  it('un conto dell’anagrafica fuori dal mese si vede ANCHE con la tabella piena', async () => {
+    // ⚠️⚠️ L'owner e' rimasto bloccato su questo (11/09/2026): aveva creato i
+    // conti in Anagrafiche e la schermata Rakeback non gli diceva in alcun modo
+    // come portarli nel mese, perche' quell'istruzione viveva SOLO nel ramo
+    // «tabella vuota» — e la sua tabella una riga ce l'aveva.
+    const conto = (id: string, username: string): ContoRakeback => ({
+      id,
+      agente: 'LOTTOMATICA',
+      username,
+      userId: null,
+      backAgenteBp: 5700,
+      backPlayerBp: 3000,
+      scaglioneBaseBp: 4500,
+      scaglionePassoCent: 2250,
+      destinazione: 'SCUOLA',
+      attivo: true,
+      ordine: 100,
+      anonimizzato: false,
+    });
+
+    // `riga()` ha `contoId: 'c1'`: c2 e c3 sono in anagrafica e NON nel mese.
+    await avvia(dettaglio(), [
+      conto('c1', 'Santotti88'),
+      conto('c2', 'Kondom91'),
+      conto('c3', '306Win'),
+      { ...conto('c4', 'Dismesso'), attivo: false },
+    ]);
+    fixture.componentInstance['vista'].set('rakeback');
+    await stabilizza();
+
+    const testo = fixture.nativeElement.textContent as string;
+    // La tabella NON e' vuota: e' il caso in cui l'avviso mancava del tutto.
+    expect(fixture.nativeElement.querySelectorAll('tbody tr').length)
+      .toBeGreaterThan(0);
+    expect(testo).toContain('2 conti dell');
+    // ⚠️ Nomina CHI: «sincronizza» da solo non dice che cosa entrera'.
+    expect(testo).toContain('Kondom91');
+    expect(testo).toContain('306Win');
+    // ⚠️ Un conto DISATTIVATO non va proposto: la sincronizzazione non lo
+    // porterebbe comunque, e offrirlo e' promettere un'azione che non avviene.
+    expect(testo).not.toContain('Dismesso');
+  });
+
+  it('a mese CHIUSO l’avviso non compare: non c’è niente da sincronizzare', async () => {
+    // ⚠️ Il verso che nega: `sincronizzaMese` passa da `caricaMeseAperto`,
+    // quindi su un mese chiuso il comando risponderebbe 409. Offrirlo sarebbe
+    // un pulsante che porta a un errore.
+    await avvia(dettaglio([], { mese: mese({ stato: 'CHIUSO' }) }), [
+      {
+        id: 'c2',
+        agente: 'LOTTOMATICA',
+        username: 'Kondom91',
+        userId: null,
+        backAgenteBp: 5700,
+        backPlayerBp: 3000,
+        scaglioneBaseBp: 4500,
+        scaglionePassoCent: 2250,
+        destinazione: 'SCUOLA',
+        attivo: true,
+        ordine: 100,
+        anonimizzato: false,
+      },
+    ]);
+    fixture.componentInstance['vista'].set('rakeback');
+    await stabilizza();
+    expect(fixture.nativeElement.textContent).not.toContain(
+      "conti dell'anagrafica",
+    );
+  });
+
   it('l’intestazione di colonna NON segue il verso, perché la tabella li mescola', async () => {
     // ⚠️ Il verso che nega: una tabella con entrate e uscite insieme non può
     // avere un'intestazione che segue il verso, e «Chi ha pagato» sopra una

@@ -81,14 +81,27 @@
           <div class="cm__mese">
             @if (mesi(); as elenco) {
               @if (elenco.length) {
+                <!--
+                  ⚠️⚠️ `[selected]` sull'OPZIONE e MAI `[value]` sul `<select>`
+                  quando le opzioni nascono da un `@for`: il binding del select
+                  si applica quando le `<option>` non esistono ancora, il
+                  browser ripiega sulla PRIMA e la scelta si perde. Difetto
+                  trovato in produzione l'11/09/2026 — scelto agosto e passati
+                  da «Anagrafiche» (l'unica scheda che distrugge questa barra),
+                  la tendina tornava a dire «settembre» mentre i dati mostrati
+                  restavano di agosto: il selettore MENTIVA sul mese aperto.
+                  ⚠️ È invisibile finché il mese scelto è il PRIMO dell'elenco,
+                  cioè nello stato predefinito.
+                -->
                 <select
                   class="input admin-barra__campo"
                   aria-label="Mese contabile"
-                  [value]="mese()?.id ?? ''"
                   (change)="scegliMese($any($event.target).value)"
                 >
                   @for (m of elenco; track m.id) {
-                    <option [value]="m.id">{{ m.etichetta }}</option>
+                    <option [value]="m.id" [selected]="m.id === mese()?.id">
+                      {{ m.etichetta }}
+                    </option>
                   }
                 </select>
               }
@@ -409,6 +422,37 @@
 
       <!-- ══ Rakeback ════════════════════════════════════════════════════ -->
       @if (vista() === 'rakeback') {
+        <!--
+          ⚠️⚠️ Questo avviso sta FUORI dal ramo «tabella vuota», ed è il punto:
+          l'istruzione per far entrare i conti nel mese viveva solo là dentro,
+          quindi con una riga in tabella spariva — e non restava NIENTE, in
+          nessuna schermata, che dicesse come aggiungere gli altri. Stesso
+          difetto già pagato su /lezioni con «Azzera i filtri», visibile solo
+          dopo aver trovato zero risultati.
+          ⚠️ Nomina QUANTI e CHI: «sincronizza» da solo non dice che cosa
+          entrerà, e un comando che non dichiara il proprio effetto su dati
+          contabili non si preme volentieri.
+        -->
+        @if (d.mese.stato === 'APERTO' && contiFuoriDalMese().length) {
+          <div class="cm__manca">
+            <p class="admin-nota">
+              @if (contiFuoriDalMese().length === 1) {
+                Un conto dell'anagrafica non è ancora in questo mese:
+              } @else {
+                {{ contiFuoriDalMese().length }} conti dell'anagrafica non sono
+                ancora in questo mese:
+              }
+              <strong>{{ nomiFuoriDalMese() }}</strong>.
+            </p>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="sincronizza()"
+            >
+              Portali in {{ d.mese.etichetta }}
+            </button>
+          </div>
+        }
         @if (!d.righe.length) {
           <p class="admin-nota">
             Nessun conto in questo mese. I conti si aggiungono da
@@ -864,6 +908,27 @@
 
       <!-- ══ Spese ed entrate ════════════════════════════════════════════ -->
       @if (vista() === 'voci') {
+        <!-- ⚠️ Gemello dell'avviso del rakeback, stessa ragione: l'istruzione
+             sulle spese fisse viveva solo nello stato vuoto della tabella. -->
+        @if (d.mese.stato === 'APERTO' && ricorrentiFuoriDalMese().length) {
+          <div class="cm__manca">
+            <p class="admin-nota">
+              @if (ricorrentiFuoriDalMese().length === 1) {
+                Una spesa fissa non è ancora in questo mese.
+              } @else {
+                {{ ricorrentiFuoriDalMese().length }} spese fisse non sono ancora
+                in questo mese.
+              }
+            </p>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="sincronizza()"
+            >
+              Portale in {{ d.mese.etichetta }}
+            </button>
+          </div>
+        }
         <p class="admin-nota admin-table__nota-mobile">
           La forma del pagamento è visibile su schermi più larghi.
         </p>
@@ -1898,15 +1963,24 @@
           } @else {
             <div class="field">
               <label [attr.for]="'met-' + r.contoId">Forma del pagamento</label>
+              <!--
+                ⚠️ Stesso difetto del selettore del mese, stessa correzione: con
+                `[value]` sul select, riaprendo la scheda di una riga la forma
+                del pagamento tornava a dire «non specificata» anche dove un
+                metodo c'era — perché la prima opzione è proprio quella vuota.
+              -->
               <select
                 [id]="'met-' + r.contoId"
                 class="input"
-                [value]="bozza()[r.contoId]?.metodo ?? ''"
                 (change)="scriviMetodo(r.contoId, $any($event.target).value)"
               >
-                <option value="">non specificata</option>
+                <option value="" [selected]="!bozza()[r.contoId]?.metodo">
+                  non specificata
+                </option>
                 @for (m of METODI; track m) {
-                  <option [value]="m">{{ metodoLabel(m) }}</option>
+                  <option [value]="m" [selected]="bozza()[r.contoId]?.metodo === m">
+                    {{ metodoLabel(m) }}
+                  </option>
                 }
               </select>
             </div>

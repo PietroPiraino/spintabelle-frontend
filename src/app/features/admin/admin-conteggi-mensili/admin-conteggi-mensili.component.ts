@@ -602,6 +602,50 @@ export class AdminConteggiMensiliComponent {
    * quale portafoglio il denaro si muove. A cambiare è la sola direzione, e
    * quindi la sola parola.
    */
+  /**
+   * I conti dell'anagrafica ATTIVI che non hanno una riga in questo mese.
+   *
+   * ⚠️⚠️ Esiste perché l'istruzione per farli entrare viveva SOLO nello stato
+   * vuoto della tabella: con almeno una riga in tabella non c'era piu' niente,
+   * in nessuna schermata, che dicesse come aggiungere gli altri — e l'owner c'e'
+   * rimasto bloccato (11/09/2026). È lo stesso difetto già pagato su /lezioni,
+   * dove «Azzera i filtri» compariva solo dopo aver trovato zero risultati:
+   * un'istruzione che si vede solo quando non serve più.
+   *
+   * ⚠️ Solo gli ATTIVI: un conto disattivato non deve entrare nei mesi nuovi,
+   * ed elencarlo qui proporrebbe un'azione che la sincronizzazione non farà.
+   */
+  protected readonly contiFuoriDalMese = computed(() => {
+    const anagrafica = this.conti() ?? [];
+    const nelMese = new Set((this.dett()?.righe ?? []).map((r) => r.contoId));
+    return anagrafica.filter((c) => c.attivo && !nelMese.has(c.id));
+  });
+
+  /** Gemella della precedente, per le spese fisse sul pannello delle voci. */
+  protected readonly ricorrentiFuoriDalMese = computed(() => {
+    const anagrafica = this.ricorrenti() ?? [];
+    const nelMese = new Set(
+      (this.dett()?.voci ?? [])
+        .map((v) => v.ricorrenteId)
+        .filter((x): x is string => !!x),
+    );
+    return anagrafica.filter((r) => r.attiva && !nelMese.has(r.id));
+  });
+
+  /**
+   * I nomi di chi manca, non solo quanti.
+   *
+   * ⚠️ Un comando che non dichiara il proprio effetto su dati contabili non si
+   * preme volentieri: «sincronizza» da solo non dice CHE COSA entrera'. Oltre i
+   * quattro si tronca, o la riga diventa un muro di testo.
+   */
+  protected readonly nomiFuoriDalMese = computed(() => {
+    const n = this.contiFuoriDalMese().map((c) => c.username);
+    return n.length <= 4
+      ? n.join(', ')
+      : `${n.slice(0, 4).join(', ')} e altri ${n.length - 4}`;
+  });
+
   protected readonly etichettaCassa = computed(() =>
     this.voceVal().verso === 'USCITA' ? 'Chi ha pagato' : 'Chi ha incassato',
   );
