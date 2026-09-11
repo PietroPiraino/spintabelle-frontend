@@ -1192,10 +1192,26 @@
                           c'è scritto dal conto e non posso vedere quanto ha
                           generato di back?».)
                         -->
+                        <!--
+                          ⚠️⚠️ IN LINEA, non su una seconda riga. Con
+                          `.admin-table__sub` (display: block) il numero e
+                          l'etichetta stavano su DUE righe con l'interlinea del
+                          BODY (21,76px): la regola a 1,25 vive solo dentro
+                          `.admin-table__ident`, e qui siamo in un `<td>` nudo.
+                          21,76 × 2 + 9,6 di padding = 54px, contro il tetto di
+                          46 di `check-admin-tabelle.mjs`. Trovato dalla sonda,
+                          sul primo giro dopo il deploy.
+                        -->
+                        <!--
+                          ⚠️ E NESSUNA etichetta accanto al numero: «dal conto»
+                          in linea faceva sfondare la tabella di 26px a 1100 —
+                          la fascia stretta del pannello — e la cella d'identità
+                          dice già «dal conto MadRoxKO». Un'informazione scritta
+                          due volte nella stessa riga costava la larghezza.
+                        -->
                         <span [class.cm__senza-back]="!r.rakeLettoCent">
                           {{ eur(r.rakeLettoCent ?? 0) }}
                         </span>
-                        <span class="admin-table__sub">dal conto</span>
                       }
                     </td>
                     @for (campo of ['poolEv', 'diff', 'fee', 'altro']; track campo) {
@@ -2059,9 +2075,11 @@
           <summary class="admin-modale__sum">Rimuovi</summary>
           <div class="admin-modale__corpo">
             <p class="admin-nota">
-              Un conto che compare già in un mese registrato <strong>non si può
-              rimuovere</strong>: disattivalo, così non entra nei mesi nuovi e lo
-              storico resta leggibile.
+              Un conto con <strong>numeri già scritti</strong> in un mese, o
+              presente in un mese già <strong>chiuso</strong>, non si può
+              rimuovere: disattivalo, così non entra nei mesi nuovi e lo
+              storico resta leggibile. Una riga ancora vuota in un mese aperto
+              va via con lui.
             </p>
             @if (conferma() === 'conto') {
               <div class="row">
@@ -2299,10 +2317,17 @@
         <details class="admin-modale__sez admin-modale__sez--rischio">
           <summary class="admin-modale__sum">Rimuovi</summary>
           <div class="admin-modale__corpo">
+            <!--
+              ⚠️ «con numeri già scritti», non «che compare in un mese»: la
+              riga a zeri generata da «Sincronizza» non blocca più, e la frase
+              deve dire il limite VERO — o si legge un rifiuto che non arriva.
+            -->
             <p class="admin-nota">
-              Un giocatore che compare già in un mese registrato <strong>non si
-              può rimuovere</strong>: disattivalo, così non entra nei mesi nuovi
-              e lo storico resta leggibile.
+              Un giocatore con <strong>numeri già scritti</strong> in un mese, o
+              presente in un mese già <strong>chiuso</strong>, non si può
+              rimuovere: disattivalo, così non entra nei mesi nuovi e lo
+              storico resta leggibile. Una riga ancora vuota in un mese aperto
+              va via con lui.
             </p>
             @if (conferma() === 'stakato') {
               <div class="row">
