@@ -1509,6 +1509,40 @@ export class AdminConteggiMensiliComponent {
     return parti.filter(Boolean).join(' · ');
   }
 
+  /**
+   * L'account collegato al conto di una riga di rakeback.
+   *
+   * ⚠️ Si legge dall'ANAGRAFICA già caricata e non da un campo sulla riga
+   * mensile: la riga è uno snapshot dei parametri di calcolo, e il
+   * collegamento a un account non è un parametro di calcolo — metterlo lì
+   * vorrebbe dire congelarlo, e un account collegato dopo non raggiungerebbe
+   * i mesi già aperti.
+   */
+  protected utenteDelConto(contoId: string): UtenteCollegato | null {
+    return (this.conti() ?? []).find((c) => c.id === contoId)?.utente ?? null;
+  }
+
+  protected inviaProspetto(userId: string): void {
+    const mese = this.mese();
+    if (!mese) return;
+    this.salvando.set(true);
+    this.api.inviaProspetto(mese.id, userId).subscribe({
+      next: () => {
+        this.salvando.set(false);
+        this.rigaAperta.set(null);
+        // ⚠️ Il toast DOPO aver chiuso la modale: con un `<dialog>` aperto
+        // dipingerebbe dietro il fondale e non lo leggerebbe nessuno.
+        this.toast.success('Prospetto inviato.');
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a mandare il prospetto.'),
+        );
+      },
+    });
+  }
+
   protected apriConto(c: ContoRakeback | 'nuovo'): void {
     this.erroreModale.set(null);
     this.conferma.set(null);

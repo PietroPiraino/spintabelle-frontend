@@ -59,6 +59,102 @@
       }
     </div>
 
+    <!--
+      Il prospetto dei propri conteggi.
+
+      ⚠️⚠️ PRIMA superficie di questo modulo rivolta all'utente: fino
+      all'11/09/2026 il registro (A17 e A18) dichiarava che nessun dato di
+      questa contabilità compariva in alcuna schermata rivolta all'utente, e che
+      mostrarla «sarebbe una superficie nuova, da valutare prima». La
+      valutazione è `gdpr/valutazione-prospetto-e-punti.md`, adottata prima di
+      questo markup; l'informativa è stata pubblicata prima del codice.
+
+      ⚠️ La sezione NON compare a chi non ha conteggi — che è quasi chiunque.
+      Una card «non hai conteggi» sulla pagina di tutti gli iscritti sarebbe
+      rumore per il 99% e non direbbe niente all'1%.
+
+      ⚠️ Ciascuno vede SOLO i propri numeri: qui non c'è una sola cifra della
+      scuola (né quanto incassa dall'agente, né i margini, né la ripartizione
+      fra i soci). È la prima delle cinque misure del §G.1.
+    -->
+    @if (prospetto().length) {
+      <div class="card card--pad account__card">
+        <h2>I miei conteggi</h2>
+        <p class="text-muted">
+          Il dettaglio di come si arriva alle cifre del tuo accordo, mese per
+          mese. Se qualcosa non ti torna, scrivici.
+        </p>
+
+        @for (m of prospetto(); track m.meseId) {
+          <div class="account__conteggio">
+            <h3 class="account__conteggio-titolo">
+              {{ m.etichetta }}
+              @if (m.provvisorio) {
+                <!-- ⚠️ Il mese aperto si mostra, ma DICHIARATO: i suoi numeri
+                     possono ancora cambiare, e chi legge deve saperlo. -->
+                <span class="account__chip">provvisorio</span>
+              }
+            </h3>
+
+            @if (m.rakeback; as r) {
+              <dl class="account__conteggio-righe">
+                <dt>Rake generato</dt>
+                <dd>{{ eur(r.rakeGeneratoCent) }}</dd>
+                <dt>La tua percentuale</dt>
+                <dd>{{ pct(r.backPlayerBp) }}</dd>
+                <dt>
+                  Già accreditato dalla sala
+                  <span class="account__nota">
+                    a blocchi da {{ eur(r.scaglionePassoCent) }} sul
+                    {{ pct(r.scaglioneBaseBp) }}
+                  </span>
+                </dt>
+                <dd>{{ eur(r.erogatoBonusCent) }}</dd>
+                <dt>Ti spetta da noi</dt>
+                <dd><strong>{{ eur(r.spettanteAlPlayerCent) }}</strong></dd>
+                <dt>Hai ricevuto</dt>
+                <dd>{{ eur(r.pagatoAlPlayerCent) }}</dd>
+                <dt>Resta da darti (di questo mese)</dt>
+                <dd><strong>{{ eur(r.residuoAlPlayerCent) }}</strong></dd>
+              </dl>
+            }
+
+            @if (m.stakato; as st) {
+              <dl class="account__conteggio-righe">
+                <dt>Back maturata</dt>
+                <dd>{{ eur(st.backCent) }}</dd>
+                <dt>Risultato EV del pool</dt>
+                <dd>{{ eur(st.poolEvCent) }}</dd>
+                <dt>Diff</dt>
+                <dd>{{ eur(st.diffCent) }}</dd>
+                <dt>Fee</dt>
+                <dd>{{ eur(st.feeCent) }}</dd>
+                <dt>Altro</dt>
+                <dd>{{ eur(st.altroCent) }}</dd>
+                <dt>Totale del mese</dt>
+                <dd><strong>{{ eur(st.totaleCent) }}</strong></dd>
+                <dt>Quota della scuola ({{ pct(st.dealScuolaBp) }})</dt>
+                <dd>{{ eur(st.quotaScuolaCent) }}</dd>
+                <dt>
+                  Meno quanto tratteniamo
+                  <span class="account__nota">
+                    la parte di back che non ti accreditiamo in ticket
+                  </span>
+                </dt>
+                <dd>− {{ eur(st.trattenutoCent) }}</dd>
+                @if (st.aRecuperoCent !== 0) {
+                  <dt>A recupero dello scarto EV</dt>
+                  <dd>{{ eur(st.aRecuperoCent) }}</dd>
+                }
+                <dt>Da bonificare</dt>
+                <dd><strong>{{ eur(st.daRegolareCent) }}</strong></dd>
+              </dl>
+            }
+          </div>
+        }
+      </div>
+    }
+
     <!-- I miei buoni (Negozio) -->
     <div class="card card--pad account__card">
       <h2>I miei buoni</h2>

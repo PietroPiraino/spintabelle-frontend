@@ -15,6 +15,7 @@ import {
   VoceMese,
   VocePayload,
 ContoRakeback,
+  ProspettoMese,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -172,6 +173,33 @@ export class AdminConteggiService {
       `${API}/admin/conteggi/stakati/${id}`,
       body,
     );
+  }
+
+  /**
+   * Il prospetto dell'utente autenticato.
+   *
+   * ⚠️ Sta in questo servizio benché la rotta NON sia sotto `/admin`: è lo
+   * stesso dominio e gli stessi tipi, e un secondo servizio per una chiamata
+   * sola sarebbe un posto in più in cui cercarla. La rotta è `/conteggi`, senza
+   * prefisso admin, e non accetta alcun id: il server sceglie le righe dal
+   * token.
+   */
+  /**
+   * Manda al giocatore il prospetto di quel mese.
+   *
+   * ⚠️ `userId` e non l'id della riga: il prospetto è della PERSONA, e chi ha
+   * sia un conto rakeback sia un accordo di staking riceve UNA email con tutto
+   * quello che lo riguarda.
+   */
+  inviaProspetto(meseId: string, userId: string): Observable<void> {
+    return this.http.post<void>(
+      `${API}/admin/conteggi/mesi/${meseId}/prospetto`,
+      { userId },
+    );
+  }
+
+  mioProspetto(): Observable<ProspettoMese[]> {
+    return this.http.get<ProspettoMese[]>(`${API}/conteggi/mio-prospetto`);
   }
 
   eliminaStakato(id: string): Observable<void> {

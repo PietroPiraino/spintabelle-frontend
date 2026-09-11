@@ -2712,6 +2712,49 @@
           }
         </div>
       </details>
+
+      <!--
+        ⚠️⚠️ L'invio è UN COMANDO, mai un aggancio alla chiusura del mese: è la
+        richiesta esplicita dell'owner («quando voglio io») ed è anche una
+        garanzia della valutazione GDPR — una comunicazione che parte da sé è
+        una comunicazione che nessuno rilegge prima che parta.
+        ⚠️ Il prospetto è della PERSONA: chi ha anche un accordo di staking
+        riceve una sola email con dentro tutto quello che lo riguarda in quel
+        mese.
+      -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Manda il prospetto</summary>
+        <div class="admin-modale__corpo">
+          @if (utenteDelConto(r.contoId); as u) {
+            <p class="admin-nota">
+              <!-- ⚠️ `mese()` e non `d`: questa scheda vive FUORI dal blocco
+                   `@if (dett(); as d)`, quindi quella variabile qui non esiste. -->
+              Gli arriva per email il dettaglio di
+              <strong>{{ mese()?.etichetta }}</strong>: solo i suoi numeri, mai
+              i totali della scuola.
+              @if (mese()?.stato !== 'CHIUSO') {
+                Il mese è ancora aperto e l'email lo dichiara come
+                <strong>provvisorio</strong>.
+              }
+            </p>
+            <p class="admin-nota">A: <strong>{{ etichettaUtente(u) }}</strong></p>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              [disabled]="salvando()"
+              (click)="inviaProspetto(u.id)"
+            >
+              {{ salvando() ? 'Mando…' : 'Manda il prospetto' }}
+            </button>
+          } @else {
+            <!-- ⚠️ Si dice QUI perché non si può, non al momento del clic. -->
+            <p class="admin-nota">
+              Questo conto non è collegato a un account del sito: collegalo da
+              <strong>Anagrafiche</strong> e il comando comparirà.
+            </p>
+          }
+        </div>
+      </details>
     </div>
   </app-modal>
 }

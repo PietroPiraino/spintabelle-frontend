@@ -2611,6 +2611,54 @@ export type FonteBack = (typeof FONTI_BACK)[number];
  * ⚠️ Il server lo RISOLVE a ogni lettura e non lo denormalizza: un'anagrafica
  * vive mesi e l'indirizzo può cambiarle sotto.
  */
+/**
+ * Il prospetto del proprio conteggio, come lo vede il giocatore.
+ *
+ * ⚠️⚠️ Ciascuno vede SOLO i propri numeri: qui non arrivano né altri
+ * giocatori, né i totali della scuola, né la ripartizione fra i soci — in
+ * particolare non esiste `spettanteDaAgenteCent` né alcun margine. È la prima
+ * delle cinque misure di `gdpr/valutazione-prospetto-e-punti.md`, e il caso 25
+ * di `verify-conteggi.mjs` la prova per SOTTRAZIONE.
+ */
+export interface ProspettoRakeback {
+  username: string;
+  backPlayerBp: number;
+  scaglioneBaseBp: number;
+  scaglionePassoCent: number;
+  rakeGeneratoCent: number;
+  erogatoBonusCent: number;
+  spettanteAlPlayerCent: number;
+  pagatoAlPlayerCent: number;
+  residuoAlPlayerCent: number;
+}
+
+export interface ProspettoStakato {
+  nome: string;
+  dealScuolaBp: number;
+  backCent: number;
+  trattenutoCent: number;
+  poolEvCent: number;
+  diffCent: number;
+  feeCent: number;
+  altroCent: number;
+  totaleCent: number;
+  quotaScuolaCent: number;
+  risultatoCent: number;
+  aRecuperoCent: number;
+  daRegolareCent: number;
+}
+
+export interface ProspettoMese {
+  meseId: string;
+  anno: number;
+  mese: number;
+  etichetta: string;
+  /** Il mese è ancora aperto: i numeri possono cambiare, e si DICE. */
+  provvisorio: boolean;
+  rakeback?: ProspettoRakeback;
+  stakato?: ProspettoStakato;
+}
+
 export interface UtenteCollegato {
   id: string;
   nickname?: string;

@@ -127,3 +127,51 @@
     color: var(--text-faint);
   }
 }
+
+// Il prospetto dei conteggi.
+//
+// ⚠️ `column-gap: 0` e la distanza data dal padding del `dt`, come nel conto
+// economico del pannello: con un gap vero i filetti delle righe di totale si
+// disegnerebbero come due segmenti separati da un buco.
+.account__conteggio {
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+
+  &:first-of-type {
+    border-top: 0;
+  }
+}
+
+.account__conteggio-titolo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  font-size: 1rem;
+}
+
+.account__conteggio-righe {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 0;
+  row-gap: 0.3rem;
+  margin: 0;
+
+  dt {
+    padding-right: 1.5rem;
+    color: var(--text-muted);
+  }
+
+  dd {
+    margin: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.account__nota {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}

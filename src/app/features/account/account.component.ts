@@ -19,11 +19,14 @@ import {
   MyPoints,
   MyVoucher,
   ShopOrder,
+  ProspettoMese,
 } from '../../core/models/api.models';
 import { AffiliationsService } from '../../core/services/affiliations.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PointsService } from '../../core/services/points.service';
 import { ShopService } from '../../core/services/shop.service';
+import { formattaBp, formattaCent } from '../admin/denaro';
+import { AdminConteggiService } from '../../core/services/admin-conteggi.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
@@ -44,6 +47,7 @@ export class AccountComponent {
   private readonly auth = inject(AuthService);
   private readonly pointsApi = inject(PointsService);
   private readonly shop = inject(ShopService);
+  private readonly conteggi = inject(AdminConteggiService);
   private readonly affiliationsApi = inject(AffiliationsService);
   private readonly router = inject(Router);
 
@@ -58,6 +62,15 @@ export class AccountComponent {
 
   // ── Negozio: buoni e ordini dell'utente (best-effort) ──
   protected readonly myVouchers = signal<MyVoucher[]>([]);
+  /**
+   * Il prospetto dei propri conteggi.
+   *
+   * ⚠️ Best-effort come buoni e ordini: quasi nessun utente ha un accordo di
+   * rakeback, quindi la lista vuota è il caso NORMALE e un errore in rosso
+   * sulla pagina di tutti sarebbe rumore. La sezione non compare affatto
+   * quando non c'è nulla — vedi il template.
+   */
+  protected readonly prospetto = signal<ProspettoMese[]>([]);
   protected readonly myOrders = signal<ShopOrder[]>([]);
 
   // ── Affiliazioni (tracciamento poker room) ──
@@ -122,6 +135,22 @@ export class AccountComponent {
       ],
     ],
   });
+  /**
+   * Euro e percentuali: le STESSE funzioni del pannello admin.
+   *
+   * ⚠️ Non si riscrivono qui: l'aritmetica del denaro vive in un punto per
+   * lato (`features/admin/denaro.ts`), e una seconda formattazione produrrebbe
+   * due schermate che scrivono lo stesso importo in due modi — su una pagina
+   * che il giocatore confronta con quella dell'amministrazione.
+   */
+  protected eur(cent: number): string {
+    return formattaCent(cent);
+  }
+
+  protected pct(bp: number): string {
+    return formattaBp(bp);
+  }
+
   protected readonly profileSaving = signal(false);
   protected readonly profileError = signal<string | null>(null);
   protected readonly profileMsg = signal<string | null>(null);
@@ -173,6 +202,10 @@ export class AccountComponent {
     });
     this.shop.myOrders().subscribe({
       next: (o) => this.myOrders.set(o),
+      error: () => undefined,
+    });
+    this.conteggi.mioProspetto().subscribe({
+      next: (p) => this.prospetto.set(p),
       error: () => undefined,
     });
     // affiliazioni: errore MOSTRATO, non assorbito (vedi il commento sui segnali)
