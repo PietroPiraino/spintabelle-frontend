@@ -14,6 +14,7 @@ import {
   SpesaRicorrente,
   RigaStakato,
   Stakato,
+  AdminUser,
 } from '../../../core/models/api.models';
 import { AdminConteggiMensiliComponent } from './admin-conteggi-mensili.component';
 
@@ -170,6 +171,18 @@ describe('AdminConteggiMensiliComponent', () => {
       http.expectOne(`${API}/admin/conteggi/mesi/${d.mese.id}`).flush(d);
     }
     await stabilizza();
+  };
+
+  /**
+   * ⚠️ Ogni salvataggio di anagrafica RICARICA i tre elenchi: senza
+   * consumarli, `http.verify()` in `afterEach` fallisce con «Expected no open
+   * requests» — un messaggio che accusa il test successivo invece di quello
+   * che ha lasciato le richieste aperte.
+   */
+  const flushAnagrafiche = () => {
+    http.expectOne(`${API}/admin/conteggi/conti`).flush([]);
+    http.expectOne(`${API}/admin/conteggi/ricorrenti`).flush([]);
+    http.expectOne(`${API}/admin/conteggi/stakati`).flush([]);
   };
 
   const scheda = (etichetta: string): HTMLButtonElement =>
@@ -913,6 +926,131 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain(
       'Rimuovi questo giocatore',
     );
+  });
+
+  it('la spunta «Stakato» del conto arriva DAVVERO al server', async () => {
+    // ⚠️⚠️ Il flag esisteva su schema e DTO dal 10/09/2026 e nel form NO: dal
+    // pannello nessun conto poteva essere marcato stakato, quindi il conto
+    // economico perdeva il ticket trattenuto su ognuno di loro. Stessa forma
+    // del difetto dei contanti — completo lato server, muto lato interfaccia.
+    const conto: ContoRakeback = {
+      id: 'c1',
+      agente: 'LOTTOMATICA',
+      username: 'MadRoxKO',
+      userId: null,
+      backAgenteBp: 5700,
+      backPlayerBp: 5000,
+      scaglioneBaseBp: 4500,
+      scaglionePassoCent: 2250,
+      destinazione: 'SCUOLA',
+      stakato: false,
+      attivo: true,
+      ordine: 100,
+      anonimizzato: false,
+    };
+    await avvia(dettaglio(), [conto]);
+    fixture.componentInstance['apriConto'](conto);
+    await stabilizza();
+
+    fixture.componentInstance['formConto'].controls.stakato.setValue(true);
+    fixture.componentInstance['salvaConto']();
+    await stabilizza();
+
+    const req = http.expectOne(`${API}/admin/conteggi/conti/c1`);
+    expect(req.request.body.stakato).toBeTrue();
+    req.flush({ ...conto, stakato: true });
+    await stabilizza();
+    flushAnagrafiche();
+  });
+
+  it('collegare un account lo mostra e lo manda, scollegarlo lo toglie', async () => {
+    const conto: ContoRakeback = {
+      id: 'c1',
+      agente: 'LOTTOMATICA',
+      username: 'MadRoxKO',
+      userId: null,
+      backAgenteBp: 5700,
+      backPlayerBp: 5000,
+      scaglioneBaseBp: 4500,
+      scaglionePassoCent: 2250,
+      destinazione: 'SCUOLA',
+      stakato: false,
+      attivo: true,
+      ordine: 100,
+      anonimizzato: false,
+    };
+    await avvia(dettaglio(), [conto]);
+    fixture.componentInstance['apriConto'](conto);
+    await stabilizza();
+
+    fixture.componentInstance['collegaUtente']({
+      id: 'u1',
+      nickname: 'MadRoxKO',
+      email: 'rossana@example.it',
+    } as AdminUser);
+    await stabilizza();
+    // L'etichetta nomina la persona: nickname se c'è, email sempre.
+    expect(fixture.nativeElement.textContent).toContain('rossana@example.it');
+
+    fixture.componentInstance['salvaConto']();
+    await stabilizza();
+    let req = http.expectOne(`${API}/admin/conteggi/conti/c1`);
+    expect(req.request.body.userId).toBe('u1');
+    req.flush(conto);
+    await stabilizza();
+    flushAnagrafiche();
+    await stabilizza();
+
+    // ⚠️ Scollegare OMETTE la chiave, non manda la stringa vuota: il DTO ha
+    // `@IsMongoId()` e '' sarebbe un 400 sull'INTERA chiamata.
+    fixture.componentInstance['apriConto'](conto);
+    await stabilizza();
+    fixture.componentInstance['collegaUtente']({
+      id: 'u1',
+      nickname: 'MadRoxKO',
+      email: 'rossana@example.it',
+    } as AdminUser);
+    fixture.componentInstance['scollegaUtente']();
+    fixture.componentInstance['salvaConto']();
+    await stabilizza();
+    req = http.expectOne(`${API}/admin/conteggi/conti/c1`);
+    expect('userId' in req.request.body).toBeFalse();
+    req.flush(conto);
+    await stabilizza();
+    flushAnagrafiche();
+  });
+
+  it('collegare un account SPORCA la modale', async () => {
+    // ⚠️ `sporco` si costruisce da `valueChanges`, quindi il collegamento deve
+    // stare NEL form: tenuto in un signal a parte, Escape butterebbe via il
+    // collegamento senza chiedere niente — il difetto che quell'input esiste
+    // per prevenire.
+    const conto: ContoRakeback = {
+      id: 'c1',
+      agente: 'LOTTOMATICA',
+      username: 'MadRoxKO',
+      userId: null,
+      backAgenteBp: 5700,
+      backPlayerBp: 5000,
+      scaglioneBaseBp: 4500,
+      scaglionePassoCent: 2250,
+      destinazione: 'SCUOLA',
+      stakato: false,
+      attivo: true,
+      ordine: 100,
+      anonimizzato: false,
+    };
+    await avvia(dettaglio(), [conto]);
+    fixture.componentInstance['apriConto'](conto);
+    await stabilizza();
+    expect(fixture.componentInstance['contoSporco']()).toBeFalse();
+
+    fixture.componentInstance['collegaUtente']({
+      id: 'u1',
+      email: 'rossana@example.it',
+    } as AdminUser);
+    await stabilizza();
+    expect(fixture.componentInstance['contoSporco']()).toBeTrue();
   });
 
   it('il mese scelto SOPRAVVIVE al cambio di scheda', async () => {

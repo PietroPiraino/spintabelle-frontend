@@ -1419,9 +1419,20 @@
                             <span class="badge badge--tag">Anonimizzato</span>
                           }
                         </span>
-                        @if (c.nomeReale) {
-                          <span class="admin-table__sub" [title]="c.nomeReale">
-                            {{ c.nomeReale }}
+                        <!--
+                          ⚠️⚠️ UNA riga sola, non due: la cella d'identità è
+                          già a due righe dichiarate (titolo + sotto-testo) e
+                          una TERZA porterebbe la riga oltre i 46px che
+                          `check-admin-tabelle.mjs` impone. Nome reale e
+                          account collegato stanno quindi sulla stessa riga,
+                          separati da un punto medio.
+                        -->
+                        @if (c.nomeReale || c.utente) {
+                          <span
+                            class="admin-table__sub"
+                            [title]="sottoTestoConto(c)"
+                          >
+                            {{ sottoTestoConto(c) }}
                           </span>
                         }
                       </span>
@@ -1507,10 +1518,16 @@
                             <span class="badge">Anonimizzato</span>
                           }
                         </span>
-                        @if (!st.userId) {
+                        @if (st.utente) {
+                          <span class="admin-table__sub">
+                            ↳ {{ etichettaUtente(st.utente) }}
+                          </span>
+                        } @else {
                           <!-- ⚠️ Senza account non esiste una scheda staking su
                                cui registrare il conteggio: si dice QUI, non al
-                               momento del clic. -->
+                               momento del clic. E ora si può anche collegare:
+                               fino all'11/09/2026 questa riga annunciava un
+                               problema senza dare il modo di risolverlo. -->
                           <span class="admin-table__sub">
                             Non collegato a un account
                           </span>
@@ -1979,6 +1996,23 @@
           buona è `.row.admin-panel__check` col testo in uno `<span>` — la
           stessa di admin-shop, admin-lessons e admin-users.
         -->
+        <!--
+          ⚠️⚠️ MANCAVA, e cambia l'ARITMETICA del margine: per uno stakato il
+          ticket non si paga, quindi la riga vale l'intero incasso dall'agente
+          invece del profitto. Schema e DTO lo accettavano da sempre — senza
+          questa casella nessun conto poteva essere marcato come tale, e il
+          conto economico perdeva il ticket trattenuto su ognuno di loro.
+        -->
+        <label class="row admin-panel__check">
+          <input type="checkbox" formControlName="stakato" />
+          <span>
+            Stakato (il ticket non gli si paga: il margine è l'intero incasso
+            dall'agente, e la riga esce da «Resta da dare»)
+          </span>
+        </label>
+
+        <ng-container [ngTemplateOutlet]="selettoreAccount" />
+
         <label class="row admin-panel__check">
           <input type="checkbox" formControlName="attivo" />
           <span>Attivo (entra nei mesi nuovi)</span>
@@ -2055,6 +2089,62 @@
     </div>
   </app-modal>
 }
+
+<!--
+  ⚠️⚠️ UN SOLO blocco per le DUE modali (conto e stakato), consumato con
+  `ngTemplateOutlet`: è lo stesso identico comando e due copie divergerebbero
+  al primo ritocco — precedente dichiarato, il punto di montaggio del player in
+  /lezioni. Si apre una modale alla volta, quindi l'`id` non collide mai.
+-->
+<ng-template #selettoreAccount>
+  <div class="field">
+    <label for="cm-account">Account sul sito</label>
+    @if (utenteCollegato(); as u) {
+      <div class="row cm__account">
+        <span class="cm__account-nome">{{ etichettaUtente(u) }}</span>
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm"
+          (click)="scollegaUtente()"
+        >
+          Scollega
+        </button>
+      </div>
+    } @else {
+      <input
+        id="cm-account"
+        type="text"
+        class="input"
+        autocomplete="off"
+        placeholder="cerca per nickname o email…"
+        (input)="cercaUtente($any($event.target).value)"
+      />
+      @if (cercandoUtenti()) {
+        <p class="admin-nota">Cerco…</p>
+      }
+      @if (risultatiUtenti().length) {
+        <ul class="cm__risultati">
+          @for (u of risultatiUtenti(); track u.id) {
+            <li>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="collegaUtente(u)"
+              >
+                {{ etichettaUtente(u) }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    }
+    <p class="admin-nota">
+      Facoltativo: molti giocatori censiti non hanno un account. È l'unico
+      aggancio alla cancellazione dei dati, e senza non c'è una scheda staking
+      su cui registrare un conteggio.
+    </p>
+  </div>
+</ng-template>
 
 <!-- ══ Modale: spesa ricorrente ═══════════════════════════════════════════ -->
 @if (stakatoAperto(); as st) {
@@ -2155,6 +2245,8 @@
             <strong>Stakati</strong>.
           </p>
         }
+
+        <ng-container [ngTemplateOutlet]="selettoreAccount" />
 
         <label class="row admin-panel__check">
           <input type="checkbox" formControlName="attivo" />

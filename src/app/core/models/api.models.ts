@@ -2467,6 +2467,8 @@ export interface SpesaRicorrente {
 
 export interface ContoRakeback {
   id: string;
+  /** Vedi `Stakato.utente`: risolto in lettura, mai denormalizzato. */
+  utente?: UtenteCollegato;
   agente: AgenteRakeback;
   username: string;
   nomeReale?: string;
@@ -2603,10 +2605,24 @@ export const FONTI_BACK = ['CONTO', 'MANUALE'] as const;
 export type FonteBack = (typeof FONTI_BACK)[number];
 
 /** L'anagrafica di un giocatore finanziato. */
+/**
+ * L'account del sito collegato a un'anagrafica dei conteggi.
+ *
+ * ⚠️ Il server lo RISOLVE a ogni lettura e non lo denormalizza: un'anagrafica
+ * vive mesi e l'indirizzo può cambiarle sotto.
+ */
+export interface UtenteCollegato {
+  id: string;
+  nickname?: string;
+  email: string;
+}
+
 export interface Stakato {
   id: string;
   nome: string;
   userId: string | null;
+  /** Assente se non collegato — il caso normale per molti giocatori censiti. */
+  utente?: UtenteCollegato;
   /** La quota della scuola sul risultato del mese, in punti base. */
   dealScuolaBp: number;
   fonteBack: FonteBack;

@@ -1,12 +1,23 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { of, Subject } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  map,
+  switchMap,
+  tap,
+} from 'rxjs/operators';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   CASSE,
@@ -33,8 +44,11 @@ import {
   SpesaRicorrente,
   VersoVoce,
   VoceMese,
+  AdminUser,
+  UtenteCollegato,
 } from '../../../core/models/api.models';
 import { AdminConteggiService } from '../../../core/services/admin-conteggi.service';
+import { AdminUsersService } from '../../../core/services/admin-users.service';
 import { SubscriptionsService } from '../../../core/services/subscriptions.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
@@ -129,7 +143,7 @@ const METODI: readonly MetodoMovimento[] = [
  */
 @Component({
   selector: 'app-admin-conteggi-mensili',
-  imports: [
+  imports: [NgTemplateOutlet, 
     ReactiveFormsModule,
     IconComponent,
     ModalComponent,
@@ -147,6 +161,8 @@ const METODI: readonly MetodoMovimento[] = [
 export class AdminConteggiMensiliComponent {
   private readonly api = inject(AdminConteggiService);
   private readonly abbonamentiApi = inject(SubscriptionsService);
+  private readonly utenti = inject(AdminUsersService);
+  private readonly distruttore = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
 
@@ -192,6 +208,17 @@ export class AdminConteggiMensiliComponent {
   protected readonly stakati = signal<Stakato[] | null>(null);
   protected readonly bozzaStakati = signal<Record<string, BozzaStakato>>({});
   protected readonly stakatoAperto = signal<Stakato | 'nuovo' | null>(null);
+
+  // ── Il collegamento a un account del sito ────────────────────────────────
+  //
+  // ⚠️ UN SOLO stato per le due modali: se ne apre una alla volta, e due signal
+  // gemelli sarebbero due cose da azzerare in quattro punti — con la garanzia
+  // che prima o poi uno resta indietro e la modale nasce con l'etichetta di
+  // quella precedente.
+  protected readonly utenteCollegato = signal<UtenteCollegato | null>(null);
+  protected readonly risultatiUtenti = signal<AdminUser[]>([]);
+  protected readonly cercandoUtenti = signal(false);
+  private readonly ricercaUtente$ = new Subject<string>();
 
   protected readonly metodoPagamentoLabel = metodoPagamentoLabel;
   protected readonly incassanteLabel = incassanteLabel;
@@ -373,9 +400,21 @@ export class AdminConteggiMensiliComponent {
     scaglioneBase: ['45', Validators.required],
     scaglionePasso: ['22,50', Validators.required],
     destinazione: ['SCUOLA' as DestinazioneMargine, Validators.required],
+    // ⚠️⚠️ MANCAVA del tutto, ed era il flag che cambia l'aritmetica del
+    // margine: per uno stakato il ticket non si paga, quindi la riga vale
+    // l'INTERO incasso dall'agente e non `profittoAgente`. Schema e DTO lo
+    // accettavano da sempre — dall'interfaccia non si poteva spuntare, quindi
+    // nessun conto poteva essere marcato come tale. Stessa forma del difetto
+    // dei contanti: completo lato server, muto lato interfaccia.
+    stakato: [false],
     attivo: [true],
     ordine: [100],
     nota: [''],
+    // ⚠️ Sta NEL form e non in un signal a parte, benché il valore lo scriva un
+    // comando e non una digitazione: `sporco` si costruisce da `valueChanges`,
+    // quindi fuori di qui collegare un account non sporcherebbe la modale ed
+    // Escape butterebbe via il collegamento senza chiedere niente.
+    userId: [''],
   });
 
   protected readonly formRicorrente = this.fb.nonNullable.group({
@@ -454,6 +493,7 @@ export class AdminConteggiMensiliComponent {
 
   constructor() {
     this.carica();
+    this.agganciaRicercaUtenti();
 
     /**
      * Cambiando VERSO, una categoria rimasta dell'altro verso torna ad «Altro».
@@ -1143,6 +1183,7 @@ export class AdminConteggiMensiliComponent {
     back: [''],
     attivo: [true],
     nota: [''],
+    userId: [''],
   });
 
   protected readonly stakatoVal = toSignal(this.formStakato.valueChanges, {
@@ -1173,6 +1214,7 @@ export class AdminConteggiMensiliComponent {
         back: '',
         attivo: true,
         nota: '',
+        userId: '',
       });
     } else {
       this.formStakato.setValue({
@@ -1184,8 +1226,11 @@ export class AdminConteggiMensiliComponent {
         back: st.backBp === undefined ? '' : this.pctGrezza(st.backBp),
         attivo: st.attivo,
         nota: st.nota ?? '',
+        userId: st.userId ?? '',
       });
     }
+    this.utenteCollegato.set(st === 'nuovo' ? null : (st.utente ?? null));
+    this.risultatiUtenti.set([]);
     // ⚠️ La baseline DOPO il patch, o la modale nasce già sporca.
     this.baseStakato.set(JSON.stringify(this.formStakato.getRawValue()));
     this.stakatoAperto.set(st);
@@ -1249,6 +1294,9 @@ export class AdminConteggiMensiliComponent {
       ...(f.fonteBack === 'MANUALE' && back !== null ? { backBp: back } : {}),
       attivo: f.attivo,
       ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),
+      // ⚠️ Omessa quando non c'è: `@IsMongoId()` rifiuta la stringa vuota con
+      // un 400 sull'INTERA chiamata.
+      ...(f.userId ? { userId: f.userId } : {}),
     };
     this.salvando.set(true);
     this.erroreModale.set(null);
@@ -1380,6 +1428,87 @@ export class AdminConteggiMensiliComponent {
 
   // ── Conti ────────────────────────────────────────────────────────────────
 
+  /**
+   * La ricerca dell'account da collegare.
+   *
+   * ⚠️ Debounce a 300 ms come ogni altra ricerca del sito: `/admin/users` ha il
+   * tetto globale di 120 richieste al minuto, e una chiamata per battuta lo
+   * sfonda — col 429 che la modale mostrerebbe come «nessun risultato», cioè
+   * la diagnosi opposta.
+   *
+   * ⚠️ `switchMap` e non `mergeMap`: le risposte possono tornare fuori ordine e
+   * l'ultima battuta deve vincere, non l'ultima risposta arrivata.
+   */
+  protected cercaUtente(q: string): void {
+    this.ricercaUtente$.next(q);
+  }
+
+  /**
+   * Aggancia la ricerca degli account. Chiamata dal costruttore.
+   *
+   * ⚠️ `takeUntilDestroyed` con l'iniettore esplicito: qui siamo fuori dal
+   * contesto di iniezione, e senza quello la sottoscrizione resta viva dopo
+   * che il pannello è stato chiuso.
+   */
+  private agganciaRicercaUtenti(): void {
+    this.ricercaUtente$
+      .pipe(
+        map((q) => q.trim()),
+        debounceTime(300),
+        distinctUntilChanged(),
+        tap((q) => this.cercandoUtenti.set(q.length >= 2)),
+        switchMap((q) =>
+          q.length < 2
+            ? of([] as AdminUser[])
+            : this.utenti
+                .list({ q, limit: 8 })
+                .pipe(
+                  map((p) => p.items),
+                  catchError(() => of([] as AdminUser[])),
+                ),
+        ),
+        takeUntilDestroyed(this.distruttore),
+      )
+      .subscribe((items) => {
+        this.risultatiUtenti.set(items);
+        this.cercandoUtenti.set(false);
+      });
+  }
+
+  protected collegaUtente(u: AdminUser): void {
+    this.utenteCollegato.set({
+      id: u.id,
+      nickname: u.nickname,
+      email: u.email,
+    });
+    this.formConto.controls.userId.setValue(u.id);
+    this.formStakato.controls.userId.setValue(u.id);
+    this.risultatiUtenti.set([]);
+  }
+
+  protected scollegaUtente(): void {
+    this.utenteCollegato.set(null);
+    this.formConto.controls.userId.setValue('');
+    this.formStakato.controls.userId.setValue('');
+  }
+
+  /** L'etichetta con cui si nomina un account: nickname se c'è, email sempre. */
+  protected etichettaUtente(u: UtenteCollegato | AdminUser): string {
+    return u.nickname ? `${u.nickname} · ${u.email}` : u.email;
+  }
+
+  /**
+   * Il sotto-testo della riga di un conto: nome reale e account, su UNA riga.
+   *
+   * ⚠️ Una riga sola perché la cella d'identità ne dichiara due e la terza
+   * sfonderebbe i 46px per riga di `check-admin-tabelle.mjs` — il tetto che
+   * quella sonda misura su tutte e quaranta le tabelle del pannello.
+   */
+  protected sottoTestoConto(c: ContoRakeback): string {
+    const parti = [c.nomeReale, c.utente && `↳ ${this.etichettaUtente(c.utente)}`];
+    return parti.filter(Boolean).join(' · ');
+  }
+
   protected apriConto(c: ContoRakeback | 'nuovo'): void {
     this.erroreModale.set(null);
     this.conferma.set(null);
@@ -1392,9 +1521,11 @@ export class AdminConteggiMensiliComponent {
         scaglioneBase: '45',
         scaglionePasso: '22,50',
         destinazione: 'SCUOLA',
+        stakato: false,
         attivo: true,
         ordine: 100,
         nota: '',
+        userId: '',
       });
     } else {
       this.formConto.setValue({
@@ -1405,11 +1536,18 @@ export class AdminConteggiMensiliComponent {
         scaglioneBase: String(c.scaglioneBaseBp / 100).replace('.', ','),
         scaglionePasso: this.euro(c.scaglionePassoCent),
         destinazione: c.destinazione,
+        stakato: c.stakato,
         attivo: c.attivo,
         ordine: c.ordine,
         nota: c.nota ?? '',
+        userId: c.userId ?? '',
       });
     }
+    // ⚠️ PRIMA della baseline: l'etichetta e il campo devono essere a posto
+    // quando si fotografa lo stato «pulito», o la modale nasce sporca e il
+    // primo Escape chiede conferma senza che nessuno abbia toccato niente.
+    this.utenteCollegato.set(c === 'nuovo' ? null : (c.utente ?? null));
+    this.risultatiUtenti.set([]);
     this.baseConto.set(JSON.stringify(this.formConto.getRawValue()));
     this.contoAperto.set(c);
   }
@@ -1443,9 +1581,14 @@ export class AdminConteggiMensiliComponent {
       scaglioneBaseBp: base,
       scaglionePassoCent: passo,
       destinazione: f.destinazione,
+      stakato: f.stakato,
       attivo: f.attivo,
       ordine: Number(f.ordine) || 100,
       ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),
+      // ⚠️ La chiave si OMETTE quando non c'è: il DTO ha `@IsMongoId()` e una
+      // stringa vuota è un 400 sull'intera chiamata. Scollegare si fa
+      // omettendola, che sul server finisce in `$unset`.
+      ...(f.userId ? { userId: f.userId } : {}),
     };
     this.salvando.set(true);
     this.erroreModale.set(null);

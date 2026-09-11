@@ -186,6 +186,30 @@
   color: var(--copper-600);
 }
 
+// Il selettore dell'account collegato.
+//
+// ⚠️ L'elenco dei risultati e' una lista vera (`<ul>`), non una pila di `div`:
+// uno screen reader annuncia «elenco di 8 elementi» e si sa quanti sono prima
+// di percorrerli.
+.cm__account {
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cm__account-nome {
+  font-weight: 600;
+}
+
+.cm__risultati {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
 // Il conguaglio coi giocatori: una riga di conto economico come le altre, ma
 // staccata da quelle delle spese perché non è una spesa — è una rettifica.
 //
