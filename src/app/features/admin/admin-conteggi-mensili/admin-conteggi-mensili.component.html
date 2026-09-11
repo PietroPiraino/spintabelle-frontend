@@ -272,6 +272,33 @@
             </dd>
           }
 
+          <!--
+            ⚠️⚠️ IL CONGUAGLIO COI GIOCATORI. «Commissioni rakeback» entra per
+            COMPETENZA, cioè presuppone di aver pagato al giocatore esattamente
+            quello che gli spetta; ma i ticket si arrotondano ai 10 € e il saldo
+            col giocatore riparte da zero ogni mese, quindi la differenza è
+            denaro consumato in QUEL mese. Fino all'11/09/2026 non compariva in
+            nessuna riga: né costo, né margine, né partita di giro — misurati
+            ~6,64 €/mese, ~80 €/anno che uscivano dal conto senza traccia.
+            ⚠️ Sta QUI e non fra le entrate perché ha segno: le righe delle
+            entrate devono continuare a sommare «Totale entrate».
+            ⚠️ Si mostra sempre, anche a zero: è una riga del conto economico,
+            non una coda di lavoro, e una voce che appare solo quando è diversa
+            da zero fa sembrare nuovo un meccanismo che c'è sempre stato.
+          -->
+          <dt class="cm__conguaglio">Conguaglio coi giocatori</dt>
+          <dd
+            class="is-num cm__conguaglio"
+            [class.is-perdita]="d.riepilogo.conguaglioGiocatoriCent < 0"
+            [title]="
+              d.riepilogo.conguaglioGiocatoriCent < 0
+                ? 'Pagato ai giocatori più del dovuto: è un costo del mese.'
+                : 'Pagato meno del dovuto: quella parte resta alla scuola.'
+            "
+          >
+            {{ eur(d.riepilogo.conguaglioGiocatoriCent) }}
+          </dd>
+
           <dt class="cm__margine">Margine netto della scuola</dt>
           <dd class="is-num cm__margine" [class.is-perdita]="d.riepilogo.margineNettoCent < 0">
             {{ eur(d.riepilogo.margineNettoCent) }}
@@ -360,6 +387,38 @@
             {{ d.riepilogo.abbonamentiStimati === 1 ? 'abbonamento non ha' : 'abbonamenti non hanno' }}
             il prezzo registrato: {{ d.riepilogo.abbonamentiStimati === 1 ? 'è stato ricostruito' : 'sono stati ricostruiti' }}
             dal listino in vigore quel giorno. È una stima.
+          </p>
+        }
+
+        <!--
+          ⚠️⚠️ L'AVVISO CHE IL CONGUAGLIO SI PORTA DIETRO. Il conguaglio conta
+          una riga senza pagamento come una TRATTENUTA, quindi chiudere il mese
+          prima di aver mandato i ticket gonfia il margine di questa cifra
+          esatta — e il 65/35 col socio è mensile. Sull'anno torna al centesimo
+          (il mese in cui paghi si prende il negativo), ma un numero che gonfia
+          il margine dev'essere detto, non dedotto.
+          ⚠️ È un avviso e NON un blocco: pagare dopo la chiusura è un modo
+          legittimo di lavorare, e un mese che si rifiuta di chiudersi per una
+          cosa che si sistema da sé è peggio del difetto che previene.
+        -->
+        @if (
+          d.mese.stato === 'APERTO' &&
+          d.riepilogo.cassaGiocatori.righeSenzaPagamento > 0
+        ) {
+          <p class="admin-nota">
+            ⚠️
+            @if (d.riepilogo.cassaGiocatori.righeSenzaPagamento === 1) {
+              Una riga di rakeback deve ancora ricevere
+            } @else {
+              {{ d.riepilogo.cassaGiocatori.righeSenzaPagamento }} righe di
+              rakeback devono ancora ricevere
+            }
+            <strong>{{ eur(d.riepilogo.cassaGiocatori.senzaPagamentoCent) }}</strong>
+            e non hanno alcun pagamento registrato: il conguaglio le conta come
+            trattenute, quindi chiudendo adesso il margine di
+            {{ d.mese.etichetta }} è più alto di altrettanto. Scrivi il
+            «Pagato» nella scheda Rakeback prima di chiudere, oppure chiudi
+            sapendo che il mese in cui pagherai scenderà della stessa cifra.
           </p>
         }
 
@@ -944,6 +1003,70 @@
             arrivano da soli dalla tabella del rakeback: non si ridigitano.
           </p>
 
+          <!--
+            ⚠️⚠️ L'avviso che mancava del tutto. Con la colonna del rakeback
+            ancora vuota, una riga «dal conto» calcola su una back di ZERO: il
+            totale del pool non viene compensato da niente, il risultato esce
+            più negativo del vero e il pannello propone di portare a recupero
+            una perdita che non è quella. Il conteggio è giusto, i DATI sono
+            incompleti — e la differenza si vede solo se qualcuno la dice.
+            ⚠️ Nomina CHI, come l'avviso dei conti fuori dal mese: «qualche
+            riga legge zero» non dice quale numero andare a scrivere.
+          -->
+          @if (d.mese.stato === 'APERTO' && stakatiSenzaBack().length) {
+            <div class="cm__manca">
+              <p class="admin-nota">
+                <strong>{{ nomiSenzaBack() }}</strong>:
+                @if (stakatiSenzaBack().length === 1) {
+                  la sua back vale <strong>0,00 €</strong> perché
+                } @else {
+                  le loro back valgono <strong>0,00 €</strong> perché
+                }
+                il rake letto dalla scheda Rakeback di {{ d.mese.etichetta }} è
+                a zero. Il pool non viene compensato da nulla e il risultato
+                esce più negativo del vero: scrivi lì il rake, poi torna qui.
+              </p>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="vista.set('rakeback')"
+              >
+                Apri il Rakeback
+              </button>
+            </div>
+          }
+          <!--
+            ⚠️ Avviso SEPARATO, perché il rimedio è diverso: qui non c'è niente
+            da scrivere nella scheda Rakeback — o il conto non è nel mese, o la
+            riga non è collegata ad alcun conto. Un avviso solo per tre cause
+            manderebbe due volte su tre a fare la cosa sbagliata.
+          -->
+          @if (d.mese.stato === 'APERTO' && stakatiSenzaConto().length) {
+            <div class="cm__manca">
+              <p class="admin-nota">
+                <strong>{{ nomiSenzaConto() }}</strong>: la back non si può
+                leggere, quindi vale <strong>0,00 €</strong> e il conteggio è
+                sbagliato. Il conto rakeback da cui prenderla o non è in
+                {{ d.mese.etichetta }}, o non è collegato all'anagrafica dello
+                stakato.
+              </p>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="sincronizza()"
+              >
+                Sincronizza anagrafiche
+              </button>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="vista.set('anagrafiche')"
+              >
+                Apri le Anagrafiche
+              </button>
+            </div>
+          }
+
           <div class="admin-totali">
             <span class="admin-totali__voce">
               Da bonificare <strong>{{ eur(totaleDaRegolare()) }}</strong>
@@ -995,7 +1118,19 @@
                         </span>
                         <span class="admin-table__sub">
                           {{ pct(r.dealScuolaBp) }} alla scuola ·
-                          {{ r.skin ? skinLabel(r.skin) : 'dal conto rakeback' }}
+                          <!--
+                            ⚠️ NOMINA il conto invece di dire «dal conto
+                            rakeback»: con la back a zero la prima domanda è
+                            «da quale conto la sta leggendo?», e la risposta
+                            era da nessuna parte nella schermata.
+                          -->
+                          {{
+                            r.skin
+                              ? skinLabel(r.skin)
+                              : r.contoUsername
+                                ? 'dal conto ' + r.contoUsername
+                                : 'dal conto rakeback'
+                          }}
                         </span>
                       </span>
                     </th>
@@ -1011,7 +1146,38 @@
                         />
                       } @else if (r.fonteBack === 'MANUALE') {
                         {{ eur(r.rakeLordoCent ?? 0) }}
+                      } @else if (r.contoNonCollegato) {
+                        <!--
+                          ⚠️ TERZA diagnosi, e il rimedio è un altro ancora:
+                          qui non c'è alcun conto da leggere. La creazione lo
+                          impone, ma una riga mensile nata prima del
+                          collegamento se lo porta dietro.
+                        -->
+                        <span class="cm__senza-back">non collegato</span>
+                      } @else if (r.contoFuoriMese) {
+                        <!--
+                          ⚠️ Caso DIVERSO dal «rake ancora a zero», e confonderli
+                          manda a cercare la cosa sbagliata: qui il conto non è
+                          entrato nel mese, quindi nessuna cifra scritta nella
+                          scheda Rakeback lo raggiungerebbe — si passa da
+                          «Sincronizza anagrafiche».
+                        -->
+                        <span class="cm__senza-back">fuori dal mese</span>
                       } @else {
+                        <!--
+                          ⚠️⚠️ Qui si stampava SOLO «dal conto» e nessuna cifra.
+                          Con la scheda Rakeback del mese ancora vuota la back
+                          usciva 0,00 €, il pool veniva confrontato con una back
+                          inesistente e il pannello annunciava una perdita più
+                          grande di quella vera — senza che nulla dicesse
+                          perché. Un derivato a zero dev'essere SPIEGABILE.
+                          (Owner, in produzione su agosto 2026: «perché su rake
+                          c'è scritto dal conto e non posso vedere quanto ha
+                          generato di back?».)
+                        -->
+                        <span [class.cm__senza-back]="!r.rakeLettoCent">
+                          {{ eur(r.rakeLettoCent ?? 0) }}
+                        </span>
                         <span class="admin-table__sub">dal conto</span>
                       }
                     </td>

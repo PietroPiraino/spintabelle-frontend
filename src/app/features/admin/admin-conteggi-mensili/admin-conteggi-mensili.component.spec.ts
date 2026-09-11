@@ -112,6 +112,7 @@ const dettaglio = (
       },
       totaleCent: 36_000,
     },
+    conguaglioGiocatoriCent: 0,
     margineNettoCent: 19_290,
     ripartizione: {
       titolareCent: 12_539,
@@ -123,6 +124,8 @@ const dettaglio = (
       attesoDaAgenteCent: 91_881,
       pagatoAiGiocatoriCent: 0,
       residuoDovutoCent: 61_591,
+      righeSenzaPagamento: 0,
+      senzaPagamentoCent: 0,
     },
     abbonamentiStimati: 0,
   },
@@ -740,6 +743,113 @@ describe('AdminConteggiMensiliComponent', () => {
     fixture.componentInstance['dett'].set(d);
     await stabilizza();
     expect(fixture.nativeElement.textContent).toContain('di cui dai conteggi');
+  });
+
+  it('il conguaglio coi giocatori sta nel conto economico, col segno', async () => {
+    // ⚠️ Fino all'11/09/2026 la differenza fra quello che si doveva e quello
+    // che si è pagato non compariva in NESSUNA riga: né costo, né margine, né
+    // partita di giro. Misurati ~6,64 €/mese sul foglio reale.
+    const d = dettaglio();
+    d.riepilogo.conguaglioGiocatoriCent = -664;
+    await avvia(d);
+
+    const testo = fixture.nativeElement.textContent as string;
+    expect(testo).toContain('Conguaglio coi giocatori');
+    expect(testo).toContain('6,64');
+
+    // ⚠️ Si mostra ANCHE a zero: è una riga del conto economico, non una coda
+    // di lavoro. Una voce che compare solo quando è diversa da zero fa sembrare
+    // nuovo un meccanismo che c'è sempre stato.
+    const z = dettaglio();
+    z.riepilogo.conguaglioGiocatoriCent = 0;
+    fixture.componentInstance['dett'].set(z);
+    await stabilizza();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Conguaglio coi giocatori',
+    );
+  });
+
+  it('la chiusura AVVISA se restano righe senza pagamento, e non blocca', async () => {
+    const d = dettaglio();
+    d.riepilogo.cassaGiocatori.righeSenzaPagamento = 2;
+    d.riepilogo.cassaGiocatori.senzaPagamentoCent = 81_240;
+    await avvia(d);
+
+    const testo = () => fixture.nativeElement.textContent as string;
+    // ⚠️ NOMINA la cifra: il conguaglio conta quelle righe come trattenute,
+    // quindi chiudere adesso gonfia il margine di esattamente quel numero.
+    expect(testo()).toContain('812,40');
+    // ⚠️ E il pulsante resta premibile: è un avviso, non un blocco.
+    const chiudi = [
+      ...fixture.nativeElement.querySelectorAll('button'),
+    ].find((b: HTMLButtonElement) => b.textContent?.includes('Chiudi il mese'));
+    expect(chiudi).toBeDefined();
+    expect((chiudi as HTMLButtonElement).disabled).toBeFalse();
+  });
+
+  it('una riga «dal conto» mostra il rake LETTO, e a zero lo segnala', async () => {
+    // ⚠️ Qui si stampava solo «dal conto» e nessuna cifra: con la scheda
+    // Rakeback del mese vuota la back usciva 0,00 € e non c'era modo di capire
+    // perché. Rilevato dall'owner in produzione su agosto 2026.
+    const st = (over: Partial<RigaStakato> = {}): RigaStakato => ({
+      id: 'rs1',
+      stakatoId: 'st1',
+      nome: 'Rossana',
+      fonteBack: 'CONTO',
+      dealScuolaBp: 3500,
+      backCent: 0,
+      trattenutoCent: 0,
+      poolEvCent: -6800,
+      diffCent: -700,
+      feeCent: -2500,
+      altroCent: 100,
+      debitoEvCent: 0,
+      totaleCent: -10_100,
+      quotaScuolaCent: -3535,
+      risultatoCent: -3535,
+      aRecuperoCent: -3535,
+      daRegolareCent: 0,
+      registrato: false,
+      disallineato: false,
+      ...over,
+    });
+
+    const testo = () => fixture.nativeElement.textContent as string;
+
+    // (1) Rake letto davvero: la cifra si vede, il conto è NOMINATO, e non
+    // c'è alcun avviso.
+    await avvia(
+      dettaglio([], {
+        stakati: [st({ rakeLettoCent: 46_117, contoUsername: 'MadRoxKO' })],
+      }),
+    );
+    fixture.componentInstance['vista'].set('stakati');
+    await stabilizza();
+    expect(testo()).toContain('461,17');
+    expect(testo()).toContain('dal conto MadRoxKO');
+    expect(testo()).not.toContain('il rake letto dalla scheda Rakeback');
+    expect(testo()).not.toContain('la back non si può leggere');
+
+    // (2) Rake a zero: si corregge SCRIVENDO il rake.
+    fixture.componentInstance['dett'].set(
+      dettaglio([], { stakati: [st({ rakeLettoCent: 0 })] }),
+    );
+    await stabilizza();
+    expect(testo()).toContain('il rake letto dalla scheda Rakeback');
+    expect(testo()).toContain('Rossana');
+    expect(testo()).not.toContain('la back non si può leggere');
+
+    // ⚠️⚠️ (3) e (4) sono cause DIVERSE con rimedi diversi, e l'avviso deve
+    // essere l'altro: qui non c'è niente da scrivere nella scheda Rakeback.
+    // Confonderli manda a fare la cosa sbagliata due volte su tre.
+    for (const caso of [{ contoFuoriMese: true }, { contoNonCollegato: true }]) {
+      fixture.componentInstance['dett'].set(
+        dettaglio([], { stakati: [st(caso)] }),
+      );
+      await stabilizza();
+      expect(testo()).toContain('la back non si può leggere');
+      expect(testo()).not.toContain('il rake letto dalla scheda Rakeback');
+    }
   });
 
   it('il mese scelto SOPRAVVIVE al cambio di scheda', async () => {

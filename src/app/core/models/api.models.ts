@@ -2642,6 +2642,14 @@ export interface RigaStakato {
   dealScuolaBp: number;
   rakeLordoCent?: number;
   backBp?: number;
+  /** Il rake letto davvero dalla scheda Rakeback del mese (righe «dal conto»). */
+  rakeLettoCent?: number;
+  /** Il conto non ha una riga di rakeback in questo mese: la back vale 0. */
+  contoFuoriMese?: boolean;
+  /** La riga dice «dal conto» ma non è collegata ad alcun conto. */
+  contoNonCollegato?: boolean;
+  /** L'username del conto da cui si è letta la back. */
+  contoUsername?: string;
   /** La back maturata: letta dal conto rakeback, o calcolata dal rake. */
   backCent: number;
   /** Quanto la scuola trattiene perché non accreditato in ticket. */
@@ -2754,6 +2762,13 @@ export interface RiepilogoMese {
     perCassa: UscitePerCassa;
     totaleCent: number;
   };
+  /**
+   * Il conguaglio coi giocatori, col segno: `dovuto − pagato`.
+   * Positivo = pagato meno del dovuto (resta alla scuola), negativo = pagato
+   * di più. Entra nel margine, NON fra le entrate: ha segno, e le righe delle
+   * entrate devono continuare a sommare `entrate.totaleCent`.
+   */
+  conguaglioGiocatoriCent: number;
   margineNettoCent: number;
   ripartizione: {
     titolareCent: number;
@@ -2767,6 +2782,9 @@ export interface RiepilogoMese {
     attesoDaAgenteCent: number;
     pagatoAiGiocatoriCent: number;
     residuoDovutoCent: number;
+    /** Righe che devono ancora ricevere qualcosa e senza alcun pagamento. */
+    righeSenzaPagamento: number;
+    senzaPagamentoCent: number;
   };
   /** Quante righe di abbonamento sono ricostruite dal listino invece che dallo snapshot. */
   abbonamentiStimati: number;

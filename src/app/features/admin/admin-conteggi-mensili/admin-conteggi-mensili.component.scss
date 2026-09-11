@@ -172,6 +172,30 @@
   color: var(--danger);
 }
 
+// Un rake a zero letto dal conto, o un conto che nel mese non c'è.
+//
+// ⚠️ NON `.is-perdita`: quello è rosso e vuol dire «hai perso», mentre qui non
+// si è perso niente — manca un dato. Due fatti diversi col medesimo colore si
+// leggono come lo stesso fatto. Il rame è il tono che questo pannello usa già
+// per la coda di lavoro (i marcatori del tab News).
+//
+// ⚠️ E il colore non basta da solo: la cella porta comunque la cifra o la
+// parola, l'avviso sopra l'elenco NOMINA le righe, e chi non distingue i toni
+// legge lo stesso quello che serve.
+.cm__senza-back {
+  color: var(--copper-600);
+}
+
+// Il conguaglio coi giocatori: una riga di conto economico come le altre, ma
+// staccata da quelle delle spese perché non è una spesa — è una rettifica.
+//
+// ⚠️ Niente `border-top` come `.cm__somma`: quel filetto significa «questa riga
+// somma quelle sopra», e il conguaglio non somma niente. Lo stacco lo dà lo
+// spazio.
+.cm__conguaglio {
+  padding-top: 0.5rem;
+}
+
 // ── Le tabelle di denaro: rakeback e stakati ────────────────────────────────
 //
 // ⚠️ Condividono il blocco perché hanno lo stesso problema, misurato due volte:

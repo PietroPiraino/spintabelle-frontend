@@ -680,6 +680,67 @@ export class AdminConteggiMensiliComponent {
       : `${n.slice(0, 4).join(', ')} e altri ${n.length - 4}`;
   });
 
+  /**
+   * Le righe «dal conto» che stanno calcolando su una back di ZERO, perché il
+   * rake del mese non è ancora stato scritto nella scheda Rakeback.
+   *
+   * ⚠️⚠️ Senza questo avviso il pannello dava un risultato PIÙ NEGATIVO del
+   * vero e proponeva di portarlo a recupero: il pool non veniva compensato da
+   * alcuna back. Il calcolo era giusto e i dati incompleti — la distinzione
+   * più difficile da vedere e la più facile da dire. Rilevata dall'owner in
+   * produzione su agosto 2026.
+   *
+   * ⚠️ Esclude `contoFuoriMese`: quelle righe hanno la loro diagnosi in
+   * tabella («fuori dal mese») e una strada diversa — scrivere il rake non le
+   * aiuterebbe, il conto va prima sincronizzato nel mese.
+   *
+   * ⚠️ E esclude le righe `MANUALE`: là il rake si digita in questa stessa
+   * tabella, quindi lo zero è già davanti agli occhi di chi lo deve correggere.
+   */
+  protected readonly stakatiSenzaBack = computed(() =>
+    (this.dett()?.stakati ?? []).filter(
+      // ⚠️ Esclude ENTRAMBE le altre due diagnosi, non una: con la sola
+      // `contoFuoriMese` una riga non collegata cadeva in tutti e due gli
+      // avvisi, che si contraddicono («scrivi il rake» / «non c'è un conto da
+      // cui leggerlo»). Preso da una spec, non a occhio.
+      (r) =>
+        r.fonteBack === 'CONTO' &&
+        !r.contoFuoriMese &&
+        !r.contoNonCollegato &&
+        !r.rakeLettoCent,
+    ),
+  );
+
+  /**
+   * Le righe che la back non la possono proprio leggere: il conto non è nel
+   * mese, oppure non è collegato affatto.
+   *
+   * ⚠️ SEPARATE da `stakatiSenzaBack` perché il rimedio è un altro: là si
+   * scrive il rake, qui si sincronizza o si collega il conto. Un avviso solo
+   * per tre cause manderebbe due volte su tre a fare la cosa sbagliata.
+   */
+  protected readonly stakatiSenzaConto = computed(() =>
+    (this.dett()?.stakati ?? []).filter(
+      (r) =>
+        r.fonteBack === 'CONTO' && (r.contoFuoriMese || r.contoNonCollegato),
+    ),
+  );
+
+  /** I nomi, non solo quanti: gemella di `nomiFuoriDalMese`. */
+  protected readonly nomiSenzaBack = computed(() =>
+    this.elenca(this.stakatiSenzaBack().map((r) => r.nome)),
+  );
+
+  protected readonly nomiSenzaConto = computed(() =>
+    this.elenca(this.stakatiSenzaConto().map((r) => r.nome)),
+  );
+
+  private elenca(n: string[]): string {
+    return n.length <= 4
+      ? n.join(', ')
+      : `${n.slice(0, 4).join(', ')} e altri ${n.length - 4}`;
+  }
+
   protected readonly etichettaCassa = computed(() =>
     this.voceVal().verso === 'USCITA' ? 'Chi ha pagato' : 'Chi ha incassato',
   );
