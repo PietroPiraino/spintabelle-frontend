@@ -190,6 +190,48 @@
 .cm__rimborso {
   color: var(--copper-600);
 }
+
+// Lo scarto fra quanto l'agente doveva mandare e quanto ha mandato.
+//
+// ⚠️ Rame e non `.is-perdita`, per la ragione scritta due righe sopra: manca
+// un pezzo di un bonifico, non si è perso del denaro. Due fatti diversi con lo
+// stesso colore si leggono come lo stesso fatto.
+.cm__scarto {
+  color: var(--copper-600);
+}
+
+// La quadratura riuscita: l'oro del tono «ok» di `.admin-stato`, cioè lo
+// stesso colore che nel pannello significa gia' «vivo, approvato».
+//
+// ⚠️ Il colore non basta da solo: la riga porta comunque la frase «Quadra al
+// centesimo», e chi non distingue i toni legge quella.
+.cm__quadra {
+  color: var(--gold-text);
+}
+
+// L'elenco dei movimenti gia' registrati, con la via di ritorno.
+//
+// ⚠️ Un `<ul>` vero e non una pila di `div`: uno screen reader annuncia
+// «elenco di N elementi», ed e' l'idioma gia' scritto per `.cm__account`.
+.cm__regolate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm, 6px);
+  }
+}
 // Il selettore dell'account collegato.
 //
 // ⚠️ L'elenco dei risultati e' una lista vera (`<ul>`), non una pila di `div`:

@@ -2793,10 +2793,23 @@ export interface RigaStakato {
    */
   aRecuperoCent: number;
   /**
-   * La cassa: positiva = il giocatore bonifica; ⚠️ NEGATIVA = è la scuola a
-   * rimborsarlo (bonifico da Pietro). Zero in un mese in perdita.
+   * La cassa: positiva = il giocatore bonifica; ⚠️ NEGATIVA = è la scuola
+   * a rimborsarlo. ⚠️ **Da quale tasca lo dice `regolatoCassa`**, non una
+   * convenzione: fino all'11/09/2026 si assumeva «bonifico da Pietro» e la sua
+   * cassa si muoveva d'ufficio. Zero in un mese in perdita.
    */
   daRegolareCent: number;
+  /**
+   * Quanto il giocatore ha davvero mandato, col SEGNO di `daRegolareCent`:
+   * positivo = incassato da lui, negativo = rimborsato a lui.
+   *
+   * ⚠️ Vive sulla riga e non nello snapshot del mese: il bonifico arriva
+   * quando arriva, spesso a mese già chiuso. Assente = nessuno l'ha ancora
+   * dichiarato, ed è diverso da zero.
+   */
+  regolatoCent?: number;
+  /** In quale tasca è finito (o da quale è uscito, se è un rimborso). */
+  regolatoCassa?: Cassa;
   registrato: boolean;
   /** Registrato, ma con un importo che non corrisponde più al ricalcolo. */
   disallineato: boolean;
@@ -2836,6 +2849,20 @@ export interface SociMese {
   exivezzz: QuotaSocio;
   incassiNonAttribuitiCent: number;
   speseNonAttribuiteCent: number;
+  /**
+   * Quanto ci si aspetta di incassare per questo mese, congelato alla chiusura.
+   *
+   * ⚠️⚠️ Il MARGINE di riga, non lo spettante: i ticket li accredita la
+   * piattaforma ai giocatori e non passano mai dalla scuola. Su agosto 2026
+   * sono 765,67 € contro 2.473,96 — confonderli direbbe che l'agente deve tre
+   * volte tanto.
+   *
+   * ⚠️ Vale 0 sugli snapshot chiusi prima del 12/09/2026, ed è il valore
+   * esatto: quei mesi non l'hanno mai misurato.
+   */
+  attesoDaAgenteCent: number;
+  /** Idem per i giocatori finanziati. Negativo = è la scuola a dover pagare. */
+  attesoDaiGiocatoriCent: number;
 }
 
 export const ESTREMI_VERSAMENTO = [
@@ -2865,7 +2892,16 @@ export interface VersamentoPayload {
 
 export interface SaldoSocio {
   maturatoCent: number;
+  /**
+   * Il denaro della scuola passato per la sua tasca nei mesi CHIUSI: la parte
+   * congelata (abbonamenti, gadget, entrate a mano, meno le spese anticipate)
+   * più quella dal vivo, cioè i due campi qui sotto.
+   */
   cassaCent: number;
+  /** Di quella cassa, quanto è arrivato dall'agente. */
+  daAgenteCent: number;
+  /** Di quella cassa, quanto dai giocatori finanziati (negativo = rimborsi). */
+  daiGiocatoriCent: number;
   ricevutiCent: number;
   datiCent: number;
   /** Positivo = la scuola gli deve; negativo = ha in mano più di quanto gli spetti. */
@@ -2879,10 +2915,55 @@ export interface SaldiSoci {
   exivezzz: SaldoSocio;
   /** `saldoPietro + saldoExivezzz`: il denaro non ancora in tasca a nessuno dei due. */
   creditoNonRiscossoCent: number;
+  /**
+   * Di quel credito, quanto è ancora presso l'agente e quanto i giocatori
+   * finanziati non hanno ancora bonificato.
+   *
+   * ⚠️ Un credito che non dice DA CHI lo si aspetta è una cifra che non si
+   * può andare a incassare. Ciò che avanza sono i non attribuiti qui sotto.
+   */
+  pressoAgenteCent: number;
+  daRiscuotereDaiGiocatoriCent: number;
   incassiNonAttribuitiCent: number;
   speseNonAttribuiteCent: number;
   provvisorio?: { etichetta: string; soci: SociMese };
   versamenti: VersamentoView[];
+}
+
+/** L'incasso dell'agente per un mese, com'è registrato. */
+export interface IncassoAgenteView {
+  importoCent: number;
+  cassa: Cassa;
+  dataAt?: string;
+  nota?: string;
+}
+
+/**
+ * La quadratura col bonifico dell'agente.
+ *
+ * ⚠️⚠️ Si legge SEMPRE dal vivo e non entra nello snapshot: l'agente paga
+ * DOPO la chiusura del mese, quindi un campo congelato resterebbe a zero per
+ * sempre. Per la stessa ragione il blocco si mostra anche a mese chiuso — è il
+ * caso normale, non un'eccezione.
+ */
+export interface IncassoAgenteMese {
+  attesoCent: number;
+  incasso?: IncassoAgenteView;
+}
+
+export interface IncassoAgentePayload {
+  importoCent: number;
+  cassa: Cassa;
+  dataAt?: string;
+  nota?: string;
+}
+
+/** Una riga del salvataggio dei bonifici dei giocatori finanziati. */
+export interface RegolazioneStakato {
+  id: string;
+  /** ⚠️ Col segno. **Zero CANCELLA** la registrazione. */
+  regolatoCent: number;
+  regolatoCassa?: Cassa;
 }
 
 /** Un abbonamento del mese, dal punto di vista della CASSA. */
@@ -3010,6 +3091,13 @@ export interface DettaglioMese {
    * può solo produrre un errore è peggio di un elenco assente.
    */
   speseFisseDaRegistrare: SpesaFissaDaRegistrare[];
+  /**
+   * La quadratura col bonifico dell'agente.
+   *
+   * ⚠️ Dal vivo come `speseFisseDaRegistrare`: non è un totale congelato, è
+   * un fatto che cambia quando i soldi arrivano.
+   */
+  incassoAgente: IncassoAgenteMese;
   riepilogo: RiepilogoMese;
   /** ⚠️ Un tetto raggiunto si DICE, mai si tronca in silenzio. */
   troncato: boolean;

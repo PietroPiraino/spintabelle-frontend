@@ -21,6 +21,8 @@ ContoRakeback,
   VersamentoPayload,
   SaldiSoci,
   SpesaFissaPayload,
+  IncassoAgentePayload,
+  RegolazioneStakato,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -215,6 +217,44 @@ export class AdminConteggiService {
   ): Observable<DettaglioMese> {
     return this.http.post<DettaglioMese>(
       `${API}/admin/conteggi/mesi/${meseId}/spese-fisse`,
+      { righe },
+    );
+  }
+
+  // ── Il denaro che arriva DOPO la chiusura ────────────────────────────
+  //
+  // ⚠️⚠️ Queste tre rotte funzionano anche a mese CHIUSO, ed è il caso
+  // normale: l'agente paga il rakeback di agosto a settembre e il giocatore
+  // bonifica quando gli pare. Non toccano il margine — dicono in quale tasca
+  // è finito un denaro già contato per competenza.
+
+  registraIncassoAgente(
+    meseId: string,
+    body: IncassoAgentePayload,
+  ): Observable<DettaglioMese> {
+    return this.http.put<DettaglioMese>(
+      `${API}/admin/conteggi/mesi/${meseId}/incasso-agente`,
+      body,
+    );
+  }
+
+  eliminaIncassoAgente(meseId: string): Observable<DettaglioMese> {
+    return this.http.delete<DettaglioMese>(
+      `${API}/admin/conteggi/mesi/${meseId}/incasso-agente`,
+    );
+  }
+
+  /**
+   * ⚠️ Una PUT per tutta la colonna, come il rakeback e le spese fisse: la
+   * risposta è il mese ricalcolato. ⚠️ `regolatoCent: 0` CANCELLA la
+   * registrazione di quella riga.
+   */
+  regolaStakati(
+    meseId: string,
+    righe: RegolazioneStakato[],
+  ): Observable<DettaglioMese> {
+    return this.http.put<DettaglioMese>(
+      `${API}/admin/conteggi/mesi/${meseId}/regolazioni`,
       { righe },
     );
   }

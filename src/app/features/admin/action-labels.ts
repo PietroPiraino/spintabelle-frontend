@@ -92,6 +92,10 @@ export const ACTION_LABELS: Record<string, string> = {
   'save-staked-month': 'Conteggio stakati salvato',
   'register-staking-settlement': 'Conteggio portato sul registro staking',
   'register-fixed-expenses': 'Spese fisse registrate',
+  // ⚠️ Le due scritture che funzionano anche a mese CHIUSO: il denaro arriva
+  // dopo la chiusura, e dire in quale tasca è finito non tocca il margine.
+  'register-agent-payment': 'Incasso dall’agente registrato',
+  'settle-staked-players': 'Movimenti coi giocatori registrati',
   'create-rakeback-account': 'Conto rakeback aggiunto',
   'update-rakeback-account': 'Conto rakeback modificato',
   'delete-rakeback-account': 'Conto rakeback rimosso',

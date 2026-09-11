@@ -842,6 +842,103 @@
               </p>
             }
           }
+
+          <!--
+            ⚠️⚠️ «Incassato dall'agente» sta QUI e si vede ANCHE a mese CHIUSO,
+            ed è il caso normale: il rakeback di agosto l'agente lo bonifica a
+            settembre. È il contrario delle spese fisse, che a mese chiuso
+            spariscono perché registrarle risponderebbe 409 — qui la scrittura
+            non tocca il margine, dice soltanto in quale tasca è finito un
+            denaro già contato per competenza.
+
+            ⚠️ L'atteso è il MARGINE, non lo spettante: su agosto 2026 sono
+            765,67 € contro 2.473,96, perché i ticket li accredita la
+            piattaforma ai giocatori e non passano mai dalla scuola. Metterci
+            lo spettante direbbe che l'agente deve tre volte tanto.
+          -->
+          <section class="cm__gruppo cm__incasso">
+            <h3 class="cm__h3">Incassato dall'agente</h3>
+            <p class="admin-totali">
+              <span class="admin-totali__voce">
+                Atteso <strong>{{ eur(d.incassoAgente.attesoCent) }}</strong>
+              </span>
+              @if (d.incassoAgente.incasso; as i) {
+                <span class="admin-totali__voce">
+                  Incassato <strong>{{ eur(i.importoCent) }}</strong>
+                </span>
+                <span class="admin-totali__voce">
+                  In cassa a <strong>{{ cassaLabel(i.cassa) }}</strong>
+                </span>
+                @if (i.dataAt) {
+                  <span class="admin-totali__voce">
+                    Il <strong>{{ dataBreve(i.dataAt) }}</strong>
+                  </span>
+                }
+              }
+              <span class="admin-totali__ambito">
+                il margine di questo mese, non lo spettante
+              </span>
+            </p>
+
+            @if (d.incassoAgente.incasso; as i) {
+              <!--
+                ⚠️ «Quadra» e «non ancora registrato» sono due fatti diversi, e
+                `scartoIncassoCent()` vale `null` nel secondo: uno zero li
+                confonderebbe proprio sulla riga che serve a distinguerli.
+                ⚠️ Il tono dello scarto è il RAME e non `.is-perdita`: quel
+                rosso significa «hai perso», e qui non si è perso niente —
+                manca un pezzo di un bonifico, ed è la stessa scelta già fatta
+                per la back a zero degli stakati.
+              -->
+              @if (scartoIncassoCent() === 0) {
+                <p class="admin-nota cm__quadra">
+                  Quadra al centesimo.
+                </p>
+              } @else if (scartoIncassoCent()! > 0) {
+                <p class="admin-nota cm__scarto">
+                  Mancano {{ eur(scartoIncassoCent()!) }} rispetto all'atteso.
+                </p>
+              } @else {
+                <p class="admin-nota cm__scarto">
+                  Ha mandato {{ eur(-scartoIncassoCent()!) }} in più
+                  dell'atteso.
+                </p>
+              }
+              @if (i.nota) {
+                <p class="admin-nota">{{ i.nota }}</p>
+              }
+              <div class="row cm__azioni">
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="apriIncasso()"
+                >
+                  Correggi l'incasso
+                </button>
+              </div>
+            } @else {
+              <p class="admin-nota">
+                Quando l'agente bonifica, scrivi qui quanto è arrivato e su
+                quale conto: finché non lo fai, quella cifra resta nel credito
+                non riscosso della scheda Soci.
+              </p>
+              <div class="row cm__azioni">
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  [disabled]="!d.incassoAgente.attesoCent"
+                  (click)="apriIncasso()"
+                >
+                  Registra l'incasso
+                </button>
+                @if (!d.incassoAgente.attesoCent) {
+                  <span class="admin-nota">
+                    Con un margine a zero non c'è niente da incassare.
+                  </span>
+                }
+              </div>
+            }
+          </section>
         }
       }
 
@@ -1182,6 +1279,21 @@
                               Rimborso
                             </span>
                           }
+                          @if (r.regolatoCent !== undefined) {
+                            <!--
+                              ⚠️ Un BADGE e non una colonna: con dieci colonne
+                              questa tabella sfonda già a 1100px, che è la
+                              fascia più stretta del pannello (la sidebar è
+                              ancora affiancata). La cifra e la tasca stanno
+                              nel sotto-testo, dove non allargano niente.
+                              ⚠️ `!== undefined` e non `r.regolatoCent`: una
+                              riga può essere stata regolata per l'intero
+                              dovuto e restare comunque una riga registrata.
+                            -->
+                            <span class="admin-stato" data-tono="concluso">
+                              {{ r.regolatoCent < 0 ? 'Rimborsato' : 'Incassato' }}
+                            </span>
+                          }
                         </span>
                         <span class="admin-table__sub">
                           {{ pct(r.dealScuolaBp) }} alla scuola ·
@@ -1198,6 +1310,11 @@
                                 ? 'dal conto ' + r.contoUsername
                                 : 'dal conto rakeback'
                           }}
+                          @if (r.regolatoCent !== undefined) {
+                            · {{ eur(abs(r.regolatoCent)) }}
+                            {{ r.regolatoCent < 0 ? 'da' : 'a' }}
+                            {{ r.regolatoCassa ? cassaLabel(r.regolatoCassa) : '—' }}
+                          }
                         </span>
                       </span>
                     </th>
@@ -1329,6 +1446,194 @@
                 {{ salvando() ? 'Salvo…' : 'Salva il conteggio' }}
               </button>
             </div>
+          }
+
+          <!--
+            ⚠️⚠️ Questo blocco si vede ANCHE a mese CHIUSO, ed è il caso
+            normale: il giocatore bonifica quando gli pare, spesso settimane
+            dopo. Registrarlo non tocca il margine — quel denaro è già contato
+            per competenza — dice solo in quale tasca è finito. È il contrario
+            delle spese fisse, che a mese chiuso spariscono perché registrarle
+            risponderebbe 409.
+            ⚠️ Sul modello di «Spese fisse da registrare»: si digita in locale,
+            si manda tutto in una chiamata, e il dovuto resta un SUGGERIMENTO
+            accanto al campo, mai dentro — un importo precompilato si salva
+            senza che nessuno lo guardi, e qui il pagamento parziale è il caso
+            per cui l'owner ha chiesto un importo invece di una spunta.
+          -->
+          @if (daIncassare().length) {
+            <section class="cm__gruppo">
+              <h3 class="cm__h3">Movimenti coi giocatori</h3>
+              <p class="admin-nota">
+                Scrivi solo quelli davvero arrivati: gli altri restano qui.
+                Su un <strong>rimborso</strong> la cifra si scrive
+                <strong>positiva</strong> come le altre — il verso lo dice già
+                la riga, e la cassa scelta è quella da cui il bonifico esce.
+              </p>
+
+              <div class="admin-table__scroll">
+                <table class="admin-table cm__rakeback cm__fisse">
+                  <caption class="visually-hidden">
+                    Bonifici dei giocatori finanziati ancora da registrare
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-table__c-primo">Giocatore</th>
+                      <th scope="col" class="is-num">Importo</th>
+                      <th scope="col">Per quale tasca</th>
+                      <th scope="col" class="is-num admin-table__solo-largo">
+                        Il dovuto
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of daIncassare(); track r.id) {
+                      <tr>
+                        <th scope="row" class="admin-table__c-primo">
+                          <span class="admin-table__ident">
+                            <span class="admin-table__ident-riga">
+                              <strong [title]="r.nome">{{ r.nome }}</strong>
+                              @if (r.daRegolareCent < 0) {
+                                <span class="admin-stato" data-tono="attesa">
+                                  Rimborso
+                                </span>
+                              }
+                            </span>
+                          </span>
+                        </th>
+                        <td class="is-num" data-etichetta="Importo">
+                          <label class="visually-hidden" [attr.for]="'reg-' + r.id">
+                            Importo arrivato da {{ r.nome }}
+                          </label>
+                          <input
+                            [id]="'reg-' + r.id"
+                            type="text"
+                            inputmode="decimal"
+                            class="input cm__cella"
+                            [class.is-error]="regolazioniNonValide().includes(r.nome)"
+                            [value]="bozzaRegolazioni()[r.id]?.importo ?? ''"
+                            (input)="scriviRegolazione(r.id, 'importo', $any($event.target).value)"
+                            autocomplete="off"
+                            placeholder="0,00"
+                          />
+                        </td>
+                        <td data-etichetta="Per quale tasca">
+                          <label class="visually-hidden" [attr.for]="'regc-' + r.id">
+                            Cassa di {{ r.nome }}
+                          </label>
+                          <!--
+                            ⚠️⚠️ `[selected]` sull'OPZIONE e mai `[value]` sul
+                            `<select>`: con le `<option>` generate da un `@for`
+                            il binding si applica prima che esistano, il
+                            browser ripiega sulla prima e la tendina MENTE.
+                            Trappola già pagata due volte in questa schermata.
+                          -->
+                          <select
+                            [id]="'regc-' + r.id"
+                            class="input cm__cella"
+                            (change)="scriviRegolazione(r.id, 'cassa', $any($event.target).value)"
+                          >
+                            <option value="" [selected]="!bozzaRegolazioni()[r.id]?.cassa">
+                              Scegli…
+                            </option>
+                            @for (c of CASSE; track c) {
+                              <option
+                                [value]="c"
+                                [selected]="bozzaRegolazioni()[r.id]?.cassa === c"
+                              >
+                                {{ cassaLabel(c) }}
+                              </option>
+                            }
+                          </select>
+                        </td>
+                        <!--
+                          ⚠️ Su UNA riga sola: `.admin-table__sub` in un `<td>`
+                          nudo eredita l'interlinea del body e porta la cella a
+                          54px contro il tetto di 46 della sonda.
+                        -->
+                        <td class="is-num admin-table__solo-largo">
+                          {{ eur(abs(r.daRegolareCent)) }}
+                          {{ r.daRegolareCent < 0 ? 'da mandare' : 'da ricevere' }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              @if (erroreRegolazioni()) {
+                <p class="form-feedback is-error" role="alert">
+                  {{ erroreRegolazioni() }}
+                </p>
+              }
+              <div class="row cm__azioni">
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm"
+                  [disabled]="!regolazioniCompilate().length || salvando()"
+                  (click)="salvaRegolazioni()"
+                >
+                  @if (salvando()) {
+                    Registro…
+                  } @else if (regolazioniCompilate().length === 1) {
+                    Registra il movimento
+                  } @else {
+                    Registra {{ regolazioniCompilate().length }} movimenti
+                  }
+                </button>
+              </div>
+            </section>
+          }
+
+          @if (regolate().length) {
+            <section class="cm__gruppo">
+              <h3 class="cm__h3">Movimenti registrati</h3>
+              <ul class="cm__regolate">
+                @for (r of regolate(); track r.id) {
+                  <li>
+                    <span>
+                      <strong>{{ r.nome }}</strong> ·
+                      {{ eur(abs(r.regolatoCent!)) }}
+                      {{ r.regolatoCent! < 0 ? 'rimborsati da' : 'incassati su' }}
+                      {{ r.regolatoCassa ? cassaLabel(r.regolatoCassa) : '—' }}
+                    </span>
+                    <!--
+                      ⚠️ La via di ritorno esiste perché una riga segnata per
+                      sbaglio non si potrebbe altrimenti disfare, e l'unica
+                      uscita sarebbe un versamento inventato. Lato server lo
+                      zero È il comando di cancellazione.
+                    -->
+                    @if (conferma() === 'reg-' + r.id) {
+                      <span class="row">
+                        <button
+                          type="button"
+                          class="btn btn--sm btn--danger"
+                          [disabled]="salvando()"
+                          (click)="annullaRegolazione(r.id)"
+                        >
+                          Annulla davvero
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn--sm btn--ghost"
+                          (click)="conferma.set(null)"
+                        >
+                          No
+                        </button>
+                      </span>
+                    } @else {
+                      <button
+                        type="button"
+                        class="btn btn--sm btn--ghost"
+                        (click)="conferma.set('reg-' + r.id)"
+                      >
+                        Annulla
+                      </button>
+                    }
+                  </li>
+                }
+              </ul>
+            </section>
           }
         }
       }
@@ -1576,10 +1881,25 @@
           Quanto è <strong>maturato</strong> a ciascuno (la sua parte del
           margine dei mesi chiusi; i conti personali vanno a Pietro), quanto
           denaro della scuola gli è passato <strong>per le mani</strong>
-          (contanti incassati, PayPal a Pietro e Skrill a Exivezzz, meno le
-          spese anticipate), e i <strong>versamenti</strong> registrati qui
-          sotto. Il saldo è la differenza: positivo, la scuola gli deve;
-          negativo, ha in mano più di quanto gli spetti.
+          (contanti incassati, PayPal a Pietro e Skrill a Exivezzz, il bonifico
+          dell'agente e quelli dei giocatori finanziati, meno le spese
+          anticipate), e i <strong>versamenti</strong> registrati qui sotto. Il
+          saldo è la differenza: positivo, la scuola gli deve; negativo, ha in
+          mano più di quanto gli spetti.
+        </p>
+        <!--
+          ⚠️⚠️ La divisione fra ciò che si congela e ciò che si legge dal vivo è
+          il cuore di questa schermata, e va detta: il margine di un mese si
+          ferma alla chiusura, ma l'agente bonifica a settembre il rakeback di
+          agosto e il giocatore paga quando gli pare. Congelando anche quelli,
+          il credito non sarebbe mai sceso.
+        -->
+        <p class="admin-nota">
+          Gli incassi si registrano <strong>quando arrivano</strong>, anche su
+          un mese già chiuso: il bonifico dell'agente nella scheda
+          <strong>Rakeback</strong>, quelli dei giocatori finanziati nella
+          scheda <strong>Stakati</strong>. Non muovono il margine — quel denaro
+          è già contato — dicono solo in quale tasca è finito.
         </p>
 
         @if (erroreSoci(); as e) {
@@ -1590,15 +1910,39 @@
             </button>
           </div>
         } @else if (soci(); as s) {
+          <!--
+            ⚠️⚠️ Il credito si SPEZZA per origine (richiesta dell'owner): una
+            cifra che non dice da CHI la si aspetta è una cifra che non si può
+            andare a incassare. Le due voci sotto sono `atteso − incassato` per
+            i mesi chiusi; ciò che avanza è denaro in cassa comune o passato per
+            una tasca che nessuno ha dichiarato (la nota più sotto).
+            ⚠️ Ognuna compare solo se diversa da zero: tre voci a 0,00 € sopra
+            un credito a zero sono rumore proprio nel mese in cui tutto quadra.
+          -->
           <div class="admin-totali">
             <span class="admin-totali__voce">
               Credito non riscosso
               <strong>{{ eur(s.creditoNonRiscossoCent) }}</strong>
             </span>
+            @if (s.pressoAgenteCent) {
+              <span class="admin-totali__voce">
+                Presso l'agente <strong>{{ eur(s.pressoAgenteCent) }}</strong>
+              </span>
+            }
+            @if (s.daRiscuotereDaiGiocatoriCent) {
+              <span class="admin-totali__voce">
+                <!-- ⚠️ Negativo qui non è un credito: è un rimborso che la
+                     scuola deve ancora mandare, e chiamarlo «da riscuotere»
+                     direbbe il contrario esatto. -->
+                {{ s.daRiscuotereDaiGiocatoriCent < 0 ? 'Da rimborsare ai giocatori' : 'Dai giocatori' }}
+                <strong>{{ eur(abs(s.daRiscuotereDaiGiocatoriCent)) }}</strong>
+              </span>
+            }
             <span class="admin-totali__ambito">
               su {{ s.mesiChiusi }} {{ s.mesiChiusi === 1 ? 'mese chiuso' : 'mesi chiusi' }} —
               è quello che la scuola deve ai due insieme: denaro in cassa
-              comune o ancora presso l'agente
+              comune, ancora presso l'agente o non ancora bonificato dai
+              giocatori
             </span>
           </div>
 
@@ -1623,6 +1967,27 @@
                         <span class="admin-table__ident-riga">
                           <strong>{{ r.nome }}</strong>
                         </span>
+                        <!--
+                          ⚠️ Il dettaglio sta QUI e non in due colonne nuove:
+                          la tabella ne ha già sei e due spariscono sotto i
+                          1200px, che è la fascia in cui il pannello è più
+                          stretto. La cella d'identità è l'unica che cresce in
+                          altezza senza allargare niente.
+                          ⚠️ Compare solo se c'è qualcosa da dire: su chi non
+                          ha ancora incassato niente sarebbero due zeri.
+                        -->
+                        @if (r.q.daAgenteCent || r.q.daiGiocatoriCent) {
+                          <span class="admin-table__sub">
+                            di cui
+                            @if (r.q.daAgenteCent) {
+                              {{ eur(r.q.daAgenteCent) }} dall'agente
+                            }
+                            @if (r.q.daAgenteCent && r.q.daiGiocatoriCent) { · }
+                            @if (r.q.daiGiocatoriCent) {
+                              {{ eur(r.q.daiGiocatoriCent) }} dai giocatori
+                            }
+                          </span>
+                        }
                       </span>
                     </th>
                     <td class="is-num" data-etichetta="Maturato">{{ eur(r.q.maturatoCent) }}</td>
@@ -2997,6 +3362,135 @@
         [disabled]="formCorrezione.invalid || salvando()"
       >
         {{ salvando() ? 'Correggo…' : 'Correggi' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<!-- ══ Modale: l’incasso dall’agente ═════════════════════════════════════ -->
+<!--
+  ⚠️⚠️ Si apre anche su un mese CHIUSO, ed è il caso normale: l’agente bonifica
+  il rakeback di agosto a settembre. La scrittura non tocca il margine — quel
+  denaro è già contato per competenza — quindi non viola il congelamento, che è
+  la stessa linea già tracciata per l’accredito dei punti.
+-->
+@if (incassoAperto() && dett(); as d) {
+  <app-modal
+    titolo="Incasso dall’agente"
+    [sottotitolo]="d.mese.etichetta"
+    [sporco]="incassoSporco()"
+    [salvando]="salvando()"
+    (chiusa)="incassoAperto.set(false)"
+  >
+    <div class="admin-modale">
+      <form id="cm-form-incasso" [formGroup]="formIncasso" (ngSubmit)="salvaIncasso()">
+        <div class="field">
+          <label for="cm-in-importo">Importo arrivato (€)</label>
+          <input
+            id="cm-in-importo"
+            type="text"
+            inputmode="decimal"
+            class="input"
+            formControlName="importo"
+            placeholder="es. 765,67"
+          />
+          <!--
+            ⚠️⚠️ L’atteso sta ACCANTO al campo e non DENTRO. Precompilandolo la
+            quadratura tornerebbe SEMPRE, cioè il controllo per cui questo
+            blocco esiste non controllerebbe più niente — ed è anche la regola
+            già scritta per «l’ultima volta» delle spese fisse: un importo
+            precompilato si salva senza che nessuno lo guardi.
+          -->
+          <p class="admin-nota">
+            Atteso per questo mese:
+            <strong>{{ eur(d.incassoAgente.attesoCent) }}</strong>. È il
+            <strong>margine</strong>, non lo spettante: i ticket li accredita
+            la piattaforma ai giocatori e non passano dalla scuola.
+          </p>
+        </div>
+        <div class="field">
+          <label for="cm-in-cassa">Su quale conto è arrivato</label>
+          <!-- ⚠️ `formControlName`: i reactive forms scrivono il valore dopo il
+               montaggio della vista, quindi qui la trappola del `[value]` sul
+               `<select>` con le `<option>` da un `@for` non si presenta. -->
+          <select id="cm-in-cassa" class="input" formControlName="cassa">
+            @for (c of CASSE; track c) {
+              <option [value]="c">{{ cassaLabel(c) }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="cm-in-data">Data del bonifico</label>
+          <input id="cm-in-data" type="date" class="input" formControlName="data" />
+        </div>
+        <div class="field">
+          <label for="cm-in-nota">Nota</label>
+          <input
+            id="cm-in-nota"
+            type="text"
+            class="input"
+            formControlName="nota"
+            maxlength="500"
+            placeholder="es. due tranche, 400 il 5 e 365,67 il 12"
+          />
+        </div>
+        <p class="admin-nota">
+          Se l’agente ha pagato in <strong>più tranche</strong>, somma gli
+          importi e scrivilo nella nota: qui ci sta un movimento solo per mese.
+          Per spostare poi il denaro fra te ed Exivezzz c’è «Versamenti fra
+          casse» nella scheda Soci.
+        </p>
+        @if (erroreModale()) {
+          <p class="form-feedback is-error" role="alert">{{ erroreModale() }}</p>
+        }
+      </form>
+
+      @if (d.incassoAgente.incasso) {
+        <details class="admin-modale__sez admin-modale__sez--rischio">
+          <summary>Rimuovi la registrazione</summary>
+          <p class="admin-nota">
+            L’incasso torna a «non registrato» e quella cifra rientra nel
+            credito non riscosso della scheda Soci. Il margine del mese non
+            cambia di un centesimo.
+          </p>
+          @if (conferma() === 'incasso') {
+            <div class="row">
+              <button
+                type="button"
+                class="btn btn--sm btn--danger"
+                [disabled]="salvando()"
+                (click)="eliminaIncasso()"
+              >
+                Rimuovi davvero
+              </button>
+              <button
+                type="button"
+                class="btn btn--sm btn--ghost"
+                (click)="conferma.set(null)"
+              >
+                No
+              </button>
+            </div>
+          } @else {
+            <button
+              type="button"
+              class="btn btn--sm btn--ghost"
+              (click)="conferma.set('incasso')"
+            >
+              Rimuovi
+            </button>
+          }
+        </details>
+      }
+    </div>
+    <div moPiede>
+      <button
+        type="submit"
+        form="cm-form-incasso"
+        class="btn btn--primary btn--sm"
+        [disabled]="formIncasso.invalid || salvando()"
+      >
+        {{ salvando() ? 'Salvo…' : 'Registra' }}
       </button>
     </div>
   </app-modal>

@@ -73,6 +73,9 @@ const dettaglio = (
   abbonamenti: [],
   stakati: [],
   speseFisseDaRegistrare: [],
+  // ⚠️ Dal vivo come `speseFisseDaRegistrare`: l'agente bonifica dopo la
+  // chiusura, quindi questo blocco non entra nello snapshot.
+  incassoAgente: { attesoCent: 76_567 },
   totaliRakeback: {
     rakeGeneratoCent: righe.reduce((t, r) => t + r.rakeGeneratoCent, 0),
     erogatoBonusCent: righe.reduce((t, r) => t + r.erogatoBonusCent, 0),
@@ -133,6 +136,8 @@ const dettaglio = (
       exivezzz: { maturatoCent: 6751, cassaCent: -8_900 },
       incassiNonAttribuitiCent: 0,
       speseNonAttribuiteCent: 1_280,
+      attesoDaAgenteCent: 76_567,
+      attesoDaiGiocatoriCent: 0,
     },
     cassaGiocatori: {
       attesoDaAgenteCent: 91_881,
@@ -153,6 +158,8 @@ const saldi = (over: Partial<SaldiSoci> = {}): SaldiSoci => ({
   pietro: {
     maturatoCent: 50_000,
     cassaCent: 5_000,
+    daAgenteCent: 0,
+    daiGiocatoriCent: 0,
     ricevutiCent: 30_000,
     datiCent: 0,
     saldoCent: 15_000,
@@ -163,11 +170,18 @@ const saldi = (over: Partial<SaldiSoci> = {}): SaldiSoci => ({
   exivezzz: {
     maturatoCent: 20_000,
     cassaCent: 20_000,
+    daAgenteCent: 0,
+    daiGiocatoriCent: 0,
     ricevutiCent: 0,
     datiCent: 0,
     saldoCent: 0,
   },
   creditoNonRiscossoCent: 15_000,
+  // ⚠️ La scomposizione per origine: `pressoAgente + daiGiocatori` non deve
+  // superare il credito, o la fixture verificherebbe una schermata che il
+  // server non può produrre.
+  pressoAgenteCent: 0,
+  daRiscuotereDaiGiocatoriCent: 0,
   incassiNonAttribuitiCent: 0,
   speseNonAttribuiteCent: 0,
   provvisorio: {
@@ -258,6 +272,222 @@ describe('AdminConteggiMensiliComponent', () => {
     });
     fixture = TestBed.createComponent(AdminConteggiMensiliComponent);
     http = TestBed.inject(HttpTestingController);
+  });
+
+  // ── Il libro cassa: il denaro che arriva DOPO la chiusura ────────────────
+
+  /** Una riga di stakato per le prove sui bonifici. */
+  const rigaStakato = (over: Partial<RigaStakato> = {}): RigaStakato => ({
+    id: 'rs1',
+    stakatoId: 'st1',
+    nome: 'Rossana',
+    fonteBack: 'CONTO',
+    dealScuolaBp: 3500,
+    backCent: 23_059,
+    trattenutoCent: 2_809,
+    poolEvCent: -6800,
+    diffCent: -700,
+    feeCent: -2500,
+    altroCent: 100,
+    debitoEvCent: 0,
+    totaleCent: 13_159,
+    quotaScuolaCent: 4_606,
+    risultatoCent: 1_797,
+    aRecuperoCent: 0,
+    daRegolareCent: 1_797,
+    registrato: false,
+    disallineato: false,
+    ...over,
+  });
+
+  it('mostra «Incassato dall’agente» anche a mese CHIUSO, ed è il caso normale', async () => {
+    // ⚠️⚠️ È la regola portante del lotto: l'agente bonifica il rakeback di
+    // agosto a settembre. Se il blocco seguisse le spese fisse — che a mese
+    // chiuso spariscono perché registrarle darebbe 409 — quel denaro non si
+    // potrebbe registrare mai, e il credito non scenderebbe.
+    await avvia(
+      dettaglio([riga()], {
+        mese: mese({ stato: 'CHIUSO', riepilogoCongelato: true }),
+      }),
+    );
+    await vaiA('Rakeback');
+
+    expect(testo()).toContain("Incassato dall'agente");
+    const registra = [
+      ...fixture.nativeElement.querySelectorAll('button'),
+    ].find((b: HTMLButtonElement) =>
+      b.textContent?.includes("Registra l'incasso"),
+    ) as HTMLButtonElement;
+    expect(registra).withContext("il comando c’è a mese chiuso").toBeTruthy();
+    expect(registra.disabled).toBeFalse();
+  });
+
+  it('l’atteso è un SUGGERIMENTO accanto al campo, mai il valore precompilato', async () => {
+    // ⚠️⚠️ Precompilando con l'atteso la quadratura tornerebbe SEMPRE, cioè il
+    // controllo per cui questo blocco esiste non controllerebbe più niente. È
+    // la stessa regola di «l'ultima volta» sulle spese fisse.
+    await avvia();
+    await vaiA('Rakeback');
+    (
+      [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) => b.textContent?.includes("Registra l'incasso"),
+      ) as HTMLButtonElement
+    ).click();
+    await stabilizza();
+
+    const campo = fixture.nativeElement.querySelector(
+      '#cm-in-importo',
+    ) as HTMLInputElement;
+    expect(campo.value).withContext('il campo nasce VUOTO').toBe('');
+    expect(testo()).toContain('Atteso per questo mese');
+    expect(testo()).toContain('765,67');
+  });
+
+  it('registra l’incasso con la cassa e la data a mezzogiorno UTC', async () => {
+    await avvia();
+    await vaiA('Rakeback');
+    (
+      [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) => b.textContent?.includes("Registra l'incasso"),
+      ) as HTMLButtonElement
+    ).click();
+    await stabilizza();
+
+    const scrivi = (sel: string, v: string) => {
+      const el = fixture.nativeElement.querySelector(sel) as HTMLInputElement;
+      el.value = v;
+      el.dispatchEvent(new Event('input'));
+    };
+    scrivi('#cm-in-importo', '765,67');
+    const cassa = fixture.nativeElement.querySelector(
+      '#cm-in-cassa',
+    ) as HTMLSelectElement;
+    cassa.value = 'EXIVEZZZ';
+    cassa.dispatchEvent(new Event('change'));
+    scrivi('#cm-in-data', '2026-10-05');
+    await stabilizza();
+
+    (
+      fixture.nativeElement.querySelector(
+        'button[form="cm-form-incasso"]',
+      ) as HTMLButtonElement
+    ).click();
+    await stabilizza();
+
+    const req = http.expectOne(`${API}/admin/conteggi/mesi/m1/incasso-agente`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body.importoCent).toBe(76_567);
+    expect(req.request.body.cassa).toBe('EXIVEZZZ');
+    // ⚠️ Mezzogiorno UTC: una data-solo a mezzanotte di Roma è il giorno prima
+    // in UTC per metà dell'anno, e il registro ordina per data.
+    expect(req.request.body.dataAt).toBe('2026-10-05T12:00:00.000Z');
+    req.flush(dettaglio());
+    await stabilizza();
+  });
+
+  it('su un rimborso la cifra si scrive POSITIVA: il segno lo mette il client', async () => {
+    // ⚠️⚠️ Chiedere un meno su un bonifico in uscita è il modo più rapido per
+    // registrare il verso sbagliato di un movimento di denaro. Il verso è già
+    // scritto nel dovuto che la riga mostra accanto.
+    await avvia(
+      dettaglio([], {
+        stakati: [rigaStakato({ daRegolareCent: -338, risultatoCent: -338 })],
+      }),
+    );
+    await vaiA('Stakati');
+
+    expect(testo()).toContain('Movimenti coi giocatori');
+    const importo = fixture.nativeElement.querySelector(
+      '#reg-rs1',
+    ) as HTMLInputElement;
+    importo.value = '3,38';
+    importo.dispatchEvent(new Event('input'));
+    const cassa = fixture.nativeElement.querySelector(
+      '#regc-rs1',
+    ) as HTMLSelectElement;
+    cassa.value = 'EXIVEZZZ';
+    cassa.dispatchEvent(new Event('change'));
+    await stabilizza();
+
+    (
+      [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) =>
+          b.textContent?.includes('Registra il movimento'),
+      ) as HTMLButtonElement
+    ).click();
+    await stabilizza();
+
+    const req = http.expectOne(`${API}/admin/conteggi/mesi/m1/regolazioni`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body.righe[0].regolatoCent).toBe(-338);
+    expect(req.request.body.righe[0].regolatoCassa).toBe('EXIVEZZZ');
+    req.flush(dettaglio());
+    await stabilizza();
+  });
+
+  it('senza la cassa NON parte alcuna chiamata, e l’errore NOMINA la riga', async () => {
+    // ⚠️ Un importo senza tasca non abbassa il saldo di nessuno dei due: si
+    // chiede subito, invece di scrivere una riga che non serve a niente.
+    await avvia(dettaglio([], { stakati: [rigaStakato()] }));
+    await vaiA('Stakati');
+
+    const importo = fixture.nativeElement.querySelector(
+      '#reg-rs1',
+    ) as HTMLInputElement;
+    importo.value = '17,97';
+    importo.dispatchEvent(new Event('input'));
+    await stabilizza();
+
+    (
+      [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) =>
+          b.textContent?.includes('Registra il movimento'),
+      ) as HTMLButtonElement
+    ).click();
+    await stabilizza();
+
+    http.expectNone(`${API}/admin/conteggi/mesi/m1/regolazioni`);
+    expect(testo()).toContain('Rossana');
+    expect(testo()).toContain('Manca l’importo o la cassa');
+  });
+
+  it('una riga già regolata esce dalla coda e porta il badge con la tasca', async () => {
+    await avvia(
+      dettaglio([], {
+        stakati: [
+          rigaStakato({ regolatoCent: 1_797, regolatoCassa: 'PIETRO' }),
+        ],
+      }),
+    );
+    await vaiA('Stakati');
+
+    // ⚠️ Nessuna COLONNA nuova: con dieci colonne questa tabella sfonda già a
+    // 1100px. Il fatto sta fra i badge, la cifra nel sotto-testo.
+    expect(testo()).toContain('Incassato');
+    expect(testo()).toContain('17,97');
+    expect(testo()).not.toContain('Movimenti coi giocatori');
+    expect(testo()).toContain('Movimenti registrati');
+  });
+
+  it('il credito non riscosso si SPEZZA per origine, e un negativo si chiama rimborso', async () => {
+    // ⚠️ Una cifra che non dice da CHI la si aspetta è una cifra che non si
+    // puo' andare a incassare (richiesta dell'owner).
+    await avvia();
+    await vaiA('Soci');
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(
+      saldi({
+        pressoAgenteCent: 76_567,
+        daRiscuotereDaiGiocatoriCent: -338,
+      }),
+    );
+    await stabilizza();
+
+    expect(testo()).toContain("Presso l'agente");
+    expect(testo()).toContain('765,67');
+    // ⚠️ Negativo NON è un credito: è un rimborso che la scuola deve ancora
+    // mandare, e «da riscuotere» direbbe il contrario esatto.
+    expect(testo()).toContain('Da rimborsare ai giocatori');
+    expect(testo()).not.toContain('−3,38');
   });
 
   afterEach(() => {
@@ -1050,6 +1280,8 @@ describe('AdminConteggiMensiliComponent', () => {
         exivezzz: {
           maturatoCent: 20_000,
           cassaCent: 35_000,
+          daAgenteCent: 0,
+          daiGiocatoriCent: 0,
           ricevutiCent: 0,
           datiCent: 0,
           saldoCent: -15_000,

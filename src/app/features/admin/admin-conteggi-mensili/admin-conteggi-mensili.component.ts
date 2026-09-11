@@ -48,6 +48,8 @@ import {
   UtenteCollegato,
   AnteprimaPunti,
   VersamentoView,
+  IncassoAgenteView,
+  RegolazioneStakato,
   SaldiSoci,
   EstremoVersamento,
   ESTREMI_VERSAMENTO,
@@ -245,6 +247,92 @@ export class AdminConteggiMensiliComponent {
     () => JSON.stringify(this.versamentoVal()) !== this.baseVersamento(),
   );
   protected readonly ESTREMI = ESTREMI_VERSAMENTO;
+
+  // ── L'incasso dell'agente ────────────────────────────────────────────────
+  //
+  // ⚠️⚠️ Il blocco si mostra ANCHE a mese chiuso, ed è il caso normale: il
+  // rakeback di agosto l'agente lo bonifica a settembre. È il contrario delle
+  // spese fisse, che a mese chiuso spariscono perché registrarle darebbe 409.
+  protected readonly incassoAperto = signal(false);
+  protected readonly formIncasso = this.fb.nonNullable.group({
+    importo: ['', Validators.required],
+    cassa: ['PIETRO' as Cassa, Validators.required],
+    data: [''],
+    nota: [''],
+  });
+  protected readonly incassoVal = toSignal(this.formIncasso.valueChanges, {
+    initialValue: this.formIncasso.getRawValue(),
+  });
+  private readonly baseIncasso = signal('');
+  protected readonly incassoSporco = computed(
+    () => JSON.stringify(this.incassoVal()) !== this.baseIncasso(),
+  );
+
+  /**
+   * Lo scarto fra quanto l'agente doveva mandare e quanto ha mandato.
+   *
+   * ⚠️ `null` quando nessuno ha ancora registrato niente: «non lo so» e «quadra
+   * al centesimo» sono due cose diverse, e uno zero le confonderebbe.
+   */
+  protected readonly scartoIncassoCent = computed<number | null>(() => {
+    const i = this.dett()?.incassoAgente;
+    if (!i?.incasso) return null;
+    return i.attesoCent - i.incasso.importoCent;
+  });
+
+  // ── I bonifici dei giocatori finanziati ──────────────────────────────────
+  //
+  // ⚠️ Stessa forma della bozza delle spese fisse — si digita in locale, si
+  // manda tutto in una chiamata, la risposta ridisegna — e come quella NON si
+  // risemina in `applica()`: una riga appena regolata esce dall'elenco.
+  protected readonly bozzaRegolazioni = signal<
+    Record<string, { importo: string; cassa: string }>
+  >({});
+  protected readonly erroreRegolazioni = signal<string | null>(null);
+
+  /**
+   * Le righe con un conto ancora aperto col giocatore.
+   *
+   * ⚠️ Il filtro è `regolatoCent === undefined` e non `!regolatoCent`: lo zero
+   * CANCELLA una registrazione e quindi non esiste come valore salvato, ma una
+   * riga il cui DOVUTO è zero non ha niente da regolare e non deve comparire.
+   */
+  protected readonly daIncassare = computed(() =>
+    (this.dett()?.stakati ?? []).filter(
+      (r) => r.daRegolareCent !== 0 && r.regolatoCent === undefined,
+    ),
+  );
+
+  protected readonly regolazioniCompilate = computed(() =>
+    this.daIncassare().filter(
+      (r) => (this.bozzaRegolazioni()[r.id]?.importo ?? '').trim() !== '',
+    ),
+  );
+
+  /** Quelle gia' registrate: l'elenco in cui sta la via di ritorno. */
+  protected readonly regolate = computed(() =>
+    (this.dett()?.stakati ?? []).filter((r) => r.regolatoCent !== undefined),
+  );
+
+  /**
+   * Il valore assoluto, per stampare un rimborso senza il meno.
+   *
+   * ⚠️ Il verso lo dicono la parola accanto e il badge: un numero col meno
+   * dentro una frase che gia' dice «rimborsati» si legge come un doppio meno.
+   */
+  protected readonly abs = (cent: number): number => Math.abs(cent);
+
+  protected readonly regolazioniNonValide = computed(() =>
+    this.regolazioniCompilate()
+      .filter((r) => {
+        const b = this.bozzaRegolazioni()[r.id];
+        const c = parseImportoInCent(b?.importo ?? '');
+        // ⚠️ Lo zero non passa di qui: per disfare c'è un comando apposta, e
+        // uno zero digitato nel campo è quasi sempre un ripensamento a metà.
+        return c === null || c === 0 || !b?.cassa;
+      })
+      .map((r) => r.nome),
+  );
 
   // ── Le spese fisse del mese ──────────────────────────────────────────────
   //
@@ -688,6 +776,11 @@ export class AdminConteggiMensiliComponent {
     // salvataggio riuscito quelle registrate non sono più nell'elenco.
     this.bozzaFisse.set({});
     this.erroreFisse.set(null);
+    // ⚠️ Stessa ragione: una riga appena regolata esce da `daIncassare()`, e
+    // riseminarla lascerebbe nel campo un importo che non ha più un posto dove
+    // essere salvato.
+    this.bozzaRegolazioni.set({});
+    this.erroreRegolazioni.set(null);
   }
 
   /** Euro nudi per un campo di input: «1250,50», mai «1.250,50 €». */
@@ -1703,6 +1796,186 @@ export class AdminConteggiMensiliComponent {
       case 'ESTERNO':
         return 'Fuori (agente, giocatore, banca…)';
     }
+  }
+
+  // ── L'incasso dell'agente ────────────────────────────────────────────────
+
+  protected apriIncasso(): void {
+    this.erroreModale.set(null);
+    this.conferma.set(null);
+    const i = this.dett()?.incassoAgente?.incasso;
+    const oggi = new Date();
+    const iso = i?.dataAt
+      ? i.dataAt.slice(0, 10)
+      : `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, '0')}-${String(oggi.getDate()).padStart(2, '0')}`;
+    // ⚠️⚠️ Correggendo si ripropone quello che c'è; alla PRIMA registrazione il
+    // campo nasce VUOTO e l'atteso resta un suggerimento accanto. È la regola
+    // già scritta per «l'ultima volta» delle spese fisse: un importo
+    // precompilato si salva senza che nessuno lo guardi — e qui sarebbe
+    // peggio, perché precompilando con l'atteso la quadratura tornerebbe
+    // SEMPRE, cioè il controllo per cui questo blocco esiste non
+    // controllerebbe più niente.
+    this.formIncasso.reset({
+      importo: i ? this.euro(i.importoCent) : '',
+      cassa: i?.cassa ?? 'PIETRO',
+      data: iso,
+      nota: i?.nota ?? '',
+    });
+    this.baseIncasso.set(JSON.stringify(this.formIncasso.getRawValue()));
+    this.incassoAperto.set(true);
+  }
+
+  protected salvaIncasso(): void {
+    const m = this.mese();
+    if (!m) return;
+    const f = this.formIncasso.getRawValue();
+    const importoCent = parseImportoInCent(f.importo);
+    if (importoCent === null || importoCent <= 0) {
+      this.erroreModale.set('L’importo non è valido.');
+      return;
+    }
+    this.salvando.set(true);
+    this.erroreModale.set(null);
+    this.api
+      .registraIncassoAgente(m.id, {
+        importoCent,
+        cassa: f.cassa,
+        // ⚠️ Mezzogiorno UTC come i versamenti: una data-solo a mezzanotte di
+        // Roma è il giorno prima in UTC per metà dell'anno.
+        ...(f.data
+          ? { dataAt: new Date(`${f.data}T12:00:00Z`).toISOString() }
+          : {}),
+        ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),
+      })
+      .subscribe({
+        next: (nuovo) => {
+          this.salvando.set(false);
+          this.incassoAperto.set(false);
+          this.applica(nuovo);
+          this.toast.success('Incasso dall’agente registrato.');
+        },
+        error: (err) => {
+          this.salvando.set(false);
+          this.erroreModale.set(
+            apiErrorMessage(err, 'Non riesco a registrare l’incasso.'),
+          );
+        },
+      });
+  }
+
+  protected eliminaIncasso(): void {
+    const m = this.mese();
+    if (!m) return;
+    this.salvando.set(true);
+    this.api.eliminaIncassoAgente(m.id).subscribe({
+      next: (nuovo) => {
+        this.salvando.set(false);
+        this.conferma.set(null);
+        this.incassoAperto.set(false);
+        this.applica(nuovo);
+        this.toast.success('Incasso rimosso.');
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        // ⚠️ La conferma si DISARMA sull'errore: riprovare non cambia il
+        // risultato, e lasciare «Rimuovi davvero» sotto il dito invita una
+        // pressione che può solo fallire.
+        this.conferma.set(null);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a rimuovere l’incasso.'),
+        );
+      },
+    });
+  }
+
+  // ── I bonifici dei giocatori finanziati ──────────────────────────────────
+
+  protected scriviRegolazione(
+    id: string,
+    campo: 'importo' | 'cassa',
+    valore: string,
+  ): void {
+    this.bozzaRegolazioni.update((b) => ({
+      ...b,
+      // ⚠️ I due valori di partenza si mettono con un `??` e non con uno
+      // spread davanti a `b[id]`: TypeScript vede che lo spread li
+      // sovrascrive SEMPRE (TS2783) e rifiuta di compilare.
+      [id]: {
+        importo: b[id]?.importo ?? '',
+        cassa: b[id]?.cassa ?? '',
+        [campo]: valore,
+      },
+    }));
+  }
+
+  protected salvaRegolazioni(): void {
+    const m = this.mese();
+    if (!m) return;
+    const rotte = this.regolazioniNonValide();
+    if (rotte.length) {
+      // ⚠️ Nomina le righe rotte, e la banda sta ACCANTO al pulsante: quella
+      // di `error()` offre «Riprova», che ricaricherebbe buttando via tutto.
+      this.erroreRegolazioni.set(
+        `Manca l’importo o la cassa su ${rotte.join(', ')}: scrivi la cifra arrivata e per quale tasca è passata.`,
+      );
+      return;
+    }
+    const righe: RegolazioneStakato[] = this.regolazioniCompilate().map((r) => {
+      const b = this.bozzaRegolazioni()[r.id];
+      const cent = parseImportoInCent(b.importo)!;
+      return {
+        id: r.id,
+        // ⚠️⚠️ Il SEGNO lo detta la riga, non chi digita: su un rimborso
+        // (`daRegolareCent` negativo) si scrive comunque una cifra positiva nel
+        // campo. Chiedere un meno su un bonifico in uscita è il modo più rapido
+        // per registrare il verso sbagliato di un movimento di denaro, e il
+        // verso è già scritto nel dovuto che la riga mostra accanto.
+        regolatoCent: r.daRegolareCent < 0 ? -Math.abs(cent) : Math.abs(cent),
+        regolatoCassa: b.cassa as Cassa,
+      };
+    });
+    if (!righe.length) return;
+    this.salvando.set(true);
+    this.erroreRegolazioni.set(null);
+    this.api.regolaStakati(m.id, righe).subscribe({
+      next: (nuovo) => {
+        this.salvando.set(false);
+        this.applica(nuovo);
+        this.toast.success(
+          righe.length === 1
+            ? 'Movimento registrato.'
+            : `${righe.length} movimenti registrati.`,
+        );
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreRegolazioni.set(
+          apiErrorMessage(err, 'Non riesco a registrare i movimenti.'),
+        );
+      },
+    });
+  }
+
+  /** Disfa una registrazione: lo zero è il comando di cancellazione. */
+  protected annullaRegolazione(id: string): void {
+    const m = this.mese();
+    if (!m) return;
+    this.salvando.set(true);
+    this.api.regolaStakati(m.id, [{ id, regolatoCent: 0 }]).subscribe({
+      next: (nuovo) => {
+        this.salvando.set(false);
+        this.conferma.set(null);
+        this.applica(nuovo);
+        this.toast.success('Registrazione annullata.');
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.conferma.set(null);
+        this.erroreRegolazioni.set(
+          apiErrorMessage(err, 'Non riesco ad annullare la registrazione.'),
+        );
+      },
+    });
   }
 
   protected apriVersamento(): void {
