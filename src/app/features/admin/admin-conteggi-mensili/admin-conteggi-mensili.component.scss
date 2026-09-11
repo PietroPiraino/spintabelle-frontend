@@ -172,7 +172,12 @@
   color: var(--danger);
 }
 
-// ── La tabella del rakeback ─────────────────────────────────────────────────
+// ── Le tabelle di denaro: rakeback e stakati ────────────────────────────────
+//
+// ⚠️ Condividono il blocco perché hanno lo stesso problema, misurato due volte:
+// molte colonne di sole cifre con etichette lunghe. La tabella degli stakati ne
+// ha DIECI e, senza le intestazioni che vanno a capo, sfondava di 129px a
+// 1100 — la stretta vera del pannello.
 
 .cm__rakeback {
   .is-num {
@@ -194,6 +199,17 @@
   // elenco di card. L'intestazione si scrive una volta sola e non paga densità.
   thead th {
     white-space: normal;
+  }
+
+  // ⚠️⚠️ La cella d'identità degli STAKATI sta più stretta di quella del
+  // rakeback, e non è una rifinitura: qui le colonne sono dieci invece di
+  // otto, e a 1100px (dove restano 788px utili) la sola colonna «Giocatore»
+  // ne prendeva 313 — il 40% dello spazio per un nome e un sotto-testo.
+  // Il tetto va su un elemento INTERNO alla cella: su un `<td>` limiterebbe la
+  // scatola e lascerebbe uscire il testo, che è la lezione già pagata sul
+  // «Dettagli» del Log.
+  &.cm__stakati .admin-table__ident {
+    max-width: 13rem;
   }
 
   // Le celle calcolate si distinguono da quelle che si compilano: sono in sola

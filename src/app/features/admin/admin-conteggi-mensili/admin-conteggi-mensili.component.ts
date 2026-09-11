@@ -12,6 +12,14 @@ import {
   CASSE,
   Cassa,
   CategoriaEntrata,
+  FONTI_BACK,
+  FonteBack,
+  RigaStakato,
+  RigaStakatoPayload,
+  SKIN,
+  Skin,
+  Stakato,
+  StakatoPayload,
   CategoriaUscita,
   CategoriaVoce,
   ContoRakeback,
@@ -40,6 +48,8 @@ import { TonoStato } from '../admin-stato';
 import { formattaBp, formattaCent, parseImportoInCent } from '../denaro';
 import {
   cassaLabel,
+  fonteBackLabel,
+  skinLabel,
   incassanteLabel,
   metodoPagamentoLabel,
   motivoSenzaCassa,
@@ -49,8 +59,18 @@ type Vista =
   | 'riepilogo'
   | 'rakeback'
   | 'abbonamenti'
+  | 'stakati'
   | 'voci'
   | 'anagrafiche';
+
+/** La bozza di una riga di conteggio: quattro campi di testo, come il rakeback. */
+interface BozzaStakato {
+  rake: string;
+  poolEv: string;
+  diff: string;
+  fee: string;
+  altro: string;
+}
 
 /** Quello che si sta digitando nella colonna del rakeback, prima di salvare. */
 interface BozzaRiga {
@@ -166,6 +186,12 @@ export class AdminConteggiMensiliComponent {
   protected readonly METODI = METODI;
   protected readonly INCASSANTI: readonly Incassante[] = ['PIETRO', 'EXIVEZZZ'];
   protected readonly CASSE = CASSE;
+  protected readonly SKIN = SKIN;
+  protected readonly FONTI_BACK = FONTI_BACK;
+
+  protected readonly stakati = signal<Stakato[] | null>(null);
+  protected readonly bozzaStakati = signal<Record<string, BozzaStakato>>({});
+  protected readonly stakatoAperto = signal<Stakato | 'nuovo' | null>(null);
 
   protected readonly metodoPagamentoLabel = metodoPagamentoLabel;
   protected readonly incassanteLabel = incassanteLabel;
@@ -193,6 +219,11 @@ export class AdminConteggiMensiliComponent {
         valore: 'abbonamenti',
         etichetta: 'Abbonamenti',
         conteggio: d?.abbonamenti.length ?? null,
+      },
+      {
+        valore: 'stakati',
+        etichetta: 'Stakati',
+        conteggio: d?.stakati.length ?? null,
       },
       {
         valore: 'voci',
@@ -236,6 +267,8 @@ export class AdminConteggiMensiliComponent {
         return 'Rakeback';
       case 'abbonamenti':
         return 'Abbonamenti';
+      case 'stakati':
+        return 'Stakati';
       case 'voci':
         return 'Spese ed entrate';
       case 'anagrafiche':
@@ -485,6 +518,7 @@ export class AdminConteggiMensiliComponent {
       next: (r) => this.ricorrenti.set(r),
       error: () => this.ricorrenti.set(null),
     });
+    this.listStakati();
   }
 
   protected scegliMese(id: string): void {
@@ -841,6 +875,323 @@ export class AdminConteggiMensiliComponent {
           apiErrorMessage(err, 'Non riesco a salvare la colonna.'),
         );
       },
+    });
+  }
+
+  // ── Stakati ──────────────────────────────────────────────────────────────
+
+  protected readonly skinLabel = skinLabel;
+  protected readonly fonteBackLabel = fonteBackLabel;
+
+  /**
+   * ⚠️ Nomina l'insieme che somma, come la striscia del rakeback: sopra un
+   * elenco, un totale che non dice cosa sta sommando si legge come «tutto
+   * l'archivio» qualunque cosa ci sia sotto.
+   */
+  protected readonly ambitoStakati = computed(() => {
+    const d = this.dett();
+    if (!d) return '';
+    const n = d.stakati.length;
+    const daReg = d.stakati.filter((r) => !r.registrato && r.aRecuperoCent !== 0)
+      .length;
+    const base = `su ${n} stakato${n === 1 ? '' : 'i'} di ${d.mese.etichetta}`;
+    return daReg
+      ? `${base}, ${daReg} da portare sul registro staking`
+      : base;
+  });
+
+  protected readonly totaleDaRegolare = computed(() =>
+    (this.dett()?.stakati ?? []).reduce((t, r) => t + r.daRegolareCent, 0),
+  );
+
+  protected scriviStakato(
+    id: string,
+    campo: keyof BozzaStakato,
+    valore: string,
+  ): void {
+    this.bozzaStakati.update((b) => ({
+      ...b,
+      [id]: { ...(b[id] ?? this.bozzaVuota()), [campo]: valore },
+    }));
+  }
+
+  private bozzaVuota(): BozzaStakato {
+    return { rake: '', poolEv: '', diff: '', fee: '', altro: '' };
+  }
+
+  /** Il valore salvato, per il ramo a mese CHIUSO (dove non si rende un input). */
+  protected valoreCongelato(r: RigaStakato, campo: keyof BozzaStakato): number {
+    switch (campo) {
+      case 'rake':
+        return r.rakeLordoCent ?? 0;
+      case 'poolEv':
+        return r.poolEvCent;
+      case 'diff':
+        return r.diffCent;
+      case 'fee':
+        return r.feeCent;
+      case 'altro':
+        return r.altroCent;
+    }
+  }
+
+  protected valoreStakato(r: RigaStakato, campo: keyof BozzaStakato): string {
+    const b = this.bozzaStakati()[r.id];
+    if (b) return b[campo];
+    switch (campo) {
+      case 'rake':
+        return r.rakeLordoCent === undefined ? '' : this.euro(r.rakeLordoCent);
+      case 'poolEv':
+        return this.euro(r.poolEvCent);
+      case 'diff':
+        return this.euro(r.diffCent);
+      case 'fee':
+        return this.euro(r.feeCent);
+      case 'altro':
+        return this.euro(r.altroCent);
+    }
+  }
+
+  /**
+   * ⚠️ I quattro del pool si digitano CON SEGNO, quindi `parseImportoInCent`
+   * deve poter tornare un negativo. Un campo vuoto vale zero — su un pool che
+   * spesso ha «Altro» a zero, obbligare a scrivere «0» sarebbe attrito puro.
+   */
+  private centDaCampo(v: string | undefined): number | null {
+    const t = (v ?? '').trim();
+    if (!t) return 0;
+    const neg = t.startsWith('-') || t.startsWith('\u2212');
+    const cent = parseImportoInCent(neg ? t.slice(1).trim() : t);
+    if (cent === null) return null;
+    return neg ? -cent : cent;
+  }
+
+  protected readonly righeStakatiNonValide = computed(() => {
+    const d = this.dett();
+    if (!d) return [] as string[];
+    const b = this.bozzaStakati();
+    return d.stakati
+      .filter((r) => {
+        const v = b[r.id];
+        if (!v) return false;
+        const campi: (keyof BozzaStakato)[] = ['poolEv', 'diff', 'fee', 'altro'];
+        if (r.fonteBack === 'MANUALE') campi.push('rake');
+        return campi.some((c) => this.centDaCampo(v[c]) === null);
+      })
+      .map((r) => r.id);
+  });
+
+  protected readonly sporcoStakati = computed(() => {
+    const d = this.dett();
+    if (!d) return false;
+    const b = this.bozzaStakati();
+    return d.stakati.some((r) => {
+      const v = b[r.id];
+      if (!v) return false;
+      return (
+        this.centDaCampo(v.poolEv) !== r.poolEvCent ||
+        this.centDaCampo(v.diff) !== r.diffCent ||
+        this.centDaCampo(v.fee) !== r.feeCent ||
+        this.centDaCampo(v.altro) !== r.altroCent ||
+        (r.fonteBack === 'MANUALE' &&
+          this.centDaCampo(v.rake) !== (r.rakeLordoCent ?? 0))
+      );
+    });
+  });
+
+  protected salvaStakati(): void {
+    const m = this.mese();
+    const d = this.dett();
+    if (!m || !d) return;
+    const rotte = this.righeStakatiNonValide();
+    if (rotte.length) {
+      const nomi = d.stakati
+        .filter((r) => rotte.includes(r.id))
+        .map((r) => r.nome)
+        .join(', ');
+      this.erroreValidazione.set(
+        `Non riesco a leggere i numeri di ${nomi}: correggili prima di salvare.`,
+      );
+      return;
+    }
+    const b = this.bozzaStakati();
+    const righe: RigaStakatoPayload[] = d.stakati.map((r) => {
+      const v = b[r.id];
+      const leggi = (c: keyof BozzaStakato, fallback: number) =>
+        v ? (this.centDaCampo(v[c]) ?? 0) : fallback;
+      return {
+        id: r.id,
+        poolEvCent: leggi('poolEv', r.poolEvCent),
+        diffCent: leggi('diff', r.diffCent),
+        feeCent: leggi('fee', r.feeCent),
+        altroCent: leggi('altro', r.altroCent),
+        ...(r.fonteBack === 'MANUALE'
+          ? { rakeLordoCent: leggi('rake', r.rakeLordoCent ?? 0) }
+          : {}),
+      };
+    });
+    this.salvando.set(true);
+    this.erroreValidazione.set(null);
+    this.api.salvaStakati(m.id, righe).subscribe({
+      next: (nuovo) => {
+        this.salvando.set(false);
+        this.applica(nuovo);
+        this.bozzaStakati.set({});
+        this.toast.success('Conteggio salvato.');
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreValidazione.set(
+          apiErrorMessage(err, 'Non riesco a salvare il conteggio.'),
+        );
+      },
+    });
+  }
+
+  /**
+   * ⚠️ La risposta è il mese RICALCOLATO e si ridisegna da quella: dopo la
+   * scrittura il debito EV è cambiato, e tenere a schermo la ripartizione di
+   * prima mostrerebbe una divisione che non esiste più.
+   */
+  protected registraStakato(r: RigaStakato): void {
+    this.salvando.set(true);
+    this.erroreValidazione.set(null);
+    this.api.registraStakato(r.id).subscribe({
+      next: (nuovo) => {
+        this.salvando.set(false);
+        this.applica(nuovo);
+        this.toast.success(`Conteggio di ${r.nome} portato sul registro.`);
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreValidazione.set(
+          apiErrorMessage(err, 'Non riesco a registrare il conteggio.'),
+        );
+      },
+    });
+  }
+
+  // ── Stakati: anagrafica ──────────────────────────────────────────────────
+
+  protected readonly formStakato = this.fb.nonNullable.group({
+    nome: ['', [Validators.required, Validators.minLength(2)]],
+    deal: ['35', Validators.required],
+    fonteBack: ['CONTO' as FonteBack, Validators.required],
+    contoId: [''],
+    skin: ['' as Skin | ''],
+    back: [''],
+    attivo: [true],
+    nota: [''],
+  });
+
+  protected readonly stakatoVal = toSignal(this.formStakato.valueChanges, {
+    initialValue: this.formStakato.getRawValue(),
+  });
+
+  /** ⚠️ I campi dell'altra fonte si nascondono: chiederli entrambi invita a
+   * compilarne uno che poi il server butta via. */
+  protected readonly fonteConto = computed(
+    () => this.stakatoVal().fonteBack === 'CONTO',
+  );
+
+  protected readonly baseStakato = signal('');
+  protected readonly stakatoSporco = computed(
+    () => JSON.stringify(this.stakatoVal()) !== this.baseStakato(),
+  );
+
+  protected apriStakato(st: Stakato | 'nuovo'): void {
+    this.erroreModale.set(null);
+    this.conferma.set(null);
+    if (st === 'nuovo') {
+      this.formStakato.reset({
+        nome: '',
+        deal: '35',
+        fonteBack: 'CONTO',
+        contoId: '',
+        skin: '',
+        back: '',
+        attivo: true,
+        nota: '',
+      });
+    } else {
+      this.formStakato.setValue({
+        nome: st.nome,
+        deal: this.pctGrezza(st.dealScuolaBp),
+        fonteBack: st.fonteBack,
+        contoId: st.contoId ?? '',
+        skin: st.skin ?? '',
+        back: st.backBp === undefined ? '' : this.pctGrezza(st.backBp),
+        attivo: st.attivo,
+        nota: st.nota ?? '',
+      });
+    }
+    // ⚠️ La baseline DOPO il patch, o la modale nasce già sporca.
+    this.baseStakato.set(JSON.stringify(this.formStakato.getRawValue()));
+    this.stakatoAperto.set(st);
+  }
+
+  private pctGrezza(bp: number): string {
+    return String(bp / 100).replace('.', ',');
+  }
+
+  protected salvaStakato(): void {
+    const aperto = this.stakatoAperto();
+    if (!aperto) return;
+    const f = this.formStakato.getRawValue();
+    const deal = parseImportoInCent(f.deal);
+    if (deal === null || deal < 0 || deal > 10_000) {
+      this.erroreModale.set('La quota della scuola non è valida.');
+      return;
+    }
+    if (f.fonteBack === 'CONTO' && !f.contoId) {
+      this.erroreModale.set('Scegli il conto rakeback da cui leggere la back.');
+      return;
+    }
+    const back = f.fonteBack === 'MANUALE' ? parseImportoInCent(f.back) : null;
+    if (f.fonteBack === 'MANUALE' && (!f.skin || back === null)) {
+      this.erroreModale.set(
+        'Con il rake a mano servono la skin e la percentuale di back.',
+      );
+      return;
+    }
+    const body: StakatoPayload = {
+      nome: f.nome.trim(),
+      dealScuolaBp: deal,
+      fonteBack: f.fonteBack,
+      ...(f.fonteBack === 'CONTO' ? { contoId: f.contoId } : {}),
+      ...(f.fonteBack === 'MANUALE' && f.skin ? { skin: f.skin } : {}),
+      ...(f.fonteBack === 'MANUALE' && back !== null ? { backBp: back } : {}),
+      attivo: f.attivo,
+      ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),
+    };
+    this.salvando.set(true);
+    this.erroreModale.set(null);
+    const chiamata =
+      aperto === 'nuovo'
+        ? this.api.creaStakato(body)
+        : this.api.aggiornaStakato(aperto.id, body);
+    chiamata.subscribe({
+      next: () => {
+        this.salvando.set(false);
+        this.stakatoAperto.set(null);
+        this.listStakati();
+        const m = this.mese();
+        if (m) this.scegliMese(m.id);
+        this.toast.success('Stakato salvato.');
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a salvare lo stakato.'),
+        );
+      },
+    });
+  }
+
+  protected listStakati(): void {
+    this.api.listStakati().subscribe({
+      next: (r) => this.stakati.set(r),
+      error: () => this.stakati.set([]),
     });
   }
 

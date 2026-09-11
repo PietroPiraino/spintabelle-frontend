@@ -12,6 +12,7 @@ import {
   MeseContabile,
   RigaRakeback,
   SpesaRicorrente,
+  RigaStakato,
 } from '../../../core/models/api.models';
 import { AdminConteggiMensiliComponent } from './admin-conteggi-mensili.component';
 
@@ -48,6 +49,7 @@ const riga = (over: Partial<RigaRakeback> = {}): RigaRakeback => ({
   profittoAgenteCent: 30_290,
   nettoCassaCent: 91_881,
   residuoAlPlayerCent: 61_591,
+  stakato: false,
   ...over,
 });
 
@@ -65,6 +67,7 @@ const dettaglio = (
   voci: [],
   righe,
   abbonamenti: [],
+  stakati: [],
   totaliRakeback: {
     rakeGeneratoCent: righe.reduce((t, r) => t + r.rakeGeneratoCent, 0),
     erogatoBonusCent: righe.reduce((t, r) => t + r.erogatoBonusCent, 0),
@@ -92,6 +95,7 @@ const dettaglio = (
       gadgetCent: 0,
       commissioniRakebackCent: 30_290,
       stakingCent: 0,
+      stakingDaConteggiCent: 0,
       altreCent: 0,
       totaleCent: 55_290,
     },
@@ -138,7 +142,13 @@ describe('AdminConteggiMensiliComponent', () => {
     fixture.detectChanges();
   };
 
-  /** Le quattro chiamate del costruttore: mesi, conti, ricorrenti, dettaglio. */
+  /**
+   * Le CINQUE chiamate del costruttore: mesi, conti, ricorrenti, stakati,
+   * dettaglio. ⚠️ `HttpTestingController.verify()` fallisce su una richiesta
+   * non consumata, quindi chi aggiunge un caricamento all'avvio deve venire
+   * qui — il sintomo è «Expected no open requests» su spec che con quella
+   * chiamata non c'entrano nulla.
+   */
   const avvia = async (
     d: DettaglioMese | null = dettaglio(),
     conti: ContoRakeback[] = [],
@@ -150,6 +160,7 @@ describe('AdminConteggiMensiliComponent', () => {
       .flush(d ? [d.mese] : []);
     http.expectOne(`${API}/admin/conteggi/conti`).flush(conti);
     http.expectOne(`${API}/admin/conteggi/ricorrenti`).flush(ricorrenti);
+    http.expectOne(`${API}/admin/conteggi/stakati`).flush([]);
     if (d) {
       await stabilizza();
       http.expectOne(`${API}/admin/conteggi/mesi/${d.mese.id}`).flush(d);
@@ -195,18 +206,22 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(pastiglia?.textContent?.trim()).toBe('Aperto');
   });
 
-  it('le cinque sezioni sono SCHEDE, con un pannello raggiungibile', async () => {
+  it('le sei sezioni sono SCHEDE, con un pannello raggiungibile', async () => {
     await avvia();
     const schede = fixture.nativeElement.querySelectorAll(
       'button[role="tab"]',
     ) as NodeListOf<HTMLButtonElement>;
-    expect(schede.length).toBe(5);
-    // ⚠️ L'ordine è quello del conto economico: prima il riepilogo, poi le tre
-    // fonti di denaro, infine le anagrafiche che non appartengono a un mese.
+    expect(schede.length).toBe(6);
+    // ⚠️ L'ordine è quello del conto economico: prima il riepilogo, poi le
+    // QUATTRO fonti di denaro, infine le anagrafiche, che non appartengono a un
+    // mese. ⚠️ Gli stakati stanno DOPO gli abbonamenti e prima delle spese: il
+    // loro conteggio legge dalla tabella del rakeback, quindi si compila dopo
+    // quella — l'ordine delle schede è l'ordine in cui si lavora.
     expect([...schede].map((b) => b.textContent?.trim().split(/\s+/)[0])).toEqual([
       'Riepilogo',
       'Rakeback',
       'Abbonamenti',
+      'Stakati',
       'Spese',
       'Anagrafiche',
     ]);
@@ -646,6 +661,87 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(etichetta()).toBe('Chi ha pagato');
   });
 
+  it('lo stakato mostra recupero e bonifico come DUE cifre, e registra solo se serve', async () => {
+    const riga = (over: Partial<RigaStakato> = {}): RigaStakato => ({
+      id: 'rs1',
+      stakatoId: 'st1',
+      nome: 'Rossana',
+      fonteBack: 'CONTO',
+      dealScuolaBp: 3500,
+      backCent: 23_059,
+      trattenutoCent: 2809,
+      poolEvCent: -6800,
+      diffCent: -700,
+      feeCent: -2500,
+      altroCent: 100,
+      debitoEvCent: 0,
+      totaleCent: 13_159,
+      quotaScuolaCent: 4606,
+      risultatoCent: 1797,
+      aRecuperoCent: 0,
+      daRegolareCent: 1797,
+      registrato: false,
+      disallineato: false,
+      ...over,
+    });
+
+    await avvia(dettaglio([], { stakati: [riga()] }));
+    fixture.componentInstance['vista'].set('stakati');
+    await stabilizza();
+
+    const testo = () => fixture.nativeElement.textContent as string;
+    expect(testo()).toContain('Rossana');
+    // Il risultato del mese, la cifra che deve bonificare.
+    expect(testo()).toContain('17,97');
+    // ⚠️ Senza debito EV non c'è niente da portare sul registro: il comando NON
+    // compare. Un pulsante che risponde 400 e' peggio di un pulsante assente.
+    const comando = () =>
+      [...fixture.nativeElement.querySelectorAll('button.admin-ico')].find(
+        (b: HTMLButtonElement) =>
+          b.getAttribute('aria-label')?.includes('registro staking'),
+      );
+    expect(comando()).toBeUndefined();
+
+    // Con un debito, le due cifre sono SEPARATE e il comando compare.
+    fixture.componentInstance['dett'].set(
+      dettaglio([], {
+        stakati: [
+          riga({
+            debitoEvCent: -700,
+            aRecuperoCent: 700,
+            daRegolareCent: 1097,
+          }),
+        ],
+      }),
+    );
+    await stabilizza();
+    // ⚠️⚠️ Due numeri e non uno: il registro staking rifiuta un movimento che
+    // porti l'EV sopra zero, quindi «7,00 a recupero + 10,97 da bonificare» e'
+    // il fatto, non una scomposizione estetica.
+    expect(testo()).toContain('7,00');
+    expect(testo()).toContain('10,97');
+    expect(comando()).toBeDefined();
+    // ⚠️ E il comando NOMINA la riga: con un'etichetta fissa sarebbero N
+    // pulsanti che annunciano tutti la stessa parola.
+    expect(comando()?.getAttribute('aria-label')).toContain('Rossana');
+  });
+
+  it('«di cui dai conteggi» compare solo quando c’è', async () => {
+    await avvia();
+    // ⚠️ La riga Staking somma DUE strade: i conteggi e le voci a mano. Vederle
+    // separate e' l'unico modo di accorgersi di una cifra inserita due volte.
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'di cui dai conteggi',
+    );
+
+    const d = dettaglio();
+    d.riepilogo.entrate.stakingDaConteggiCent = 1797;
+    d.riepilogo.entrate.stakingCent = 1797;
+    fixture.componentInstance['dett'].set(d);
+    await stabilizza();
+    expect(fixture.nativeElement.textContent).toContain('di cui dai conteggi');
+  });
+
   it('il mese scelto SOPRAVVIVE al cambio di scheda', async () => {
     // ⚠️⚠️ Difetto trovato dall'owner in produzione l'11/09/2026: scelto agosto
     // dalla tendina e cambiata scheda, tornando indietro il selettore diceva
@@ -667,6 +763,7 @@ describe('AdminConteggiMensiliComponent', () => {
       .flush([settembre, agosto]);
     http.expectOne(`${API}/admin/conteggi/conti`).flush([]);
     http.expectOne(`${API}/admin/conteggi/ricorrenti`).flush([]);
+    http.expectOne(`${API}/admin/conteggi/stakati`).flush([]);
     await stabilizza();
     http
       .expectOne(`${API}/admin/conteggi/mesi/${settembre.id}`)
@@ -721,6 +818,7 @@ describe('AdminConteggiMensiliComponent', () => {
       scaglioneBaseBp: 4500,
       scaglionePassoCent: 2250,
       destinazione: 'SCUOLA',
+      stakato: false,
       attivo: true,
       ordine: 100,
       anonimizzato: false,
@@ -764,6 +862,7 @@ describe('AdminConteggiMensiliComponent', () => {
         scaglioneBaseBp: 4500,
         scaglionePassoCent: 2250,
         destinazione: 'SCUOLA',
+        stakato: false,
         attivo: true,
         ordine: 100,
         anonimizzato: false,

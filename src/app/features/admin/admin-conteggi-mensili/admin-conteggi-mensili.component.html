@@ -220,6 +220,19 @@
           -->
           <dt>Staking</dt>
           <dd class="is-num">{{ eur(d.riepilogo.entrate.stakingCent) }}</dd>
+          @if (d.riepilogo.entrate.stakingDaConteggiCent) {
+            <!--
+              ⚠️ Si mostra solo se c'è, come «di cui in contanti senza
+              incassante»: la riga resta due strade — i conteggi dei giocatori
+              finanziati E le voci scritte a mano — e vederle separate è l'unico
+              modo di accorgersi di una cifra inserita due volte, che
+              altrimenti sparirebbe dentro un totale che torna comunque.
+            -->
+            <dt class="cm__didi">di cui dai conteggi degli stakati</dt>
+            <dd class="is-num cm__didi">
+              {{ eur(d.riepilogo.entrate.stakingDaConteggiCent) }}
+            </dd>
+          }
           <dt>Altre entrate</dt>
           <dd class="is-num">{{ eur(d.riepilogo.entrate.altreCent) }}</dd>
           <dt class="cm__somma">Totale entrate</dt>
@@ -555,6 +568,15 @@
                               da sé.
                             -->
                             <span class="badge badge--tag">Personale</span>
+                          }
+                          @if (r.stakato) {
+                            <!--
+                              ⚠️ Senza questo marcatore, la riga di uno stakato
+                              ha un margine più alto delle altre e un «resta da
+                              dare» a zero, e quella differenza si legge come un
+                              errore di calcolo.
+                            -->
+                            <span class="badge badge--tag">Stakato</span>
                           }
                         </span>
                         @if (r.nomeReale) {
@@ -907,6 +929,159 @@
       }
 
       <!-- ══ Spese ed entrate ════════════════════════════════════════════ -->
+      <!-- ══ Stakati ═════════════════════════════════════════════════════ -->
+      @if (vista() === 'stakati') {
+        @if (!d.stakati.length) {
+          <p class="admin-nota">
+            Nessun giocatore finanziato in questo mese. Si aggiungono da
+            <strong>Anagrafiche</strong>, poi si usa «Sincronizza anagrafiche»
+            nel Riepilogo per farli entrare nel mese.
+          </p>
+        } @else {
+          <p class="admin-nota">
+            I quattro numeri del pool si copiano <strong>col segno</strong>, come
+            si leggono sul pool. La back e quello che la scuola trattiene
+            arrivano da soli dalla tabella del rakeback: non si ridigitano.
+          </p>
+
+          <div class="admin-totali">
+            <span class="admin-totali__voce">
+              Da bonificare <strong>{{ eur(totaleDaRegolare()) }}</strong>
+            </span>
+            <span class="admin-totali__ambito">{{ ambitoStakati() }}</span>
+          </div>
+
+          <div class="admin-table__scroll">
+            <table class="admin-table cm__rakeback cm__stakati">
+              <caption class="visually-hidden">
+                Conteggio dei giocatori finanziati
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="admin-table__c-primo">Giocatore</th>
+                  <th scope="col" class="is-num">Rake</th>
+                  <th scope="col" class="is-num">Pool EV</th>
+                  <th scope="col" class="is-num">Diff</th>
+                  <th scope="col" class="is-num">Fee</th>
+                  <th scope="col" class="is-num">Altro</th>
+                  <th scope="col" class="is-num admin-table__solo-largo">Back</th>
+                  <th scope="col" class="is-num">A recupero</th>
+                  <th scope="col" class="is-num">Da bonificare</th>
+                  <th scope="col" class="admin-table__c-ultimo">
+                    <span class="visually-hidden">Azioni</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of d.stakati; track r.id) {
+                  <tr>
+                    <th scope="row" class="admin-table__c-primo">
+                      <span class="admin-table__ident">
+                        <span class="admin-table__ident-riga">
+                          <strong [title]="r.nome">{{ r.nome }}</strong>
+                          @if (r.disallineato) {
+                            <!-- ⚠️ Riaperto il mese, i numeri sono cambiati e
+                                 il movimento gia' scritto non corrisponde piu':
+                                 si DICE, invece di lasciar divergere due cifre
+                                 di denaro in silenzio. -->
+                            <span class="admin-stato" data-tono="allarme">
+                              Non corrisponde
+                            </span>
+                          } @else if (r.registrato) {
+                            <span class="admin-stato" data-tono="ok">
+                              Registrato
+                            </span>
+                          }
+                        </span>
+                        <span class="admin-table__sub">
+                          {{ pct(r.dealScuolaBp) }} alla scuola ·
+                          {{ r.skin ? skinLabel(r.skin) : 'dal conto rakeback' }}
+                        </span>
+                      </span>
+                    </th>
+                    <td class="is-num">
+                      @if (r.fonteBack === 'MANUALE' && d.mese.stato === 'APERTO') {
+                        <input
+                          type="text"
+                          inputmode="decimal"
+                          class="input cm__cella"
+                          [attr.aria-label]="'Rake di ' + r.nome"
+                          [value]="valoreStakato(r, 'rake')"
+                          (input)="scriviStakato(r.id, 'rake', $any($event.target).value)"
+                        />
+                      } @else if (r.fonteBack === 'MANUALE') {
+                        {{ eur(r.rakeLordoCent ?? 0) }}
+                      } @else {
+                        <span class="admin-table__sub">dal conto</span>
+                      }
+                    </td>
+                    @for (campo of ['poolEv', 'diff', 'fee', 'altro']; track campo) {
+                      <td class="is-num">
+                        @if (d.mese.stato === 'APERTO') {
+                          <input
+                            type="text"
+                            inputmode="decimal"
+                            class="input cm__cella"
+                            [attr.aria-label]="campo + ' di ' + r.nome"
+                            [value]="valoreStakato(r, $any(campo))"
+                            (input)="scriviStakato(r.id, $any(campo), $any($event.target).value)"
+                          />
+                        } @else {
+                          {{ eur(valoreCongelato(r, $any(campo))) }}
+                        }
+                      </td>
+                    }
+                    <td class="is-num admin-table__solo-largo">
+                      {{ eur(r.backCent) }}
+                    </td>
+                    <td class="is-num" [class.is-perdita]="r.aRecuperoCent < 0">
+                      {{ r.aRecuperoCent ? eur(r.aRecuperoCent) : '—' }}
+                    </td>
+                    <td class="is-num"><strong>{{ eur(r.daRegolareCent) }}</strong></td>
+                    <td class="admin-table__c-ultimo">
+                      @if (d.mese.stato === 'APERTO' && r.aRecuperoCent !== 0 && !r.registrato) {
+                        <button
+                          type="button"
+                          class="admin-ico"
+                          [attr.aria-label]="'Porta il conteggio di ' + r.nome + ' sul registro staking'"
+                          title="Porta sul registro staking"
+                          [disabled]="salvando()"
+                          (click)="registraStakato(r)"
+                        >
+                          <app-icon name="check" [size]="18" />
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (d.mese.stato === 'APERTO') {
+            @if (erroreValidazione()) {
+              <!-- ⚠️ La banda sta ACCANTO al pulsante e non in quella di
+                   caricamento: là ci sarebbe «Riprova», che ricaricherebbe
+                   buttando via la colonna appena digitata. -->
+              <p class="form-feedback is-error">{{ erroreValidazione() }}</p>
+            }
+            <!-- ⚠️ `.row` e non il pulsante nudo: in un contenitore a colonna
+                 un bottone figlio si stira a tutta larghezza (`align-items`
+                 vale `stretch`), ed e' il precedente gia' scritto per /live. -->
+            <div class="row cm__azioni">
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                [disabled]="!sporcoStakati() || salvando()"
+                (click)="salvaStakati()"
+              >
+                {{ salvando() ? 'Salvo…' : 'Salva il conteggio' }}
+              </button>
+            </div>
+          }
+        }
+      }
+
       @if (vista() === 'voci') {
         <!-- ⚠️ Gemello dell'avviso del rakeback, stessa ragione: l'istruzione
              sulle spese fisse viveva solo nello stato vuoto della tabella. -->
@@ -1112,6 +1287,95 @@
                     <td colspan="6" class="admin-table__vuota">
                       Nessun conto configurato. Ogni conto si scrive una volta
                       sola: poi, ogni mese, si compila solo il rake generato.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="cm__gruppo">
+          <div class="admin-barra">
+            <h2 class="admin-barra__titolo">Stakati</h2>
+            <button
+              type="button"
+              class="admin-ico admin-barra__crea"
+              aria-haspopup="dialog"
+              aria-label="Aggiungi uno stakato"
+              title="Aggiungi uno stakato"
+              (click)="apriStakato('nuovo')"
+            >
+              <app-icon name="plus" [size]="18" />
+            </button>
+          </div>
+          <p class="admin-nota">
+            I giocatori finanziati dalla scuola. Chi ha un conto rakeback nostro
+            lascia qui la parte di back non accreditata in ticket; chi gioca
+            altrove dichiara skin e percentuale, e il rake si scrive ogni mese.
+          </p>
+          <div class="admin-table__scroll">
+            <table class="admin-table">
+              <caption class="visually-hidden">Giocatori finanziati</caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="admin-table__c-primo">Giocatore</th>
+                  <th scope="col">Quota scuola</th>
+                  <th scope="col" class="admin-table__solo-largo">Back</th>
+                  <th scope="col" class="admin-table__c-ultimo">
+                    <span class="visually-hidden">Azioni</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (st of stakati() ?? []; track st.id) {
+                  <tr>
+                    <th scope="row" class="admin-table__c-primo">
+                      <span class="admin-table__ident">
+                        <span class="admin-table__ident-riga">
+                          <strong [title]="st.nome">{{ st.nome }}</strong>
+                          @if (!st.attivo) {
+                            <span class="badge">Disattivato</span>
+                          }
+                          @if (st.anonimizzato) {
+                            <span class="badge">Anonimizzato</span>
+                          }
+                        </span>
+                        @if (!st.userId) {
+                          <!-- ⚠️ Senza account non esiste una scheda staking su
+                               cui registrare il conteggio: si dice QUI, non al
+                               momento del clic. -->
+                          <span class="admin-table__sub">
+                            Non collegato a un account
+                          </span>
+                        }
+                      </span>
+                    </th>
+                    <td>{{ pct(st.dealScuolaBp) }}</td>
+                    <td class="admin-table__solo-largo">
+                      {{ fonteBackLabel(st.fonteBack) }}
+                      @if (st.skin) {
+                        · {{ skinLabel(st.skin) }} {{ pct(st.backBp ?? 0) }}
+                      }
+                    </td>
+                    <td class="admin-table__c-ultimo">
+                      <button
+                        type="button"
+                        class="admin-ico"
+                        aria-haspopup="dialog"
+                        [attr.aria-label]="'Modifica ' + st.nome"
+                        title="Modifica"
+                        (click)="apriStakato(st)"
+                      >
+                        <app-icon name="pencil" [size]="18" />
+                      </button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="admin-table__vuota">
+                      Nessun giocatore finanziato. Ognuno si scrive una volta
+                      sola: poi, ogni mese, si compilano solo i numeri del pool.
                     </td>
                   </tr>
                 }
@@ -1627,6 +1891,140 @@
 }
 
 <!-- ══ Modale: spesa ricorrente ═══════════════════════════════════════════ -->
+@if (stakatoAperto(); as st) {
+  <app-modal
+    [titolo]="st === 'nuovo' ? 'Nuovo stakato' : 'Modifica lo stakato'"
+    [sporco]="stakatoSporco()"
+    [salvando]="salvando()"
+    (chiusa)="stakatoAperto.set(null)"
+  >
+    <div class="admin-modale">
+      <form id="cm-form-stakato" [formGroup]="formStakato" (ngSubmit)="salvaStakato()">
+        <div class="row">
+          <div class="field">
+            <label for="cm-st-nome">Giocatore</label>
+            <input
+              id="cm-st-nome"
+              type="text"
+              class="input"
+              formControlName="nome"
+              maxlength="120"
+              placeholder="es. Rossana"
+            />
+          </div>
+          <div class="field">
+            <label for="cm-st-deal">% alla scuola</label>
+            <input
+              id="cm-st-deal"
+              type="text"
+              inputmode="decimal"
+              class="input"
+              formControlName="deal"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="cm-st-fonte">Da dove arriva la back</label>
+          <select id="cm-st-fonte" class="input" formControlName="fonteBack">
+            @for (f of FONTI_BACK; track f) {
+              <option [value]="f" [selected]="stakatoVal().fonteBack === f">
+                {{ fonteBackLabel(f) }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <!--
+          ⚠️ I campi dell'ALTRA fonte non si mostrano affatto, invece di essere
+          disabilitati: chiederli entrambi invita a compilarne uno che poi il
+          server butta via, e un campo spento senza spiegazione fa cercare un
+          guasto.
+        -->
+        @if (fonteConto()) {
+          <div class="field">
+            <label for="cm-st-conto">Conto rakeback</label>
+            <select id="cm-st-conto" class="input" formControlName="contoId">
+              <option value="">scegli il conto</option>
+              @for (c of conti() ?? []; track c.id) {
+                <option [value]="c.id" [selected]="stakatoVal().contoId === c.id">
+                  {{ c.username }}
+                </option>
+              }
+            </select>
+          </div>
+          <p class="admin-nota">
+            La back e la parte che la scuola trattiene si leggono da lì: non si
+            ridigitano, e restano allineate anche se correggi il rake in tabella.
+          </p>
+        } @else {
+          <div class="row">
+            <div class="field">
+              <label for="cm-st-skin">Skin</label>
+              <select id="cm-st-skin" class="input" formControlName="skin">
+                <option value="">scegli la skin</option>
+                @for (k of SKIN; track k) {
+                  <option [value]="k" [selected]="stakatoVal().skin === k">
+                    {{ skinLabel(k) }}
+                  </option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <label for="cm-st-back">% di back</label>
+              <input
+                id="cm-st-back"
+                type="text"
+                inputmode="decimal"
+                class="input"
+                formControlName="back"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+          <p class="admin-nota">
+            La back la prende direttamente sul suo conto gioco, quindi non c'è
+            niente da trattenere: il rake lordo si scrive ogni mese nella scheda
+            <strong>Stakati</strong>.
+          </p>
+        }
+
+        <label class="row admin-panel__check">
+          <input type="checkbox" formControlName="attivo" />
+          <span>Attivo (entra nei mesi che apri)</span>
+        </label>
+
+        <div class="field">
+          <label for="cm-st-nota">Nota interna</label>
+          <input
+            id="cm-st-nota"
+            type="text"
+            class="input"
+            formControlName="nota"
+            maxlength="2000"
+          />
+        </div>
+
+        @if (erroreModale()) {
+          <p class="form-feedback is-error">{{ erroreModale() }}</p>
+        }
+      </form>
+    </div>
+
+    <ng-container moPiede>
+      <button
+        type="submit"
+        form="cm-form-stakato"
+        class="btn btn--primary btn--sm"
+        [disabled]="salvando()"
+      >
+        Salva
+      </button>
+    </ng-container>
+  </app-modal>
+}
+
 @if (ricorrenteAperta(); as r) {
   <app-modal
     [titolo]="r === 'nuova' ? 'Nuova spesa fissa' : 'Modifica la spesa fissa'"

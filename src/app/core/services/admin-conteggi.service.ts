@@ -3,15 +3,18 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  ContoRakeback,
   ContoRakebackPayload,
   DettaglioMese,
   MeseContabile,
   RigaRakebackPayload,
+  RigaStakatoPayload,
   SpesaRicorrente,
   SpesaRicorrentePayload,
+  Stakato,
+  StakatoPayload,
   VoceMese,
   VocePayload,
+ContoRakeback,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -127,7 +130,49 @@ export class AdminConteggiService {
     );
   }
 
+  // ── La colonna degli stakati ─────────────────────────────────────────────
+
+  /** ⚠️ Una chiamata per tutta la colonna, per la ragione scritta sopra. */
+  salvaStakati(
+    meseId: string,
+    righe: RigaStakatoPayload[],
+  ): Observable<DettaglioMese> {
+    return this.http.put<DettaglioMese>(
+      `${API}/admin/conteggi/mesi/${meseId}/stakati`,
+      { righe },
+    );
+  }
+
+  /**
+   * Porta il conteggio di una riga sul registro staking.
+   *
+   * ⚠️ La risposta è il mese ricalcolato: dopo la scrittura il debito EV è
+   * cambiato, e ridisegnare dalla risposta è l'unico modo di non mostrare una
+   * ripartizione che non esiste più.
+   */
+  registraStakato(rigaId: string): Observable<DettaglioMese> {
+    return this.http.post<DettaglioMese>(
+      `${API}/admin/conteggi/stakati/righe/${rigaId}/registra`,
+      {},
+    );
+  }
+
   // ── Anagrafiche ──────────────────────────────────────────────────────────
+
+  listStakati(): Observable<Stakato[]> {
+    return this.http.get<Stakato[]>(`${API}/admin/conteggi/stakati`);
+  }
+
+  creaStakato(body: StakatoPayload): Observable<Stakato> {
+    return this.http.post<Stakato>(`${API}/admin/conteggi/stakati`, body);
+  }
+
+  aggiornaStakato(id: string, body: StakatoPayload): Observable<Stakato> {
+    return this.http.patch<Stakato>(
+      `${API}/admin/conteggi/stakati/${id}`,
+      body,
+    );
+  }
 
   listRicorrenti(): Observable<SpesaRicorrente[]> {
     return this.http.get<SpesaRicorrente[]>(

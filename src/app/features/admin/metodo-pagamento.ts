@@ -18,7 +18,13 @@
  * poi è UNA copia sola, e la guardia di completezza qui sotto non lascia
  * aggiungere un metodo senza deciderne l'etichetta.
  */
-import { Cassa, Incassante, PaymentMethod } from '../../core/models/api.models';
+import {
+  Cassa,
+  FonteBack,
+  Incassante,
+  PaymentMethod,
+  Skin,
+} from '../../core/models/api.models';
 
 export const METODI_PAGAMENTO = [
   'paypal',
@@ -136,5 +142,44 @@ export function cassaLabel(c: Cassa): string {
       return 'Exivezzz';
     case 'COMUNE':
       return 'Cassa comune';
+  }
+}
+
+/**
+ * Dove gioca uno stakato che non ha un conto presso il nostro agente.
+ *
+ * ⚠️ `switch` esaustivo: aggiungere una skin senza deciderne l'etichetta non
+ * compila. E' l'unica difesa possibile, visto che la tupla e' ricalcata a mano
+ * dall'altro repo.
+ */
+export function skinLabel(s: Skin): string {
+  switch (s) {
+    case 'LOTTOMATICA':
+      return 'Lottomatica';
+    case 'GOLDBET':
+      return 'Goldbet';
+    case 'SISAL':
+      return 'Sisal';
+    case 'SNAI':
+      return 'Snai';
+    case 'PLANETWIN':
+      return 'Planetwin365';
+    case 'ADMIRALBET':
+      return 'AdmiralBet';
+    case 'BETPASSION':
+      return 'BetPassion';
+    case 'POKERSTARS':
+      return 'PokerStars';
+    case 'ALTRA':
+      return 'Altra skin';
+  }
+}
+
+export function fonteBackLabel(f: FonteBack): string {
+  switch (f) {
+    case 'CONTO':
+      return 'Dal conto rakeback';
+    case 'MANUALE':
+      return 'Rake inserito a mano';
   }
 }

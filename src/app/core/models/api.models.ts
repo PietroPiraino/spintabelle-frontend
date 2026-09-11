@@ -2476,6 +2476,12 @@ export interface ContoRakeback {
   scaglioneBaseBp: number;
   scaglionePassoCent: number;
   destinazione: DestinazioneMargine;
+  /**
+   * ⚠️ Cambia l'ARITMETICA del margine, non è un'etichetta: per uno stakato il
+   * ticket al giocatore non si paga — si regola nel conteggio del pool —
+   * quindi il margine del mese è l'intero incasso dall'agente.
+   */
+  stakato: boolean;
   attivo: boolean;
   ordine: number;
   nota?: string;
@@ -2491,6 +2497,8 @@ export interface ContoRakeback {
  * per lo stesso mese.
  */
 export interface RigaRakeback {
+  /** ⚠️ La riga di uno stakato ha un margine diverso e nessun «resta da dare». */
+  stakato: boolean;
   id: string;
   contoId: string;
   username: string;
@@ -2562,6 +2570,114 @@ export interface UscitePerCassa {
   nonAttribuitoCent: number;
 }
 
+/**
+ * Dove gioca uno stakato che non ha un conto presso il nostro agente.
+ *
+ * ⚠️ Ricalcata a mano da `SKIN` in `backend/src/conteggi/conteggi.types.ts`: i
+ * due repo non condividono una riga. Elenco CHIUSO e non testo libero — nel
+ * progetto ci sono già tre elenchi di piattaforme, e il quarto non deve essere
+ * quello che ammette «ipoker» e «iPoker» come due cose.
+ */
+export const SKIN = [
+  'LOTTOMATICA',
+  'GOLDBET',
+  'SISAL',
+  'SNAI',
+  'PLANETWIN',
+  'ADMIRALBET',
+  'BETPASSION',
+  'POKERSTARS',
+  'ALTRA',
+] as const;
+export type Skin = (typeof SKIN)[number];
+
+/**
+ * Da dove arriva la back di uno stakato.
+ *
+ * ⚠️ Le due strade NON sono intercambiabili: chi ha un conto presso il nostro
+ * agente lascia alla scuola la parte di back non accreditata in ticket, e
+ * quella si sottrae dal conteggio; chi gioca altrove se l'è già presa sul
+ * proprio conto gioco e non c'è niente da trattenere.
+ */
+export const FONTI_BACK = ['CONTO', 'MANUALE'] as const;
+export type FonteBack = (typeof FONTI_BACK)[number];
+
+/** L'anagrafica di un giocatore finanziato. */
+export interface Stakato {
+  id: string;
+  nome: string;
+  userId: string | null;
+  /** La quota della scuola sul risultato del mese, in punti base. */
+  dealScuolaBp: number;
+  fonteBack: FonteBack;
+  contoId: string | null;
+  skin?: Skin;
+  backBp?: number;
+  attivo: boolean;
+  ordine: number;
+  nota?: string;
+  anonimizzato: boolean;
+}
+
+export interface StakatoPayload {
+  nome: string;
+  userId?: string;
+  dealScuolaBp: number;
+  fonteBack: FonteBack;
+  contoId?: string;
+  skin?: Skin;
+  backBp?: number;
+  attivo?: boolean;
+  ordine?: number;
+  nota?: string;
+}
+
+/** Una riga del conteggio mensile: ingressi PIÙ calcolo, tutto dal server. */
+export interface RigaStakato {
+  id: string;
+  stakatoId: string;
+  nome: string;
+  fonteBack: FonteBack;
+  skin?: Skin;
+  dealScuolaBp: number;
+  rakeLordoCent?: number;
+  backBp?: number;
+  /** La back maturata: letta dal conto rakeback, o calcolata dal rake. */
+  backCent: number;
+  /** Quanto la scuola trattiene perché non accreditato in ticket. */
+  trattenutoCent: number;
+  poolEvCent: number;
+  diffCent: number;
+  feeCent: number;
+  altroCent: number;
+  /** Il debito EV a oggi, dal registro staking. Sempre ≤ 0. */
+  debitoEvCent: number;
+  totaleCent: number;
+  quotaScuolaCent: number;
+  risultatoCent: number;
+  /**
+   * Quanto passa dal registro EV. ⚠️ Il SEGNO porta informazione: positivo
+   * riduce un debito, negativo è un mese in passivo che ne crea uno nuovo.
+   */
+  aRecuperoCent: number;
+  /** La cifra che il giocatore deve bonificare. Mai negativa. */
+  daRegolareCent: number;
+  registrato: boolean;
+  /** Registrato, ma con un importo che non corrisponde più al ricalcolo. */
+  disallineato: boolean;
+  nota?: string;
+}
+
+export interface RigaStakatoPayload {
+  id: string;
+  rakeLordoCent?: number;
+  poolEvCent: number;
+  diffCent: number;
+  feeCent: number;
+  altroCent: number;
+  nota?: string;
+}
+
 export interface AbbonamentiPerDestinazione {
   pietroCent: number;
   exivezzzCent: number;
@@ -2612,6 +2728,16 @@ export interface RiepilogoMese {
      * mano.
      */
     stakingCent: number;
+    /**
+     * La parte di `stakingCent` che viene dai CONTEGGI dei giocatori
+     * finanziati, invece che da una voce scritta a mano. Le due si sommano e il
+     * Riepilogo le mostra separate: una cifra inserita due volte si deve
+     * VEDERE, invece di sparire dentro un totale che torna comunque.
+     *
+     * ⚠️ Su un mese chiuso prima di questo lotto lo snapshot non ce l'ha: il
+     * server lo riempie a 0 in lettura.
+     */
+    stakingDaConteggiCent: number;
     /** ⚠️ Le entrate a mano che NON sono staking: le due sono complementari. */
     altreCent: number;
     totaleCent: number;
@@ -2663,6 +2789,8 @@ export interface DettaglioMese {
    */
   abbonamenti: RigaAbbonamento[];
   totaliRakeback: TotaliRakeback;
+  /** Il conteggio dei giocatori finanziati, letto sempre dal vivo. */
+  stakati: RigaStakato[];
   riepilogo: RiepilogoMese;
   /** ⚠️ Un tetto raggiunto si DICE, mai si tronca in silenzio. */
   troncato: boolean;
@@ -2691,6 +2819,7 @@ export interface SpesaRicorrentePayload {
 
 export interface ContoRakebackPayload {
   agente: AgenteRakeback;
+  stakato?: boolean;
   username: string;
   nomeReale?: string;
   userId?: string;
