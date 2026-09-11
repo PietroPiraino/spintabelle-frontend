@@ -1179,6 +1179,60 @@ describe('AdminConteggiMensiliComponent', () => {
     );
   });
 
+  it('«i ticket li paga l’agente»: la spunta arriva al server e la riga non chiede un pagato', async () => {
+    // ⚠️ Il caso di TroviComodo (11/09/2026): 1% sul rake, ticket sbrigati
+    // dall'agente. Senza il flag il ticket finiva fra i «non pagati» e
+    // gonfiava il margine personale; qui si pinna che la riga non abbia il
+    // campo «Pagato» e che «Da incassare» sia il solo margine.
+    const conto: ContoRakeback = {
+      id: 'c1',
+      agente: 'LOTTOMATICA',
+      username: 'TroviComodo',
+      userId: null,
+      backAgenteBp: 5600,
+      backPlayerBp: 5500,
+      scaglioneBaseBp: 4500,
+      scaglionePassoCent: 2250,
+      destinazione: 'PERSONALE',
+      stakato: false,
+      attivo: true,
+      ordine: 100,
+      anonimizzato: false,
+    };
+    await avvia(
+      dettaglio([
+        riga({
+          contoId: 'c1',
+          username: 'TroviComodo',
+          ticketDallAgente: true,
+          spettanteDaAgenteCent: 25_799,
+          spettanteAlPlayerCent: 23_531,
+          profittoAgenteCent: 2268,
+        }),
+      ]),
+      [conto],
+    );
+    fixture.componentInstance['vista'].set('rakeback');
+    await stabilizza();
+    const el = fixture.nativeElement as HTMLElement;
+    const r = el.querySelector('.cm__rakeback tbody tr') as HTMLElement;
+    expect(r.textContent).toContain('Ticket dall\'agente');
+    // Niente campo «Pagato» sulla riga, e da incassare il solo margine.
+    expect(r.querySelector('input[id^="pag-"]')).toBeNull();
+    expect(r.querySelector('[data-etichetta="Da incassare"]')?.textContent).toContain('22,68');
+
+    fixture.componentInstance['apriConto'](conto);
+    await stabilizza();
+    fixture.componentInstance['formConto'].controls.ticketDallAgente.setValue(true);
+    fixture.componentInstance['salvaConto']();
+    await stabilizza();
+    const req = http.expectOne(`${API}/admin/conteggi/conti/c1`);
+    expect(req.request.body.ticketDallAgente).toBeTrue();
+    req.flush({ ...conto, ticketDallAgente: true });
+    await stabilizza();
+    flushAnagrafiche();
+  });
+
   it('la spunta «Stakato» del conto arriva DAVVERO al server', async () => {
     // ⚠️⚠️ Il flag esisteva su schema e DTO dal 10/09/2026 e nel form NO: dal
     // pannello nessun conto poteva essere marcato stakato, quindi il conto

@@ -654,6 +654,9 @@
                             -->
                             <span class="badge badge--tag">Stakato</span>
                           }
+                          @if (r.ticketDallAgente) {
+                            <span class="badge badge--tag">Ticket dall'agente</span>
+                          }
                         </span>
                         @if (r.nomeReale) {
                           <span class="admin-table__sub" [title]="r.nomeReale">
@@ -694,7 +697,11 @@
                     </td>
 
                     <td class="is-num" data-etichetta="Pagato">
-                      @if (d.mese.stato === 'APERTO') {
+                      @if (r.ticketDallAgente) {
+                        <!-- ⚠️ Niente campo: un «pagato» qui sarebbe un costo
+                             pieno per un ticket che paga l'agente. -->
+                        <span title="Il ticket lo paga l'agente">—</span>
+                      } @else if (d.mese.stato === 'APERTO') {
                         <label class="visually-hidden" [attr.for]="'pag-' + r.contoId">
                           Pagato a {{ r.username }}
                         </label>
@@ -734,7 +741,8 @@
                       {{ eur(r.erogatoBonusCent) }}
                     </td>
                     <td class="is-num cm__calcolata" data-etichetta="Da incassare">
-                      {{ eur(r.spettanteDaAgenteCent) }}
+                      <!-- ⚠️ Se il ticket lo paga l'agente, arriva il solo margine. -->
+                      {{ eur(r.ticketDallAgente ? r.profittoAgenteCent : r.spettanteDaAgenteCent) }}
                     </td>
                     <td
                       class="is-num cm__calcolata"
@@ -2266,6 +2274,18 @@
             dall'agente, e la riga esce da «Resta da dare»)
           </span>
         </label>
+        <!--
+          ⚠️ Il TERZO modo di regolare un ticket (TroviComodo): lo paga
+          l'agente, alla scuola arriva il solo margine. Non insieme a
+          «Stakato» — il server risponde 400 e la modale lo mostra.
+        -->
+        <label class="row admin-panel__check">
+          <input type="checkbox" formControlName="ticketDallAgente" />
+          <span>
+            I ticket li paga l'agente (alla scuola arriva solo il margine: la
+            riga non chiede un «pagato» ed esce da «Resta da dare»)
+          </span>
+        </label>
 
         <ng-container [ngTemplateOutlet]="selettoreAccount" />
 
@@ -3106,19 +3126,24 @@
             <dt>Già erogato dalla sala</dt>
             <dd class="is-num">{{ eur(r.erogatoBonusCent) }}</dd>
             <dt>Da incassare dall'agente ({{ pct(r.backAgenteBp) }})</dt>
-            <dd class="is-num">{{ eur(r.spettanteDaAgenteCent) }}</dd>
+            <dd class="is-num">{{ eur(r.ticketDallAgente ? r.profittoAgenteCent : r.spettanteDaAgenteCent) }}</dd>
             <dt>Spetta al giocatore ({{ pct(r.backPlayerBp) }})</dt>
             <dd class="is-num" [class.is-perdita]="r.spettanteAlPlayerCent < 0">
               {{ eur(r.spettanteAlPlayerCent) }}
             </dd>
             <dt class="cm__margine">Margine</dt>
             <dd class="is-num cm__margine">{{ eur(r.profittoAgenteCent) }}</dd>
-            <dt>Già pagato</dt>
-            <dd class="is-num">{{ eur(r.pagatoAlPlayerCent) }}</dd>
-            <dt>Resta da dargli (di questo mese)</dt>
-            <dd class="is-num" [class.is-perdita]="r.residuoAlPlayerCent < 0">
-              {{ eur(r.residuoAlPlayerCent) }}
-            </dd>
+            @if (r.ticketDallAgente) {
+              <dt>Ticket</dt>
+              <dd>lo paga l'agente: da noi non riceve niente</dd>
+            } @else {
+              <dt>Già pagato</dt>
+              <dd class="is-num">{{ eur(r.pagatoAlPlayerCent) }}</dd>
+              <dt>Resta da dargli (di questo mese)</dt>
+              <dd class="is-num" [class.is-perdita]="r.residuoAlPlayerCent < 0">
+                {{ eur(r.residuoAlPlayerCent) }}
+              </dd>
+            }
           </dl>
           @if (r.residuoAlPlayerCent < 0) {
             <!--

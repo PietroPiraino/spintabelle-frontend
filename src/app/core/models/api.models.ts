@@ -2484,6 +2484,11 @@ export interface ContoRakeback {
    * quindi il margine del mese è l'intero incasso dall'agente.
    */
   stakato: boolean;
+  /**
+   * I ticket li paga l'AGENTE per conto suo: alla scuola arriva solo il
+   * margine, al giocatore non si deve niente. Mai insieme a `stakato`.
+   */
+  ticketDallAgente?: boolean;
   attivo: boolean;
   ordine: number;
   nota?: string;
@@ -2501,6 +2506,8 @@ export interface ContoRakeback {
 export interface RigaRakeback {
   /** ⚠️ La riga di uno stakato ha un margine diverso e nessun «resta da dare». */
   stakato: boolean;
+  /** Il ticket lo paga l'agente: niente «pagato», da incassare il solo margine. */
+  ticketDallAgente?: boolean;
   id: string;
   contoId: string;
   username: string;
@@ -2630,6 +2637,8 @@ export interface ProspettoRakeback {
   spettanteAlPlayerCent: number;
   pagatoAlPlayerCent: number;
   residuoAlPlayerCent: number;
+  /** Il ticket glielo accredita direttamente l'agente: pagato e residuo valgono 0. */
+  ticketDallAgente?: boolean;
 }
 
 export interface ProspettoStakato {
@@ -2996,6 +3005,7 @@ export interface SpesaRicorrentePayload {
 export interface ContoRakebackPayload {
   agente: AgenteRakeback;
   stakato?: boolean;
+  ticketDallAgente?: boolean;
   username: string;
   nomeReale?: string;
   userId?: string;

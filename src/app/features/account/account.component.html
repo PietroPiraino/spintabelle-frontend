@@ -110,12 +110,22 @@
                   </span>
                 </dt>
                 <dd>{{ eur(r.erogatoBonusCent) }}</dd>
-                <dt>Ti spetta da noi</dt>
-                <dd><strong>{{ eur(r.spettanteAlPlayerCent) }}</strong></dd>
-                <dt>Hai ricevuto</dt>
-                <dd>{{ eur(r.pagatoAlPlayerCent) }}</dd>
-                <dt>Resta da darti (di questo mese)</dt>
-                <dd><strong>{{ eur(r.residuoAlPlayerCent) }}</strong></dd>
+                @if (r.ticketDallAgente) {
+                  <dt>
+                    Ti spetta
+                    <span class="account__nota">
+                      te lo accredita direttamente l'agente
+                    </span>
+                  </dt>
+                  <dd><strong>{{ eur(r.spettanteAlPlayerCent) }}</strong></dd>
+                } @else {
+                  <dt>Ti spetta da noi</dt>
+                  <dd><strong>{{ eur(r.spettanteAlPlayerCent) }}</strong></dd>
+                  <dt>Hai ricevuto</dt>
+                  <dd>{{ eur(r.pagatoAlPlayerCent) }}</dd>
+                  <dt>Resta da darti (di questo mese)</dt>
+                  <dd><strong>{{ eur(r.residuoAlPlayerCent) }}</strong></dd>
+                }
               </dl>
             }
 

@@ -452,6 +452,8 @@ export class AdminConteggiMensiliComponent {
     // nessun conto poteva essere marcato come tale. Stessa forma del difetto
     // dei contanti: completo lato server, muto lato interfaccia.
     stakato: [false],
+    // I ticket li paga l'agente: alla scuola arriva il solo margine.
+    ticketDallAgente: [false],
     attivo: [true],
     ordine: [100],
     nota: [''],
@@ -1785,6 +1787,7 @@ export class AdminConteggiMensiliComponent {
         scaglionePasso: this.euro(c.scaglionePassoCent),
         destinazione: c.destinazione,
         stakato: c.stakato,
+        ticketDallAgente: c.ticketDallAgente ?? false,
         attivo: c.attivo,
         ordine: c.ordine,
         nota: c.nota ?? '',
@@ -1830,6 +1833,7 @@ export class AdminConteggiMensiliComponent {
       scaglionePassoCent: passo,
       destinazione: f.destinazione,
       stakato: f.stakato,
+      ticketDallAgente: f.ticketDallAgente,
       attivo: f.attivo,
       ordine: Number(f.ordine) || 100,
       ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),
