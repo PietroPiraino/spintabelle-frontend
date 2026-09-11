@@ -185,6 +185,11 @@
 .cm__senza-back {
   color: var(--copper-600);
 }
+// Il rimborso al giocatore: rame e non `.is-perdita`, perché quel rosso
+// significa «hai perso» e qui non si è perso niente — si restituisce.
+.cm__rimborso {
+  color: var(--copper-600);
+}
 // Il selettore dell'account collegato.
 //
 // ⚠️ L'elenco dei risultati e' una lista vera (`<ul>`), non una pila di `div`:

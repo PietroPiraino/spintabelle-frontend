@@ -1018,6 +1018,12 @@
             I quattro numeri del pool si copiano <strong>col segno</strong>, come
             si leggono sul pool. La back e quello che la scuola trattiene
             arrivano da soli dalla tabella del rakeback: non si ridigitano.
+            Una cifra <strong>negativa</strong> in «Da bonificare» è un
+            <strong>rimborso</strong> che devi tu al giocatore (la tua quota è
+            sotto il ticket già trattenuto): si scala prima dal suo debito EV,
+            il resto glielo mandi con un bonifico da Pietro. Un mese in perdita
+            va invece per intero sul registro EV (make-up pieno) e non muove
+            cassa.
           </p>
 
           <!--
@@ -1086,8 +1092,15 @@
 
           <div class="admin-totali">
             <span class="admin-totali__voce">
-              Da bonificare <strong>{{ eur(totaleDaRegolare()) }}</strong>
+              Da incassare <strong>{{ eur(totaleDaIncassare()) }}</strong>
             </span>
+            @if (totaleDaRimborsare()) {
+              <!-- ⚠️ Separato, mai sommato: sono bonifici in direzioni
+                   opposte (questo esce dalla tasca di Pietro). -->
+              <span class="admin-totali__voce">
+                Da rimborsare <strong class="cm__rimborso">{{ eur(totaleDaRimborsare()) }}</strong>
+              </span>
+            }
             <span class="admin-totali__ambito">{{ ambitoStakati() }}</span>
           </div>
 
@@ -1130,6 +1143,14 @@
                           } @else if (r.registrato) {
                             <span class="admin-stato" data-tono="ok">
                               Registrato
+                            </span>
+                          }
+                          @if (r.daRegolareCent < 0) {
+                            <!-- ⚠️ Il verso del denaro si DICE: un numero col
+                                 meno in una colonna chiamata «Da bonificare»
+                                 si legge come un errore di battitura. -->
+                            <span class="admin-stato" data-tono="attesa">
+                              Rimborso
                             </span>
                           }
                         </span>
@@ -1236,7 +1257,9 @@
                     <td class="is-num" [class.is-perdita]="r.aRecuperoCent < 0">
                       {{ r.aRecuperoCent ? eur(r.aRecuperoCent) : '—' }}
                     </td>
-                    <td class="is-num"><strong>{{ eur(r.daRegolareCent) }}</strong></td>
+                    <td class="is-num">
+                      <strong [class.cm__rimborso]="r.daRegolareCent < 0">{{ eur(r.daRegolareCent) }}</strong>
+                    </td>
                     <td class="admin-table__c-ultimo">
                       @if (d.mese.stato === 'APERTO' && r.aRecuperoCent !== 0 && !r.registrato) {
                         <button

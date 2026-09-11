@@ -2750,11 +2750,16 @@ export interface RigaStakato {
   quotaScuolaCent: number;
   risultatoCent: number;
   /**
-   * Quanto passa dal registro EV. ⚠️ Il SEGNO porta informazione: positivo
-   * riduce un debito, negativo è un mese in passivo che ne crea uno nuovo.
+   * Quanto passa dal registro EV, col segno del REGISTRO: positivo riduce un
+   * debito (un recupero pagato da lui, o una compensazione in cui è la scuola
+   * a scalare ciò che gli deve), negativo è un mese in perdita che ne crea uno
+   * nuovo (make-up pieno: l'intera perdita).
    */
   aRecuperoCent: number;
-  /** La cifra che il giocatore deve bonificare. Mai negativa. */
+  /**
+   * La cassa: positiva = il giocatore bonifica; ⚠️ NEGATIVA = è la scuola a
+   * rimborsarlo (bonifico da Pietro). Zero in un mese in perdita.
+   */
   daRegolareCent: number;
   registrato: boolean;
   /** Registrato, ma con un importo che non corrisponde più al ricalcolo. */

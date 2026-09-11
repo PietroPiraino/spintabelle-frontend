@@ -1051,8 +1051,25 @@ export class AdminConteggiMensiliComponent {
       : base;
   });
 
-  protected readonly totaleDaRegolare = computed(() =>
-    (this.dett()?.stakati ?? []).reduce((t, r) => t + r.daRegolareCent, 0),
+  /** Quello che i giocatori bonificano alla scuola (le sole cifre positive). */
+  protected readonly totaleDaIncassare = computed(() =>
+    (this.dett()?.stakati ?? []).reduce(
+      (t, r) => t + Math.max(0, r.daRegolareCent),
+      0,
+    ),
+  );
+
+  /**
+   * ⚠️ Quello che la SCUOLA rimborsa ai giocatori (bonifico da Pietro):
+   * positivo, e separato dall'incasso. Sommarli in una cifra sola direbbe
+   * «da bonificare 1,89» dove ci sono 3,27 da incassare e 1,38 da restituire
+   * — due bonifici in direzioni opposte, non uno.
+   */
+  protected readonly totaleDaRimborsare = computed(() =>
+    (this.dett()?.stakati ?? []).reduce(
+      (t, r) => t + Math.max(0, -r.daRegolareCent),
+      0,
+    ),
   );
 
   protected scriviStakato(

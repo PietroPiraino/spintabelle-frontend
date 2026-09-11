@@ -797,6 +797,64 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(comando()?.getAttribute('aria-label')).toContain('Rossana');
   });
 
+  it('un rimborso al player si vede come tale: pastiglia, rame, e un totale SEPARATO', async () => {
+    // ⚠️ Domanda dell'owner (11/09/2026): «puo capitare che sia io a dover
+    // mandare soldi al player?». Si — e finche' la cifra usciva col meno in
+    // una colonna chiamata «Da bonificare», si leggeva come un refuso.
+    const riga = (over: Partial<RigaStakato>): RigaStakato => ({
+      id: 'rs1',
+      stakatoId: 'st1',
+      nome: 'Rossana',
+      fonteBack: 'CONTO',
+      dealScuolaBp: 3500,
+      backCent: 23_059,
+      trattenutoCent: 2809,
+      poolEvCent: -16_000,
+      diffCent: 0,
+      feeCent: 0,
+      altroCent: 0,
+      debitoEvCent: -200,
+      totaleCent: 7059,
+      quotaScuolaCent: 2471,
+      risultatoCent: -338,
+      aRecuperoCent: 200,
+      daRegolareCent: -138,
+      registrato: false,
+      disallineato: false,
+      ...over,
+    });
+    await avvia(
+      dettaglio([], {
+        stakati: [
+          riga({}),
+          riga({ id: 'rs2', stakatoId: 'st2', nome: 'Altro', poolEvCent: -6800, risultatoCent: 1727, aRecuperoCent: 0, daRegolareCent: 1727 }),
+        ],
+      }),
+    );
+    fixture.componentInstance['vista'].set('stakati');
+    await stabilizza();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const righe = [...el.querySelectorAll('.cm__stakati tbody tr')] as HTMLElement[];
+    expect(righe[0].textContent).toContain('Rimborso');
+    expect(righe[0].querySelector('.cm__rimborso')?.textContent).toContain('-1,38');
+    expect(righe[1].textContent).not.toContain('Rimborso');
+    expect(righe[1].querySelector('.cm__rimborso')).toBeNull();
+
+    // ⚠️ Due totali, mai una somma: 17,27 da incassare e 1,38 da restituire
+    // sono due bonifici in direzioni opposte, non «15,89 da bonificare».
+    const striscia = el.querySelector('.admin-totali')?.textContent ?? '';
+    expect(striscia).toContain('Da incassare');
+    expect(striscia).toContain('17,27');
+    expect(striscia).toContain('Da rimborsare');
+    expect(striscia).toContain('1,38');
+    expect(striscia).not.toContain('15,89');
+    // La compensazione sul registro (+2,00) si registra come ogni movimento.
+    expect(
+      el.querySelector('button[aria-label="Porta il conteggio di Rossana sul registro staking"]'),
+    ).toBeTruthy();
+  });
+
   it('«di cui dai conteggi» compare solo quando c’è', async () => {
     await avvia();
     // ⚠️ La riga Staking somma DUE strade: i conteggi e le voci a mano. Vederle
