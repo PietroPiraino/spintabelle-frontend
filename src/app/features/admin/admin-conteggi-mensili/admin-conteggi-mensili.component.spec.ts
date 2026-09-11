@@ -72,6 +72,7 @@ const dettaglio = (
   righe,
   abbonamenti: [],
   stakati: [],
+  speseFisseDaRegistrare: [],
   totaliRakeback: {
     rakeGeneratoCent: righe.reduce((t, r) => t + r.rakeGeneratoCent, 0),
     erogatoBonusCent: righe.reduce((t, r) => t + r.erogatoBonusCent, 0),
@@ -853,6 +854,143 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(
       el.querySelector('button[aria-label="Porta il conteggio di Rossana sul registro staking"]'),
     ).toBeTruthy();
+  });
+
+  it('le spese fisse si compilano in blocco: un campo per riga, un solo salvataggio', async () => {
+    // ⚠️⚠️ Ha preso il posto della generazione automatica (11/09/2026):
+    // l'anagrafica pretendeva un «importo di listino» obbligatorio, ma quello
+    // vero cambia ogni mese col cambio del dollaro — quindi il catalogo era
+    // inutilizzabile e in produzione era rimasto VUOTO, mentre le stesse
+    // cinque spese venivano riscritte a mano una per una.
+    const d = dettaglio();
+    d.speseFisseDaRegistrare = [
+      {
+        ricorrenteId: 'r1',
+        descrizione: 'GtoWizard',
+        categoria: 'INFRASTRUTTURA',
+        cassa: 'PIETRO',
+        metodo: 'BONIFICO',
+        ultimoImportoCent: 13_162,
+        ultimoMese: 'agosto 2026',
+      },
+      {
+        ricorrenteId: 'r2',
+        descrizione: 'Anthropic',
+        categoria: 'INFRASTRUTTURA',
+      },
+    ];
+    await avvia(d);
+    fixture.componentInstance['vista'].set('voci');
+    await stabilizza();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const righe = [...el.querySelectorAll('.cm__fisse tbody tr')] as HTMLElement[];
+    expect(righe.length).toBe(2);
+    // ⚠️ Il suggerimento è un FATTO — quanto è uscito l'ultima volta — e sta
+    // ACCANTO al campo, mai dentro: un importo precompilato si salva senza che
+    // nessuno lo guardi.
+    expect(righe[0].textContent).toContain('131,62');
+    expect(righe[0].textContent).toContain('agosto 2026');
+    const campo = righe[0].querySelector('input') as HTMLInputElement;
+    expect(campo.value).toBe('');
+    // Chi non ha precedenti non ha un numero inventato.
+    expect(righe[1].textContent).toContain('—');
+
+    const bottone = () =>
+      [...el.querySelectorAll('button')].find((b) =>
+        b.textContent?.includes('Registra'),
+      ) as HTMLButtonElement;
+    // Senza niente scritto non si salva niente.
+    expect(bottone().disabled).toBeTrue();
+
+    const c = fixture.componentInstance as unknown as {
+      scriviFissa: (id: string, v: string) => void;
+    };
+    c.scriviFissa('r1', '140,05');
+    await stabilizza();
+    expect(bottone().disabled).toBeFalse();
+
+    bottone().click();
+    const req = http.expectOne(`${API}/admin/conteggi/mesi/${d.mese.id}/spese-fisse`);
+    expect(req.request.method).toBe('POST');
+    // ⚠️ Si mandano SOLO le righe compilate: quella lasciata vuota resta in
+    // coda, non diventa una riga da zero euro nel conto economico.
+    expect(req.request.body).toEqual({
+      righe: [{ ricorrenteId: 'r1', importoCent: 14_005 }],
+    });
+    const dopo = dettaglio();
+    dopo.speseFisseDaRegistrare = [d.speseFisseDaRegistrare[1]];
+    req.flush(dopo);
+    await stabilizza();
+    // Registrata, esce dalla coda.
+    expect(el.querySelectorAll('.cm__fisse tbody tr').length).toBe(1);
+  });
+
+  it('un importo illeggibile fra le spese fisse NOMINA la riga e non parte', async () => {
+    const d = dettaglio();
+    d.speseFisseDaRegistrare = [
+      { ricorrenteId: 'r1', descrizione: 'GtoWizard', categoria: 'INFRASTRUTTURA' },
+    ];
+    await avvia(d);
+    fixture.componentInstance['vista'].set('voci');
+    await stabilizza();
+
+    const c = fixture.componentInstance as unknown as {
+      scriviFissa: (id: string, v: string) => void;
+      registraSpeseFisse: () => void;
+    };
+    c.scriviFissa('r1', 'cento euro');
+    await stabilizza();
+    c.registraSpeseFisse();
+    http.expectNone(`${API}/admin/conteggi/mesi/${d.mese.id}/spese-fisse`);
+    // ⚠️ In zoneless il DOM non si aggiorna da sé dopo una chiamata diretta.
+    await stabilizza();
+    const banda = (fixture.nativeElement as HTMLElement).querySelector(
+      '.form-feedback.is-error',
+    );
+    // ⚠️ Nomina la riga rotta, e sta ACCANTO al pulsante: la banda di `error()`
+    // offre «Riprova», che ricaricherebbe buttando via tutto il digitato.
+    expect(banda?.textContent).toContain('GtoWizard');
+  });
+
+  it('la chiusura NOMINA le spese fisse non registrate, e non blocca', async () => {
+    const d = dettaglio();
+    d.speseFisseDaRegistrare = [
+      { ricorrenteId: 'r1', descrizione: 'GtoWizard', categoria: 'INFRASTRUTTURA' },
+      { ricorrenteId: 'r2', descrizione: 'bunny.net', categoria: 'INFRASTRUTTURA' },
+    ];
+    await avvia(d);
+    await stabilizza();
+    const testo = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(testo).toContain('2 spese fisse non sono ancora');
+    expect(testo).toContain('GtoWizard, bunny.net');
+    // ⚠️ Avviso e non blocco: il pulsante di chiusura resta premibile.
+    const chiudi = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+    ].find((b) => b.textContent?.includes('Chiudi il mese')) as HTMLButtonElement;
+    expect(chiudi?.disabled).toBeFalsy();
+  });
+
+  it('«A chi» segue il VERSO: fornitore su una spesa, «da chi» su un’entrata', async () => {
+    // ⚠️ Rilievo dell'owner (11/09/2026): «non so a cosa si riferisce». È la
+    // terza volta che in questa modale una parola fissa risulta falsa su metà
+    // dei casi, dopo il segnaposto della descrizione e l'etichetta della cassa.
+    await avvia();
+    const c = fixture.componentInstance as unknown as {
+      apriVoce: (v: unknown) => void;
+      formVoce: { patchValue: (v: Record<string, unknown>) => void };
+    };
+    c.apriVoce('nuova');
+    await stabilizza();
+    const etichetta = () =>
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('label[for="cm-contro"]')
+        ?.textContent?.trim();
+    expect(etichetta()).toBe('Fornitore');
+
+    c.formVoce.patchValue({ verso: 'ENTRATA' });
+    await stabilizza();
+    expect(etichetta()).toBe('Da chi');
   });
 
   it('«di cui dai conteggi» compare solo quando c’è', async () => {

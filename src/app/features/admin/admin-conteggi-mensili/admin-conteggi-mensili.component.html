@@ -422,6 +422,27 @@
           </p>
         }
 
+        <!--
+          ⚠️ Gemello dell'avviso qui sopra, e avviso e non blocco per la stessa
+          ragione: una spesa che questo mese non è arrivata è normale, e un
+          mese che si rifiuta di chiudersi per questo sarebbe peggio del
+          difetto che previene. Le NOMINA, perché «tre spese fisse mancano» non
+          dice quale andare a cercare.
+        -->
+        @if (d.speseFisseDaRegistrare.length) {
+          <p class="admin-nota">
+            ⚠️
+            @if (d.speseFisseDaRegistrare.length === 1) {
+              Una spesa fissa non è ancora registrata:
+            } @else {
+              {{ d.speseFisseDaRegistrare.length }} spese fisse non sono ancora
+              registrate:
+            }
+            <strong>{{ nomiSpeseFisse() }}</strong>. Se le hai pagate,
+            scrivile in «Spese ed entrate» prima di chiudere.
+          </p>
+        }
+
         <div class="row cm__azioni">
           @if (d.mese.stato === 'APERTO') {
             <button
@@ -1313,26 +1334,125 @@
       }
 
       @if (vista() === 'voci') {
-        <!-- ⚠️ Gemello dell'avviso del rakeback, stessa ragione: l'istruzione
-             sulle spese fisse viveva solo nello stato vuoto della tabella. -->
-        @if (d.mese.stato === 'APERTO' && ricorrentiFuoriDalMese().length) {
-          <div class="cm__manca">
+        <!--
+          ⚠️⚠️ LE SPESE FISSE NON SI GENERANO PIÙ DA SOLE (11/09/2026), e qui
+          c'era l'avviso «N spese fisse non sono ancora in questo mese» col
+          pulsante «Sincronizza». Il motivo: l'anagrafica pretendeva un importo
+          obbligatorio e l'apertura del mese materializzava le righe con quel
+          numero — solo che l'importo vero cambia ogni mese (si paga in
+          dollari), quindi il catalogo era inutilizzabile e in produzione era
+          rimasto VUOTO, mentre le stesse cinque spese venivano riscritte a
+          mano una per una.
+          ⚠️ E non si generano righe a 0,00 € da correggere: una riga da zero
+          euro non sposta niente ma resta nel conto economico, cioè rumore in un
+          elenco che si legge per capire dove sono finiti i soldi — è la ragione
+          già scritta su `VoceDto.importoCent`, che è `@Min(1)`. Una spesa di
+          cui non si conosce ancora l'importo non è una spesa da zero euro: è
+          una spesa non ancora registrata, e si mostra come una cosa da fare.
+        -->
+        @if (d.mese.stato === 'APERTO' && d.speseFisseDaRegistrare.length) {
+          <section class="cm__gruppo">
+            <h3 class="cm__h3">Spese fisse da registrare</h3>
             <p class="admin-nota">
-              @if (ricorrentiFuoriDalMese().length === 1) {
-                Una spesa fissa non è ancora in questo mese.
-              } @else {
-                {{ ricorrentiFuoriDalMese().length }} spese fisse non sono ancora
-                in questo mese.
-              }
+              Scrivi solo quelle che hai pagato: le altre restano qui.
+              Categoria, portafoglio e metodo li porta l'anagrafica — qui serve
+              la sola cifra.
             </p>
-            <button
-              type="button"
-              class="btn btn--ghost btn--sm"
-              (click)="sincronizza()"
-            >
-              Portale in {{ d.mese.etichetta }}
-            </button>
-          </div>
+
+            <div class="admin-table__scroll">
+              <table class="admin-table cm__rakeback cm__fisse">
+                <caption class="visually-hidden">
+                  Spese fisse attese in questo mese
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="admin-table__c-primo">Spesa</th>
+                    <th scope="col" class="is-num">Importo</th>
+                    <th scope="col" class="admin-table__solo-largo">
+                      L'ultima volta
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of d.speseFisseDaRegistrare; track s.ricorrenteId) {
+                    <tr>
+                      <th scope="row" class="admin-table__c-primo">
+                        <span class="admin-table__ident">
+                          <span class="admin-table__ident-riga">
+                            <strong [title]="s.descrizione">{{ s.descrizione }}</strong>
+                          </span>
+                          <span class="admin-table__sub">
+                            {{ categoriaLabel(s.categoria) }}
+                            @if (s.cassa) { · {{ cassaLabel(s.cassa) }} }
+                          </span>
+                        </span>
+                      </th>
+                      <td class="is-num" data-etichetta="Importo">
+                        <label
+                          class="visually-hidden"
+                          [attr.for]="'fis-' + s.ricorrenteId"
+                        >
+                          Importo di {{ s.descrizione }}
+                        </label>
+                        <input
+                          [id]="'fis-' + s.ricorrenteId"
+                          type="text"
+                          inputmode="decimal"
+                          class="input cm__cella"
+                          [class.is-error]="fisseNonValide().includes(s.descrizione)"
+                          [value]="bozzaFisse()[s.ricorrenteId] ?? ''"
+                          (input)="scriviFissa(s.ricorrenteId, $any($event.target).value)"
+                          autocomplete="off"
+                          placeholder="0,00"
+                        />
+                      </td>
+                      <!--
+                        ⚠️ È un FATTO, non una previsione: quanto è uscito
+                        l'ultima volta, col mese che lo dice. Sta ACCANTO al
+                        campo e non DENTRO — un importo precompilato si salva
+                        senza che nessuno lo guardi, e col cambio del dollaro
+                        sarebbe quasi sempre sbagliato.
+                      -->
+                      <!--
+                        ⚠️ Su UNA riga sola: `.admin-table__sub` in un `<td>`
+                        nudo eredita l'interlinea del body (21,76px), e due
+                        righe portano la cella a 54px contro il tetto di 46 di
+                        `check-admin-tabelle.mjs`. È la trappola già pagata
+                        sulla cella Rake degli stakati.
+                      -->
+                      <td class="admin-table__solo-largo">
+                        @if (s.ultimoImportoCent !== undefined) {
+                          {{ eur(s.ultimoImportoCent) }} · {{ s.ultimoMese }}
+                        } @else {
+                          —
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            @if (erroreFisse()) {
+              <p class="form-feedback is-error">{{ erroreFisse() }}</p>
+            }
+            <div class="row cm__azioni">
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                [disabled]="!fisseCompilate().length || salvando()"
+                (click)="registraSpeseFisse()"
+              >
+                @if (salvando()) {
+                  Registro…
+                } @else if (fisseCompilate().length === 1) {
+                  Registra la spesa
+                } @else {
+                  Registra {{ fisseCompilate().length || '' }} spese
+                }
+              </button>
+            </div>
+          </section>
         }
         <p class="admin-nota admin-table__nota-mobile">
           La forma del pagamento è visibile su schermi più larghi.
@@ -1413,9 +1533,10 @@
               } @empty {
                 <tr>
                   <td colspan="6" class="admin-table__vuota">
-                    Nessuna spesa e nessuna entrata in questo mese. Le spese
-                    fisse compaiono da sole quando si apre il mese, se sono
-                    state configurate in <strong>Anagrafiche</strong>.
+                    Nessuna spesa e nessuna entrata in questo mese. Quelle
+                    che tornano ogni mese si dichiarano una volta in
+                    <strong>Anagrafiche</strong> e poi compaiono qui sopra, da
+                    compilare con l'importo del mese.
                   </td>
                 </tr>
               }
@@ -1833,7 +1954,7 @@
 
         <section class="cm__gruppo">
           <div class="admin-barra">
-            <h2 class="admin-barra__titolo">Spese ricorrenti</h2>
+            <h2 class="admin-barra__titolo">Spese fisse</h2>
             <button
               type="button"
               class="admin-ico admin-barra__crea"
@@ -1855,7 +1976,8 @@
                 <tr>
                   <th scope="col" class="admin-table__c-primo">Spesa</th>
                   <th scope="col">Categoria</th>
-                  <th scope="col" class="is-num">Importo di listino</th>
+                  <th scope="col" class="admin-table__solo-largo">Portafoglio</th>
+                  <th scope="col">Come</th>
                   <th scope="col" class="admin-table__c-ultimo">
                     <span class="visually-hidden">Azioni</span>
                   </th>
@@ -1872,15 +1994,15 @@
                             <span class="badge badge--tag">Sospesa</span>
                           }
                         </span>
-                        @if (r.controparte) {
-                          <span class="admin-table__sub" [title]="r.controparte">
-                            {{ r.controparte }}
-                          </span>
-                        }
                       </span>
                     </th>
                     <td>{{ categoriaLabel(r.categoria) }}</td>
-                    <td class="is-num">{{ eur(r.importoCentPredefinito) }}</td>
+                    <td class="admin-table__solo-largo">
+                      {{ r.cassaPredefinita ? cassaLabel(r.cassaPredefinita) : '—' }}
+                    </td>
+                    <td>
+                      {{ r.metodoPredefinito ? metodoLabel(r.metodoPredefinito) : '—' }}
+                    </td>
                     <td class="admin-table__c-ultimo">
                       <button
                         type="button"
@@ -1896,9 +2018,10 @@
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="4" class="admin-table__vuota">
-                      Nessuna spesa fissa. Quelle che aggiungi qui compaiono da
-                      sole in ogni mese che apri, e restano modificabili.
+                    <td colspan="5" class="admin-table__vuota">
+                      Nessuna spesa fissa. Quelle che aggiungi qui te le ritrovi
+                      ogni mese in «Spese ed entrate», da compilare con
+                      l'importo di quel mese.
                     </td>
                   </tr>
                 }
@@ -1907,8 +2030,10 @@
           </div>
 
           <p class="admin-nota">
-            L'importo è un <strong>valore predefinito</strong>, non un vincolo: la
-            voce che genera resta modificabile mese per mese.
+            Qui <strong>non c'è l'importo</strong>: cambia ogni mese, e si
+            scrive nel mese. Portafoglio e metodo sono valori predefiniti che si
+            copiano sulla voce — il mese in cui l'anticipa l'altro socio lo si
+            corregge sulla voce.
           </p>
         </section>
       }
@@ -2048,14 +2173,21 @@
         </div>
         <div class="row">
           <div class="field">
-            <label for="cm-contro">A chi / da chi</label>
+            <!--
+              ⚠️ Segue il VERSO come il segnaposto della descrizione e
+              l'etichetta della cassa: «A chi / da chi» non diceva a nessuno
+              che cosa fosse (rilievo dell'owner, 11/09/2026), ed è la terza
+              volta che in questa modale una parola fissa risulta falsa su
+              meta' dei casi.
+            -->
+            <label for="cm-contro">{{ etichettaControparte() }}</label>
             <input
               id="cm-contro"
               type="text"
               class="input"
               formControlName="controparte"
               maxlength="200"
-              placeholder="facoltativo"
+              [placeholder]="esempioControparte()"
             />
           </div>
           <div class="field">
@@ -2424,7 +2556,7 @@
   </div>
 </ng-template>
 
-<!-- ══ Modale: spesa ricorrente ═══════════════════════════════════════════ -->
+<!-- ══ Modale: stakato ═══════════════════════════════════════════ -->
 @if (stakatoAperto(); as st) {
   <app-modal
     [titolo]="st === 'nuovo' ? 'Nuovo stakato' : 'Modifica lo stakato'"
@@ -2616,6 +2748,7 @@
   </app-modal>
 }
 
+<!-- ══ Modale: spesa fissa ══════════════════════════════════════════════ -->
 @if (ricorrenteAperta(); as r) {
   <app-modal
     [titolo]="r === 'nuova' ? 'Nuova spesa fissa' : 'Modifica la spesa fissa'"
@@ -2650,28 +2783,6 @@
             </select>
           </div>
           <div class="field">
-            <label for="cm-ric-contro">A chi</label>
-            <input
-              id="cm-ric-contro"
-              type="text"
-              class="input"
-              formControlName="controparte"
-              maxlength="200"
-              placeholder="facoltativo"
-            />
-          </div>
-          <div class="field">
-            <label for="cm-ric-imp">Importo in €</label>
-            <input
-              id="cm-ric-imp"
-              type="text"
-              inputmode="decimal"
-              class="input"
-              formControlName="importo"
-              autocomplete="off"
-            />
-          </div>
-          <div class="field">
             <label for="cm-ric-cassa">Chi la paga</label>
             <select id="cm-ric-cassa" class="input" formControlName="cassa">
               <option value="">non specificato</option>
@@ -2680,16 +2791,31 @@
               }
             </select>
           </div>
+          <div class="field">
+            <label for="cm-ric-met">Come la paghi</label>
+            <select id="cm-ric-met" class="input" formControlName="metodo">
+              <option value="">non specificato</option>
+              @for (m of METODI; track m) {
+                <option [value]="m">{{ metodoLabel(m) }}</option>
+              }
+            </select>
+          </div>
         </div>
+        <!--
+          ⚠️ Qui NON c'è l'importo, ed è la ragione per cui questa schermata
+          esiste: quello vero cambia ogni mese col cambio del dollaro, e un
+          «importo di listino» obbligatorio ha tenuto questo catalogo vuoto.
+        -->
         <p class="admin-nota">
-          «Chi la paga» si copia sulla voce che questa spesa genera ogni mese,
-          come l'importo: è un <strong>valore predefinito</strong>, non un
-          vincolo — il mese in cui l'anticipa l'altro socio lo si corregge sulla
-          voce.
+          L'<strong>importo si scrive nel mese</strong>: questa spesa comparirà
+          in «Spese ed entrate» fra quelle da registrare, con accanto quanto era
+          l'ultima volta. Portafoglio e metodo sono valori predefiniti che si
+          copiano sulla voce — il mese in cui l'anticipa l'altro socio lo si
+          corregge lì.
         </p>
         <label class="row admin-panel__check">
           <input type="checkbox" formControlName="attiva" />
-          <span>Attiva (compare nei mesi che apri)</span>
+          <span>Attiva (compare fra le spese da registrare ogni mese)</span>
         </label>
         <div class="field">
           <label for="cm-ric-nota">Nota interna</label>

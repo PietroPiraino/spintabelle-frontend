@@ -2453,16 +2453,43 @@ export interface VoceMese {
   createdAt?: string;
 }
 
+/**
+ * Una spesa che torna ogni mese.
+ *
+ * ⚠️⚠️ NON porta un importo, e fino all'11/09/2026 lo pretendeva obbligatorio:
+ * quello vero cambia ogni mese (si paga in dollari), quindi il catalogo era
+ * inutilizzabile ed era rimasto vuoto. Qui si dichiara solo che la spesa
+ * torna; l'importo si scrive nel mese, dall'elenco «Spese fisse da
+ * registrare».
+ */
 export interface SpesaRicorrente {
   id: string;
   descrizione: string;
   categoria: CategoriaUscita;
-  controparte?: string;
-  /** Chi la paga di solito: si copia sulla voce che genera. */
+  /** Chi la paga di solito: si copia sulla voce al momento della registrazione. */
   cassaPredefinita?: Cassa;
-  importoCentPredefinito: number;
+  /** Come la si paga di solito. Gemello del precedente. */
+  metodoPredefinito?: MetodoMovimento;
   attiva: boolean;
   nota?: string;
+}
+
+/** Una spesa fissa che questo mese non è ancora stata registrata. */
+export interface SpesaFissaDaRegistrare {
+  ricorrenteId: string;
+  descrizione: string;
+  categoria: CategoriaUscita;
+  cassa?: Cassa;
+  metodo?: MetodoMovimento;
+  /** Quanto è costata l'ultima volta: un FATTO, non una previsione. */
+  ultimoImportoCent?: number;
+  /** Il mese da cui viene quella cifra, per poterla riconoscere. */
+  ultimoMese?: string;
+}
+
+export interface SpesaFissaPayload {
+  ricorrenteId: string;
+  importoCent: number;
 }
 
 export interface ContoRakeback {
@@ -2976,6 +3003,13 @@ export interface DettaglioMese {
   totaliRakeback: TotaliRakeback;
   /** Il conteggio dei giocatori finanziati, letto sempre dal vivo. */
   stakati: RigaStakato[];
+  /**
+   * Le spese fisse attese che il mese non ha ancora.
+   *
+   * ⚠️ Vuoto su un mese CHIUSO: registrarle risponderebbe 409, e un elenco che
+   * può solo produrre un errore è peggio di un elenco assente.
+   */
+  speseFisseDaRegistrare: SpesaFissaDaRegistrare[];
   riepilogo: RiepilogoMese;
   /** ⚠️ Un tetto raggiunto si DICE, mai si tronca in silenzio. */
   troncato: boolean;
@@ -2995,9 +3029,8 @@ export interface VocePayload {
 export interface SpesaRicorrentePayload {
   descrizione: string;
   categoria: CategoriaUscita;
-  controparte?: string;
   cassaPredefinita?: Cassa;
-  importoCentPredefinito: number;
+  metodoPredefinito?: MetodoMovimento;
   attiva?: boolean;
   nota?: string;
 }

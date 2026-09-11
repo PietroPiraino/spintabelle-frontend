@@ -246,6 +246,47 @@ export class AdminConteggiMensiliComponent {
   );
   protected readonly ESTREMI = ESTREMI_VERSAMENTO;
 
+  // ── Le spese fisse del mese ──────────────────────────────────────────────
+  //
+  // ⚠️ Stessa forma della bozza del rakeback: si digita in locale, si manda
+  // tutto in una chiamata, e la risposta ridisegna. Qui però la bozza NON si
+  // risemina dal server (`applica`) — queste righe un importo non ce l'hanno
+  // ancora, è proprio il motivo per cui esistono.
+  protected readonly bozzaFisse = signal<Record<string, string>>({});
+  protected readonly erroreFisse = signal<string | null>(null);
+
+  /** Quelle con qualcosa scritto dentro: sono le sole che si mandano. */
+  protected readonly fisseCompilate = computed(() =>
+    (this.dett()?.speseFisseDaRegistrare ?? []).filter(
+      (s) => (this.bozzaFisse()[s.ricorrenteId] ?? '').trim() !== '',
+    ),
+  );
+
+  protected readonly fisseNonValide = computed(() =>
+    this.fisseCompilate()
+      .filter((s) => {
+        const c = parseImportoInCent(this.bozzaFisse()[s.ricorrenteId] ?? '');
+        return c === null || c <= 0;
+      })
+      .map((s) => s.descrizione),
+  );
+
+  /**
+   * I nomi di quelle che mancano, per l'avviso di chiusura.
+   *
+   * ⚠️ Nomina CHI e non solo quanti, come l'avviso dei conti fuori dal mese:
+   * «tre spese fisse mancano» non dice quale andare a cercare. Oltre le quattro
+   * si tronca, o la riga diventa un muro di testo.
+   */
+  protected readonly nomiSpeseFisse = computed(() => {
+    const n = (this.dett()?.speseFisseDaRegistrare ?? []).map(
+      (s) => s.descrizione,
+    );
+    return n.length <= 4
+      ? n.join(', ')
+      : `${n.slice(0, 4).join(', ')} e altre ${n.length - 4}`;
+  });
+
   protected readonly puntiAperti = signal(false);
   protected readonly punti = signal<AnteprimaPunti | null>(null);
 
@@ -464,12 +505,15 @@ export class AdminConteggiMensiliComponent {
     userId: [''],
   });
 
+  // ⚠️⚠️ NIENTE IMPORTO, ed era obbligatorio fino all'11/09/2026: quello vero
+  // cambia ogni mese col cambio del dollaro, quindi il catalogo non si poteva
+  // compilare e in produzione era rimasto vuoto. Qui si dichiara solo che la
+  // spesa torna; l'importo si scrive nel mese.
   protected readonly formRicorrente = this.fb.nonNullable.group({
     descrizione: ['', [Validators.required, Validators.minLength(2)]],
     categoria: ['INFRASTRUTTURA' as CategoriaUscita, Validators.required],
-    controparte: [''],
     cassa: ['' as Cassa | ''],
-    importo: ['', Validators.required],
+    metodo: ['' as MetodoMovimento | ''],
     attiva: [true],
     nota: [''],
   });
@@ -639,6 +683,11 @@ export class AdminConteggiMensiliComponent {
       };
     }
     this.bozza.set(b);
+    // ⚠️ La bozza delle spese fisse si AZZERA e non si risemina: quelle righe
+    // un importo non ce l'hanno (è il motivo per cui sono in coda), e dopo un
+    // salvataggio riuscito quelle registrate non sono più nell'elenco.
+    this.bozzaFisse.set({});
+    this.erroreFisse.set(null);
   }
 
   /** Euro nudi per un campo di input: «1250,50», mai «1.250,50 €». */
@@ -747,16 +796,9 @@ export class AdminConteggiMensiliComponent {
     return anagrafica.filter((c) => c.attivo && !nelMese.has(c.id));
   });
 
-  /** Gemella della precedente, per le spese fisse sul pannello delle voci. */
-  protected readonly ricorrentiFuoriDalMese = computed(() => {
-    const anagrafica = this.ricorrenti() ?? [];
-    const nelMese = new Set(
-      (this.dett()?.voci ?? [])
-        .map((v) => v.ricorrenteId)
-        .filter((x): x is string => !!x),
-    );
-    return anagrafica.filter((r) => r.attiva && !nelMese.has(r.id));
-  });
+  // ⚠️ Il gemello per le spese fisse NON vive più qui: l'elenco arriva dal
+  // server (`speseFisseDaRegistrare`), che è l'unico a sapere anche quanto sono
+  // costate l'ultima volta. Il client di questo modulo non calcola niente.
 
   /**
    * I nomi di chi manca, non solo quanti.
@@ -837,6 +879,23 @@ export class AdminConteggiMensiliComponent {
     this.voceVal().verso === 'USCITA' ? 'Chi ha pagato' : 'Chi ha incassato',
   );
 
+  /**
+   * ⚠️ «A chi / da chi» non diceva a nessuno che cosa fosse — rilievo
+   * dell'owner, 11/09/2026 — e come il segnaposto della descrizione e
+   * l'etichetta della cassa deve seguire il VERSO: su una spesa è il
+   * fornitore, su un'entrata è chi ha pagato noi. È la terza volta che in
+   * questa modale una parola fissa risulta falsa su metà dei casi.
+   */
+  protected readonly etichettaControparte = computed(() =>
+    this.voceVal().verso === 'USCITA' ? 'Fornitore' : 'Da chi',
+  );
+
+  protected readonly esempioControparte = computed(() =>
+    this.voceVal().verso === 'USCITA'
+      ? 'facoltativo · es. GTO Wizard'
+      : 'facoltativo · es. Grinderlab',
+  );
+
   // ── Il mese: apri, chiudi, riapri, sincronizza ───────────────────────────
 
   protected apriModaleMese(): void {
@@ -882,8 +941,8 @@ export class AdminConteggiMensiliComponent {
         this.scegliMese(m.id);
         this.caricaAnagrafiche();
         this.toast.success(
-          r.vociCreate || r.righeCreate
-            ? `Aggiunte ${r.vociCreate} spese ricorrenti e ${r.righeCreate} righe di rakeback.`
+          r.righeCreate
+            ? `Aggiunte ${r.righeCreate} righe al mese.`
             : 'Il mese era già allineato: niente da aggiungere.',
         );
       },
@@ -1720,6 +1779,48 @@ export class AdminConteggiMensiliComponent {
     });
   }
 
+  protected scriviFissa(ricorrenteId: string, valore: string): void {
+    this.bozzaFisse.update((b) => ({ ...b, [ricorrenteId]: valore }));
+  }
+
+  protected registraSpeseFisse(): void {
+    const m = this.mese();
+    if (!m) return;
+    const rotte = this.fisseNonValide();
+    if (rotte.length) {
+      // ⚠️ Nomina le righe rotte, e la banda sta ACCANTO al pulsante: quella di
+      // `error()` offre «Riprova», che ricaricherebbe buttando via il digitato.
+      this.erroreFisse.set(
+        `Importo non valido su ${rotte.join(', ')}: scrivi solo cifre, es. 24,15.`,
+      );
+      return;
+    }
+    const righe = this.fisseCompilate().map((s) => ({
+      ricorrenteId: s.ricorrenteId,
+      importoCent: parseImportoInCent(this.bozzaFisse()[s.ricorrenteId] ?? '')!,
+    }));
+    if (!righe.length) return;
+    this.salvando.set(true);
+    this.erroreFisse.set(null);
+    this.api.registraSpeseFisse(m.id, righe).subscribe({
+      next: (nuovo) => {
+        this.salvando.set(false);
+        this.applica(nuovo);
+        this.toast.success(
+          righe.length === 1
+            ? 'Spesa fissa registrata.'
+            : `${righe.length} spese fisse registrate.`,
+        );
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreFisse.set(
+          apiErrorMessage(err, 'Non riesco a registrare le spese fisse.'),
+        );
+      },
+    });
+  }
+
   protected apriPunti(): void {
     const mese = this.mese();
     if (!mese) return;
@@ -1892,9 +1993,8 @@ export class AdminConteggiMensiliComponent {
       this.formRicorrente.reset({
         descrizione: '',
         categoria: 'INFRASTRUTTURA',
-        controparte: '',
         cassa: '',
-        importo: '',
+        metodo: '',
         attiva: true,
         nota: '',
       });
@@ -1902,9 +2002,8 @@ export class AdminConteggiMensiliComponent {
       this.formRicorrente.setValue({
         descrizione: r.descrizione,
         categoria: r.categoria,
-        controparte: r.controparte ?? '',
         cassa: r.cassaPredefinita ?? '',
-        importo: this.euro(r.importoCentPredefinito),
+        metodo: r.metodoPredefinito ?? '',
         attiva: r.attiva,
         nota: r.nota ?? '',
       });
@@ -1917,17 +2016,11 @@ export class AdminConteggiMensiliComponent {
     const aperta = this.ricorrenteAperta();
     if (!aperta) return;
     const f = this.formRicorrente.getRawValue();
-    const importo = parseImportoInCent(f.importo);
-    if (importo === null || importo <= 0) {
-      this.erroreModale.set('L’importo non è valido.');
-      return;
-    }
     const body = {
       descrizione: f.descrizione.trim(),
       categoria: f.categoria,
-      ...(f.controparte.trim() ? { controparte: f.controparte.trim() } : {}),
       ...(f.cassa ? { cassaPredefinita: f.cassa } : {}),
-      importoCentPredefinito: importo,
+      ...(f.metodo ? { metodoPredefinito: f.metodo } : {}),
       attiva: f.attiva,
       ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),
     };
@@ -1942,7 +2035,7 @@ export class AdminConteggiMensiliComponent {
         this.salvando.set(false);
         this.ricorrenteAperta.set(null);
         this.caricaAnagrafiche();
-        this.toast.success('Spesa ricorrente salvata.');
+        this.toast.success('Spesa fissa salvata.');
       },
       error: (err) => {
         this.salvando.set(false);

@@ -91,6 +91,7 @@ export const ACTION_LABELS: Record<string, string> = {
   'update-staked-player': 'Stakato modificato',
   'save-staked-month': 'Conteggio stakati salvato',
   'register-staking-settlement': 'Conteggio portato sul registro staking',
+  'register-fixed-expenses': 'Spese fisse registrate',
   'create-rakeback-account': 'Conto rakeback aggiunto',
   'update-rakeback-account': 'Conto rakeback modificato',
   'delete-rakeback-account': 'Conto rakeback rimosso',

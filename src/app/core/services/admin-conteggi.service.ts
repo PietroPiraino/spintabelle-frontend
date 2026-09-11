@@ -20,6 +20,7 @@ ContoRakeback,
   VersamentoView,
   VersamentoPayload,
   SaldiSoci,
+  SpesaFissaPayload,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -68,10 +69,12 @@ export class AdminConteggiService {
     );
   }
 
-  sincronizza(
-    meseId: string,
-  ): Observable<{ vociCreate: number; righeCreate: number }> {
-    return this.http.post<{ vociCreate: number; righeCreate: number }>(
+  /**
+   * ⚠️ Non porta più `vociCreate`: dall'11/09/2026 le spese fisse non si
+   * generano più da sole — si registrano con gli importi veri.
+   */
+  sincronizza(meseId: string): Observable<{ righeCreate: number }> {
+    return this.http.post<{ righeCreate: number }>(
       `${API}/admin/conteggi/mesi/${meseId}/sincronizza`,
       {},
     );
@@ -199,6 +202,20 @@ export class AdminConteggiService {
     return this.http.post<void>(
       `${API}/admin/conteggi/mesi/${meseId}/prospetto`,
       { userId },
+    );
+  }
+
+  /**
+   * ⚠️ Una chiamata per tutto l'elenco, come la PUT del rakeback: la risposta è
+   * il mese RICALCOLATO, e il client non somma mai niente da sé.
+   */
+  registraSpeseFisse(
+    meseId: string,
+    righe: SpesaFissaPayload[],
+  ): Observable<DettaglioMese> {
+    return this.http.post<DettaglioMese>(
+      `${API}/admin/conteggi/mesi/${meseId}/spese-fisse`,
+      { righe },
     );
   }
 
