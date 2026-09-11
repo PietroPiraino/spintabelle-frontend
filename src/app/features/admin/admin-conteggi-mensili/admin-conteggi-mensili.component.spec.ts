@@ -16,6 +16,7 @@ import {
   Stakato,
   AdminUser,
   AnteprimaPunti,
+  SaldiSoci,
 } from '../../../core/models/api.models';
 import { AdminConteggiMensiliComponent } from './admin-conteggi-mensili.component';
 
@@ -93,6 +94,8 @@ const dettaglio = (
         pietroCent: 25_000,
         exivezzzCent: 0,
         onlineCent: 0,
+        paypalCent: 0,
+        skrillCent: 0,
         nonAttribuitoCent: 0,
       },
       gadgetCent: 0,
@@ -123,6 +126,13 @@ const dettaglio = (
       quotaTitolareBp: 6500,
     },
     marginePersonaleCent: 0,
+    // Il conguaglio: maturato = ripartizione, cassa = contanti − spese anticipate.
+    soci: {
+      pietro: { maturatoCent: 12_539, cassaCent: 20_180 },
+      exivezzz: { maturatoCent: 6751, cassaCent: -8_900 },
+      incassiNonAttribuitiCent: 0,
+      speseNonAttribuiteCent: 1_280,
+    },
     cassaGiocatori: {
       attesoDaAgenteCent: 91_881,
       pagatoAiGiocatoriCent: 0,
@@ -133,6 +143,46 @@ const dettaglio = (
     abbonamentiStimati: 0,
   },
   troncato: false,
+  ...over,
+});
+
+/** Il conguaglio fra soci dal vivo: Pietro a credito, Exivezzz a debito. */
+const saldi = (over: Partial<SaldiSoci> = {}): SaldiSoci => ({
+  mesiChiusi: 2,
+  pietro: {
+    maturatoCent: 50_000,
+    cassaCent: 5_000,
+    ricevutiCent: 30_000,
+    datiCent: 0,
+    saldoCent: 15_000,
+  },
+  // ⚠️ L'identità `saldoP + saldoE = credito` vale anche nella fixture:
+  // 15.000 + 0 = 15.000. Un numero inventato qui verificherebbe una
+  // schermata che il server non può produrre.
+  exivezzz: {
+    maturatoCent: 20_000,
+    cassaCent: 20_000,
+    ricevutiCent: 0,
+    datiCent: 0,
+    saldoCent: 0,
+  },
+  creditoNonRiscossoCent: 15_000,
+  incassiNonAttribuitiCent: 0,
+  speseNonAttribuiteCent: 0,
+  provvisorio: {
+    etichetta: 'settembre 2026',
+    soci: dettaglio().riepilogo.soci,
+  },
+  versamenti: [
+    {
+      id: 'v1',
+      data: '2026-09-05T12:00:00.000Z',
+      da: 'ESTERNO',
+      a: 'PIETRO',
+      importoCent: 30_000,
+      nota: 'bonifico agente',
+    },
+  ],
   ...over,
 });
 
@@ -224,23 +274,26 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(pastiglia?.textContent?.trim()).toBe('Aperto');
   });
 
-  it('le sei sezioni sono SCHEDE, con un pannello raggiungibile', async () => {
+  it('le sette sezioni sono SCHEDE, con un pannello raggiungibile', async () => {
     await avvia();
     const schede = fixture.nativeElement.querySelectorAll(
       'button[role="tab"]',
     ) as NodeListOf<HTMLButtonElement>;
-    expect(schede.length).toBe(6);
+    expect(schede.length).toBe(7);
     // ⚠️ L'ordine è quello del conto economico: prima il riepilogo, poi le
-    // QUATTRO fonti di denaro, infine le anagrafiche, che non appartengono a un
-    // mese. ⚠️ Gli stakati stanno DOPO gli abbonamenti e prima delle spese: il
-    // loro conteggio legge dalla tabella del rakeback, quindi si compila dopo
-    // quella — l'ordine delle schede è l'ordine in cui si lavora.
+    // QUATTRO fonti di denaro, poi il conguaglio fra soci — che legge i mesi
+    // CHIUSI, quindi viene dopo tutto ciò che li compone —, infine le
+    // anagrafiche, che non appartengono a un mese. ⚠️ Gli stakati stanno DOPO
+    // gli abbonamenti e prima delle spese: il loro conteggio legge dalla
+    // tabella del rakeback, quindi si compila dopo quella — l'ordine delle
+    // schede è l'ordine in cui si lavora.
     expect([...schede].map((b) => b.textContent?.trim().split(/\s+/)[0])).toEqual([
       'Riepilogo',
       'Rakeback',
       'Abbonamenti',
       'Stakati',
       'Spese',
+      'Soci',
       'Anagrafiche',
     ]);
 
@@ -782,6 +835,145 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Conguaglio coi giocatori',
     );
+  });
+
+  it('la scheda Soci carica il saldo ENTRANDO, e un versamento lo ricarica', async () => {
+    await avvia();
+    // ⚠️ Nessuna lettura finché non si entra nella scheda: chi apre il pannello
+    // per scrivere il rake non paga il calcolo su tutti i mesi chiusi.
+    http.expectNone(`${API}/admin/conteggi/soci`);
+
+    // La scheda NON porta un conteggio: un saldo a oggi non è un elenco.
+    expect(scheda('Soci').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Soci',
+    );
+
+    await vaiA('Soci');
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(
+      saldi({
+        exivezzz: {
+          maturatoCent: 20_000,
+          cassaCent: 35_000,
+          ricevutiCent: 0,
+          datiCent: 0,
+          saldoCent: -15_000,
+        },
+        creditoNonRiscossoCent: 0,
+      }),
+    );
+    await stabilizza();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const testo = el.textContent ?? '';
+    expect(testo).toContain('Credito non riscosso');
+    // 15.000 + (−15.000): la scuola non deve niente ai due INSIEME — il
+    // denaro è passato dalla tasca sbagliata, e il conguaglio è fra loro.
+    expect(testo).toContain('0,00');
+    // ⚠️ Solo i mesi CHIUSI entrano nel saldo, e la striscia lo dice.
+    expect(testo).toContain('su 2 mesi chiusi');
+
+    const righe = [...el.querySelectorAll('.cm__soci tbody tr')] as HTMLElement[];
+    expect(righe.length).toBe(2);
+    expect(righe[0].textContent).toContain('Pietro');
+    expect(righe[0].querySelector('.is-perdita')).toBeNull();
+    // Il saldo NEGATIVO (ha in mano più di quanto gli spetti) si vede.
+    expect(righe[1].textContent).toContain('Exivezzz');
+    expect(righe[1].querySelector('.is-perdita')?.textContent).toContain(
+      '-150,00',
+    );
+
+    // Il mese aperto è provvisorio e FUORI dal saldo.
+    expect(testo).toContain('provvisorio, fuori dal saldo');
+    // Il registro elenca il versamento con le due tasche.
+    const vers = el.querySelector('.cm__versamenti tbody tr') as HTMLElement;
+    expect(vers.textContent).toContain('Fuori');
+    expect(vers.textContent).toContain('Pietro');
+    expect(vers.textContent).toContain('300,00');
+
+    // ── Un versamento nuovo ─────────────────────────────────────────────
+    const c = fixture.componentInstance;
+    c['apriVersamento']();
+    await stabilizza();
+    expect(el.querySelector('dialog .admin-modale')).toBeTruthy();
+    // ⚠️ Appena aperta NON è sporca: Escape non deve chiedere conferma.
+    expect(c['versamentoSporco']()).toBeFalse();
+    // Precompilata con OGGI (iOS: un date vuoto è un rettangolino muto).
+    expect(c['formVersamento'].getRawValue().data).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    c['formVersamento'].patchValue({
+      data: '2026-09-20',
+      da: 'PIETRO',
+      a: 'EXIVEZZZ',
+      importo: '120,50',
+      nota: ' conguaglio agosto ',
+    });
+    await stabilizza();
+    expect(c['versamentoSporco']()).toBeTrue();
+
+    c['salvaVersamento']();
+    const req = http.expectOne(`${API}/admin/conteggi/versamenti`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      // ⚠️ Mezzogiorno UTC: una data-solo a mezzanotte di Roma è il giorno
+      // prima in UTC per metà dell'anno, e il registro ordina per data.
+      data: '2026-09-20T12:00:00.000Z',
+      da: 'PIETRO',
+      a: 'EXIVEZZZ',
+      importoCent: 12_050,
+      nota: 'conguaglio agosto',
+    });
+    req.flush({
+      id: 'v2',
+      data: '2026-09-20T12:00:00.000Z',
+      da: 'PIETRO',
+      a: 'EXIVEZZZ',
+      importoCent: 12_050,
+      nota: 'conguaglio agosto',
+    });
+    await stabilizza();
+    // La modale si chiude e il saldo si RILEGGE: righe e saldi da una lettura sola.
+    expect(el.querySelector('dialog')).toBeNull();
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(saldi());
+    await stabilizza();
+  });
+
+  it('partenza e arrivo uguali NON partono, e la rimozione passa dalla conferma in linea', async () => {
+    await avvia();
+    await vaiA('Soci');
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(saldi());
+    await stabilizza();
+
+    const c = fixture.componentInstance;
+    c['apriVersamento']();
+    await stabilizza();
+    c['formVersamento'].patchValue({ da: 'PIETRO', a: 'PIETRO', importo: '10' });
+    c['salvaVersamento']();
+    http.expectNone(`${API}/admin/conteggi/versamenti`);
+    expect(c['erroreModale']()).toContain('coincidono');
+    c['versamentoAperto'].set(false);
+    await stabilizza();
+
+    // ⚠️ L'unica azione irreversibile della scheda: mai al primo tocco.
+    const el = fixture.nativeElement as HTMLElement;
+    const rimuovi = el.querySelector(
+      'button[aria-label^="Rimuovi il versamento"]',
+    ) as HTMLButtonElement;
+    expect(rimuovi).toBeTruthy();
+    rimuovi.click();
+    await stabilizza();
+    http.expectNone(`${API}/admin/conteggi/versamenti/v1`);
+    const conferma = [...el.querySelectorAll('.cm__versamenti button')].find(
+      (b) => b.textContent?.trim() === 'Rimuovi',
+    ) as HTMLButtonElement;
+    expect(conferma).toBeTruthy();
+    conferma.click();
+    const del = http.expectOne(`${API}/admin/conteggi/versamenti/v1`);
+    expect(del.request.method).toBe('DELETE');
+    del.flush(null);
+    await stabilizza();
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(saldi({ versamenti: [] }));
+    await stabilizza();
+    expect(el.textContent).toContain('Nessun versamento registrato');
   });
 
   it('la chiusura AVVISA se restano righe senza pagamento, e non blocca', async () => {
@@ -1342,6 +1534,8 @@ describe('AdminConteggiMensiliComponent', () => {
       pietroCent: 8000,
       exivezzzCent: 5000,
       onlineCent: 0,
+      paypalCent: 0,
+      skrillCent: 0,
       nonAttribuitoCent: 0,
     };
     d.abbonamenti = [
@@ -1470,7 +1664,7 @@ describe('AdminConteggiMensiliComponent', () => {
     ).toBeTruthy();
   });
 
-  it('tutte e cinque le modali portano il wrapper `.admin-modale`', async () => {
+  it('tutte le modali portano il wrapper `.admin-modale`', async () => {
     const d = dettaglio([riga()], {
       voci: [
         {
@@ -1498,6 +1692,7 @@ describe('AdminConteggiMensiliComponent', () => {
       ['conto', () => c['contoAperto'].set('nuovo')],
       ['spesa ricorrente', () => c['ricorrenteAperta'].set('nuova')],
       ['scheda di riga', () => c['rigaAperta'].set('c1')],
+      ['versamento', () => c['versamentoAperto'].set(true)],
     ];
 
     for (const [nome, apri] of casi) {
@@ -1516,6 +1711,7 @@ describe('AdminConteggiMensiliComponent', () => {
       c['contoAperto'].set(null);
       c['ricorrenteAperta'].set(null);
       c['rigaAperta'].set(null);
+      c['versamentoAperto'].set(false);
       await stabilizza();
     }
   });

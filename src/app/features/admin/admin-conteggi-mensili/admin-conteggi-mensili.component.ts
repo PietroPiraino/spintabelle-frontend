@@ -47,6 +47,10 @@ import {
   AdminUser,
   UtenteCollegato,
   AnteprimaPunti,
+  VersamentoView,
+  SaldiSoci,
+  EstremoVersamento,
+  ESTREMI_VERSAMENTO,
 } from '../../../core/models/api.models';
 import { AdminConteggiService } from '../../../core/services/admin-conteggi.service';
 import { AdminUsersService } from '../../../core/services/admin-users.service';
@@ -76,6 +80,7 @@ type Vista =
   | 'abbonamenti'
   | 'stakati'
   | 'voci'
+  | 'soci'
   | 'anagrafiche';
 
 /** La bozza di una riga di conteggio: quattro campi di testo, come il rakeback. */
@@ -217,6 +222,30 @@ export class AdminConteggiMensiliComponent {
   // delle garanzie del test di compatibilità dell'art. 6.4
   // (`gdpr/valutazione-prospetto-e-punti.md`). Un comando che accredita e poi
   // mostra il risultato è un comando che si preme alla cieca.
+  // ── Il conguaglio fra soci ───────────────────────────────────────────────
+  //
+  // ⚠️ Si carica ENTRANDO nella scheda, non all'avvio: è una lettura su tutti
+  // i mesi chiusi più il calcolo dal vivo di quello aperto, e chi apre il
+  // pannello per scrivere il rake non la vuole pagare ogni volta.
+  protected readonly soci = signal<SaldiSoci | null>(null);
+  protected readonly erroreSoci = signal<string | null>(null);
+  protected readonly versamentoAperto = signal(false);
+  protected readonly formVersamento = this.fb.nonNullable.group({
+    data: ['', Validators.required],
+    da: ['ESTERNO' as EstremoVersamento, Validators.required],
+    a: ['PIETRO' as EstremoVersamento, Validators.required],
+    importo: ['', Validators.required],
+    nota: [''],
+  });
+  protected readonly versamentoVal = toSignal(this.formVersamento.valueChanges, {
+    initialValue: this.formVersamento.getRawValue(),
+  });
+  private readonly baseVersamento = signal('');
+  protected readonly versamentoSporco = computed(
+    () => JSON.stringify(this.versamentoVal()) !== this.baseVersamento(),
+  );
+  protected readonly ESTREMI = ESTREMI_VERSAMENTO;
+
   protected readonly puntiAperti = signal(false);
   protected readonly punti = signal<AnteprimaPunti | null>(null);
 
@@ -268,6 +297,9 @@ export class AdminConteggiMensiliComponent {
         etichetta: 'Spese ed entrate',
         conteggio: d?.voci.length ?? null,
       },
+      // ⚠️ Senza conteggio: il conguaglio non è un elenco del mese, è un saldo
+      // a oggi su tutti i mesi chiusi.
+      { valore: 'soci', etichetta: 'Soci' },
       { valore: 'anagrafiche', etichetta: 'Anagrafiche' },
     ];
   });
@@ -309,6 +341,8 @@ export class AdminConteggiMensiliComponent {
         return 'Stakati';
       case 'voci':
         return 'Spese ed entrate';
+      case 'soci':
+        return 'Conguaglio fra soci';
       case 'anagrafiche':
         return 'Anagrafiche';
     }
@@ -505,6 +539,11 @@ export class AdminConteggiMensiliComponent {
   constructor() {
     this.carica();
     this.agganciaRicercaUtenti();
+    // ⚠️ Un effect e non una chiamata nel click: la scheda si può scegliere
+    // anche da tastiera, e l'unico posto che vede ogni cambio è il signal.
+    effect(() => {
+      if (this.vista() === 'soci' && !this.soci()) this.caricaSoci();
+    });
 
     /**
      * Cambiando VERSO, una categoria rimasta dell'altro verso torna ad «Altro».
@@ -1549,6 +1588,114 @@ export class AdminConteggiMensiliComponent {
         this.salvando.set(false);
         this.erroreModale.set(
           apiErrorMessage(err, 'Non riesco a mandare il prospetto.'),
+        );
+      },
+    });
+  }
+
+  protected caricaSoci(): void {
+    this.erroreSoci.set(null);
+    this.api.saldiSoci().subscribe({
+      next: (s) => this.soci.set(s),
+      error: (err) =>
+        this.erroreSoci.set(
+          apiErrorMessage(err, 'Non riesco a calcolare il conguaglio.'),
+        ),
+    });
+  }
+
+  /** «20 set 2026», a Roma: il registro ordina e si legge per data di movimento. */
+  protected dataBreve(iso: string): string {
+    return new Intl.DateTimeFormat('it-IT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Europe/Rome',
+    }).format(new Date(iso));
+  }
+
+  protected estremoLabel(e: EstremoVersamento): string {
+    switch (e) {
+      case 'PIETRO':
+        return 'Pietro';
+      case 'EXIVEZZZ':
+        return 'Exivezzz';
+      case 'COMUNE':
+        return 'Cassa comune';
+      case 'ESTERNO':
+        return 'Fuori (agente, giocatore, banca…)';
+    }
+  }
+
+  protected apriVersamento(): void {
+    this.erroreModale.set(null);
+    this.conferma.set(null);
+    const oggi = new Date();
+    const iso = `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, '0')}-${String(oggi.getDate()).padStart(2, '0')}`;
+    // ⚠️ Precompilato con OGGI: su iOS un `<input type="date">` vuoto collassa
+    // in un rettangolino muto (precedente della pausa redazione).
+    this.formVersamento.reset({
+      data: iso,
+      da: 'ESTERNO',
+      a: 'PIETRO',
+      importo: '',
+      nota: '',
+    });
+    this.baseVersamento.set(JSON.stringify(this.formVersamento.getRawValue()));
+    this.versamentoAperto.set(true);
+  }
+
+  protected salvaVersamento(): void {
+    const f = this.formVersamento.getRawValue();
+    const importoCent = parseImportoInCent(f.importo);
+    if (importoCent === null || importoCent <= 0) {
+      this.erroreModale.set('L\u2019importo non è valido.');
+      return;
+    }
+    if (f.da === f.a) {
+      this.erroreModale.set('Partenza e arrivo coincidono.');
+      return;
+    }
+    this.salvando.set(true);
+    this.erroreModale.set(null);
+    this.api
+      .creaVersamento({
+        // ⚠️ Mezzogiorno UTC, non mezzanotte locale: una data-solo a
+        // mezzanotte di Roma è il giorno prima in UTC per metà dell'anno, e
+        // il registro ordina per data.
+        data: new Date(`${f.data}T12:00:00Z`).toISOString(),
+        da: f.da,
+        a: f.a,
+        importoCent,
+        ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),
+      })
+      .subscribe({
+        next: () => {
+          this.salvando.set(false);
+          this.versamentoAperto.set(false);
+          this.caricaSoci();
+          this.toast.success('Versamento registrato.');
+        },
+        error: (err) => {
+          this.salvando.set(false);
+          this.erroreModale.set(
+            apiErrorMessage(err, 'Non riesco a registrare il versamento.'),
+          );
+        },
+      });
+  }
+
+  protected eliminaVersamento(v: VersamentoView): void {
+    this.api.eliminaVersamento(v.id).subscribe({
+      next: () => {
+        this.conferma.set(null);
+        this.caricaSoci();
+        this.toast.success('Versamento rimosso.');
+      },
+      error: (err) => {
+        this.conferma.set(null);
+        this.erroreSoci.set(
+          apiErrorMessage(err, 'Non riesco a rimuovere il versamento.'),
         );
       },
     });

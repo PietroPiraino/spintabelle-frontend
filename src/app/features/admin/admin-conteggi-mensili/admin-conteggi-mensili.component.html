@@ -1394,6 +1394,206 @@
       }
 
       <!-- ══ Anagrafiche ═════════════════════════════════════════════════ -->
+      <!-- ══ Soci ═════════════════════════════════════════════════════════ -->
+      <!--
+        Il conguaglio fra soci: modello «competenza + credito esposto».
+        ⚠️ La divisione 65/35 non si tocca. Accanto, il libro della CASSA di
+        ciascuno — quanto denaro della scuola gli è passato per le mani — e la
+        differenza fra i due libri è il suo credito non riscosso. I versamenti
+        fra casse chiudono i conti e restano sempre dal vivo: un bonifico si
+        registra spesso in ritardo, e congelarlo in un mese lo farebbe sparire
+        dal credito o contraddire la riga del mese.
+        ⚠️ Solo i mesi CHIUSI entrano nel saldo: il margine di un mese aperto
+        cambia ancora, e un saldo che oscilla a ogni rake digitato non è un saldo.
+      -->
+      @if (vista() === 'soci') {
+        <div class="admin-barra">
+          <h2 class="admin-barra__titolo">Conguaglio fra soci</h2>
+          <button
+            type="button"
+            class="admin-ico admin-barra__crea"
+            aria-haspopup="dialog"
+            aria-label="Registra un versamento fra casse"
+            title="Registra un versamento"
+            (click)="apriVersamento()"
+          >
+            <app-icon name="plus" [size]="18" />
+          </button>
+        </div>
+        <p class="admin-nota">
+          Quanto è <strong>maturato</strong> a ciascuno (la sua parte del
+          margine dei mesi chiusi; i conti personali vanno a Pietro), quanto
+          denaro della scuola gli è passato <strong>per le mani</strong>
+          (contanti incassati, PayPal a Pietro e Skrill a Exivezzz, meno le
+          spese anticipate), e i <strong>versamenti</strong> registrati qui
+          sotto. Il saldo è la differenza: positivo, la scuola gli deve;
+          negativo, ha in mano più di quanto gli spetti.
+        </p>
+
+        @if (erroreSoci(); as e) {
+          <div class="form-feedback is-error" role="alert">
+            {{ e }}
+            <button type="button" class="btn btn--ghost btn--sm" (click)="caricaSoci()">
+              Riprova
+            </button>
+          </div>
+        } @else if (soci(); as s) {
+          <div class="admin-totali">
+            <span class="admin-totali__voce">
+              Credito non riscosso
+              <strong>{{ eur(s.creditoNonRiscossoCent) }}</strong>
+            </span>
+            <span class="admin-totali__ambito">
+              su {{ s.mesiChiusi }} {{ s.mesiChiusi === 1 ? 'mese chiuso' : 'mesi chiusi' }} —
+              è quello che la scuola deve ai due insieme: denaro in cassa
+              comune o ancora presso l'agente
+            </span>
+          </div>
+
+          <div class="admin-table__scroll">
+            <table class="admin-table cm__rakeback cm__soci">
+              <caption class="visually-hidden">Il saldo di ciascun socio</caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="admin-table__c-primo">Socio</th>
+                  <th scope="col" class="is-num">Maturato</th>
+                  <th scope="col" class="is-num">Passato per le mani</th>
+                  <th scope="col" class="is-num admin-table__solo-largo">Ricevuto</th>
+                  <th scope="col" class="is-num admin-table__solo-largo">Dato</th>
+                  <th scope="col" class="is-num admin-table__c-ultimo">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of [{ nome: 'Pietro', q: s.pietro }, { nome: 'Exivezzz', q: s.exivezzz }]; track r.nome) {
+                  <tr>
+                    <th scope="row" class="admin-table__c-primo">
+                      <span class="admin-table__ident">
+                        <span class="admin-table__ident-riga">
+                          <strong>{{ r.nome }}</strong>
+                        </span>
+                      </span>
+                    </th>
+                    <td class="is-num" data-etichetta="Maturato">{{ eur(r.q.maturatoCent) }}</td>
+                    <td class="is-num" data-etichetta="Passato per le mani">{{ eur(r.q.cassaCent) }}</td>
+                    <td class="is-num admin-table__solo-largo" data-etichetta="Ricevuto">{{ eur(r.q.ricevutiCent) }}</td>
+                    <td class="is-num admin-table__solo-largo" data-etichetta="Dato">{{ eur(r.q.datiCent) }}</td>
+                    <td
+                      class="is-num admin-table__c-ultimo"
+                      data-etichetta="Saldo"
+                      [class.is-perdita]="r.q.saldoCent < 0"
+                    >
+                      <strong>{{ eur(r.q.saldoCent) }}</strong>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (s.incassiNonAttribuitiCent || s.speseNonAttribuiteCent) {
+            <!-- ⚠️ Denaro passato per una tasca che non si sa quale: si VEDE,
+                 non si indovina. Sui mesi chiusi prima del 12/09 c'è dentro
+                 anche l'online, che allora non era spartito per metodo. -->
+            <p class="admin-nota">
+              ⚠️ Nei mesi chiusi ci sono
+              @if (s.incassiNonAttribuitiCent) {
+                <strong>{{ eur(s.incassiNonAttribuitiCent) }}</strong> di incassi
+              }
+              @if (s.incassiNonAttribuitiCent && s.speseNonAttribuiteCent) { e }
+              @if (s.speseNonAttribuiteCent) {
+                <strong>{{ eur(s.speseNonAttribuiteCent) }}</strong> di spese
+              }
+              di cui non si sa in quale tasca siano passati: non entrano in
+              nessun saldo. Sono i contanti senza incassante, le spese senza
+              cassa e l'online dei mesi chiusi prima che PayPal e Skrill
+              fossero spartiti.
+            </p>
+          }
+
+          @if (s.provvisorio; as p) {
+            <section class="cm__gruppo">
+              <h3 class="cm__h3">{{ p.etichetta }} — provvisorio, fuori dal saldo</h3>
+              <p class="admin-nota">
+                Il mese è ancora aperto: a oggi maturano
+                <strong>{{ eur(p.soci.pietro.maturatoCent) }}</strong> a Pietro e
+                <strong>{{ eur(p.soci.exivezzz.maturatoCent) }}</strong> a Exivezzz,
+                con {{ eur(p.soci.pietro.cassaCent) }} e
+                {{ eur(p.soci.exivezzz.cassaCent) }} passati per le loro mani.
+                Entrano nel saldo alla chiusura.
+              </p>
+            </section>
+          }
+
+          <section class="cm__gruppo">
+            <h3 class="cm__h3">Versamenti fra casse</h3>
+            @if (!s.versamenti.length) {
+              <p class="admin-nota">
+                Nessun versamento registrato. Il primo, di solito, è il
+                <strong>saldo di apertura</strong>: quello che uno dei due doveva
+                all'altro prima che i conteggi esistessero, datato prima di tutto.
+              </p>
+            } @else {
+              <div class="admin-table__scroll">
+                <table class="admin-table cm__rakeback cm__versamenti">
+                  <caption class="visually-hidden">Versamenti fra casse</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-table__c-primo">Data</th>
+                      <th scope="col">Da</th>
+                      <th scope="col">A</th>
+                      <th scope="col" class="is-num">Importo</th>
+                      <th scope="col" class="admin-table__solo-largo">Nota</th>
+                      <th scope="col" class="admin-table__c-ultimo">
+                        <span class="visually-hidden">Azioni</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (v of s.versamenti; track v.id) {
+                      <tr>
+                        <th scope="row" class="admin-table__c-primo">
+                          <span class="admin-table__ident">
+                            <span class="admin-table__ident-riga">
+                              <strong>{{ dataBreve(v.data) }}</strong>
+                            </span>
+                          </span>
+                        </th>
+                        <td data-etichetta="Da">{{ estremoLabel(v.da) }}</td>
+                        <td data-etichetta="A">{{ estremoLabel(v.a) }}</td>
+                        <td class="is-num" data-etichetta="Importo">{{ eur(v.importoCent) }}</td>
+                        <td class="admin-table__solo-largo" [title]="v.nota ?? ''">{{ v.nota ?? '—' }}</td>
+                        <td class="admin-table__c-ultimo">
+                          <!-- ⚠️ Inline-confirm, niente confirm() nativo: è
+                               l'unica azione irreversibile della scheda. -->
+                          @if (conferma() === 'vers:' + v.id) {
+                            <span class="row" style="gap: 0.25rem">
+                              <button type="button" class="btn btn--danger btn--sm" (click)="eliminaVersamento(v)">Rimuovi</button>
+                              <button type="button" class="btn btn--ghost btn--sm" (click)="annulla()">Annulla</button>
+                            </span>
+                          } @else {
+                            <button
+                              type="button"
+                              class="admin-ico admin-ico--rischio"
+                              [attr.aria-label]="'Rimuovi il versamento del ' + dataBreve(v.data)"
+                              title="Rimuovi"
+                              (click)="chiedi('vers:' + v.id)"
+                            >
+                              <app-icon name="trash" [size]="18" />
+                            </button>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </section>
+        } @else {
+          <p class="admin-nota">Calcolo…</p>
+        }
+      }
+
       @if (vista() === 'anagrafiche') {
         <!--
           ⚠️ Due elenchi, due barre condivise: prima ognuno aveva un `<h3>` a
@@ -2628,6 +2828,86 @@
         [disabled]="formCorrezione.invalid || salvando()"
       >
         {{ salvando() ? 'Correggo…' : 'Correggi' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<!-- ══ Modale: un versamento fra casse ═══════════════════════════════════ -->
+@if (versamentoAperto()) {
+  <app-modal
+    titolo="Registra un versamento"
+    [sporco]="versamentoSporco()"
+    [salvando]="salvando()"
+    (chiusa)="versamentoAperto.set(false)"
+  >
+    <div class="admin-modale">
+      <form id="cm-form-versamento" [formGroup]="formVersamento" (ngSubmit)="salvaVersamento()">
+        <div class="field">
+          <label for="cm-vs-data">Data del movimento</label>
+          <input id="cm-vs-data" type="date" class="input" formControlName="data" />
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="cm-vs-da">Da</label>
+            <!-- ⚠️ `formControlName`: i reactive forms scrivono il valore dopo
+                 il montaggio, quindi niente trappola del `[value]` sul select. -->
+            <select id="cm-vs-da" class="input" formControlName="da">
+              @for (e of ESTREMI; track e) {
+                <option [value]="e">{{ estremoLabel(e) }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label for="cm-vs-a">A</label>
+            <select id="cm-vs-a" class="input" formControlName="a">
+              @for (e of ESTREMI; track e) {
+                <option [value]="e">{{ estremoLabel(e) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="cm-vs-importo">Importo (€)</label>
+          <input
+            id="cm-vs-importo"
+            type="text"
+            inputmode="decimal"
+            class="input"
+            formControlName="importo"
+            placeholder="es. 300,00"
+          />
+        </div>
+        <div class="field">
+          <label for="cm-vs-nota">Nota</label>
+          <input
+            id="cm-vs-nota"
+            type="text"
+            class="input"
+            formControlName="nota"
+            maxlength="500"
+            placeholder="es. bonifico agente di settembre · saldo di apertura"
+          />
+        </div>
+        <p class="admin-nota">
+          «Fuori» è tutto ciò che non è una tasca dei soci: l'agente che manda
+          il rakeback, un giocatore che bonifica, la banca. Un versamento da
+          «Fuori» a Pietro abbassa il credito di Pietro: quel denaro è già in
+          mano sua.
+        </p>
+        @if (erroreModale()) {
+          <p class="form-feedback is-error" role="alert">{{ erroreModale() }}</p>
+        }
+      </form>
+    </div>
+    <div moPiede>
+      <button
+        type="submit"
+        form="cm-form-versamento"
+        class="btn btn--primary btn--sm"
+        [disabled]="formVersamento.invalid || salvando()"
+      >
+        {{ salvando() ? 'Salvo…' : 'Registra' }}
       </button>
     </div>
   </app-modal>

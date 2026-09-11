@@ -17,6 +17,9 @@ import {
 ContoRakeback,
   ProspettoMese,
   AnteprimaPunti,
+  VersamentoView,
+  VersamentoPayload,
+  SaldiSoci,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -197,6 +200,21 @@ export class AdminConteggiService {
       `${API}/admin/conteggi/mesi/${meseId}/prospetto`,
       { userId },
     );
+  }
+
+  saldiSoci(): Observable<SaldiSoci> {
+    return this.http.get<SaldiSoci>(`${API}/admin/conteggi/soci`);
+  }
+
+  creaVersamento(body: VersamentoPayload): Observable<VersamentoView> {
+    return this.http.post<VersamentoView>(
+      `${API}/admin/conteggi/versamenti`,
+      body,
+    );
+  }
+
+  eliminaVersamento(id: string): Observable<void> {
+    return this.http.delete<void>(`${API}/admin/conteggi/versamenti/${id}`);
   }
 
   anteprimaPunti(meseId: string): Observable<AnteprimaPunti> {

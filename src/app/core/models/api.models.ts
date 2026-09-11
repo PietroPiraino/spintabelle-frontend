@@ -2775,8 +2775,73 @@ export interface RigaStakatoPayload {
 export interface AbbonamentiPerDestinazione {
   pietroCent: number;
   exivezzzCent: number;
+  /** `paypalCent + skrillCent`: il Riepilogo la mostra come una riga sola. */
   onlineCent: number;
+  /** PayPal è il conto di Pietro, Skrill quello di Exivezzz (dal 11/09/2026). */
+  paypalCent: number;
+  skrillCent: number;
   nonAttribuitoCent: number;
+}
+
+/** La quota di un socio in un mese: maturato e denaro passato per la sua tasca. */
+export interface QuotaSocio {
+  maturatoCent: number;
+  cassaCent: number;
+}
+
+/** Il conguaglio fra soci, la parte congelata nel mese. */
+export interface SociMese {
+  pietro: QuotaSocio;
+  exivezzz: QuotaSocio;
+  incassiNonAttribuitiCent: number;
+  speseNonAttribuiteCent: number;
+}
+
+export const ESTREMI_VERSAMENTO = [
+  'PIETRO',
+  'EXIVEZZZ',
+  'COMUNE',
+  'ESTERNO',
+] as const;
+export type EstremoVersamento = (typeof ESTREMI_VERSAMENTO)[number];
+
+export interface VersamentoView {
+  id: string;
+  data: string;
+  da: EstremoVersamento;
+  a: EstremoVersamento;
+  importoCent: number;
+  nota?: string;
+}
+
+export interface VersamentoPayload {
+  data: string;
+  da: EstremoVersamento;
+  a: EstremoVersamento;
+  importoCent: number;
+  nota?: string;
+}
+
+export interface SaldoSocio {
+  maturatoCent: number;
+  cassaCent: number;
+  ricevutiCent: number;
+  datiCent: number;
+  /** Positivo = la scuola gli deve; negativo = ha in mano più di quanto gli spetti. */
+  saldoCent: number;
+}
+
+/** Il conguaglio fra soci, dal vivo. Solo i mesi CHIUSI entrano nel saldo. */
+export interface SaldiSoci {
+  mesiChiusi: number;
+  pietro: SaldoSocio;
+  exivezzz: SaldoSocio;
+  /** `saldoPietro + saldoExivezzz`: il denaro non ancora in tasca a nessuno dei due. */
+  creditoNonRiscossoCent: number;
+  incassiNonAttribuitiCent: number;
+  speseNonAttribuiteCent: number;
+  provvisorio?: { etichetta: string; soci: SociMese };
+  versamenti: VersamentoView[];
 }
 
 /** Un abbonamento del mese, dal punto di vista della CASSA. */
@@ -2863,6 +2928,8 @@ export interface RiepilogoMese {
   };
   /** ⚠️ Fuori dalla divisione: i conti marcati PERSONALE. */
   marginePersonaleCent: number;
+  /** Il conguaglio fra soci, la parte congelata. Derivato sugli snapshot vecchi. */
+  soci: SociMese;
   /** ⚠️ Partite di giro, NON conto economico. */
   cassaGiocatori: {
     attesoDaAgenteCent: number;
