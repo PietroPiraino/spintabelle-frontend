@@ -83,6 +83,7 @@ export const ACTION_LABELS: Record<string, string> = {
   'update-recurring-expense': 'Spesa ricorrente modificata',
   'delete-recurring-expense': 'Spesa ricorrente rimossa',
   'create-staked-player': 'Stakato aggiunto',
+  'delete-staked-player': 'Stakato rimosso',
   'update-staked-player': 'Stakato modificato',
   'save-staked-month': 'Conteggio stakati salvato',
   'register-staking-settlement': 'Conteggio portato sul registro staking',

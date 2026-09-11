@@ -2176,6 +2176,54 @@
           <p class="form-feedback is-error">{{ erroreModale() }}</p>
         }
       </form>
+
+      <!--
+        ⚠️ Mancava, ed era l'unica delle cinque anagrafiche del modulo senza:
+        voci, ricorrenti e conti la rimozione ce l'hanno da sempre. Uno stakato
+        creato per prova restava in elenco per sempre — rilevato dall'owner al
+        primo giro di prove.
+        ⚠️ Stessa forma di «Rimuovi» sul conto, compresa la frase che dice in
+        anticipo PERCHÉ potrebbe rifiutare: un pulsante che scopre il proprio
+        limite solo premendolo si preme due volte.
+      -->
+      @if (st !== 'nuovo') {
+        <details class="admin-modale__sez admin-modale__sez--rischio">
+          <summary class="admin-modale__sum">Rimuovi</summary>
+          <div class="admin-modale__corpo">
+            <p class="admin-nota">
+              Un giocatore che compare già in un mese registrato <strong>non si
+              può rimuovere</strong>: disattivalo, così non entra nei mesi nuovi
+              e lo storico resta leggibile.
+            </p>
+            @if (conferma() === 'stakato') {
+              <div class="row">
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  (click)="eliminaStakato(st)"
+                >
+                  Rimuovi davvero
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="annulla()"
+                >
+                  Annulla
+                </button>
+              </div>
+            } @else {
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                (click)="chiedi('stakato')"
+              >
+                Rimuovi questo giocatore
+              </button>
+            }
+          </div>
+        </details>
+      }
     </div>
 
     <ng-container moPiede>

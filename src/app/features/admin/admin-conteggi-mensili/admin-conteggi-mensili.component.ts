@@ -1195,6 +1195,31 @@ export class AdminConteggiMensiliComponent {
     return String(bp / 100).replace('.', ',');
   }
 
+  protected eliminaStakato(st: Stakato): void {
+    this.api.eliminaStakato(st.id).subscribe({
+      next: () => {
+        this.stakatoAperto.set(null);
+        this.conferma.set(null);
+        this.caricaAnagrafiche();
+        this.toast.success('Stakato rimosso.');
+      },
+      // ⚠️ L'errore resta NELLA modale: un toast emesso con un `<dialog>`
+      // aperto dipinge dietro il fondale e non lo legge nessuno. E qui il 409
+      // («compare già in N mesi») è proprio il messaggio che serve.
+      //
+      // ⚠️⚠️ E la conferma si DISARMA: quel 409 non è transitorio — finché
+      // quei mesi esistono la risposta sarà la stessa —, quindi lasciare
+      // «Rimuovi davvero» sotto il dito invita una seconda pressione che non
+      // può che fallire. Preso da una spec.
+      error: (err) => {
+        this.conferma.set(null);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non riesco a rimuovere questo giocatore.'),
+        );
+      },
+    });
+  }
+
   protected salvaStakato(): void {
     const aperto = this.stakatoAperto();
     if (!aperto) return;
@@ -1452,10 +1477,14 @@ export class AdminConteggiMensiliComponent {
         this.caricaAnagrafiche();
         this.toast.success('Conto rimosso.');
       },
-      error: (err) =>
+      // ⚠️ Stesso disarmo dello stakato, e per la stessa ragione: il 409
+      // «compare in N mesi» non cambia riprovando.
+      error: (err) => {
+        this.conferma.set(null);
         this.erroreModale.set(
           apiErrorMessage(err, 'Non riesco a rimuovere il conto.'),
-        ),
+        );
+      },
     });
   }
 

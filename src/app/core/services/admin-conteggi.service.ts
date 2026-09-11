@@ -174,6 +174,10 @@ export class AdminConteggiService {
     );
   }
 
+  eliminaStakato(id: string): Observable<void> {
+    return this.http.delete<void>(`${API}/admin/conteggi/stakati/${id}`);
+  }
+
   listRicorrenti(): Observable<SpesaRicorrente[]> {
     return this.http.get<SpesaRicorrente[]>(
       `${API}/admin/conteggi/ricorrenti`,

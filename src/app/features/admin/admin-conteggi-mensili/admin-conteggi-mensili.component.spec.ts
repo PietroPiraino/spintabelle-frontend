@@ -13,6 +13,7 @@ import {
   RigaRakeback,
   SpesaRicorrente,
   RigaStakato,
+  Stakato,
 } from '../../../core/models/api.models';
 import { AdminConteggiMensiliComponent } from './admin-conteggi-mensili.component';
 
@@ -850,6 +851,68 @@ describe('AdminConteggiMensiliComponent', () => {
       expect(testo()).toContain('la back non si può leggere');
       expect(testo()).not.toContain('il rake letto dalla scheda Rakeback');
     }
+  });
+
+  it('lo stakato in anagrafica si RIMUOVE, e il 409 resta nella modale', async () => {
+    // ⚠️ Era l'unica delle cinque anagrafiche del modulo senza rimozione:
+    // voci, ricorrenti e conti ce l'hanno da sempre, e uno stakato creato per
+    // prova restava in elenco per sempre.
+    await avvia();
+    const st: Stakato = {
+      id: 'st1',
+      nome: 'Prova',
+      userId: null,
+      dealScuolaBp: 3500,
+      fonteBack: 'CONTO',
+      contoId: 'c1',
+      attivo: true,
+      ordine: 100,
+      anonimizzato: false,
+    };
+    fixture.componentInstance['stakatoAperto'].set(st);
+    await stabilizza();
+
+    const bottone = (t: string) =>
+      [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) => b.textContent?.trim() === t,
+      ) as HTMLButtonElement | undefined;
+
+    // ⚠️ Passa da una conferma in linea: è l'unica azione irreversibile
+    // dell'anagrafica, e il `confirm()` nativo qui non si usa.
+    expect(bottone('Rimuovi davvero')).toBeUndefined();
+    bottone('Rimuovi questo giocatore')!.click();
+    await stabilizza();
+    bottone('Rimuovi davvero')!.click();
+    await stabilizza();
+
+    const req = http.expectOne(`${API}/admin/conteggi/stakati/st1`);
+    expect(req.request.method).toBe('DELETE');
+
+    // ⚠️⚠️ Il 409 del server NOMINA i mesi in cui il giocatore compare, ed è
+    // l'informazione che serve: deve restare LEGGIBILE. Con una modale aperta
+    // un toast dipinge dietro il fondale e non lo vede nessuno.
+    req.flush(
+      { message: 'Questo giocatore compare in 2 mesi già registrati.' },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await stabilizza();
+    expect(fixture.nativeElement.textContent).toContain('compare in 2 mesi');
+    // ⚠️ La modale resta APERTA (è lì che si legge il motivo) ma la conferma si
+    // DISARMA: quel 409 non cambia riprovando, e lasciare «Rimuovi davvero»
+    // sotto il dito invita una pressione che non può che fallire.
+    expect(bottone('Rimuovi questo giocatore')).toBeDefined();
+    expect(bottone('Rimuovi davvero')).toBeUndefined();
+  });
+
+  it('la modale di un nuovo stakato NON offre la rimozione', async () => {
+    // ⚠️ Un «Rimuovi» su una riga che non esiste ancora è un comando che non
+    // può funzionare: stessa regola già scritta per il conto.
+    await avvia();
+    fixture.componentInstance['stakatoAperto'].set('nuovo');
+    await stabilizza();
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'Rimuovi questo giocatore',
+    );
   });
 
   it('il mese scelto SOPRAVVIVE al cambio di scheda', async () => {
