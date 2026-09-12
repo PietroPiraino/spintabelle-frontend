@@ -236,6 +236,10 @@ export class AdminConteggiMensiliComponent {
     data: ['', Validators.required],
     da: ['ESTERNO' as EstremoVersamento, Validators.required],
     a: ['PIETRO' as EstremoVersamento, Validators.required],
+    // ⚠️ Sta NEL form e non in un signal a parte: `versamentoSporco` nasce da
+    // `valueChanges`, e fuori di qui spuntare la casella non sporcherebbe la
+    // modale — Escape la butterebbe via senza chiedere.
+    restituzioneCapitale: false,
     importo: ['', Validators.required],
     nota: [''],
   });
@@ -1989,6 +1993,7 @@ export class AdminConteggiMensiliComponent {
       data: iso,
       da: 'ESTERNO',
       a: 'PIETRO',
+      restituzioneCapitale: false,
       importo: '',
       nota: '',
     });
@@ -2018,6 +2023,9 @@ export class AdminConteggiMensiliComponent {
         da: f.da,
         a: f.a,
         importoCent,
+        // ⚠️ Si manda solo se vera: il DTO la dichiara facoltativa, e un
+        // `false` esplicito su ogni riga direbbe che qualcuno ha deciso.
+        ...(f.restituzioneCapitale ? { restituzioneCapitale: true } : {}),
         ...(f.nota.trim() ? { nota: f.nota.trim() } : {}),
       })
       .subscribe({

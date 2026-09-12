@@ -164,6 +164,8 @@ const saldi = (over: Partial<SaldiSoci> = {}): SaldiSoci => ({
     daAgenteCent: 0,
     daiGiocatoriCent: 0,
     capitaleAnticipatoCent: 0,
+    capitaleRientratoCent: 0,
+    capitaleResiduoCent: 0,
     ricevutiCent: 30_000,
     datiCent: 0,
     saldoCent: 15_000,
@@ -178,6 +180,8 @@ const saldi = (over: Partial<SaldiSoci> = {}): SaldiSoci => ({
     daAgenteCent: 0,
     daiGiocatoriCent: 0,
     capitaleAnticipatoCent: 0,
+    capitaleRientratoCent: 0,
+    capitaleResiduoCent: 0,
     ricevutiCent: 0,
     datiCent: 0,
     saldoCent: 0,
@@ -1292,6 +1296,8 @@ describe('AdminConteggiMensiliComponent', () => {
           daAgenteCent: 0,
           daiGiocatoriCent: 0,
           capitaleAnticipatoCent: 0,
+          capitaleRientratoCent: 0,
+          capitaleResiduoCent: 0,
           ricevutiCent: 0,
           datiCent: 0,
           saldoCent: -15_000,
@@ -1372,6 +1378,154 @@ describe('AdminConteggiMensiliComponent', () => {
     await stabilizza();
     // La modale si chiude e il saldo si RILEGGE: righe e saldi da una lettura sola.
     expect(el.querySelector('dialog')).toBeNull();
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(saldi());
+    await stabilizza();
+  });
+
+  it('il prestito e il compenso sono DUE voci, e la restituzione non finisce sul compenso', async () => {
+    // ⚠️⚠️ LA REGRESSIONE CHE QUESTO CASO SORVEGLIA, vista in produzione il
+    // 12/09/2026: `compensoNonRitiratoCent` si misurava sull'anticipato LORDO,
+    // quindi un socio già ripagato in parte leggeva «2.799,00 di roll prestati
+    // · −974,92 di compenso non ritirato». Il totale tornava e la riga era
+    // incomprensibile: la restituzione del prestito era stampata come un
+    // compenso NEGATIVO, cioè su una riga che parla d'altro.
+    await avvia();
+    await vaiA('Soci');
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(
+      saldi({
+        pietro: {
+          maturatoCent: 0,
+          // Il capitale sta DENTRO la cassa, col segno meno.
+          cassaCent: -279_900,
+          daAgenteCent: 0,
+          daiGiocatoriCent: 0,
+          capitaleAnticipatoCent: 279_900,
+          capitaleRientratoCent: 97_492,
+          capitaleResiduoCent: 182_408,
+          ricevutiCent: 97_492,
+          datiCent: 0,
+          saldoCent: 182_408,
+          // ⚠️ ZERO, non −974,92: non ha maturato compenso, gli è rientrato
+          // del prestito. Col difetto questo campo valeva −97_492.
+          compensoNonRitiratoCent: 0,
+        },
+        creditoNonRiscossoCent: 182_408,
+        capitalePressoIGiocatoriCent: 279_900,
+        versamenti: [
+          {
+            id: 'v1',
+            data: '2026-07-31T12:00:00.000Z',
+            da: 'ESTERNO',
+            a: 'PIETRO',
+            importoCent: 97_492,
+            restituzioneCapitale: true,
+            nota: 'rientro dai profitti dei mesi precedenti',
+          },
+        ],
+      }),
+    );
+    await stabilizza();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const prospetto = el.querySelector('.cm__credito') as HTMLElement;
+    expect(prospetto).withContext('il prospetto del credito esiste').toBeTruthy();
+    const righe = prospetto.textContent?.replace(/\s+/g, ' ') ?? '';
+
+    // Le tre voci del prestito, ognuna con la propria etichetta in chiaro.
+    expect(righe).toContain('Roll anticipati di tasca sua');
+    // ⚠️ Il separatore delle migliaia è FACOLTATIVO nell'asserzione: il Chrome
+    // di Karma rende «2799,00 €» dove un browser vero scrive «2.799,00 €»
+    // (dati ICU ridotti), e pinnare il punto farebbe fallire qui una
+    // formattazione corretta in produzione. Le cifre restano pinnate.
+    expect(righe).toMatch(/2\.?799,00/);
+    expect(righe).toContain('di cui già restituiti');
+    // ⚠️ Col SEGNO: è una sottrazione, e senza il meno le tre cifre non
+    // tornano a occhio — che è l'unica cosa per cui un prospetto si guarda.
+    expect(righe).toContain('-974,92');
+    expect(righe).toContain('Prestito ancora da rientrare');
+    expect(righe).toMatch(/1\.?824,08/);
+    expect(righe).toContain('Compenso maturato e non ancora ritirato');
+
+    // ⚠️⚠️ L'ASSERZIONE CHE CONTA: nel prospetto non c'è un solo numero in
+    // rosso. Col difetto la riga del compenso portava `-974,92` e `.is-perdita`.
+    expect(prospetto.querySelector('.is-perdita'))
+      .withContext('ripagare un prestito non è una perdita')
+      .toBeNull();
+
+    // E la vecchia riga criptica non è tornata nella cella della tabella.
+    const rigaTabella = el.querySelector('.cm__soci tbody tr') as HTMLElement;
+    expect(rigaTabella.textContent).not.toContain('di roll prestati');
+
+    // Il registro DICE quali versamenti scalano il prestito: due bonifici
+    // identici si distinguono solo da lì.
+    const vers = el.querySelector('.cm__versamenti tbody tr') as HTMLElement;
+    expect(vers.textContent).toContain('restituisce capitale');
+
+    // E la schermata spiega come rientra, distinguendo le due strade.
+    const tutto = el.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(tutto).toContain('Come rientra');
+    expect(tutto).toContain('Il compenso rientra incassando');
+    expect(tutto).toContain('Il prestito rientra in due modi');
+  });
+
+  it('la spunta «restituisce capitale» viaggia solo quando è accesa', async () => {
+    // ⚠️ Omessa e non `false`: il DTO la dichiara facoltativa, e un `false`
+    // scritto su ogni riga direbbe che qualcuno ha deciso.
+    await avvia();
+    await vaiA('Soci');
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(saldi());
+    await stabilizza();
+
+    const c = fixture.componentInstance;
+    c['apriVersamento']();
+    await stabilizza();
+    c['formVersamento'].patchValue({
+      data: '2026-07-31',
+      da: 'ESTERNO',
+      a: 'PIETRO',
+      importo: '974,92',
+      restituzioneCapitale: true,
+    });
+    await stabilizza();
+    // ⚠️ La spunta SPORCA la modale: sta nel form, non in un signal a parte,
+    // o Escape butterebbe via la scelta senza chiedere.
+    expect(c['versamentoSporco']()).toBeTrue();
+
+    c['salvaVersamento']();
+    const req = http.expectOne(`${API}/admin/conteggi/versamenti`);
+    expect(req.request.body.restituzioneCapitale).toBeTrue();
+    req.flush({
+      id: 'v9',
+      data: '2026-07-31T12:00:00.000Z',
+      da: 'ESTERNO',
+      a: 'PIETRO',
+      importoCent: 97_492,
+      restituzioneCapitale: true,
+    });
+    await stabilizza();
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(saldi());
+    await stabilizza();
+
+    // Senza spunta la chiave non parte affatto.
+    c['apriVersamento']();
+    await stabilizza();
+    c['formVersamento'].patchValue({
+      data: '2026-08-01',
+      da: 'ESTERNO',
+      a: 'PIETRO',
+      importo: '50',
+    });
+    c['salvaVersamento']();
+    const req2 = http.expectOne(`${API}/admin/conteggi/versamenti`);
+    expect('restituzioneCapitale' in req2.request.body).toBeFalse();
+    req2.flush({
+      id: 'v10',
+      data: '2026-08-01T12:00:00.000Z',
+      da: 'ESTERNO',
+      a: 'PIETRO',
+      importoCent: 5_000,
+    });
+    await stabilizza();
     http.expectOne(`${API}/admin/conteggi/soci`).flush(saldi());
     await stabilizza();
   });

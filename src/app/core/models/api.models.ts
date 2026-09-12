@@ -2900,6 +2900,13 @@ export interface VersamentoView {
   da: EstremoVersamento;
   a: EstremoVersamento;
   importoCent: number;
+  /**
+   * Restituisce un anticipo di CAPITALE invece di compensare utili.
+   *
+   * ⚠️ Non sposta un centesimo del saldo: sceglie quale metà del credito il
+   * versamento sta chiudendo — il prestito o il compenso maturato.
+   */
+  restituzioneCapitale?: boolean;
   nota?: string;
 }
 
@@ -2908,6 +2915,7 @@ export interface VersamentoPayload {
   da: EstremoVersamento;
   a: EstremoVersamento;
   importoCent: number;
+  restituzioneCapitale?: boolean;
   nota?: string;
 }
 
@@ -2932,17 +2940,25 @@ export interface SaldoSocio {
    * somma di nuovo.
    */
   capitaleAnticipatoCent: number;
+  /** Di quell'anticipo, quanto gli è già stato restituito dalla scuola. */
+  capitaleRientratoCent: number;
+  /**
+   * `anticipato − rientrato`: quanto del prestito deve ancora tornargli. È la
+   * cifra che risponde a «quanto mi devono ancora dei soldi che ho messo io».
+   */
+  capitaleResiduoCent: number;
   ricevutiCent: number;
   datiCent: number;
   /** Positivo = la scuola gli deve; negativo = ha in mano più di quanto gli spetti. */
   saldoCent: number;
   /**
-   * `saldoCent − capitaleAnticipatoCent`: la parte del credito che è compenso
-   * maturato e non ritirato. Rientra incassando, mentre il capitale rientra
-   * solo quando i giocatori restituiscono i roll.
+   * `saldoCent − capitaleResiduoCent`: la parte del credito che è compenso
+   * maturato e non ritirato. Rientra incassando, mentre il prestito rientra
+   * quando i giocatori restituiscono i roll o quando la scuola ripaga il socio.
    *
-   * ⚠️ Può essere NEGATIVO e non si azzera: significa che gli è già rientrata
-   * anche una parte del capitale.
+   * ⚠️⚠️ Si misura sul RESIDUO e non sull'anticipato lordo: col secondo, un
+   * socio già ripagato in parte leggeva la restituzione come un compenso
+   * NEGATIVO, su una riga che parla d'altro.
    */
   compensoNonRitiratoCent: number;
 }

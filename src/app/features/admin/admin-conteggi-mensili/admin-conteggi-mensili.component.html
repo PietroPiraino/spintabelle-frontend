@@ -2016,23 +2016,20 @@
                           </span>
                         }
                         <!--
-                          ⚠️⚠️ LA SCOMPOSIZIONE DEL CREDITO, ed è la ragione per
-                          cui questo lotto esiste: il prestito di capitale e il
-                          compenso non ritirato rientrano in due modi diversi.
-                          Il secondo scende incassando; il primo solo quando un
-                          giocatore restituisce il roll. Un credito solo dice
-                          quanto, non quando.
-                          ⚠️ Compare solo se c'è capitale: su chi non ne ha
-                          anticipato sarebbe una riga che ripete il saldo.
+                          ⚠️⚠️ LA SCOMPOSIZIONE DEL CREDITO NON STA PIÙ QUI, ed
+                          è la correzione del 12/09/2026. Questa cella stampava
+                          «2.799,00 di roll prestati · −974,92 di compenso non
+                          ritirato»: due cifre senza operatore fra loro, di cui
+                          la seconda NEGATIVA perché il rimborso finiva sulla
+                          riga sbagliata. Rilievo dell'owner, in produzione, e
+                          il segnale che era da rifare è che per leggerla
+                          serviva una spiegazione a voce.
+                          Ora c'è un prospetto sotto la tabella — «Di che cosa è
+                          fatto il credito» — dove le voci hanno un verso, un
+                          filetto e un totale. ⚠️ E NON può tornare in cella:
+                          una terza riga qui porta l'altezza oltre i 46px per
+                          riga che `check-admin-tabelle.mjs` impone.
                         -->
-                        @if (r.q.capitaleAnticipatoCent) {
-                          <span class="admin-table__sub">
-                            {{ eur(r.q.capitaleAnticipatoCent) }} di roll
-                            prestati ·
-                            {{ eur(r.q.compensoNonRitiratoCent) }} di compenso
-                            non ritirato
-                          </span>
-                        }
                       </span>
                     </th>
                     <td class="is-num" data-etichetta="Maturato">{{ eur(r.q.maturatoCent) }}</td>
@@ -2084,6 +2081,118 @@
             </p>
           }
 
+          <!--
+            ⚠️⚠️ IL PROSPETTO DEL CREDITO, e la ragione per cui esiste è che la
+            versione precedente andava spiegata a voce. Un credito è fatto di
+            DUE cose che rientrano in modi diversi — il capitale che il socio ha
+            anticipato e il compenso che ha maturato e non ha ancora ritirato —
+            e finché stavano su una riga sola, schiacciate in una cella di
+            tabella, la restituzione del prestito si leggeva come un compenso
+            NEGATIVO. Qui ogni voce ha un verso, un filetto e un totale: si
+            legge sommando a occhio, che è l'unica cosa per cui un prospetto si
+            guarda.
+            ⚠️ Riusa la griglia del conto economico (`cm__conto`, `cm__didi`,
+            `cm__somma`, `cm__margine`) e non una sua copia: è lo stesso gesto
+            di lettura, e due griglie di importi che si somigliano ma non
+            coincidono sono il modo più rapido per farne nascere una terza.
+          -->
+          @if (s.pietro.saldoCent || s.exivezzz.saldoCent || s.pietro.capitaleAnticipatoCent || s.exivezzz.capitaleAnticipatoCent) {
+            <section class="cm__gruppo">
+              <h3 class="cm__h3">Di che cosa è fatto il credito</h3>
+              <div class="cm__crediti">
+                @for (r of [{ nome: 'Pietro', q: s.pietro }, { nome: 'Exivezzz', q: s.exivezzz }]; track r.nome) {
+                  <!-- ⚠️ Solo chi ha qualcosa da dire: un prospetto di zeri
+                       accanto a uno pieno si legge come un guasto. -->
+                  @if (r.q.saldoCent || r.q.capitaleAnticipatoCent) {
+                    <div class="cm__credito">
+                      <h4 class="cm__credito-nome">{{ r.nome }}</h4>
+                      <dl class="cm__conto">
+                        @if (r.q.capitaleAnticipatoCent) {
+                          <dt>Roll anticipati di tasca sua</dt>
+                          <dd>{{ eur(r.q.capitaleAnticipatoCent) }}</dd>
+                          @if (r.q.capitaleRientratoCent) {
+                            <!-- ⚠️ Il segno lo mette `eur` invertendo il numero,
+                                 non un «−» scritto a mano: con un rientrato
+                                 negativo (una spunta messa per errore e poi
+                                 corretta) uscirebbero due meno di fila. -->
+                            <dt class="cm__didi">di cui già restituiti</dt>
+                            <dd class="cm__didi">{{ eur(-r.q.capitaleRientratoCent) }}</dd>
+                          }
+                          <dt class="cm__somma">Prestito ancora da rientrare</dt>
+                          <dd class="cm__somma">{{ eur(r.q.capitaleResiduoCent) }}</dd>
+                        }
+                        <dt>Compenso maturato e non ancora ritirato</dt>
+                        <dd [class.is-perdita]="r.q.compensoNonRitiratoCent < 0">
+                          {{ eur(r.q.compensoNonRitiratoCent) }}
+                        </dd>
+                        <dt class="cm__margine">
+                          {{ r.q.saldoCent < 0 ? 'Ha in mano più del dovuto' : 'La scuola gli deve' }}
+                        </dt>
+                        <dd class="cm__margine" [class.is-perdita]="r.q.saldoCent < 0">
+                          {{ eur(r.q.saldoCent) }}
+                        </dd>
+                      </dl>
+                    </div>
+                  }
+                }
+              </div>
+            </section>
+          }
+
+          <!--
+            ⚠️⚠️ «COME RIENTRA», ed è la seconda metà del rilievo dell'owner:
+            «non c'è nemmeno un modo per far arrivare le entrate attese nelle
+            mie tasche». Il modo c'era — registrare l'incasso scegliendo la
+            propria tasca — ma non era scritto da nessuna parte, e da questa
+            schermata non si vedeva. Le tre strade sono DIVERSE e vanno tenute
+            distinte: il compenso rientra incassando, il prestito rientra o
+            perché un giocatore ridà il roll o perché la scuola ripaga il socio.
+            Confonderle manda a fare la cosa sbagliata due volte su tre — è la
+            stessa regola delle tre cause della back a zero.
+          -->
+          <section class="cm__gruppo">
+            <h3 class="cm__h3">Come rientra</h3>
+            @if (s.pressoAgenteCent > 0 || s.daRiscuotereDaiGiocatoriCent > 0) {
+              <p class="admin-nota">
+                <strong>Il compenso rientra incassando.</strong> La scuola
+                aspetta ancora
+                @if (s.pressoAgenteCent > 0) {
+                  <strong>{{ eur(s.pressoAgenteCent) }}</strong> dall'agente
+                }
+                @if (s.pressoAgenteCent > 0 && s.daRiscuotereDaiGiocatoriCent > 0) { e }
+                @if (s.daRiscuotereDaiGiocatoriCent > 0) {
+                  <strong>{{ eur(s.daRiscuotereDaiGiocatoriCent) }}</strong> dai
+                  giocatori finanziati
+                }.
+                Si registrano quando arrivano — il bonifico dell'agente nella
+                scheda <strong>Rakeback</strong>, quelli dei giocatori nella
+                scheda <strong>Stakati</strong> — scegliendo
+                <strong>in quale tasca</strong> sono finiti: ogni euro che
+                incassi tu abbassa di altrettanto il tuo credito.
+              </p>
+            } @else {
+              <p class="admin-nota">
+                <strong>Il compenso rientra incassando</strong>: il bonifico
+                dell'agente si registra nella scheda <strong>Rakeback</strong>,
+                quelli dei giocatori finanziati nella scheda
+                <strong>Stakati</strong>, scegliendo in quale tasca sono finiti.
+                A oggi non risulta nulla in attesa.
+              </p>
+            }
+            @if (s.pietro.capitaleResiduoCent || s.exivezzz.capitaleResiduoCent) {
+              <p class="admin-nota">
+                <strong>Il prestito rientra in due modi, e nessuno dei due è
+                incassare.</strong> O un giocatore restituisce il roll — un
+                movimento <em>Fondi</em> negativo nel
+                <strong>Registro staking</strong>, che abbassa il capitale
+                anticipato —, oppure la scuola ripaga il socio: allora si
+                registra qui un versamento verso di lui con la spunta
+                <em>«restituisce un anticipo di capitale»</em>, ed è quella
+                spunta a scalare il prestito invece del compenso.
+              </p>
+            }
+          </section>
+
           @if (s.provvisorio; as p) {
             <section class="cm__gruppo">
               <h3 class="cm__h3">{{ p.etichetta }} — provvisorio, fuori dal saldo</h3>
@@ -2130,6 +2239,15 @@
                             <span class="admin-table__ident-riga">
                               <strong>{{ dataBreve(v.data) }}</strong>
                             </span>
+                            <!-- ⚠️ Si DEVE vedere quali righe scalano il
+                                 prestito invece del compenso: è l'unica cosa
+                                 che distingue due bonifici identici, e senza
+                                 il marcatore l'unico modo per saperlo sarebbe
+                                 rifare il conto a mente. Sotto-testo e non
+                                 badge: è un fatto della riga, non uno stato. -->
+                            @if (v.restituzioneCapitale) {
+                              <span class="admin-table__sub">restituisce capitale</span>
+                            }
                           </span>
                         </th>
                         <td data-etichetta="Da">{{ estremoLabel(v.da) }}</td>
@@ -3598,6 +3716,27 @@
             placeholder="es. 300,00"
           />
         </div>
+        <!--
+          ⚠️⚠️ Questa spunta NON sposta un centesimo: il saldo è identico con e
+          senza. Sceglie quale METÀ del credito il versamento sta chiudendo —
+          il prestito di capitale o il compenso maturato —, e senza di lei un
+          rimborso finiva stampato come un compenso NEGATIVO, cioè su una riga
+          che parla d'altro.
+          ⚠️ Non si deduce da «da COMUNE a un socio»: quel versamento può
+          benissimo essere lui che ritira la propria quota di utili, che è il
+          caso opposto. Dedurlo sbaglierebbe in silenzio, e per questo si
+          chiede.
+          ⚠️ `.row.admin-panel__check` col testo in uno `<span>`: `class="check"`
+          da sola non esiste nel progetto e lascerebbe il quadratino nativo da
+          ~13px.
+        -->
+        <label class="row admin-panel__check">
+          <input type="checkbox" formControlName="restituzioneCapitale" />
+          <span>
+            Restituisce un anticipo di capitale (i roll che il socio ha messo di
+            tasca sua) invece di compensare utili maturati
+          </span>
+        </label>
         <div class="field">
           <label for="cm-vs-nota">Nota</label>
           <input
