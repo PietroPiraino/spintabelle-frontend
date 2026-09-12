@@ -2063,30 +2063,60 @@
                 <dt class="cm__margine">Prestito ancora da rientrare</dt>
                 <dd class="cm__margine">{{ eur(s.banca.residuoCent) }}</dd>
               </dl>
-              <!-- ⚠️ ACCANTO al residuo: sono le origini del denaro che la
-                   scuola aspetta ancora, e servono a non leggere il residuo
-                   come cassa disponibile. -->
+              <!--
+                ⚠️⚠️ QUESTA COLONNA DICE DOVE SONO I SOLDI, NON QUANTO SI DEVE,
+                e la prima stesura le confondeva in tre modi — rilievo
+                dell'owner sullo screenshot, 12/09/2026:
+                (1) l'intestazione diceva «di quello che la scuola aspetta
+                    ancora» e sotto ci metteva il CREDITO, che non è una cosa
+                    che la scuola aspetta ma una cosa che deve;
+                (2) «Credito non riscosso» portava `.cm__somma`, cioè il filetto
+                    che in tutto il pannello significa «totale di quello che sta
+                    sopra» — e 1.824,08 non è la somma di 2.799,00;
+                (3) quello stesso numero sta già in fondo alla scheda come
+                    «Totale che la scuola deve ai due»: lo stesso importo con
+                    due nomi sulla stessa pagina.
+                Qui restano le sole ORIGINI — dove il denaro si trova — senza
+                filetto e senza totale. Il totale ha un posto solo, più sotto.
+                ⚠️ Sta ACCANTO al residuo e non sotto: «prestito residuo» letto
+                da solo si legge come contante disponibile.
+              -->
+              <!-- ⚠️ Tutta la colonna sparisce se non c'e' niente fuori: un
+                   titolo con sotto una spiegazione e nessuna cifra e' rumore,
+                   ed e' lo stato normale finche' i roll non sono usciti. -->
+              @if (
+                s.capitalePressoIGiocatoriCent ||
+                s.pressoAgenteCent ||
+                s.daRiscuotereDaiGiocatoriCent
+              ) {
               <div class="cm__banca-fuori">
-                <p class="admin-nota">Di quello che la scuola aspetta ancora:</p>
+                <h4 class="cm__credito-nome">Dove sono i soldi della scuola</h4>
                 <dl class="cm__conto">
+                  @if (s.capitalePressoIGiocatoriCent) {
+                    <dt>Roll in mano ai giocatori</dt>
+                    <dd>{{ eur(s.capitalePressoIGiocatoriCent) }}</dd>
+                  }
                   @if (s.pressoAgenteCent) {
-                    <dt>Presso l'agente</dt>
+                    <dt>Ancora presso l'agente</dt>
                     <dd>{{ eur(s.pressoAgenteCent) }}</dd>
                   }
                   @if (s.daRiscuotereDaiGiocatoriCent) {
                     <dt>
-                      {{ s.daRiscuotereDaiGiocatoriCent < 0 ? 'Da rimborsare ai giocatori' : 'Dai giocatori' }}
+                      {{ s.daRiscuotereDaiGiocatoriCent < 0 ? 'Da rimborsare ai giocatori' : 'Dai giocatori, non ancora bonificati' }}
                     </dt>
                     <dd>{{ eur(abs(s.daRiscuotereDaiGiocatoriCent)) }}</dd>
                   }
-                  @if (s.capitalePressoIGiocatoriCent) {
-                    <dt>Capitale coi giocatori</dt>
-                    <dd>{{ eur(s.capitalePressoIGiocatoriCent) }}</dd>
-                  }
-                  <dt class="cm__somma">Credito non riscosso</dt>
-                  <dd class="cm__somma">{{ eur(s.creditoNonRiscossoCent) }}</dd>
                 </dl>
+                <p class="admin-nota">
+                  Sono soldi <strong>della scuola</strong> che nessuno ha ancora
+                  in tasca. <strong>Non si sommano col prestito qui accanto</strong>:
+                  quello dice quanto la scuola deve <em>a te</em>, questi dicono
+                  <em>dove il denaro si trova</em>. La differenza fra i due è la
+                  parte di capitale che ormai è della scuola — gliel'hai
+                  prestata, te l'ha restituita, e il roll resta comunque fuori.
+                </p>
               </div>
+              }
             </div>
             @if (s.banca.alDebitoProvvisorioCent) {
               <!-- ⚠️ I mesi APERTI non entrano nel cumulato: senza questa riga

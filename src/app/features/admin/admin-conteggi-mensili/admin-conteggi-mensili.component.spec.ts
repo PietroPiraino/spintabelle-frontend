@@ -610,7 +610,7 @@ describe('AdminConteggiMensiliComponent', () => {
     );
     await stabilizza();
 
-    expect(testo()).toContain("Presso l'agente");
+    expect(testo()).toContain("Ancora presso l'agente");
     expect(testo()).toContain('765,67');
     // ⚠️ Negativo NON è un credito: è un rimborso che la scuola deve ancora
     // mandare, e «da riscuotere» direbbe il contrario esatto.
@@ -1425,7 +1425,11 @@ describe('AdminConteggiMensiliComponent', () => {
 
     const el = fixture.nativeElement as HTMLElement;
     const testo = el.textContent ?? '';
-    expect(testo).toContain('Credito non riscosso');
+    // La colonna «dove sono i soldi» NON elenca piu' il totale: quel numero ha
+    // un nome solo e sta in fondo alla scheda (rilievo dell'owner sullo
+    // screenshot — lo stesso importo con due nomi sulla stessa pagina).
+    expect(testo).toContain('Totale che la scuola deve ai due');
+    expect(testo).not.toContain('Credito non riscosso');
     // 15.000 + (−15.000): la scuola non deve niente ai due INSIEME — il
     // denaro è passato dalla tasca sbagliata, e il conguaglio è fra loro.
     expect(testo).toContain('0,00');
