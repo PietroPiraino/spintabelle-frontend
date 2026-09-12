@@ -211,6 +211,27 @@
             {{ eur(d.riepilogo.entrate.commissioniRakebackCent) }}
           </dd>
           <!--
+            ⚠️⚠️ RISPONDE A «CHI LE INCASSA», e porta un NOME e non un importo.
+            Rilievo dell'owner: «vedo commissioni rakeback ma non chi le
+            incassa» — mentre Abbonamenti e Spese il «di cui» ce l'hanno da
+            sempre.
+            ⚠️ Il nome e non la cifra, ed è la parte da non «completare»: la
+            riga sopra è COMPETENZA (il margine maturato nel mese), il bonifico
+            dell'agente è CASSA, arriva dopo e vale un'altra cifra — comprende
+            anche il margine personale, che nella riga sopra non c'è. Una «di
+            cui» con un numero che non è una fetta di quello sopra si legge come
+            un totale che non torna. Importo, data e quadratura stanno nel
+            blocco «Bonifico dell'agente», in fondo alla schermata.
+          -->
+          <dt class="cm__didi">di cui incassate da</dt>
+          @if (d.incassoAgente.incasso; as i) {
+            <dd class="cm__didi">
+              {{ cassaLabel(i.cassa) }}@if (i.dataAt) {, il {{ dataBreve(i.dataAt) }}}
+            </dd>
+          } @else {
+            <dd class="cm__didi cm__scarto">non ancora incassate</dd>
+          }
+          <!--
             ⚠️ Lo staking ha una riga PROPRIA e non finisce in «Altre entrate»:
             è l'unica categoria di entrata a mano che il riepilogo separa, e
             senza questa riga non si saprebbe mai quanto ha reso in un mese.
@@ -232,6 +253,19 @@
             <dd class="is-num cm__didi">
               {{ eur(d.riepilogo.entrate.stakingDaConteggiCent) }}
             </dd>
+            <!--
+              ⚠️ Stessa regola della riga del rakeback: NOME e non importo. Qui
+              la competenza è quanto i conteggi dicono che i giocatori devono,
+              la cassa è quanto hanno davvero bonificato — e su più giocatori
+              può finire in tasche diverse, per questo i nomi possono essere più
+              d'uno. Si registrano nella scheda Stakati.
+            -->
+            <dt class="cm__didi">di cui incassati da</dt>
+            @if (tascheIncassiStakati(); as tasche) {
+              <dd class="cm__didi">{{ tasche }}</dd>
+            } @else {
+              <dd class="cm__didi cm__scarto">nessun bonifico registrato</dd>
+            }
           }
           <dt>Altre entrate</dt>
           <dd class="is-num">{{ eur(d.riepilogo.entrate.altreCent) }}</dd>

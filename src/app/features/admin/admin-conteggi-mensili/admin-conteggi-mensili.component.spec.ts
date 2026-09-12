@@ -1403,17 +1403,54 @@ describe('AdminConteggiMensiliComponent', () => {
     const t = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
     expect(t).toContain("Bonifico dell'agente");
     expect(t).toContain('In cassa a Pietro');
-    // ⚠️⚠️ LA RIGA CHE CONTA: sulla stessa schermata convivono DUE «atteso
-    // dall'agente» — lo spettante (ticket compresi) nella sezione sopra e il
-    // solo margine qui. Senza questa frase il secondo si legge come un ammanco
-    // del primo.
+
+    // ⚠️⚠️ E la risposta dev'essere anche NELLA RIGA del conto economico:
+    // «vedo commissioni rakeback ma non chi le incassa». Abbonamenti e Spese
+    // il «di cui» ce l'hanno da sempre, quella no.
+    expect(t).toContain('di cui incassate da');
+    const conto = fixture.nativeElement.querySelector(
+      '.cm__conto',
+    ) as HTMLElement;
+    const didi = [...conto.querySelectorAll('dt')].find(
+      (x) => x.textContent?.trim() === 'di cui incassate da',
+    ) as HTMLElement;
+    const valore = didi.nextElementSibling as HTMLElement;
+    expect(valore.textContent).toContain('Pietro');
+    // ⚠️⚠️ L'ASSERZIONE PORTANTE: un NOME e non un importo. La riga sopra è
+    // competenza, il bonifico è cassa e vale un'altra cifra (comprende il
+    // margine personale): una «di cui» con un numero che non è una fetta di
+    // quello sopra si legge come un totale che non torna.
+    expect(valore.textContent).not.toMatch(/\d+,\d\d/);
+
+    // ⚠️⚠️ E la frase che tiene insieme i DUE «atteso dall'agente» della
+    // stessa schermata: lo spettante (ticket compresi) nella sezione sopra e
+    // il solo margine nel blocco del bonifico. Senza, il secondo si legge come
+    // un ammanco del primo.
     expect(t).toContain('il solo margine');
-    // Ha mandato più dell'atteso: si dice, e NON in rosso da perdita.
+    // Ha mandato più dell'atteso: si dice, e NON col rosso della perdita.
     expect(t).toContain("in più dell'atteso");
-    const blocchi = [
+    const scarti = [
       ...fixture.nativeElement.querySelectorAll('.cm__scarto'),
     ] as HTMLElement[];
-    expect(blocchi.some((b) => b.classList.contains('is-perdita'))).toBeFalse();
+    expect(scarti.some((b) => b.classList.contains('is-perdita'))).toBeFalse();
+  });
+
+  it('e la riga del rakeback dice «non ancora incassate» quando non lo sono', async () => {
+    await avvia(dettaglio([riga()], { incassoAgente: { attesoCent: 76_567 } }));
+    // ⚠️ Sull'ELEMENTO e non su `textContent` di tutta la pagina: fra un `dt`
+    // e il suo `dd` non c'è spazio, quindi la frase intera si legge attaccata
+    // («…incassate danon ancora…») e l'asserzione a stringa fallirebbe su una
+    // schermata corretta.
+    const conto = fixture.nativeElement.querySelector(
+      '.cm__conto',
+    ) as HTMLElement;
+    const didi = [...conto.querySelectorAll('dt')].find(
+      (x) => x.textContent?.trim() === 'di cui incassate da',
+    ) as HTMLElement;
+    expect(didi).withContext('la riga c’è anche senza incasso').toBeTruthy();
+    expect(didi.nextElementSibling?.textContent?.trim()).toBe(
+      'non ancora incassate',
+    );
   });
 
   it('e se non e’ arrivato lo dice, con dove si registra', async () => {

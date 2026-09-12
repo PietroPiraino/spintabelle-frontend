@@ -278,6 +278,32 @@ export class AdminConteggiMensiliComponent {
    * ⚠️ `null` quando nessuno ha ancora registrato niente: «non lo so» e «quadra
    * al centesimo» sono due cose diverse, e uno zero le confonderebbe.
    */
+  /**
+   * In quale tasca sono finiti i bonifici dei giocatori finanziati di questo
+   * mese: «Pietro», «Exivezzz», «Pietro e Exivezzz», oppure `null` se nessuno
+   * ha ancora registrato niente.
+   *
+   * ⚠️⚠️ Torna un NOME e mai un importo, ed è la decisione che tiene onesta la
+   * riga: nel conto economico lo staking entra per COMPETENZA (quello che i
+   * conteggi dicono che i giocatori devono), mentre questo è denaro
+   * effettivamente arrivato — due numeri che non coincidono. Una riga «di cui»
+   * con una cifra diversa da una fetta di quella sopra si legge come un totale
+   * che non torna; col solo nome, la riga risponde alla domanda giusta («chi li
+   * ha incassati?») senza affermare una quantità che non le compete.
+   *
+   * ⚠️ `COMUNE` si nomina come gli altri due: quel denaro non è in tasca a
+   * nessuno dei soci, e ometterlo farebbe sembrare non registrato un incasso
+   * che c'è.
+   */
+  protected readonly tascheIncassiStakati = computed<string | null>(() => {
+    const righe = (this.dett()?.stakati ?? []).filter(
+      (r) => (r.regolatoCent ?? 0) !== 0 && r.regolatoCassa,
+    );
+    if (!righe.length) return null;
+    const nomi = [...new Set(righe.map((r) => cassaLabel(r.regolatoCassa!)))];
+    return nomi.length === 1 ? nomi[0] : nomi.join(' e ');
+  });
+
   protected readonly scartoIncassoCent = computed<number | null>(() => {
     const i = this.dett()?.incassoAgente;
     if (!i?.incasso) return null;
