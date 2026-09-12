@@ -91,3 +91,39 @@
     letter-spacing: 0.06em;
   }
 }
+
+// ── L'attribuzione della tasca a un movimento storico ───────────────────────
+//
+// ⚠️ Va a capo dentro la riga dello storico: la riga porta già tipo, importo,
+// causale, data e autore, e su una fascia stretta un select più un pulsante in
+// coda la spingerebbero fuori. `flex-wrap` sul contenitore non basta — il
+// blocco deve poter occupare la riga successiva per intero.
+.stk__attribuisci {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+
+  // ⚠️ `.input` fuori da una modale è la primitiva PUBBLICA da 54,5px: qui
+  // starebbe accanto a un `.btn--sm` da 38 e produrrebbe due altezze sulla
+  // stessa riga. 44px è l'altezza del pannello, e `min-height` da solo non
+  // stringe — è un pavimento, l'altezza vera nasce dal padding.
+  .input {
+    width: auto;
+    min-width: 11rem;
+    min-height: 44px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.9rem;
+  }
+
+  .btn {
+    min-height: 44px;
+  }
+}
+
+// La coda di lavoro sopra l'elenco dei movimenti: rame, il tono che questo
+// pannello usa già per «manca un dato» (mai `--danger`, che vuol dire «perso»).
+.stk__coda {
+  color: var(--copper-600);
+}

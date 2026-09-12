@@ -326,6 +326,29 @@
               Nessun movimento registrato: il registro è appena stato aperto.
             </p>
           } @else {
+            <!--
+              ⚠️⚠️ LA CODA DI LAVORO, e prima di oggi non esisteva ALCUNA
+              schermata per smaltirla: la rotta `PATCH movimenti/:id/cassa`
+              stava sul server dal 12/09/2026 e nessun client la chiamava.
+              Quarta volta che questo modulo spedisce una funzione completa
+              lato server e muta lato interfaccia (dopo i contanti, la spunta
+              «Stakato» e il collegamento a un account), e la prima in cui il
+              buco è stato trovato leggendo i dati di produzione invece che il
+              codice.
+              ⚠️ L'avviso NOMINA quanti sono: finché è > 0 quel denaro non
+              entra nel credito di nessuno dei due soci, e l'unico posto che lo
+              dice è il conguaglio — cioè un'altra schermata.
+            -->
+            @if (fondiSenzaCassa(); as quanti) {
+              <p class="admin-nota stk__coda">
+                ⚠️ {{ quanti }}
+                {{ quanti === 1 ? 'movimento di fondi non dice' : 'movimenti di fondi non dicono' }}
+                da quale portafoglio {{ quanti === 1 ? 'è uscito' : 'sono usciti' }}:
+                finché manca, quel denaro non entra nel credito di nessun socio
+                nel <strong>conguaglio fra soci</strong>. Si completa qui sotto,
+                uno per uno.
+              </p>
+            }
             <ul class="admin-history stk__mov">
               @for (m of movimenti()!; track m.id) {
                 <li>
@@ -346,6 +369,42 @@
                     · {{ m.createdAt | date: 'dd MMM yyyy, HH:mm' }}
                   }
                   @if (m.createdByAdminEmail) { · {{ m.createdByAdminEmail }} }
+                  <!--
+                    ⚠️ Solo sui FONDI e solo se manca: su «EV» e «Capitale
+                    perso» il server RIFIUTA la tasca con un 400, perché non
+                    spostano un centesimo da nessun portafoglio.
+                    ⚠️ `[selected]` sull'OPZIONE e mai `[value]` sul select: le
+                    opzioni nascono da un `@for`, quindi il binding del select
+                    si applica quando non esistono ancora e il browser ripiega
+                    sulla prima — la scelta si perde in silenzio. È la trappola
+                    già pagata sul selettore del mese dei conteggi.
+                  -->
+                  @if (m.tipo === 'FONDI' && !m.cassa) {
+                    <span class="stk__attribuisci">
+                      <label class="visually-hidden" [attr.for]="'stk-cassa-' + m.id">
+                        Da quale portafoglio è uscito questo movimento
+                      </label>
+                      <select
+                        [id]="'stk-cassa-' + m.id"
+                        class="input"
+                        (change)="scegliCassa(m.id, $any($event.target).value)"
+                      >
+                        @for (c of CASSE; track c) {
+                          <option [value]="c" [selected]="c === cassaDi(m.id)">
+                            {{ cassaLabel(c) }}
+                          </option>
+                        }
+                      </select>
+                      <button
+                        type="button"
+                        class="btn btn--ghost btn--sm"
+                        [disabled]="salvando()"
+                        (click)="attribuisci(m)"
+                      >
+                        Attribuisci
+                      </button>
+                    </span>
+                  }
                 </li>
               }
             </ul>

@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  Cassa,
   ElencoStakings,
   StakingDettaglio,
   StakingMovimento,
@@ -56,11 +57,42 @@ export class AdminStakingsService {
    */
   aggiungiMovimento(
     id: string,
-    body: { tipo: StakingTipo; importoCent: number; causale: string },
+    // ⚠️ `cassa` MANCAVA in questo tipo mentre il componente la mandava: uno
+    // spread condizionale aggira il controllo sulle proprietà in eccesso, quindi
+    // compilava e il tipo mentiva. Obbligatoria sui FONDI (il server risponde
+    // 400 senza), rifiutata sugli altri due assi.
+    body: {
+      tipo: StakingTipo;
+      importoCent: number;
+      causale: string;
+      cassa?: Cassa;
+    },
   ): Observable<{ riga: StakingRow; movimento: StakingMovimento }> {
     return this.http.post<{ riga: StakingRow; movimento: StakingMovimento }>(
       `${API}/admin/stakings/${id}/movimenti`,
       body,
+    );
+  }
+
+  /**
+   * Attribuisce la tasca a un movimento di fondi scritto prima che il campo
+   * esistesse.
+   *
+   * ⚠️ L'id è quello del MOVIMENTO, non della riga di staking: la rotta è
+   * `movimenti/:id/cassa` e non `:id/movimenti/…`.
+   *
+   * ⚠️ Una volta sola: il server guarda la scrittura su `cassa` ASSENTE e
+   * risponde **409** se è già attribuita. Non è una correzione, è il
+   * completamento di un'annotazione mai esistita — se si sbaglia tasca la via
+   * d'uscita è una coppia di movimenti compensativi.
+   */
+  attribuisciCassa(
+    movimentoId: string,
+    cassa: Cassa,
+  ): Observable<StakingMovimento> {
+    return this.http.patch<StakingMovimento>(
+      `${API}/admin/stakings/movimenti/${movimentoId}/cassa`,
+      { cassa },
     );
   }
 

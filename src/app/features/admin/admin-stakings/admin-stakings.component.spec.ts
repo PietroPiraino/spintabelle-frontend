@@ -6,7 +6,11 @@ import {
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../environments/environment';
-import { ElencoStakings, StakingRow } from '../../../core/models/api.models';
+import {
+  ElencoStakings,
+  StakingMovimento,
+  StakingRow,
+} from '../../../core/models/api.models';
 import { AdminStakingsComponent } from './admin-stakings.component';
 
 const API = environment.API_URL;
@@ -532,5 +536,104 @@ describe('AdminStakingsComponent', () => {
     );
     expect(testo()).toContain('Account cancellato');
     expect(testo()).toContain('Anonimizzato');
+  });
+  describe('la tasca dei movimenti storici', () => {
+    /**
+     * ⚠️⚠️ QUESTA SEZIONE ESISTE PERCHÉ IL COMANDO NON C'ERA. La rotta
+     * `PATCH /admin/stakings/movimenti/:id/cassa` viveva sul server dal
+     * 12/09/2026 e NESSUNA schermata la chiamava: dall'interfaccia i movimenti
+     * storici non si potevano attribuire affatto, quindi 2.799 € di roll
+     * restavano fuori dal credito dei soci — e il conguaglio lo diceva su
+     * un'ALTRA schermata, con un avviso che non portava da nessuna parte.
+     * Trovato leggendo i dati di produzione, non il codice. È la quarta volta
+     * che questo modulo spedisce una funzione completa lato server e muta lato
+     * interfaccia.
+     */
+    const storico = (over: Partial<StakingMovimento> = {}): StakingMovimento => ({
+      id: 'm-vecchio',
+      tipo: 'FONDI',
+      importoCent: 45_000,
+      causale: 'Bankroll per Ipoker',
+      saldoFondiDopoCent: 45_000,
+      saldoEvDopoCent: 0,
+      ...over,
+    });
+
+    const apriCon = async (movimenti: StakingMovimento[], r = riga()) => {
+      const b = [...fixture.nativeElement.querySelectorAll('button')].find(
+        (x: HTMLButtonElement) =>
+          x.getAttribute('aria-label')?.startsWith('Apri la scheda di'),
+      ) as HTMLButtonElement;
+      b.click();
+      http
+        .expectOne((q) => q.url === `${API}/admin/stakings/${r.id}`)
+        .flush({ riga: r, movimenti });
+      await stabilizza();
+    };
+
+    const bottone = () =>
+      [...fixture.nativeElement.querySelectorAll('button')].find(
+        (x: HTMLButtonElement) => x.textContent?.trim() === 'Attribuisci',
+      ) as HTMLButtonElement | undefined;
+
+    it('il comando c’è, NOMINA la coda e attribuisce la tasca scelta', async () => {
+      await rispondi(pagina([riga()]));
+      await apriCon([storico()]);
+
+      // ⚠️ L'avviso dice QUANTI sono: è l'unica cosa che collega questa
+      // schermata al credito dei soci, che vive altrove.
+      expect(fixture.nativeElement.textContent).toContain(
+        '1 movimento di fondi non dice',
+      );
+
+      const sel = fixture.nativeElement.querySelector(
+        '#stk-cassa-m-vecchio',
+      ) as HTMLSelectElement;
+      expect(sel).withContext('il selettore della tasca esiste').toBeTruthy();
+      // ⚠️ `[selected]` sull'opzione, non `[value]` sul select: con le opzioni
+      // da `@for` il binding del select si applica prima che esistano e la
+      // scelta si perde in silenzio.
+      expect(sel.value).toBe('PIETRO');
+
+      sel.value = 'EXIVEZZZ';
+      sel.dispatchEvent(new Event('change'));
+      await stabilizza();
+
+      bottone()!.click();
+      const req = http.expectOne(
+        `${API}/admin/stakings/movimenti/m-vecchio/cassa`,
+      );
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ cassa: 'EXIVEZZZ' });
+      req.flush(storico({ cassa: 'EXIVEZZZ' }));
+      await stabilizza();
+
+      // ⚠️ Il movimento si aggiorna IN PLACE: nessuna rilettura dell'elenco,
+      // o le scelte fatte sulle altre righe tornerebbero al primo valore.
+      http.expectNone((q) => q.url === `${API}/admin/stakings`);
+      expect(bottone()).withContext('attribuito una volta, sparisce').toBeUndefined();
+      expect(fixture.nativeElement.textContent).toContain('Exivezzz');
+    });
+
+    it('non lo offre su EV, su una PERDITA, né su un movimento già attribuito', async () => {
+      // ⚠️ Il server RIFIUTA la tasca sugli altri due assi con un 400: non
+      // spostano un centesimo da nessun portafoglio. Un comando visibile lì
+      // manderebbe proprio la coppia che lui non ammette.
+      await rispondi(pagina([riga()]));
+      await apriCon([
+        storico({ id: 'm-ev', tipo: 'EV', importoCent: -5_000 }),
+        storico({ id: 'm-perso', tipo: 'PERDITA', importoCent: -40_000 }),
+        storico({ id: 'm-gia', cassa: 'PIETRO' }),
+      ]);
+
+      expect(bottone()).toBeUndefined();
+      expect(fixture.nativeElement.querySelector('#stk-cassa-m-ev')).toBeNull();
+      expect(fixture.nativeElement.querySelector('#stk-cassa-m-perso')).toBeNull();
+      expect(fixture.nativeElement.querySelector('#stk-cassa-m-gia')).toBeNull();
+      // E senza coda non c'è avviso: un «0 movimenti» sarebbe rumore.
+      expect(fixture.nativeElement.textContent).not.toContain(
+        'non dice da quale portafoglio',
+      );
+    });
   });
 });

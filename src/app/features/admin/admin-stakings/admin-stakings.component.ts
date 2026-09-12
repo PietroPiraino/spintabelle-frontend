@@ -171,6 +171,78 @@ export class AdminStakingsComponent {
   protected readonly cassaLabel = cassaLabel;
 
   /**
+   * La tasca scelta per ciascun movimento storico ancora da attribuire.
+   *
+   * ⚠️ Una mappa e non un singolo `signal<Cassa>`: i movimenti da completare
+   * sono più d'uno e di solito escono da tasche diverse, quindi un valore
+   * condiviso farebbe cambiare la scelta sotto le righe che non si stanno
+   * guardando. Chi manca vale `PIETRO`, che è il caso di gran lunga più
+   * frequente ma resta modificabile — non è un default scritto sul dato: il
+   * dato lo scrive solo il pulsante.
+   */
+  private readonly cassaPerMovimento = signal<Record<string, Cassa>>({});
+
+  protected cassaDi(movimentoId: string): Cassa {
+    return this.cassaPerMovimento()[movimentoId] ?? 'PIETRO';
+  }
+
+  protected scegliCassa(movimentoId: string, cassa: string): void {
+    this.cassaPerMovimento.update((m) => ({
+      ...m,
+      [movimentoId]: cassa as Cassa,
+    }));
+  }
+
+  /**
+   * Quanti movimenti di fondi non dicono ancora da quale tasca sono usciti.
+   *
+   * ⚠️ È la coda di lavoro, e va NOMINATA sopra l'elenco: finché è > 0 quel
+   * denaro non entra nel credito di nessuno dei due soci, e nel conguaglio
+   * compare come «uscito da una tasca che nessuno ha dichiarato» — cioè un
+   * avviso su un'ALTRA schermata, che da qui non si vede.
+   */
+  protected readonly fondiSenzaCassa = computed(
+    () =>
+      (this.movimenti() ?? []).filter(
+        (m) => m.tipo === 'FONDI' && !m.cassa,
+      ).length,
+  );
+
+  /**
+   * Completa l'annotazione di un movimento storico.
+   *
+   * ⚠️ **Una volta sola**: il server guarda la scrittura su `cassa` assente e
+   * risponde 409 se qualcuno l'ha già attribuita. Non è una correzione — se si
+   * sbaglia tasca la via d'uscita è una coppia di movimenti compensativi, non
+   * una seconda chiamata.
+   *
+   * ⚠️ Aggiorna il movimento IN PLACE invece di rileggere l'elenco: rileggendo,
+   * le scelte già fatte sulle altre righe resterebbero nella mappa ma il
+   * `<select>` tornerebbe al primo valore, e su sei righe da completare di
+   * fila si perderebbe il segno di dove si era arrivati.
+   */
+  protected attribuisci(m: StakingMovimento): void {
+    if (this.salvando() || m.cassa) return;
+    const cassa = this.cassaDi(m.id);
+    this.salvando.set(true);
+    this.error.set(null);
+    this.feedback.set(null);
+    this.api.attribuisciCassa(m.id, cassa).subscribe({
+      next: (agg) => {
+        this.salvando.set(false);
+        this.movimenti.update((righe) =>
+          (righe ?? []).map((r) => (r.id === m.id ? agg : r)),
+        );
+        this.feedback.set(
+          `Movimento attribuito a ${cassaLabel(cassa)}: ora entra nel suo credito.`,
+        );
+      },
+      error: (err: unknown) =>
+        this.fallito(err, 'Attribuzione della tasca non riuscita.'),
+    });
+  }
+
+  /**
    * L'asse scelto muove denaro vero, quindi chiede la tasca.
    *
    * ⚠️ Un `computed` sul valore del form e non una lettura diretta: in zoneless
