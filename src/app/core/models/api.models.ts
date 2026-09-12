@@ -240,7 +240,15 @@ export interface AdminUsersPage extends Paginated<AdminUser> {
 // ── Registro degli staking (/admin/stakings) ────────────────────────────────
 
 export type StakingStato = 'APERTO' | 'CHIUSO';
-export type StakingTipo = 'FONDI' | 'EV';
+/**
+ * I tre assi del registro staking.
+ *
+ * ⚠️ `PERDITA` (dal 12/09/2026) è un roll che non rientra: abbassa i fondi a
+ * disposizione e diventa un costo della scuola diviso 65/35 nel mese in cui lo
+ * si dichiara. ⚠️ Copia a mano del server (`stakings.types.ts`): due repo, due
+ * build, nessuna guardia che li confronti.
+ */
+export type StakingTipo = 'FONDI' | 'EV' | 'PERDITA';
 
 /**
  * Una riga del registro: i fondi messi a disposizione di un giocatore e l'EV
@@ -274,6 +282,19 @@ export interface StakingMovimento {
   /** Positivo = accredito, negativo = addebito. In centesimi. */
   importoCent: number;
   causale: string;
+  /**
+   * Da quale portafoglio è uscito il denaro, o in quale è rientrato.
+   *
+   * ⚠⚠ Obbligatoria sui movimenti `FONDI` e VIETATA sugli altri due, e la
+   * regola vive nel service del server: un anticipo senza tasca resta fuori dal
+   * conguaglio fra soci, e una perdita con una tasca farebbe uscire lo stesso
+   * euro due volte (era già uscito quando il roll fu anticipato).
+   *
+   * ⚠️ Assente sui movimenti scritti prima del 12/09/2026: si completano uno
+   * per uno, e finché non lo si fa cadono nel secchiello «da attribuire» della
+   * scheda Soci.
+   */
+  cassa?: Cassa;
   saldoFondiDopoCent: number;
   saldoEvDopoCent: number;
   createdByAdminEmail?: string;
@@ -2902,10 +2923,28 @@ export interface SaldoSocio {
   daAgenteCent: number;
   /** Di quella cassa, quanto dai giocatori finanziati (negativo = rimborsi). */
   daiGiocatoriCent: number;
+  /**
+   * Capitale di roll uscito dalla sua tasca e non ancora rientrato, al netto.
+   *
+   * ⚠⚠ È un addendo di `cassaCent` **col segno meno**, non un termine a parte
+   * del saldo: un roll anticipato ha la forma di una spesa anticipata, con la
+   * sola differenza che è un attivo e non abbassa il margine. Si MOSTRA, non si
+   * somma di nuovo.
+   */
+  capitaleAnticipatoCent: number;
   ricevutiCent: number;
   datiCent: number;
   /** Positivo = la scuola gli deve; negativo = ha in mano più di quanto gli spetti. */
   saldoCent: number;
+  /**
+   * `saldoCent − capitaleAnticipatoCent`: la parte del credito che è compenso
+   * maturato e non ritirato. Rientra incassando, mentre il capitale rientra
+   * solo quando i giocatori restituiscono i roll.
+   *
+   * ⚠️ Può essere NEGATIVO e non si azzera: significa che gli è già rientrata
+   * anche una parte del capitale.
+   */
+  compensoNonRitiratoCent: number;
 }
 
 /** Il conguaglio fra soci, dal vivo. Solo i mesi CHIUSI entrano nel saldo. */
@@ -2924,6 +2963,10 @@ export interface SaldiSoci {
    */
   pressoAgenteCent: number;
   daRiscuotereDaiGiocatoriCent: number;
+  /** Di quel credito, quanto è capitale di roll ancora in mano ai giocatori. */
+  capitalePressoIGiocatoriCent: number;
+  /** Movimenti di fondi su cui nessuno ha ancora detto da quale tasca uscivano. */
+  capitaleNonAttribuitoCent: number;
   incassiNonAttribuitiCent: number;
   speseNonAttribuiteCent: number;
   provvisorio?: { etichetta: string; soci: SociMese };
@@ -3033,6 +3076,19 @@ export interface RiepilogoMese {
      * una bugia.
      */
     perCassa: UscitePerCassa;
+    /**
+     * Capitale di staking dichiarato PERSO nel mese: un roll che non rientra.
+     *
+     * ⚠⚠ Atomo a sé e NON una spesa: `perCassa` continua a partizionare
+     * `speseCent` e basta, quindi le quattro voci sommano ancora le sole spese.
+     * La tasca si è svuotata quando il roll fu anticipato, non quando è stato
+     * perso — registrarla come spesa farebbe uscire lo stesso euro due volte.
+     *
+     * ⚠️ Entra in `totaleCent`, quindi nel margine, quindi nella divisione
+     * 65/35: la perdita di capitale la portano entrambi i soci.
+     */
+    perditeStakingCent: number;
+    /** `speseCent + perditeStakingCent`. */
     totaleCent: number;
   };
   /**

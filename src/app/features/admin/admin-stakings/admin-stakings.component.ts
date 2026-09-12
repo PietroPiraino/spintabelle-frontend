@@ -15,6 +15,12 @@ import {
   StakingStato,
   StakingTipo,
 } from '../../../core/models/api.models';
+import { CASSE } from '../../../core/models/api.models';
+import type { Cassa } from '../../../core/models/api.models';
+// ⚠️ `cassaLabel` vive in `features/admin/metodo-pagamento.ts` insieme alle
+// altre etichette del pannello, non nei modelli: i modelli sono il contratto
+// con l'API, le etichette sono come le mostriamo.
+import { cassaLabel } from '../metodo-pagamento';
 import { AdminStakingsService } from '../../../core/services/admin-stakings.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
@@ -152,10 +158,44 @@ export class AdminStakingsComponent {
 
   protected readonly form = this.fb.nonNullable.group({
     tipo: 'FONDI' as StakingTipo,
+    // ⚠️ Da quale portafoglio esce il denaro. Obbligatoria sui soli movimenti
+    // di FONDI: il server la RIFIUTA con un 400 sugli altri due assi, perché
+    // non muovono un centesimo da nessuna tasca.
+    cassa: 'PIETRO' as Cassa,
     importo: '',
     causale: '',
     nota: '',
   });
+
+  protected readonly CASSE = CASSE;
+  protected readonly cassaLabel = cassaLabel;
+
+  /**
+   * L'asse scelto muove denaro vero, quindi chiede la tasca.
+   *
+   * ⚠️ Un `computed` sul valore del form e non una lettura diretta: in zoneless
+   * il template non si ridisegna leggendo `form.controls.x.value`, e il campo
+   * della cassa resterebbe visibile anche passando a «EV» — cioè si manderebbe
+   * al server proprio la coppia che lui rifiuta.
+   */
+  /**
+   * L'asse scelto adesso.
+   *
+   * ⚠️ Legge `valori()` per la DIPENDENZA e poi il controllo per il VALORE:
+   * `valori` è tipizzato `Record<string, unknown>`, quindi leggerne la chiave
+   * darebbe `unknown`; e leggere solo il controllo non creerebbe alcuna
+   * dipendenza, cioè il computed non si ricalcolerebbe mai — in zoneless il
+   * campo della tasca resterebbe visibile anche passando a «EV», e si
+   * manderebbe al server proprio la coppia che lui rifiuta.
+   */
+  protected readonly tipoScelto = computed<StakingTipo>(() => {
+    this.valori();
+    return this.form.controls.tipo.value;
+  });
+
+  protected readonly chiedeCassa = computed(
+    () => this.tipoScelto() === 'FONDI',
+  );
 
   private readonly baseline = signal('');
 
@@ -335,6 +375,7 @@ export class AdminStakingsComponent {
     const mio = this.seq;
     this.form.reset({
       tipo: 'FONDI',
+      cassa: 'PIETRO',
       importo: '',
       causale: '',
       nota: r.nota ?? '',
@@ -389,6 +430,12 @@ export class AdminStakingsComponent {
         tipo: this.form.controls.tipo.value,
         importoCent: cent,
         causale,
+        // ⚠️ Si manda SOLO dove serve: su «EV» e «Capitale perso» il server
+        // risponde 400 se gliela si passa, e omettere la chiave è diverso da
+        // mandarla vuota — `@IsIn` rifiuterebbe la stringa vuota.
+        ...(this.form.controls.tipo.value === 'FONDI'
+          ? { cassa: this.form.controls.cassa.value }
+          : {}),
       })
       .subscribe({
         next: (res) => {

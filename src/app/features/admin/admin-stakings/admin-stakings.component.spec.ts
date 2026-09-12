@@ -120,6 +120,110 @@ describe('AdminStakingsComponent', () => {
     http.verify();
   });
 
+
+  describe('la tasca del movimento', () => {
+    /** Cambia l'asse e lascia ricalcolare. */
+    const scegliAsse = async (v: string) => {
+      const sel = fixture.nativeElement.querySelector(
+        '#stk-tipo',
+      ) as HTMLSelectElement;
+      sel.value = v;
+      sel.dispatchEvent(new Event('change'));
+      await stabilizza();
+    };
+
+    const cassa = () =>
+      fixture.nativeElement.querySelector('#stk-cassa') as HTMLSelectElement | null;
+
+    it('la chiede sui FONDI e la nasconde sugli altri due assi', async () => {
+      // ⚠️⚠️ Non è cosmesi: il server RIFIUTA con un 400 una cassa su «EV» o su
+      // «Capitale perso», perché quei due non spostano un centesimo da nessuna
+      // tasca. Un campo che resta visibile manda al server proprio la coppia
+      // che lui non ammette.
+      await rispondi(pagina([riga()]));
+      await apri();
+
+      expect(cassa())
+        .withContext('sui fondi la tasca si chiede')
+        .toBeTruthy();
+
+      await scegliAsse('EV');
+      expect(cassa())
+        .withContext('su EV sparisce')
+        .toBeNull();
+
+      await scegliAsse('PERDITA');
+      expect(cassa())
+        .withContext('e su una perdita pure')
+        .toBeNull();
+
+      await scegliAsse('FONDI');
+      expect(cassa())
+        .withContext('tornando ai fondi ricompare')
+        .toBeTruthy();
+    });
+
+    it('manda la cassa SOLO sui fondi', async () => {
+      const r = riga();
+      await rispondi(pagina([r]));
+      await apri(r);
+
+      await digitaImporto('250');
+      const causale = fixture.nativeElement.querySelector(
+        '#stk-causale',
+      ) as HTMLInputElement;
+      causale.value = 'roll di settembre';
+      causale.dispatchEvent(new Event('input'));
+      await stabilizza();
+
+      const salva = [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) => b.textContent?.includes('Registra'),
+      ) as HTMLButtonElement;
+      salva.click();
+      await stabilizza();
+
+      const req = http.expectOne(
+        (q) => q.url === `${API}/admin/stakings/${r.id}/movimenti`,
+      );
+      expect(req.request.body.cassa).toBe('PIETRO');
+      req.flush({ riga: r, movimento: { id: 'm1', tipo: 'FONDI', importoCent: 25_000, causale: 'roll di settembre', cassa: 'PIETRO', saldoFondiDopoCent: 25_000, saldoEvDopoCent: 0 } });
+      await stabilizza();
+      await scaricaRilettura(pagina([r]));
+    });
+
+    it('su una PERDITA la chiave non parte affatto', async () => {
+      // ⚠️ Omessa e non mandata vuota: `@IsIn` sul server rifiuta la stringa
+      // vuota, quindi un `cassa: ''` darebbe 400 su un movimento legittimo.
+      const r = riga();
+      await rispondi(pagina([r]));
+      await apri(r);
+
+      await scegliAsse('PERDITA');
+      await digitaImporto('-400');
+      const causale = fixture.nativeElement.querySelector(
+        '#stk-causale',
+      ) as HTMLInputElement;
+      causale.value = 'giocatore sparito';
+      causale.dispatchEvent(new Event('input'));
+      await stabilizza();
+
+      const salva = [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) => b.textContent?.includes('Registra'),
+      ) as HTMLButtonElement;
+      salva.click();
+      await stabilizza();
+
+      const req = http.expectOne(
+        (q) => q.url === `${API}/admin/stakings/${r.id}/movimenti`,
+      );
+      expect('cassa' in req.request.body).toBeFalse();
+      expect(req.request.body.tipo).toBe('PERDITA');
+      req.flush({ riga: r, movimento: { id: 'm2', tipo: 'PERDITA', importoCent: -40_000, causale: 'giocatore sparito', saldoFondiDopoCent: 0, saldoEvDopoCent: 0 } });
+      await stabilizza();
+      await scaricaRilettura(pagina([r]));
+    });
+  });
+
   describe("l'elenco", () => {
     it('mostra i due saldi in chiaro', async () => {
       await rispondi(pagina([riga()]));

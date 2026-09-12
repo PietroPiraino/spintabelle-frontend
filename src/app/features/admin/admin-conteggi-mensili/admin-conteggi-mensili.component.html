@@ -244,6 +244,21 @@
           <dd class="is-num">− {{ eur(d.riepilogo.uscite.speseCent) }}</dd>
 
           <!--
+            ⚠⚠ RIGA A SÉ e non dentro «Spese», ed è ciò che tiene in piedi
+            l'invariante delle tre righe rientrate qui sotto: quelle sommano
+            `speseCent`, e una perdita di capitale non ha una tasca da cui
+            uscire — il denaro era già uscito quando il roll fu anticipato.
+            ⚠️ Compare solo se c'è: una riga a 0,00 € in un conto economico è
+            rumore in un elenco che si legge per capire dove sono finiti i soldi.
+          -->
+          @if (d.riepilogo.uscite.perditeStakingCent) {
+            <dt>Capitale di roll perso</dt>
+            <dd class="is-num">
+              − {{ eur(d.riepilogo.uscite.perditeStakingCent) }}
+            </dd>
+          }
+
+          <!--
             ⚠️ Le tre righe rientrate SOMMANO la riga sopra, come le cinque
             righe delle entrate sommano il totale: una ripartizione che non
             torna col numero da cui pende si legge come un buco.
@@ -1883,7 +1898,8 @@
           denaro della scuola gli è passato <strong>per le mani</strong>
           (contanti incassati, PayPal a Pietro e Skrill a Exivezzz, il bonifico
           dell'agente e quelli dei giocatori finanziati, meno le spese
-          anticipate), e i <strong>versamenti</strong> registrati qui sotto. Il
+          anticipate <strong>e i roll di capitale che ha messo lui</strong>), e
+          i <strong>versamenti</strong> registrati qui sotto. Il
           saldo è la differenza: positivo, la scuola gli deve; negativo, ha in
           mano più di quanto gli spetti.
         </p>
@@ -1927,6 +1943,17 @@
             @if (s.pressoAgenteCent) {
               <span class="admin-totali__voce">
                 Presso l'agente <strong>{{ eur(s.pressoAgenteCent) }}</strong>
+              </span>
+            }
+            @if (s.capitalePressoIGiocatoriCent) {
+              <span class="admin-totali__voce">
+                <!-- ⚠️ TERZA origine, e senza di essa il credito cresce di
+                     tutto il capitale anticipato senza dire da chi lo si
+                     aspetta. ⚠️ E non rientra incassando: rientra quando un
+                     giocatore restituisce il roll, o quando lo si dichiara
+                     perso. -->
+                Capitale coi giocatori
+                <strong>{{ eur(s.capitalePressoIGiocatoriCent) }}</strong>
               </span>
             }
             @if (s.daRiscuotereDaiGiocatoriCent) {
@@ -1988,6 +2015,24 @@
                             }
                           </span>
                         }
+                        <!--
+                          ⚠️⚠️ LA SCOMPOSIZIONE DEL CREDITO, ed è la ragione per
+                          cui questo lotto esiste: il prestito di capitale e il
+                          compenso non ritirato rientrano in due modi diversi.
+                          Il secondo scende incassando; il primo solo quando un
+                          giocatore restituisce il roll. Un credito solo dice
+                          quanto, non quando.
+                          ⚠️ Compare solo se c'è capitale: su chi non ne ha
+                          anticipato sarebbe una riga che ripete il saldo.
+                        -->
+                        @if (r.q.capitaleAnticipatoCent) {
+                          <span class="admin-table__sub">
+                            {{ eur(r.q.capitaleAnticipatoCent) }} di roll
+                            prestati ·
+                            {{ eur(r.q.compensoNonRitiratoCent) }} di compenso
+                            non ritirato
+                          </span>
+                        }
                       </span>
                     </th>
                     <td class="is-num" data-etichetta="Maturato">{{ eur(r.q.maturatoCent) }}</td>
@@ -2007,6 +2052,18 @@
             </table>
           </div>
 
+          @if (s.capitaleNonAttribuitoCent) {
+            <!-- ⚠️ Coda di lavoro, non un residuo permanente: sono i movimenti
+                 di fondi scritti prima che il campo esistesse. Va a zero man
+                 mano che si compila, e il pulsante lo dice. -->
+            <p class="admin-nota cm__scarto">
+              ⚠️ <strong>{{ eur(s.capitaleNonAttribuitoCent) }}</strong> di roll
+              sono usciti da una tasca che nessuno ha dichiarato, quindi non
+              entrano nel credito di nessuno dei due. Si attribuiscono uno per
+              uno dalla scheda del giocatore in
+              <strong>Registro staking</strong>.
+            </p>
+          }
           @if (s.incassiNonAttribuitiCent || s.speseNonAttribuiteCent) {
             <!-- ⚠️ Denaro passato per una tasca che non si sa quale: si VEDE,
                  non si indovina. Sui mesi chiusi prima del 12/09 c'è dentro

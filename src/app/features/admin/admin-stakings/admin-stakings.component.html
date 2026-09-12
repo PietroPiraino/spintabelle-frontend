@@ -223,8 +223,29 @@
                 <select id="stk-tipo" class="input" formControlName="tipo">
                   <option value="FONDI">Fondi</option>
                   <option value="EV">EV da recuperare</option>
+                  <option value="PERDITA">Capitale perso</option>
                 </select>
               </div>
+              <!--
+                ⚠️⚠️ La tasca compare SOLO sui movimenti di fondi, e non è una
+                rifinitura: il server la rifiuta con un 400 sugli altri due
+                assi. Un movimento di EV è uno scarto contabile e non sposta un
+                centesimo; una perdita cancella un attivo, e il denaro era già
+                uscito quando il roll fu anticipato — dichiararlo di nuovo lo
+                farebbe uscire due volte dalla stessa tasca.
+                ⚠️ `@if` e non `[disabled]`: un campo spento ma visibile su un
+                asse che non lo ammette invita a compilarlo.
+              -->
+              @if (chiedeCassa()) {
+                <div class="field" style="margin: 0">
+                  <label for="stk-cassa">Da quale portafoglio</label>
+                  <select id="stk-cassa" class="input" formControlName="cassa">
+                    @for (c of CASSE; track c) {
+                      <option [value]="c">{{ cassaLabel(c) }}</option>
+                    }
+                  </select>
+                </div>
+              }
               <div class="field" style="margin: 0">
                 <label for="stk-importo">Importo in €</label>
                 <input
@@ -251,13 +272,23 @@
             </div>
 
             <p class="admin-nota">
-              @if (form.controls.tipo.value === 'EV') {
+              @if (tipoScelto() === 'EV') {
                 Un valore <strong>negativo</strong> peggiora l'EV da recuperare,
                 uno <strong>positivo</strong> lo recupera. Non può salire sopra
                 zero.
+              } @else if (tipoScelto() === 'PERDITA') {
+                Un valore <strong>negativo</strong> dichiara perso quel capitale:
+                i fondi a disposizione scendono, e la perdita diventa un costo
+                della scuola <strong>diviso 65/35</strong> nel mese in cui la
+                dichiari. Non si può dichiarare perso più di quanto è fuori, e
+                una seconda dichiarazione identica viene rifiutata. Non chiede
+                una tasca: quel denaro era già uscito quando il roll è stato
+                anticipato.
               } @else {
                 Un valore <strong>positivo</strong> aggiunge fondi, uno
-                <strong>negativo</strong> li toglie.
+                <strong>negativo</strong> li toglie. La tasca dice chi ha messo
+                il denaro: è quello che fa comparire il capitale nel conguaglio
+                fra soci.
               }
             </p>
 
@@ -299,7 +330,13 @@
               @for (m of movimenti()!; track m.id) {
                 <li>
                   <span class="badge badge--tag">
-                    {{ m.tipo === 'EV' ? 'EV' : 'Fondi' }}
+                    {{
+                      m.tipo === 'EV'
+                        ? 'EV'
+                        : m.tipo === 'PERDITA'
+                          ? 'Perso'
+                          : 'Fondi'
+                    }}@if (m.cassa) { · {{ cassaLabel(m.cassa) }} }
                   </span>
                   <strong [class.is-debito]="m.importoCent < 0">
                     {{ m.importoCent > 0 ? '+' : '' }}{{ formattaCent(m.importoCent) }}

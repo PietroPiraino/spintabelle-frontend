@@ -64,6 +64,9 @@ export const ACTION_LABELS: Record<string, string> = {
   'add-staking-movement': 'Movimento di staking registrato',
   'close-staking': 'Registro staking chiuso',
   'reopen-staking': 'Registro staking riaperto',
+  // ⚠️ Completa un'annotazione che non è mai esistita su un movimento
+  // storico: NON è una rettifica di un importo, che il registro vieta.
+  'attribute-staking-wallet': 'Portafoglio attribuito a un movimento',
   'note-staking': 'Nota interna staking',
   'create-news-source': 'Fonte news aggiunta',
   'update-news-source': 'Fonte news modificata',

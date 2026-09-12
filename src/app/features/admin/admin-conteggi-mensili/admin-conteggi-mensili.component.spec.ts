@@ -111,6 +111,9 @@ const dettaglio = (
     },
     uscite: {
       speseCent: 36_000,
+      // ⚠️ Zero: la fixture non ha capitale di roll perso, e un numero
+      // inventato qui romperebbe `totaleCent = speseCent + perditeStakingCent`.
+      perditeStakingCent: 0,
       // ⚠️ Le quattro voci sommano `speseCent`: la fixture rispetta
       // l'invariante che il pannello mostra, o la spec verificherebbe una
       // schermata che in produzione non può esistere.
@@ -160,9 +163,11 @@ const saldi = (over: Partial<SaldiSoci> = {}): SaldiSoci => ({
     cassaCent: 5_000,
     daAgenteCent: 0,
     daiGiocatoriCent: 0,
+    capitaleAnticipatoCent: 0,
     ricevutiCent: 30_000,
     datiCent: 0,
     saldoCent: 15_000,
+    compensoNonRitiratoCent: 15_000,
   },
   // ⚠️ L'identità `saldoP + saldoE = credito` vale anche nella fixture:
   // 15.000 + 0 = 15.000. Un numero inventato qui verificherebbe una
@@ -172,11 +177,15 @@ const saldi = (over: Partial<SaldiSoci> = {}): SaldiSoci => ({
     cassaCent: 20_000,
     daAgenteCent: 0,
     daiGiocatoriCent: 0,
+    capitaleAnticipatoCent: 0,
     ricevutiCent: 0,
     datiCent: 0,
     saldoCent: 0,
+    compensoNonRitiratoCent: 0,
   },
   creditoNonRiscossoCent: 15_000,
+  capitalePressoIGiocatoriCent: 0,
+  capitaleNonAttribuitoCent: 0,
   // ⚠️ La scomposizione per origine: `pressoAgente + daiGiocatori` non deve
   // superare il credito, o la fixture verificherebbe una schermata che il
   // server non può produrre.
@@ -1282,9 +1291,11 @@ describe('AdminConteggiMensiliComponent', () => {
           cassaCent: 35_000,
           daAgenteCent: 0,
           daiGiocatoriCent: 0,
+          capitaleAnticipatoCent: 0,
           ricevutiCent: 0,
           datiCent: 0,
           saldoCent: -15_000,
+          compensoNonRitiratoCent: -15_000,
         },
         creditoNonRiscossoCent: 0,
       }),
