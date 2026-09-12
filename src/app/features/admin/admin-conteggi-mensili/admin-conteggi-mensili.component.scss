@@ -532,3 +532,29 @@
   justify-content: space-between;
   gap: 0.5rem;
 }
+
+// ── Il ritmo verticale dentro una scheda di riga ────────────────────────────
+//
+// ⚠️⚠️ `.admin-modale__corpo` porta SOLO padding, e il reset globale
+// `* { margin: 0 }` azzera tutto il resto: prosa, elenchi e comandi si toccano.
+// Tre rilievi dell'owner nello stesso giro — «Manda il prospetto», «Rimuovi
+// questo conto», «Scollega» — erano lo stesso difetto visto in tre posti, e
+// rattopparli uno per uno avrebbe lasciato il quarto.
+//
+// ⚠️ Margine sul fratello successivo e NON `gap` sul contenitore: in una
+// colonna flex `align-items` vale `stretch`, quindi un `<button>` si
+// allargherebbe a tutta la scheda; e con `flex-start` sarebbero i campi a
+// restringersi sul contenuto. Il margine lascia le larghezze come sono.
+//
+// ⚠️ I margini adiacenti COLLASSANO (prendono il massimo, non la somma):
+// `.field` porta gia' `margin-bottom: 1.15rem` e resta quello a decidere.
+.admin-modale__corpo > * + * {
+  margin-top: 0.6rem;
+}
+
+// ⚠️ Il nome dell'account e il comando accanto: 0,5rem e' troppo poco per una
+// pastiglia da 44px affiancata a del testo semplice, e li fa leggere come una
+// cosa sola.
+.cm__account {
+  gap: 0.75rem;
+}

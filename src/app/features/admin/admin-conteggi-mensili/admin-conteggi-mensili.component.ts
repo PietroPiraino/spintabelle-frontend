@@ -793,6 +793,18 @@ export class AdminConteggiMensiliComponent {
   private applica(d: DettaglioMese): void {
     this.dett.set(d);
     this.loading.set(false);
+    // ⚠️⚠️ Il conguaglio si INVALIDA qui, e non in ognuna delle mutazioni.
+    // `soci` si caricava una volta sola (l'effect ha la guardia `!soci()`) e
+    // nessuna scrittura lo toccava: chiudendo un mese il prestito residuo
+    // restava quello di prima finché non si ricaricava la pagina a mano —
+    // rilievo dell'owner, 12/09/2026. Praticamente OGNI scrittura del modulo
+    // può cambiare quei numeri (rake, voci, stakati, incasso dell'agente,
+    // chiusura, riapertura), e `applica` è il collo di bottiglia da cui
+    // passano tutte: metterlo qui è l'unico modo di non dimenticarne una.
+    // ⚠️ Si azzera e basta: se la scheda è aperta l'effect la ricarica subito,
+    // altrimenti la paga chi ci entra. Ricaricarla sempre vorrebbe dire pagare
+    // il calcolo su tutti i mesi chiusi a ogni cifra digitata nel rakeback.
+    this.soci.set(null);
     const b: Record<string, BozzaRiga> = {};
     for (const r of d.righe) {
       b[r.contoId] = {

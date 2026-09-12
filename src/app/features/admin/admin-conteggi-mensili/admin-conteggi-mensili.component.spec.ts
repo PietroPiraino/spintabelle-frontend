@@ -1585,6 +1585,40 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(t).not.toContain('Quadra al centesimo');
   });
 
+  it('chiudere il mese RICARICA il conguaglio: non resta il prestito di prima', async () => {
+    // ⚠️⚠️ `soci` si caricava UNA volta sola (l'effect ha la guardia
+    // `!soci()`) e nessuna scrittura lo toccava: chiuso il mese, il prestito
+    // residuo restava quello di prima finché non si ricaricava la pagina a
+    // mano. Rilievo dell'owner, 12/09/2026. L'invalidazione sta in `applica`,
+    // il collo di bottiglia da cui passa OGNI mutazione che rilegge il mese.
+    await avvia();
+    await vaiA('Soci');
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(saldi());
+    await stabilizza();
+
+    // Una seconda entrata non ricarica: la guardia dell'effect regge.
+    await vaiA('Riepilogo');
+    await vaiA('Soci');
+    http.expectNone(`${API}/admin/conteggi/soci`);
+
+    // Si chiude il mese dalla scheda Riepilogo.
+    await vaiA('Riepilogo');
+    fixture.componentInstance['chiudiMese']();
+    http
+      .expectOne(`${API}/admin/conteggi/mesi/m1/chiudi`)
+      .flush(dettaglio([], { mese: { ...mese(), stato: 'CHIUSO' } }));
+    await stabilizza();
+    // ⚠️ `listMesi` parte insieme: va consumata o `http.verify()` accusa il
+    // test successivo invece di questo.
+    http.expectOne(`${API}/admin/conteggi/mesi`).flush([mese()]);
+    await stabilizza();
+
+    // ⚠️ L'ASSERZIONE: rientrando, il conguaglio si RILEGGE.
+    await vaiA('Soci');
+    http.expectOne(`${API}/admin/conteggi/soci`).flush(saldi());
+    await stabilizza();
+  });
+
   it('il prestito si legge come una banca: cascata, riparto e utili non ritirati', async () => {
     // ⚠️⚠️ La scheda risponde alla domanda che l'owner si fa ogni mese —
     // «quanto prendo io, quanto Exivezzz, quanto resta per il prestito» — e non
