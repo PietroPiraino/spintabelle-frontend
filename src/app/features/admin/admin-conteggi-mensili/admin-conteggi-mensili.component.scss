@@ -486,3 +486,49 @@
     flex: 1 1 18rem;
   }
 }
+
+// ── Il prestito: la cascata accanto a «quello che si aspetta ancora» ────────
+//
+// ⚠️ Affiancati finché ci stanno, incolonnati sotto. Il «da incassare» deve
+// stare ACCANTO al residuo e non sotto: «prestito residuo 1.202,33» letto da
+// solo si legge come contante disponibile, mentre quel denaro è in parte
+// ancora presso l'agente e in parte in mano ai giocatori.
+.cm__banca {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
+  gap: 1rem 2.5rem;
+  align-items: start;
+}
+
+// ⚠️ Nella griglia il tetto di 34rem di `.cm__conto` non serve — la colonna è
+// già la misura di lettura — e lascerebbe le due metà disallineate.
+.cm__banca .cm__conto {
+  max-width: none;
+}
+
+.cm__banca-fuori {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+// Il blocco tecnico richiudibile in fondo alla scheda.
+//
+// ⚠️ Riusa `.admin-modale__sez` perché è l'unico `<details>` già stilato del
+// pannello, ma fuori da una modale il suo margine non c'è: lo dichiara qui.
+.cm__tecnico {
+  margin-top: 0.5rem;
+}
+
+
+// Titolo di sezione con un comando a destra (i versamenti).
+//
+// ⚠️ Non e' `.admin-barra`: quella e' la testata del PANNELLO, con le sue
+// regole d'ordine e il suo margine. Qui serve solo allineare un pulsante a un
+// `<h3>` dentro un `.cm__gruppo` che ha gia' il proprio `gap`.
+.cm__intestazione {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}

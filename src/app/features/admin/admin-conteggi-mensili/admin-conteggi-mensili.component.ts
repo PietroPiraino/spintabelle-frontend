@@ -501,7 +501,9 @@ export class AdminConteggiMensiliComponent {
       case 'voci':
         return 'Spese ed entrate';
       case 'soci':
-        return 'Conguaglio fra soci';
+        // ⚠️ Il titolo lo stampa SOLO la barra condivisa: la scheda aveva anche
+        // una barra propria con un secondo <h2>, e i due titoli erano diversi.
+        return 'Il prestito e il riparto';
       case 'anagrafiche':
         return 'Anagrafiche';
     }

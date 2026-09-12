@@ -2000,45 +2000,6 @@
         cambia ancora, e un saldo che oscilla a ogni rake digitato non è un saldo.
       -->
       @if (vista() === 'soci') {
-        <div class="admin-barra">
-          <h2 class="admin-barra__titolo">Conguaglio fra soci</h2>
-          <button
-            type="button"
-            class="admin-ico admin-barra__crea"
-            aria-haspopup="dialog"
-            aria-label="Registra un versamento fra casse"
-            title="Registra un versamento"
-            (click)="apriVersamento()"
-          >
-            <app-icon name="plus" [size]="18" />
-          </button>
-        </div>
-        <p class="admin-nota">
-          Quanto è <strong>maturato</strong> a ciascuno (la sua parte del
-          margine dei mesi chiusi; i conti personali vanno a Pietro), quanto
-          denaro della scuola gli è passato <strong>per le mani</strong>
-          (contanti incassati, PayPal a Pietro e Skrill a Exivezzz, il bonifico
-          dell'agente e quelli dei giocatori finanziati, meno le spese
-          anticipate <strong>e i roll di capitale che ha messo lui</strong>), e
-          i <strong>versamenti</strong> registrati qui sotto. Il
-          saldo è la differenza: positivo, la scuola gli deve; negativo, ha in
-          mano più di quanto gli spetti.
-        </p>
-        <!--
-          ⚠️⚠️ La divisione fra ciò che si congela e ciò che si legge dal vivo è
-          il cuore di questa schermata, e va detta: il margine di un mese si
-          ferma alla chiusura, ma l'agente bonifica a settembre il rakeback di
-          agosto e il giocatore paga quando gli pare. Congelando anche quelli,
-          il credito non sarebbe mai sceso.
-        -->
-        <p class="admin-nota">
-          Gli incassi si registrano <strong>quando arrivano</strong>, anche su
-          un mese già chiuso: il bonifico dell'agente nella scheda
-          <strong>Rakeback</strong>, quelli dei giocatori finanziati nella
-          scheda <strong>Stakati</strong>. Non muovono il margine — quel denaro
-          è già contato — dicono solo in quale tasca è finito.
-        </p>
-
         @if (erroreSoci(); as e) {
           <div class="form-feedback is-error" role="alert">
             {{ e }}
@@ -2048,52 +2009,345 @@
           </div>
         } @else if (soci(); as s) {
           <!--
-            ⚠️⚠️ Il credito si SPEZZA per origine (richiesta dell'owner): una
-            cifra che non dice da CHI la si aspetta è una cifra che non si può
-            andare a incassare. Le due voci sotto sono `atteso − incassato` per
-            i mesi chiusi; ciò che avanza è denaro in cassa comune o passato per
-            una tasca che nessuno ha dichiarato (la nota più sotto).
-            ⚠️ Ognuna compare solo se diversa da zero: tre voci a 0,00 € sopra
-            un credito a zero sono rumore proprio nel mese in cui tutto quadra.
+            == 1. IL PRESTITO ==============================================
+            ⚠️⚠️ La cascata risponde alla domanda che l'owner si fa ogni mese,
+            e il «da incassare» sta ACCANTO e non sotto: «residuo 1.202,33»
+            letto da solo si legge come contante disponibile, mentre quel denaro
+            e' in parte ancora presso l'agente e in parte in mano ai giocatori.
           -->
-          <div class="admin-totali">
-            <span class="admin-totali__voce">
-              Credito non riscosso
-              <strong>{{ eur(s.creditoNonRiscossoCent) }}</strong>
-            </span>
-            @if (s.pressoAgenteCent) {
-              <span class="admin-totali__voce">
-                Presso l'agente <strong>{{ eur(s.pressoAgenteCent) }}</strong>
-              </span>
+          <section class="cm__gruppo">
+            <h3 class="cm__h3">Il prestito</h3>
+            <div class="cm__banca">
+              <dl class="cm__conto">
+                <!-- ⚠️ «al netto dei roll rientrati»: `capitaleAnticipatoCent`
+                     somma anche i movimenti di fondi NEGATIVI, quindi quando un
+                     giocatore restituisce il roll questa riga scende da sola.
+                     Senza l'etichetta quel calo non ha spiegazione in pagina. -->
+                <dt>Capitale anticipato, al netto dei roll rientrati</dt>
+                <dd>{{ eur(s.banca.capitaleAnticipatoCent) }}</dd>
+                @if (s.banca.rientratoConVersamentiCent) {
+                  <dt class="cm__didi">gia' restituito con bonifici</dt>
+                  <dd class="cm__didi">
+                    {{ eur(-s.banca.rientratoConVersamentiCent) }}
+                  </dd>
+                }
+                @if (s.banca.rimborsatoDaiProfittiCent) {
+                  <dt class="cm__didi">rimborsato con gli utili dei mesi chiusi</dt>
+                  <dd class="cm__didi">
+                    {{ eur(-s.banca.rimborsatoDaiProfittiCent) }}
+                  </dd>
+                }
+                <dt class="cm__margine">Prestito ancora da rientrare</dt>
+                <dd class="cm__margine">{{ eur(s.banca.residuoCent) }}</dd>
+              </dl>
+              <!-- ⚠️ ACCANTO al residuo: sono le origini del denaro che la
+                   scuola aspetta ancora, e servono a non leggere il residuo
+                   come cassa disponibile. -->
+              <div class="cm__banca-fuori">
+                <p class="admin-nota">Di quello che la scuola aspetta ancora:</p>
+                <dl class="cm__conto">
+                  @if (s.pressoAgenteCent) {
+                    <dt>Presso l'agente</dt>
+                    <dd>{{ eur(s.pressoAgenteCent) }}</dd>
+                  }
+                  @if (s.daRiscuotereDaiGiocatoriCent) {
+                    <dt>
+                      {{ s.daRiscuotereDaiGiocatoriCent < 0 ? 'Da rimborsare ai giocatori' : 'Dai giocatori' }}
+                    </dt>
+                    <dd>{{ eur(abs(s.daRiscuotereDaiGiocatoriCent)) }}</dd>
+                  }
+                  @if (s.capitalePressoIGiocatoriCent) {
+                    <dt>Capitale coi giocatori</dt>
+                    <dd>{{ eur(s.capitalePressoIGiocatoriCent) }}</dd>
+                  }
+                  <dt class="cm__somma">Credito non riscosso</dt>
+                  <dd class="cm__somma">{{ eur(s.creditoNonRiscossoCent) }}</dd>
+                </dl>
+              </div>
+            </div>
+            @if (s.banca.alDebitoProvvisorioCent) {
+              <!-- ⚠️ I mesi APERTI non entrano nel cumulato: senza questa riga
+                   chi somma la colonna della tabella non ritrova il residuo. -->
+              <p class="admin-nota cm__scarto">
+                Dai mesi ancora aperti andrebbero al prestito altri
+                <strong>{{ eur(s.banca.alDebitoProvvisorioCent) }}</strong>:
+                entrano quando li chiudi, e il residuo scenderebbe a
+                <strong>{{ eur(s.banca.residuoCent - s.banca.alDebitoProvvisorioCent) }}</strong>.
+              </p>
             }
-            @if (s.capitalePressoIGiocatoriCent) {
-              <span class="admin-totali__voce">
-                <!-- ⚠️ TERZA origine, e senza di essa il credito cresce di
-                     tutto il capitale anticipato senza dire da chi lo si
-                     aspetta. ⚠️ E non rientra incassando: rientra quando un
-                     giocatore restituisce il roll, o quando lo si dichiara
-                     perso. -->
-                Capitale coi giocatori
-                <strong>{{ eur(s.capitalePressoIGiocatoriCent) }}</strong>
-              </span>
-            }
-            @if (s.daRiscuotereDaiGiocatoriCent) {
-              <span class="admin-totali__voce">
-                <!-- ⚠️ Negativo qui non è un credito: è un rimborso che la
-                     scuola deve ancora mandare, e chiamarlo «da riscuotere»
-                     direbbe il contrario esatto. -->
-                {{ s.daRiscuotereDaiGiocatoriCent < 0 ? 'Da rimborsare ai giocatori' : 'Dai giocatori' }}
-                <strong>{{ eur(abs(s.daRiscuotereDaiGiocatoriCent)) }}</strong>
-              </span>
-            }
-            <span class="admin-totali__ambito">
-              su {{ s.mesiChiusi }} {{ s.mesiChiusi === 1 ? 'mese chiuso' : 'mesi chiusi' }} —
-              è quello che la scuola deve ai due insieme: denaro in cassa
-              comune, ancora presso l'agente o non ancora bonificato dai
-              giocatori
-            </span>
-          </div>
+          </section>
 
+          <!--
+            == 2. IL RIPARTO ===============================================
+            ⚠️ La colonna «in mano» accanto a «prelievo» non e' ridondanza: nel
+            mese normale — quello in cui il socio non incassa nulla — il
+            prelievo calcolato e' 0,00 mentre il titolare ha centinaia di euro in
+            tasca, e senza la prima colonna la riga sembra rotta.
+          -->
+          <section class="cm__gruppo">
+            <h3 class="cm__h3">Il riparto, mese per mese</h3>
+            <!-- ⚠️⚠️ LA REGOLA VA SCRITTA: e' una decisione dell'owner, non
+                 un'evidenza. Senza questa riga, fra sei mesi la colonna del
+                 prelievo sembra arbitraria a chiunque la legga, owner compreso. -->
+            <p class="admin-nota">
+              <strong>La regola:</strong> Exivezzz incassa per conto suo quello
+              che incassa; tu prelevi la cifra che tiene in piedi la divisione
+              concordata; <strong>tutto il resto va al prestito</strong>. Cosi'
+              nessuno deve restituire denaro gia' incassato.
+            </p>
+            @if (!s.riparti.length) {
+              <p class="admin-nota">
+                Nessun mese da ripartire: apri un mese e scrivi i suoi numeri.
+              </p>
+            } @else {
+              <div class="admin-table__scroll">
+                <table class="admin-table cm__rakeback cm__riparti">
+                  <caption class="visually-hidden">Il riparto mese per mese</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-table__c-primo">Mese</th>
+                      <th scope="col" class="is-num">Margine</th>
+                      <th scope="col" class="is-num">Preso da Exivezzz</th>
+                      <th scope="col" class="is-num admin-table__solo-largo">In mano a Pietro</th>
+                      <th scope="col" class="is-num">Prelievo di Pietro</th>
+                      <th scope="col" class="is-num admin-table__c-ultimo">Al prestito</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of s.riparti; track r.anno * 100 + r.mese) {
+                      <tr>
+                        <th scope="row" class="admin-table__c-primo">
+                          <span class="admin-table__ident">
+                            <span class="admin-table__ident-riga">
+                              <strong>{{ r.etichetta }}</strong>
+                              @if (!r.chiuso) {
+                                <span class="admin-stato" data-tono="attesa">Aperto</span>
+                              }
+                            </span>
+                            @if (r.personaleCent) {
+                              <span class="admin-table__sub">
+                                piu' {{ eur(r.personaleCent) }} di margine personale,
+                                tuo e fuori dal riparto
+                              </span>
+                            }
+                            @if (r.eccedenzaExivezzzCent) {
+                              <span class="admin-table__sub cm__scarto">
+                                Exivezzz ha preso {{ eur(r.eccedenzaExivezzzCent) }}
+                                piu' della sua quota
+                              </span>
+                            }
+                            @if (r.parziale) {
+                              <span class="admin-table__sub cm__scarto">
+                                mese chiuso prima che PayPal e Skrill fossero
+                                spartiti: il prelievo del socio e' sottostimato
+                              </span>
+                            }
+                          </span>
+                        </th>
+                        <td class="is-num" data-etichetta="Margine" [class.is-perdita]="r.inPerdita">
+                          {{ eur(r.margineCent) }}
+                        </td>
+                        <td class="is-num" data-etichetta="Preso da Exivezzz">
+                          {{ eur(r.incassatoExivezzzCent) }}
+                        </td>
+                        <td class="is-num admin-table__solo-largo" data-etichetta="In mano a Pietro">
+                          {{ eur(r.inManoPietroCent) }}
+                        </td>
+                        <td class="is-num" data-etichetta="Prelievo di Pietro">
+                          {{ eur(r.prelievoPietroCent) }}
+                        </td>
+                        <td class="is-num admin-table__c-ultimo" data-etichetta="Al prestito">
+                          @if (r.inPerdita) {
+                            <span class="cm__senza-back">mese in perdita</span>
+                          } @else {
+                            <strong>{{ eur(r.alDebitoCent) }}</strong>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </section>
+
+          <!--
+            == 3. QUANTO VI SPETTA ANCORA ==================================
+            ⚠️⚠️ LA FRASE IN FONDO E' PORTANTE. «Il profitto ripaga il debito»
+            non muove denaro: il prestito cala e l'utile non ritirato sale della
+            stessa cifra, quindi il totale dovuto NON cambia. Senza dirlo, la
+            prima lettura e' «il debito scende ma non divento piu' ricco, quindi
+            e' rotto» — e sarebbe una lettura ragionevole.
+          -->
+          <section class="cm__gruppo">
+            <h3 class="cm__h3">Quanto vi spetta ancora</h3>
+            <dl class="cm__conto">
+              <dt>A te, di utile maturato e non prelevato</dt>
+              <dd [class.is-perdita]="s.banca.utileNonRitiratoPietroCent < 0">
+                {{ eur(s.banca.utileNonRitiratoPietroCent) }}
+              </dd>
+              <dt>A Exivezzz</dt>
+              <dd [class.is-perdita]="s.banca.utileNonRitiratoExivezzzCent < 0">
+                {{ eur(s.banca.utileNonRitiratoExivezzzCent) }}
+              </dd>
+              <dt class="cm__didi">piu' il prestito ancora da rientrare</dt>
+              <dd class="cm__didi">{{ eur(s.banca.residuoCent) }}</dd>
+              <dt class="cm__margine">Totale che la scuola deve ai due</dt>
+              <dd class="cm__margine">{{ eur(s.creditoNonRiscossoCent) }}</dd>
+            </dl>
+            <p class="admin-nota">
+              Quando il prestito scende, <strong>l'utile non ritirato sale della
+              stessa cifra</strong> e il totale non cambia: quei soldi sono gia'
+              nelle tue mani, e imputarli al prestito invece che all'utile non ti
+              rende ne' piu' ricco ne' piu' povero. Quello che cambia e'
+              <strong>quanto puoi prelevare ogni mese</strong> — e il giorno in
+              cui il prestito arriva a zero, tutto quello che incassi e' utile.
+            </p>
+            <p class="admin-nota">
+              Nel saldo entrano i soli <strong>mesi chiusi</strong>: finora
+              {{ s.mesiChiusi === 1 ? 'ne e\u2019 stato chiuso 1' : 'ne sono stati chiusi ' + s.mesiChiusi }}.
+              Un roll dichiarato perso <strong>non</strong> riduce il prestito:
+              e' un costo che si divide come ogni altro.
+            </p>
+          </section>
+
+          @if (s.capitaleNonAttribuitoCent) {
+            <!-- ⚠️ Coda di lavoro, non un residuo permanente: sono i movimenti
+                 di fondi scritti prima che il campo esistesse. Va a zero man
+                 mano che si compila, e il pulsante lo dice. -->
+            <p class="admin-nota cm__scarto">
+              ⚠️ <strong>{{ eur(s.capitaleNonAttribuitoCent) }}</strong> di roll
+              sono usciti da una tasca che nessuno ha dichiarato, quindi non
+              entrano nel credito di nessuno dei due. Si attribuiscono uno per
+              uno dalla scheda del giocatore in
+              <strong>Registro staking</strong>.
+            </p>
+          }
+          @if (s.incassiNonAttribuitiCent || s.speseNonAttribuiteCent) {
+            <!-- ⚠️ Denaro passato per una tasca che non si sa quale: si VEDE,
+                 non si indovina. Sui mesi chiusi prima del 12/09 c'è dentro
+                 anche l'online, che allora non era spartito per metodo. -->
+            <p class="admin-nota">
+              ⚠️ Nei mesi chiusi ci sono
+              @if (s.incassiNonAttribuitiCent) {
+                <strong>{{ eur(s.incassiNonAttribuitiCent) }}</strong> di incassi
+              }
+              @if (s.incassiNonAttribuitiCent && s.speseNonAttribuiteCent) { e }
+              @if (s.speseNonAttribuiteCent) {
+                <strong>{{ eur(s.speseNonAttribuiteCent) }}</strong> di spese
+              }
+              di cui non si sa in quale tasca siano passati: non entrano in
+              nessun saldo. Sono i contanti senza incassante, le spese senza
+              cassa e l'online dei mesi chiusi prima che PayPal e Skrill
+              fossero spartiti.
+            </p>
+          }
+
+          <section class="cm__gruppo">
+            <div class="cm__intestazione">
+              <h3 class="cm__h3">Versamenti fra casse</h3>
+              <button
+                type="button"
+                class="admin-ico"
+                aria-haspopup="dialog"
+                aria-label="Registra un versamento fra casse"
+                title="Registra un versamento"
+                (click)="apriVersamento()"
+              >
+                <app-icon name="plus" [size]="18" />
+              </button>
+            </div>
+            @if (!s.versamenti.length) {
+              <p class="admin-nota">
+                Nessun versamento registrato. Il primo, di solito, è il
+                <strong>saldo di apertura</strong>: quello che uno dei due doveva
+                all'altro prima che i conteggi esistessero, datato prima di tutto.
+              </p>
+            } @else {
+              <div class="admin-table__scroll">
+                <table class="admin-table cm__rakeback cm__versamenti">
+                  <caption class="visually-hidden">Versamenti fra casse</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-table__c-primo">Data</th>
+                      <th scope="col">Da</th>
+                      <th scope="col">A</th>
+                      <th scope="col" class="is-num">Importo</th>
+                      <th scope="col" class="admin-table__solo-largo">Nota</th>
+                      <th scope="col" class="admin-table__c-ultimo">
+                        <span class="visually-hidden">Azioni</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (v of s.versamenti; track v.id) {
+                      <tr>
+                        <th scope="row" class="admin-table__c-primo">
+                          <span class="admin-table__ident">
+                            <span class="admin-table__ident-riga">
+                              <strong>{{ dataBreve(v.data) }}</strong>
+                            </span>
+                            <!-- ⚠️ Si DEVE vedere quali righe scalano il
+                                 prestito invece del compenso: è l'unica cosa
+                                 che distingue due bonifici identici, e senza
+                                 il marcatore l'unico modo per saperlo sarebbe
+                                 rifare il conto a mente. Sotto-testo e non
+                                 badge: è un fatto della riga, non uno stato. -->
+                            @if (v.restituzioneCapitale) {
+                              <span class="admin-table__sub">restituisce capitale</span>
+                            }
+                          </span>
+                        </th>
+                        <td data-etichetta="Da">{{ estremoLabel(v.da) }}</td>
+                        <td data-etichetta="A">{{ estremoLabel(v.a) }}</td>
+                        <td class="is-num" data-etichetta="Importo">{{ eur(v.importoCent) }}</td>
+                        <td class="admin-table__solo-largo" [title]="v.nota ?? ''">{{ v.nota ?? '—' }}</td>
+                        <td class="admin-table__c-ultimo">
+                          <!-- ⚠️ Inline-confirm, niente confirm() nativo: è
+                               l'unica azione irreversibile della scheda. -->
+                          @if (conferma() === 'vers:' + v.id) {
+                            <span class="row" style="gap: 0.25rem">
+                              <button type="button" class="btn btn--danger btn--sm" (click)="eliminaVersamento(v)">Rimuovi</button>
+                              <button type="button" class="btn btn--ghost btn--sm" (click)="annulla()">Annulla</button>
+                            </span>
+                          } @else {
+                            <button
+                              type="button"
+                              class="admin-ico admin-ico--rischio"
+                              [attr.aria-label]="'Rimuovi il versamento del ' + dataBreve(v.data)"
+                              title="Rimuovi"
+                              (click)="chiedi('vers:' + v.id)"
+                            >
+                              <app-icon name="trash" [size]="18" />
+                            </button>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </section>
+          <!--
+            ⚠️ La tabella tecnica resta, ma CHIUSA: e' l'unico posto in cui
+            l'identita' «saldo di Pietro + saldo di Exivezzz = credito non
+            riscosso» si vede, e serve a capire da dove escono i numeri sopra
+            quando qualcosa non torna. ⚠️ Non ripete «compenso non ritirato»:
+            quel campo qui vale un'altra cosa rispetto all'utile della sezione
+            3 (si misura sull'anticipato lordo, non sul residuo), e due cifre
+            con lo stesso nome sulla stessa pagina sono una segnalazione certa.
+          -->
+          <details class="admin-modale__sez cm__tecnico">
+            <summary class="admin-modale__sum">Dettaglio dei saldi</summary>
+            <div class="admin-modale__corpo">
+              <p class="admin-nota">
+                Il modello sotto la scheda: quanto e' <strong>maturato</strong> a
+                ciascuno sui mesi chiusi, quanto denaro della scuola gli e'
+                <strong>passato per le mani</strong> (il capitale anticipato
+                conta col segno meno) e i versamenti. Il saldo e' la differenza,
+                e la somma dei due saldi e' il credito non riscosso.
+              </p>
           <div class="admin-table__scroll">
             <table class="admin-table cm__rakeback cm__soci">
               <caption class="visually-hidden">Il saldo di ciascun socio</caption>
@@ -2169,241 +2423,17 @@
               </tbody>
             </table>
           </div>
-
-          @if (s.capitaleNonAttribuitoCent) {
-            <!-- ⚠️ Coda di lavoro, non un residuo permanente: sono i movimenti
-                 di fondi scritti prima che il campo esistesse. Va a zero man
-                 mano che si compila, e il pulsante lo dice. -->
-            <p class="admin-nota cm__scarto">
-              ⚠️ <strong>{{ eur(s.capitaleNonAttribuitoCent) }}</strong> di roll
-              sono usciti da una tasca che nessuno ha dichiarato, quindi non
-              entrano nel credito di nessuno dei due. Si attribuiscono uno per
-              uno dalla scheda del giocatore in
-              <strong>Registro staking</strong>.
-            </p>
-          }
-          @if (s.incassiNonAttribuitiCent || s.speseNonAttribuiteCent) {
-            <!-- ⚠️ Denaro passato per una tasca che non si sa quale: si VEDE,
-                 non si indovina. Sui mesi chiusi prima del 12/09 c'è dentro
-                 anche l'online, che allora non era spartito per metodo. -->
-            <p class="admin-nota">
-              ⚠️ Nei mesi chiusi ci sono
-              @if (s.incassiNonAttribuitiCent) {
-                <strong>{{ eur(s.incassiNonAttribuitiCent) }}</strong> di incassi
+              @if (s.provvisorio; as p) {
+                <p class="admin-nota">
+                  {{ p.etichetta }} e' ancora aperto e resta fuori dal saldo: a
+                  oggi maturano {{ eur(p.soci.pietro.maturatoCent) }} a Pietro e
+                  {{ eur(p.soci.exivezzz.maturatoCent) }} a Exivezzz.
+                </p>
               }
-              @if (s.incassiNonAttribuitiCent && s.speseNonAttribuiteCent) { e }
-              @if (s.speseNonAttribuiteCent) {
-                <strong>{{ eur(s.speseNonAttribuiteCent) }}</strong> di spese
-              }
-              di cui non si sa in quale tasca siano passati: non entrano in
-              nessun saldo. Sono i contanti senza incassante, le spese senza
-              cassa e l'online dei mesi chiusi prima che PayPal e Skrill
-              fossero spartiti.
-            </p>
-          }
-
-          <!--
-            ⚠️⚠️ IL PROSPETTO DEL CREDITO, e la ragione per cui esiste è che la
-            versione precedente andava spiegata a voce. Un credito è fatto di
-            DUE cose che rientrano in modi diversi — il capitale che il socio ha
-            anticipato e il compenso che ha maturato e non ha ancora ritirato —
-            e finché stavano su una riga sola, schiacciate in una cella di
-            tabella, la restituzione del prestito si leggeva come un compenso
-            NEGATIVO. Qui ogni voce ha un verso, un filetto e un totale: si
-            legge sommando a occhio, che è l'unica cosa per cui un prospetto si
-            guarda.
-            ⚠️ Riusa la griglia del conto economico (`cm__conto`, `cm__didi`,
-            `cm__somma`, `cm__margine`) e non una sua copia: è lo stesso gesto
-            di lettura, e due griglie di importi che si somigliano ma non
-            coincidono sono il modo più rapido per farne nascere una terza.
-          -->
-          @if (s.pietro.saldoCent || s.exivezzz.saldoCent || s.pietro.capitaleAnticipatoCent || s.exivezzz.capitaleAnticipatoCent) {
-            <section class="cm__gruppo">
-              <h3 class="cm__h3">Di che cosa è fatto il credito</h3>
-              <div class="cm__crediti">
-                @for (r of [{ nome: 'Pietro', q: s.pietro }, { nome: 'Exivezzz', q: s.exivezzz }]; track r.nome) {
-                  <!-- ⚠️ Solo chi ha qualcosa da dire: un prospetto di zeri
-                       accanto a uno pieno si legge come un guasto. -->
-                  @if (r.q.saldoCent || r.q.capitaleAnticipatoCent) {
-                    <div class="cm__credito">
-                      <h4 class="cm__credito-nome">{{ r.nome }}</h4>
-                      <dl class="cm__conto">
-                        @if (r.q.capitaleAnticipatoCent) {
-                          <dt>Roll anticipati di tasca sua</dt>
-                          <dd>{{ eur(r.q.capitaleAnticipatoCent) }}</dd>
-                          @if (r.q.capitaleRientratoCent) {
-                            <!-- ⚠️ Il segno lo mette `eur` invertendo il numero,
-                                 non un «−» scritto a mano: con un rientrato
-                                 negativo (una spunta messa per errore e poi
-                                 corretta) uscirebbero due meno di fila. -->
-                            <dt class="cm__didi">di cui già restituiti</dt>
-                            <dd class="cm__didi">{{ eur(-r.q.capitaleRientratoCent) }}</dd>
-                          }
-                          <dt class="cm__somma">Prestito ancora da rientrare</dt>
-                          <dd class="cm__somma">{{ eur(r.q.capitaleResiduoCent) }}</dd>
-                        }
-                        <dt>Compenso maturato e non ancora ritirato</dt>
-                        <dd [class.is-perdita]="r.q.compensoNonRitiratoCent < 0">
-                          {{ eur(r.q.compensoNonRitiratoCent) }}
-                        </dd>
-                        <dt class="cm__margine">
-                          {{ r.q.saldoCent < 0 ? 'Ha in mano più del dovuto' : 'La scuola gli deve' }}
-                        </dt>
-                        <dd class="cm__margine" [class.is-perdita]="r.q.saldoCent < 0">
-                          {{ eur(r.q.saldoCent) }}
-                        </dd>
-                      </dl>
-                    </div>
-                  }
-                }
-              </div>
-            </section>
-          }
-
-          <!--
-            ⚠️⚠️ «COME RIENTRA», ed è la seconda metà del rilievo dell'owner:
-            «non c'è nemmeno un modo per far arrivare le entrate attese nelle
-            mie tasche». Il modo c'era — registrare l'incasso scegliendo la
-            propria tasca — ma non era scritto da nessuna parte, e da questa
-            schermata non si vedeva. Le tre strade sono DIVERSE e vanno tenute
-            distinte: il compenso rientra incassando, il prestito rientra o
-            perché un giocatore ridà il roll o perché la scuola ripaga il socio.
-            Confonderle manda a fare la cosa sbagliata due volte su tre — è la
-            stessa regola delle tre cause della back a zero.
-          -->
-          <section class="cm__gruppo">
-            <h3 class="cm__h3">Come rientra</h3>
-            @if (s.pressoAgenteCent > 0 || s.daRiscuotereDaiGiocatoriCent > 0) {
-              <p class="admin-nota">
-                <strong>Il compenso rientra incassando.</strong> La scuola
-                aspetta ancora
-                @if (s.pressoAgenteCent > 0) {
-                  <strong>{{ eur(s.pressoAgenteCent) }}</strong> dall'agente
-                }
-                @if (s.pressoAgenteCent > 0 && s.daRiscuotereDaiGiocatoriCent > 0) { e }
-                @if (s.daRiscuotereDaiGiocatoriCent > 0) {
-                  <strong>{{ eur(s.daRiscuotereDaiGiocatoriCent) }}</strong> dai
-                  giocatori finanziati
-                }.
-                Si registrano quando arrivano — il bonifico dell'agente nella
-                scheda <strong>Rakeback</strong>, quelli dei giocatori nella
-                scheda <strong>Stakati</strong> — scegliendo
-                <strong>in quale tasca</strong> sono finiti: ogni euro che
-                incassi tu abbassa di altrettanto il tuo credito.
-              </p>
-            } @else {
-              <p class="admin-nota">
-                <strong>Il compenso rientra incassando</strong>: il bonifico
-                dell'agente si registra nella scheda <strong>Rakeback</strong>,
-                quelli dei giocatori finanziati nella scheda
-                <strong>Stakati</strong>, scegliendo in quale tasca sono finiti.
-                A oggi non risulta nulla in attesa.
-              </p>
-            }
-            @if (s.pietro.capitaleResiduoCent || s.exivezzz.capitaleResiduoCent) {
-              <p class="admin-nota">
-                <strong>Il prestito rientra in due modi, e nessuno dei due è
-                incassare.</strong> O un giocatore restituisce il roll — un
-                movimento <em>Fondi</em> negativo nel
-                <strong>Registro staking</strong>, che abbassa il capitale
-                anticipato —, oppure la scuola ripaga il socio: allora si
-                registra qui un versamento verso di lui con la spunta
-                <em>«restituisce un anticipo di capitale»</em>, ed è quella
-                spunta a scalare il prestito invece del compenso.
-              </p>
-            }
-          </section>
-
-          @if (s.provvisorio; as p) {
-            <section class="cm__gruppo">
-              <h3 class="cm__h3">{{ p.etichetta }} — provvisorio, fuori dal saldo</h3>
-              <p class="admin-nota">
-                Il mese è ancora aperto: a oggi maturano
-                <strong>{{ eur(p.soci.pietro.maturatoCent) }}</strong> a Pietro e
-                <strong>{{ eur(p.soci.exivezzz.maturatoCent) }}</strong> a Exivezzz,
-                con {{ eur(p.soci.pietro.cassaCent) }} e
-                {{ eur(p.soci.exivezzz.cassaCent) }} passati per le loro mani.
-                Entrano nel saldo alla chiusura.
-              </p>
-            </section>
-          }
-
-          <section class="cm__gruppo">
-            <h3 class="cm__h3">Versamenti fra casse</h3>
-            @if (!s.versamenti.length) {
-              <p class="admin-nota">
-                Nessun versamento registrato. Il primo, di solito, è il
-                <strong>saldo di apertura</strong>: quello che uno dei due doveva
-                all'altro prima che i conteggi esistessero, datato prima di tutto.
-              </p>
-            } @else {
-              <div class="admin-table__scroll">
-                <table class="admin-table cm__rakeback cm__versamenti">
-                  <caption class="visually-hidden">Versamenti fra casse</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col" class="admin-table__c-primo">Data</th>
-                      <th scope="col">Da</th>
-                      <th scope="col">A</th>
-                      <th scope="col" class="is-num">Importo</th>
-                      <th scope="col" class="admin-table__solo-largo">Nota</th>
-                      <th scope="col" class="admin-table__c-ultimo">
-                        <span class="visually-hidden">Azioni</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (v of s.versamenti; track v.id) {
-                      <tr>
-                        <th scope="row" class="admin-table__c-primo">
-                          <span class="admin-table__ident">
-                            <span class="admin-table__ident-riga">
-                              <strong>{{ dataBreve(v.data) }}</strong>
-                            </span>
-                            <!-- ⚠️ Si DEVE vedere quali righe scalano il
-                                 prestito invece del compenso: è l'unica cosa
-                                 che distingue due bonifici identici, e senza
-                                 il marcatore l'unico modo per saperlo sarebbe
-                                 rifare il conto a mente. Sotto-testo e non
-                                 badge: è un fatto della riga, non uno stato. -->
-                            @if (v.restituzioneCapitale) {
-                              <span class="admin-table__sub">restituisce capitale</span>
-                            }
-                          </span>
-                        </th>
-                        <td data-etichetta="Da">{{ estremoLabel(v.da) }}</td>
-                        <td data-etichetta="A">{{ estremoLabel(v.a) }}</td>
-                        <td class="is-num" data-etichetta="Importo">{{ eur(v.importoCent) }}</td>
-                        <td class="admin-table__solo-largo" [title]="v.nota ?? ''">{{ v.nota ?? '—' }}</td>
-                        <td class="admin-table__c-ultimo">
-                          <!-- ⚠️ Inline-confirm, niente confirm() nativo: è
-                               l'unica azione irreversibile della scheda. -->
-                          @if (conferma() === 'vers:' + v.id) {
-                            <span class="row" style="gap: 0.25rem">
-                              <button type="button" class="btn btn--danger btn--sm" (click)="eliminaVersamento(v)">Rimuovi</button>
-                              <button type="button" class="btn btn--ghost btn--sm" (click)="annulla()">Annulla</button>
-                            </span>
-                          } @else {
-                            <button
-                              type="button"
-                              class="admin-ico admin-ico--rischio"
-                              [attr.aria-label]="'Rimuovi il versamento del ' + dataBreve(v.data)"
-                              title="Rimuovi"
-                              (click)="chiedi('vers:' + v.id)"
-                            >
-                              <app-icon name="trash" [size]="18" />
-                            </button>
-                          }
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            }
-          </section>
+            </div>
+          </details>
         } @else {
-          <p class="admin-nota">Calcolo…</p>
+          <p class="admin-nota">Calcolo...</p>
         }
       }
 

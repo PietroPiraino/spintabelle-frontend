@@ -201,6 +201,37 @@ const saldi = (over: Partial<SaldiSoci> = {}): SaldiSoci => ({
     etichetta: 'settembre 2026',
     soci: dettaglio().riepilogo.soci,
   },
+  // Un mese chiuso col riparto: il socio ha incassato 21,13 (la sua quota su
+  // un margine di 60,37), quindi il titolare preleva 39,24 e al prestito non
+  // resta niente.
+  riparti: [
+    {
+      anno: 2026,
+      mese: 8,
+      etichetta: 'agosto 2026',
+      chiuso: true,
+      margineCent: 60_370,
+      personaleCent: 0,
+      incassatoExivezzzCent: 2_113,
+      inManoPietroCent: 10_000,
+      prelievoPietroCent: 3_924,
+      alDebitoCent: 54_333,
+      inPerdita: false,
+    },
+  ],
+  banca: {
+    capitaleAnticipatoCent: 0,
+    rientratoConVersamentiCent: 0,
+    rimborsatoDaiProfittiCent: 0,
+    residuoPietroCent: 0,
+    residuoCent: 0,
+    // ⚠️ Le identità valgono anche nella fixture: senza capitale anticipato
+    // l'utile non ritirato È il saldo. Un numero inventato qui verificherebbe
+    // una schermata che il server non può produrre.
+    utileNonRitiratoPietroCent: 15_000,
+    utileNonRitiratoExivezzzCent: 0,
+    alDebitoProvvisorioCent: 0,
+  },
   versamenti: [
     {
       id: 'v1',
@@ -1314,8 +1345,8 @@ describe('AdminConteggiMensiliComponent', () => {
     // 15.000 + (−15.000): la scuola non deve niente ai due INSIEME — il
     // denaro è passato dalla tasca sbagliata, e il conguaglio è fra loro.
     expect(testo).toContain('0,00');
-    // ⚠️ Solo i mesi CHIUSI entrano nel saldo, e la striscia lo dice.
-    expect(testo).toContain('su 2 mesi chiusi');
+    // ⚠️ Solo i mesi CHIUSI entrano nel saldo, e la scheda lo dice.
+    expect(testo).toContain('ne sono stati chiusi 2');
 
     const righe = [...el.querySelectorAll('.cm__soci tbody tr')] as HTMLElement[];
     expect(righe.length).toBe(2);
@@ -1327,8 +1358,8 @@ describe('AdminConteggiMensiliComponent', () => {
       '-150,00',
     );
 
-    // Il mese aperto è provvisorio e FUORI dal saldo.
-    expect(testo).toContain('provvisorio, fuori dal saldo');
+    // Il mese aperto resta FUORI dal saldo, e lo dice nel dettaglio tecnico.
+    expect(testo).toContain('resta fuori dal saldo');
     // Il registro elenca il versamento con le due tasche.
     const vers = el.querySelector('.cm__versamenti tbody tr') as HTMLElement;
     expect(vers.textContent).toContain('Fuori');
@@ -1466,90 +1497,119 @@ describe('AdminConteggiMensiliComponent', () => {
     expect(t).not.toContain('Quadra al centesimo');
   });
 
-  it('il prestito e il compenso sono DUE voci, e la restituzione non finisce sul compenso', async () => {
-    // ⚠️⚠️ LA REGRESSIONE CHE QUESTO CASO SORVEGLIA, vista in produzione il
-    // 12/09/2026: `compensoNonRitiratoCent` si misurava sull'anticipato LORDO,
-    // quindi un socio già ripagato in parte leggeva «2.799,00 di roll prestati
-    // · −974,92 di compenso non ritirato». Il totale tornava e la riga era
-    // incomprensibile: la restituzione del prestito era stampata come un
-    // compenso NEGATIVO, cioè su una riga che parla d'altro.
+  it('il prestito si legge come una banca: cascata, riparto e utili non ritirati', async () => {
+    // ⚠️⚠️ La scheda risponde alla domanda che l'owner si fa ogni mese —
+    // «quanto prendo io, quanto Exivezzz, quanto resta per il prestito» — e non
+    // piu' allo stato dei conti. I numeri qui sotto sono quelli di agosto 2026.
     await avvia();
     await vaiA('Soci');
     http.expectOne(`${API}/admin/conteggi/soci`).flush(
       saldi({
         pietro: {
-          maturatoCent: 0,
-          // Il capitale sta DENTRO la cassa, col segno meno.
-          cassaCent: -279_900,
-          daAgenteCent: 0,
-          daiGiocatoriCent: 0,
+          maturatoCent: 57_648,
+          cassaCent: 79_544 - 279_900,
+          daAgenteCent: 88_000,
+          daiGiocatoriCent: 61_780,
           capitaleAnticipatoCent: 279_900,
           capitaleRientratoCent: 97_492,
           capitaleResiduoCent: 182_408,
           ricevutiCent: 97_492,
           datiCent: 0,
-          saldoCent: 182_408,
-          // ⚠️ ZERO, non −974,92: non ha maturato compenso, gli è rientrato
-          // del prestito. Col difetto questo campo valeva −97_492.
-          compensoNonRitiratoCent: 0,
+          saldoCent: 160_512,
+          compensoNonRitiratoCent: 160_512 - 182_408,
         },
-        creditoNonRiscossoCent: 182_408,
-        capitalePressoIGiocatoriCent: 279_900,
-        versamenti: [
+        exivezzz: {
+          maturatoCent: 27_261,
+          cassaCent: 5_500,
+          daAgenteCent: 0,
+          daiGiocatoriCent: 0,
+          capitaleAnticipatoCent: 0,
+          capitaleRientratoCent: 0,
+          capitaleResiduoCent: 0,
+          ricevutiCent: 0,
+          datiCent: 0,
+          saldoCent: 21_761,
+          compensoNonRitiratoCent: 21_761,
+        },
+        creditoNonRiscossoCent: 182_273,
+        riparti: [
           {
-            id: 'v1',
-            data: '2026-07-31T12:00:00.000Z',
-            da: 'ESTERNO',
-            a: 'PIETRO',
-            importoCent: 97_492,
-            restituzioneCapitale: true,
-            nota: 'rientro dai profitti dei mesi precedenti',
+            anno: 2026,
+            mese: 8,
+            etichetta: 'agosto 2026',
+            chiuso: true,
+            margineCent: 77_889,
+            personaleCent: 7_020,
+            incassatoExivezzzCent: 5_500,
+            inManoPietroCent: 79_544,
+            prelievoPietroCent: 10_214,
+            alDebitoCent: 62_175,
+            inPerdita: false,
           },
         ],
+        banca: {
+          capitaleAnticipatoCent: 279_900,
+          rientratoConVersamentiCent: 97_492,
+          rimborsatoDaiProfittiCent: 62_175,
+          residuoPietroCent: 120_233,
+          residuoCent: 120_233,
+          // ⚠️ Per SOTTRAZIONE: 160_512 − 120_233. Le identita' valgono anche
+          // nella fixture, o si verificherebbe una schermata impossibile.
+          utileNonRitiratoPietroCent: 40_279,
+          utileNonRitiratoExivezzzCent: 21_761,
+          alDebitoProvvisorioCent: 0,
+        },
       }),
     );
     await stabilizza();
 
     const el = fixture.nativeElement as HTMLElement;
-    const prospetto = el.querySelector('.cm__credito') as HTMLElement;
-    expect(prospetto).withContext('il prospetto del credito esiste').toBeTruthy();
-    const righe = prospetto.textContent?.replace(/\s+/g, ' ') ?? '';
+    const t = (el.textContent ?? '').replace(/\s+/g, ' ');
 
-    // Le tre voci del prestito, ognuna con la propria etichetta in chiaro.
-    expect(righe).toContain('Roll anticipati di tasca sua');
-    // ⚠️ Il separatore delle migliaia è FACOLTATIVO nell'asserzione: il Chrome
-    // di Karma rende «2799,00 €» dove un browser vero scrive «2.799,00 €»
-    // (dati ICU ridotti), e pinnare il punto farebbe fallire qui una
-    // formattazione corretta in produzione. Le cifre restano pinnate.
-    expect(righe).toMatch(/2\.?799,00/);
-    expect(righe).toContain('di cui già restituiti');
-    // ⚠️ Col SEGNO: è una sottrazione, e senza il meno le tre cifre non
-    // tornano a occhio — che è l'unica cosa per cui un prospetto si guarda.
-    expect(righe).toContain('-974,92');
-    expect(righe).toContain('Prestito ancora da rientrare');
-    expect(righe).toMatch(/1\.?824,08/);
-    expect(righe).toContain('Compenso maturato e non ancora ritirato');
+    // ── La cascata del prestito ───────────────────────────────────────────
+    expect(t).toContain('Capitale anticipato');
+    expect(t).toMatch(/2\.?799,00/);
+    expect(t).toContain('rimborsato con gli utili dei mesi chiusi');
+    expect(t).toMatch(/621,75/);
+    expect(t).toContain('Prestito ancora da rientrare');
+    expect(t).toMatch(/1\.?202,33/);
 
-    // ⚠️⚠️ L'ASSERZIONE CHE CONTA: nel prospetto non c'è un solo numero in
-    // rosso. Col difetto la riga del compenso portava `-974,92` e `.is-perdita`.
-    expect(prospetto.querySelector('.is-perdita'))
-      .withContext('ripagare un prestito non è una perdita')
-      .toBeNull();
+    // ── Il riparto del mese, con la regola scritta ────────────────────────
+    const riga = el.querySelector('.cm__riparti tbody tr') as HTMLElement;
+    expect(riga).withContext('la tabella del riparto esiste').toBeTruthy();
+    const celle = (riga.textContent ?? '').replace(/\s+/g, ' ');
+    expect(celle).toContain('agosto 2026');
+    expect(celle).toMatch(/55,00/);
+    expect(celle).toMatch(/102,14/);
+    expect(celle).toMatch(/621,75/);
+    // ⚠️ La colonna «in mano» accanto al prelievo: senza, nel mese in cui il
+    // socio non incassa nulla la riga direbbe «prelievo 0,00» accanto a un
+    // titolare con centinaia di euro in tasca.
+    expect(celle).toMatch(/795,44/);
+    // ⚠️ Il margine personale e' FUORI dal riparto e la riga lo dichiara.
+    expect(celle).toContain('margine personale');
+    // ⚠️ LA REGOLA VA SCRITTA: e' una decisione, non un'evidenza.
+    expect(t).toContain('tutto il resto va al prestito');
 
-    // E la vecchia riga criptica non è tornata nella cella della tabella.
-    const rigaTabella = el.querySelector('.cm__soci tbody tr') as HTMLElement;
-    expect(rigaTabella.textContent).not.toContain('di roll prestati');
+    // ── Gli utili non ritirati, e la frase che spiega perche' il totale
+    //    non cambia quando il prestito scende ────────────────────────────
+    expect(t).toContain('utile maturato e non prelevato');
+    expect(t).toMatch(/402,79/);
+    expect(t).toMatch(/217,61/);
+    // ⚠️⚠️ L'ASSERZIONE PORTANTE: senza questa frase la prima lettura e' «il
+    // debito scende ma non divento piu' ricco, quindi e' rotto».
+    expect(t).toContain(
+      "l'utile non ritirato sale della stessa cifra",
+    );
 
-    // Il registro DICE quali versamenti scalano il prestito: due bonifici
-    // identici si distinguono solo da lì.
-    const vers = el.querySelector('.cm__versamenti tbody tr') as HTMLElement;
-    expect(vers.textContent).toContain('restituisce capitale');
-
-    // E la schermata spiega come rientra, distinguendo le due strade.
-    const tutto = el.textContent?.replace(/\s+/g, ' ') ?? '';
-    expect(tutto).toContain('Come rientra');
-    expect(tutto).toContain('Il compenso rientra incassando');
-    expect(tutto).toContain('Il prestito rientra in due modi');
+    // ── Il dettaglio tecnico c'e', ma CHIUSO ──────────────────────────────
+    const tecnico = el.querySelector('.cm__tecnico') as HTMLDetailsElement;
+    expect(tecnico).withContext('il dettaglio dei saldi resta').toBeTruthy();
+    expect(tecnico.open).withContext('e nasce chiuso').toBeFalse();
+    // ⚠️ E NON ripete «compenso non ritirato»: quel campo li' si misura
+    // sull'anticipato lordo e vale un'altra cifra rispetto all'utile della
+    // sezione sopra. Due numeri con lo stesso nome sono una segnalazione certa.
+    expect(tecnico.textContent).not.toContain('ompenso non ritirato');
   });
 
   it('la spunta «restituisce capitale» viaggia solo quando è accesa', async () => {

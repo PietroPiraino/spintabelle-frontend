@@ -2986,7 +2986,73 @@ export interface SaldiSoci {
   incassiNonAttribuitiCent: number;
   speseNonAttribuiteCent: number;
   provvisorio?: { etichetta: string; soci: SociMese };
+  /** Il riparto mese per mese, dal PIU' VECCHIO al piu' nuovo. */
+  riparti: RipartoMese[];
+  /** Il prestito letto come un debito verso una banca. */
+  banca: BancaSoci;
   versamenti: VersamentoView[];
+}
+
+/**
+ * Il riparto di UN mese: quanto si distribuisce e quanto resta per il prestito.
+ *
+ * ⚠️ La regola e' una DECISIONE dell'owner: il socio incassa per conto suo, il
+ * titolare preleva quanto basta a tenere la ripartizione, e **tutto il resto va
+ * al prestito**. Cosi' nessuno deve restituire denaro gia' incassato. Va
+ * scritta in pagina, o fra sei mesi la colonna del prelievo sembra arbitraria.
+ */
+export interface RipartoMese {
+  anno: number;
+  mese: number;
+  etichetta: string;
+  /** Un mese APERTO si mostra, ma non entra nel rimborso cumulato. */
+  chiuso: boolean;
+  margineCent: number;
+  /** I conti «Personale»: interamente del titolare, fuori dal riparto. */
+  personaleCent: number;
+  incassatoExivezzzCent: number;
+  /**
+   * Quanto ha materialmente in mano il titolare.
+   *
+   * ⚠️ NON e' il suo prelievo: comprende il denaro che trattiene come rimborso.
+   * Senza questa colonna, nel mese in cui il socio non incassa nulla la riga
+   * direbbe «prelievo 0,00» accanto a un titolare che ha centinaia di euro.
+   */
+  inManoPietroCent: number;
+  prelievoPietroCent: number;
+  alDebitoCent: number;
+  /** Il socio ha preso piu' della sua quota: si dice, non si nasconde. */
+  eccedenzaExivezzzCent?: number;
+  /** Margine <= 0: niente da distribuire, e il prestito non si muove. */
+  inPerdita: boolean;
+  /** Snapshot anteriore all'11/09/2026: la cassa del socio e' sottostimata. */
+  parziale?: boolean;
+}
+
+/**
+ * Il prestito letto come un debito verso una banca.
+ *
+ * ⚠️⚠️ **Niente qui dentro muove denaro.** «Il profitto ripaga il debito» non
+ * e' un bonifico: il `saldoCent` non scende, il riparto RICLASSIFICA il credito
+ * fra le sue due meta'. Quando il prestito cala di X, l'utile non ritirato sale
+ * di X e il totale dovuto resta identico — ed e' corretto, perche' quei soldi
+ * il titolare li ha gia' in mano. Va detto in pagina, o la prima lettura e' «il
+ * debito scende ma non divento piu' ricco, quindi e' rotto».
+ */
+export interface BancaSoci {
+  /** ⚠️ E' un NETTO: se un giocatore restituisce il roll, la riga scende da se'. */
+  capitaleAnticipatoCent: number;
+  rientratoConVersamentiCent: number;
+  /** Somma dei mesi CHIUSI, limitata fra zero e il capitale residuo. */
+  rimborsatoDaiProfittiCent: number;
+  residuoPietroCent: number;
+  /** Comprende il capitale eventualmente anticipato anche dal socio. */
+  residuoCent: number;
+  /** `saldo - residuo`: per SOTTRAZIONE, mai per somma. */
+  utileNonRitiratoPietroCent: number;
+  utileNonRitiratoExivezzzCent: number;
+  /** Quanto andrebbe al prestito dai mesi ancora APERTI, fuori dal cumulato. */
+  alDebitoProvvisorioCent: number;
 }
 
 /** L'incasso dell'agente per un mese, com'è registrato. */
