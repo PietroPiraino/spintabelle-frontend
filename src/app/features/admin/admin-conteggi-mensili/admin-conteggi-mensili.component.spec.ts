@@ -344,6 +344,90 @@ describe('AdminConteggiMensiliComponent', () => {
     ...over,
   });
 
+  describe('la scheda di una riga stakato', () => {
+    /**
+     * ⚠️⚠️ QUESTA SEZIONE ESISTE PERCHE' IL COMANDO NON C'ERA. Il «manda il
+     * prospetto» viveva SOLO nella scheda di una riga di rakeback, agganciato
+     * al `contoId`: chi gioca altrove (`fonteBack: 'MANUALE'`) un conto non ce
+     * l'ha, quindi dal pannello il suo prospetto non si poteva mandare affatto
+     * — mentre il server lo accetta da sempre, perche' la rotta chiede lo
+     * `userId` e il prospetto e' della PERSONA. Quinta volta che questo modulo
+     * spedisce una funzione completa lato server e muta lato interfaccia.
+     * Trovato dall'owner provando a usarla.
+     */
+    const schedaDi = (nome: string) =>
+      [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) =>
+          b.getAttribute('aria-label') === 'Scheda di ' + nome,
+      ) as HTMLButtonElement | undefined;
+
+    it('si apre dalla riga e manda il prospetto all account COLLEGATO', async () => {
+      await avvia(
+        dettaglio([], { stakati: [rigaStakato()] }),
+        [],
+        [],
+      );
+      // L'anagrafica porta il collegamento: la riga del mese ha solo i numeri.
+      http.expectNone(`${API}/admin/conteggi/stakati`);
+      fixture.componentInstance['stakati'].set([
+        {
+          id: 'st1',
+          nome: 'Rossana',
+          attivo: true,
+          fonteBack: 'CONTO',
+          dealScuolaBp: 3500,
+          utente: { id: 'u-ross', nickname: 'rossana', email: 'ross@example.it' },
+        } as never,
+      ]);
+      await vaiA('Stakati');
+      await stabilizza();
+
+      // ⚠️ Il nome accessibile NOMINA la riga: con un'etichetta fissa sarebbero
+      // N pulsanti che annunciano tutti la stessa parola.
+      const b = schedaDi('Rossana');
+      expect(b).withContext('il comando di riga esiste').toBeTruthy();
+      b!.click();
+      await stabilizza();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const t = (el.textContent ?? '').replace(/\s+/g, ' ');
+      expect(t).toContain('Manda il prospetto');
+      expect(t).toContain('rossana');
+
+      const invia = [...el.querySelectorAll('button')].find(
+        (x: HTMLButtonElement) => x.textContent?.trim() === 'Manda il prospetto',
+      ) as HTMLButtonElement;
+      invia.click();
+      const req = http.expectOne(`${API}/admin/conteggi/mesi/m1/prospetto`);
+      expect(req.request.method).toBe('POST');
+      // ⚠️ `userId` e non l'id della riga: il prospetto e' della PERSONA, e chi
+      // ha anche un conto rakeback riceve UNA sola email.
+      expect(req.request.body).toEqual({ userId: 'u-ross' });
+      req.flush({});
+      await stabilizza();
+      // La modale si chiude, cosi' il toast non dipinge dietro il fondale.
+      expect(el.querySelector('dialog')).toBeNull();
+    });
+
+    it('e se non e collegato lo DICE, invece di offrire un comando che fallisce', async () => {
+      await avvia(dettaglio([], { stakati: [rigaStakato()] }), [], []);
+      fixture.componentInstance['stakati'].set([
+        { id: 'st1', nome: 'Rossana', attivo: true, fonteBack: 'CONTO', dealScuolaBp: 3500 } as never,
+      ]);
+      await vaiA('Stakati');
+      await stabilizza();
+
+      schedaDi('Rossana')!.click();
+      await stabilizza();
+      const t = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
+      expect(t).toContain('non è collegato a un account del sito');
+      const invia = [...fixture.nativeElement.querySelectorAll('button')].find(
+        (x: HTMLButtonElement) => x.textContent?.trim() === 'Manda il prospetto',
+      );
+      expect(invia).withContext('nessun comando che non puo funzionare').toBeUndefined();
+    });
+  });
+
   it('mostra «Incassato dall’agente» anche a mese CHIUSO, ed è il caso normale', async () => {
     // ⚠️⚠️ È la regola portante del lotto: l'agente bonifica il rakeback di
     // agosto a settembre. Se il blocco seguisse le spese fisse — che a mese

@@ -1555,6 +1555,29 @@
                           <app-icon name="check" [size]="18" />
                         </button>
                       }
+                      <!--
+                        ⚠️⚠️ La scheda di riga MANCAVA, e con lei l'unico modo
+                        di mandare il prospetto a un giocatore finanziato: il
+                        comando viveva solo nella scheda di una riga di
+                        rakeback, agganciato al `contoId`. Chi gioca altrove un
+                        conto non ce l'ha, quindi dal pannello il suo prospetto
+                        non si poteva mandare — mentre il server lo accetta da
+                        sempre, perché chiede lo `userId`.
+                        ⚠️ Il nome accessibile NOMINA la riga: `app-icon` porta
+                        `aria-hidden`, quindi senza etichetta il bottone è
+                        anonimo e con una fissa sarebbero N pulsanti che
+                        annunciano tutti la stessa parola.
+                      -->
+                      <button
+                        type="button"
+                        class="admin-ico"
+                        aria-haspopup="dialog"
+                        [attr.aria-label]="'Scheda di ' + r.nome"
+                        title="Apri la scheda"
+                        (click)="apriRigaStakato(r)"
+                      >
+                        <app-icon name="more-vertical" [size]="18" />
+                      </button>
                     </td>
                   </tr>
                 }
@@ -4066,6 +4089,88 @@
           </button>
         }
       }
+    </div>
+  </app-modal>
+}
+
+<!-- ══ Scheda di una riga STAKATO ═════════════════════════════════════════ -->
+@if (stakatoInScheda(); as r) {
+  <app-modal [titolo]="r.nome" (chiusa)="rigaStakatoAperta.set(null)">
+    <div class="admin-modale">
+      <details class="admin-modale__sez" open>
+        <summary class="admin-modale__sum">Come è stato calcolato</summary>
+        <div class="admin-modale__corpo">
+          <dl class="cm__conto">
+            <dt>Back del giocatore</dt>
+            <dd>{{ eur(r.backCent) }}</dd>
+            <dt class="cm__didi">di cui trattenuto dalla scuola</dt>
+            <dd class="cm__didi">{{ eur(r.trattenutoCent) }}</dd>
+            <dt>Pool EV</dt>
+            <dd>{{ eur(r.poolEvCent) }}</dd>
+            <dt>Diff</dt>
+            <dd>{{ eur(r.diffCent) }}</dd>
+            <dt>Fee</dt>
+            <dd>{{ eur(r.feeCent) }}</dd>
+            <dt>Altro</dt>
+            <dd>{{ eur(r.altroCent) }}</dd>
+            <dt class="cm__somma">Totale del mese</dt>
+            <dd class="cm__somma" [class.is-perdita]="r.totaleCent < 0">
+              {{ eur(r.totaleCent) }}
+            </dd>
+            <dt>Quota della scuola</dt>
+            <dd>{{ eur(r.quotaScuolaCent) }}</dd>
+            <dt class="cm__margine">
+              {{ r.daRegolareCent < 0 ? 'Da rimborsargli' : 'Deve bonificare' }}
+            </dt>
+            <dd class="cm__margine" [class.cm__rimborso]="r.daRegolareCent < 0">
+              {{ eur(abs(r.daRegolareCent)) }}
+            </dd>
+          </dl>
+        </div>
+      </details>
+
+      <!--
+        ⚠️ Stesse regole della scheda di rakeback: l'invio è UN COMANDO e mai
+        un aggancio alla chiusura del mese (richiesta dell'owner e garanzia
+        della valutazione GDPR — una comunicazione che parte da sé è una
+        comunicazione che nessuno rilegge prima che parta).
+        ⚠️ Il prospetto è della PERSONA: chi ha anche un conto rakeback riceve
+        UNA sola email con dentro tutto quello che lo riguarda nel mese.
+      -->
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Manda il prospetto</summary>
+        <div class="admin-modale__corpo">
+          @if (utenteDelloStakato(r.stakatoId); as u) {
+            <p class="admin-nota">
+              Gli arriva per email il dettaglio di
+              <strong>{{ mese()?.etichetta }}</strong>: solo i suoi numeri, mai
+              i totali della scuola.
+              @if (mese()?.stato !== 'CHIUSO') {
+                Il mese è ancora aperto e l'email lo dichiara come
+                <strong>provvisorio</strong>.
+              }
+            </p>
+            <p class="admin-nota">A: <strong>{{ etichettaUtente(u) }}</strong></p>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              [disabled]="salvando()"
+              (click)="inviaProspetto(u.id)"
+            >
+              {{ salvando() ? 'Mando…' : 'Manda il prospetto' }}
+            </button>
+          } @else {
+            <!-- ⚠️ Si dice QUI perché non si può, non al momento del clic. -->
+            <p class="admin-nota">
+              Questo giocatore non è collegato a un account del sito: collegalo
+              da <strong>Anagrafiche</strong> e il comando comparirà.
+            </p>
+          }
+          @if (erroreModale(); as e) {
+            <p class="form-feedback is-error" role="alert">{{ e }}</p>
+          }
+        </div>
+      </details>
     </div>
   </app-modal>
 }

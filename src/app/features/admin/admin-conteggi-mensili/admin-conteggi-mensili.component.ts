@@ -1167,6 +1167,43 @@ export class AdminConteggiMensiliComponent {
     this.rigaAperta.set(r.contoId);
   }
 
+  /**
+   * La scheda di una riga STAKATO.
+   *
+   * ⚠️⚠️ Non esisteva fino al 12/09/2026, e con lei mancava l'unico modo di
+   * mandare il prospetto a un giocatore finanziato: il comando viveva SOLO
+   * nella scheda di una riga di rakeback, agganciato al `contoId`. Chi gioca
+   * altrove (`fonteBack: 'MANUALE'`) un conto non ce l'ha, quindi dal pannello
+   * il suo prospetto non si poteva mandare affatto — mentre il server lo
+   * accetta da sempre, perché la rotta chiede lo `userId` e il prospetto è
+   * della PERSONA. Quinta volta che questo modulo spedisce una funzione
+   * completa lato server e muta lato interfaccia.
+   */
+  protected readonly rigaStakatoAperta = signal<string | null>(null);
+
+  protected readonly stakatoInScheda = computed(() => {
+    const id = this.rigaStakatoAperta();
+    if (!id) return null;
+    // ⚠️ La riga RILETTA dalla pagina e non l'id, come per il rakeback: se la
+    // tabella si ricarica e quella riga non c'è più, la scheda si chiude da sé.
+    return this.dett()?.stakati.find((r) => r.id === id) ?? null;
+  });
+
+  protected apriRigaStakato(r: { id: string }): void {
+    this.rigaStakatoAperta.set(r.id);
+  }
+
+  /**
+   * ⚠️ Passa dall'ANAGRAFICA (`stakatoId`) e non dalla riga del mese: il
+   * collegamento a un account vive sull'anagrafica, e la riga mensile porta
+   * solo i numeri. È il gemello di `utenteDelConto`.
+   */
+  protected utenteDelloStakato(stakatoId: string): UtenteCollegato | null {
+    return (
+      (this.stakati() ?? []).find((s) => s.id === stakatoId)?.utente ?? null
+    );
+  }
+
   protected salvaRakeback(): void {
     const m = this.mese();
     const d = this.dett();
@@ -1782,7 +1819,12 @@ export class AdminConteggiMensiliComponent {
     this.api.inviaProspetto(mese.id, userId).subscribe({
       next: () => {
         this.salvando.set(false);
+        // ⚠️ Si chiudono ENTRAMBE le schede: il comando vive in due posti (la
+        // riga di rakeback e quella di uno stakato) e non sa da quale è stato
+        // premuto. Chiuderne una sola lascerebbe l'altra aperta col toast che
+        // dipinge dietro il suo fondale.
         this.rigaAperta.set(null);
+        this.rigaStakatoAperta.set(null);
         // ⚠️ Il toast DOPO aver chiuso la modale: con un `<dialog>` aperto
         // dipingerebbe dietro il fondale e non lo leggerebbe nessuno.
         this.toast.success('Prospetto inviato.');
