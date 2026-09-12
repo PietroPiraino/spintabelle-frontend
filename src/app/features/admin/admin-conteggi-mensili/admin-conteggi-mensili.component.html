@@ -396,6 +396,93 @@
           </p>
         </section>
 
+        <!--
+          ⚠️⚠️ IL BONIFICO DELL'AGENTE NEL RIEPILOGO, e nasce da un rilievo
+          dell'owner: aveva registrato l'incasso a suo nome e «questa
+          informazione non appare nel riepilogo». Aveva ragione — la sezione
+          qui sopra si chiama «Cassa», nomina l'agente, e non diceva né se i
+          soldi fossero arrivati né a chi. Il dato stava solo nella scheda
+          Rakeback, cioè su un'altra schermata.
+
+          ⚠️⚠️ E QUI CONVIVONO DUE «ATTESO DALL'AGENTE» DIVERSI, che è la
+          ragione per cui questo blocco porta la sua spiegazione addosso:
+          - sopra, `cassaGiocatori.attesoDaAgenteCent` è lo SPETTANTE (su agosto
+            2026: 2.473,96), cioè tutto quello che l'agente deve — ticket dei
+            giocatori compresi, che però la piattaforma accredita a loro
+            direttamente;
+          - qui, `incassoAgente.attesoCent` è il solo MARGINE (765,67), cioè
+            l'unica parte che diventa un bonifico alla scuola.
+          Messi vicini senza dirlo, il secondo si legge come un ammanco del
+          primo. È la stessa confusione che CLAUDE.md segnala per chi «corregge»
+          `attesoDaAgenteCent` scambiandolo con quello del conguaglio.
+
+          ⚠️ Di sola LETTURA: si registra e si corregge nella scheda Rakeback,
+          dove il comando vive già. Due punti di scrittura per lo stesso dato
+          sarebbero due form da tenere allineati.
+        -->
+        <section class="cm__gruppo">
+          <h3 class="cm__h3">Bonifico dell'agente</h3>
+          @if (d.incassoAgente.incasso; as i) {
+            <p class="admin-totali">
+              <span class="admin-totali__voce">
+                Atteso <strong>{{ eur(d.incassoAgente.attesoCent) }}</strong>
+              </span>
+              <span class="admin-totali__voce">
+                Incassato <strong>{{ eur(i.importoCent) }}</strong>
+              </span>
+              <span class="admin-totali__voce">
+                In cassa a <strong>{{ cassaLabel(i.cassa) }}</strong>
+              </span>
+              @if (i.dataAt) {
+                <span class="admin-totali__voce">
+                  Il <strong>{{ dataBreve(i.dataAt) }}</strong>
+                </span>
+              }
+              <span class="admin-totali__ambito">
+                il solo margine: i ticket qui sopra li accredita la piattaforma
+                ai giocatori e non passano dalla scuola
+              </span>
+            </p>
+            <!-- ⚠️ `null` = «nessuno ha registrato», 0 = «quadra»: uno zero
+                 confonderebbe i due proprio sulla riga che li distingue. -->
+            @if (scartoIncassoCent() === 0) {
+              <p class="admin-nota cm__quadra">Quadra al centesimo.</p>
+            } @else if (scartoIncassoCent()! > 0) {
+              <p class="admin-nota cm__scarto">
+                Mancano {{ eur(scartoIncassoCent()!) }} rispetto all'atteso.
+              </p>
+            } @else {
+              <p class="admin-nota cm__scarto">
+                Ha mandato {{ eur(-scartoIncassoCent()!) }} in più dell'atteso.
+              </p>
+            }
+            <p class="admin-nota">
+              Quel denaro è passato per la cassa di
+              <strong>{{ cassaLabel(i.cassa) }}</strong>, quindi
+              <strong>abbassa il suo credito</strong> nella scheda
+              <strong>Soci</strong> — ma solo da quando questo mese è
+              <strong>chiuso</strong>: nel conguaglio entrano i soli mesi chiusi.
+            </p>
+          } @else {
+            <p class="admin-totali">
+              <span class="admin-totali__voce">
+                Atteso <strong>{{ eur(d.incassoAgente.attesoCent) }}</strong>
+              </span>
+              <span class="admin-totali__ambito">
+                il solo margine: i ticket qui sopra li accredita la piattaforma
+                ai giocatori e non passano dalla scuola
+              </span>
+            </p>
+            <p class="admin-nota cm__scarto">
+              ⚠️ Non risulta ancora incassato. Finché non lo registri —
+              scheda <strong>Rakeback</strong>, in fondo, «Incassato
+              dall'agente» — quella cifra resta nel credito della scuola sotto
+              «Presso l'agente», e non abbassa il credito di nessuno dei due
+              soci.
+            </p>
+          }
+        </section>
+
         @if (d.riepilogo.abbonamentiStimati > 0) {
           <p class="admin-nota">
             ⚠️ {{ d.riepilogo.abbonamentiStimati }}

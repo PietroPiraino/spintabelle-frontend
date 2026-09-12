@@ -1382,6 +1382,53 @@ describe('AdminConteggiMensiliComponent', () => {
     await stabilizza();
   });
 
+  it('il Riepilogo dice se il bonifico dell’agente e’ arrivato e a chi', async () => {
+    // ⚠️⚠️ Rilievo dell'owner: aveva registrato l'incasso a suo nome e «questa
+    // informazione non appare nel riepilogo». Il dato viveva solo nella scheda
+    // Rakeback — cioè su un'altra schermata — mentre il Riepilogo ha una
+    // sezione che si chiama «Cassa» e nomina l'agente.
+    await avvia(
+      dettaglio([riga()], {
+        incassoAgente: {
+          attesoCent: 76_567,
+          incasso: {
+            importoCent: 79_376,
+            cassa: 'PIETRO',
+            dataAt: '2026-09-03T12:00:00.000Z',
+          },
+        },
+      }),
+    );
+
+    const t = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
+    expect(t).toContain("Bonifico dell'agente");
+    expect(t).toContain('In cassa a Pietro');
+    // ⚠️⚠️ LA RIGA CHE CONTA: sulla stessa schermata convivono DUE «atteso
+    // dall'agente» — lo spettante (ticket compresi) nella sezione sopra e il
+    // solo margine qui. Senza questa frase il secondo si legge come un ammanco
+    // del primo.
+    expect(t).toContain('il solo margine');
+    // Ha mandato più dell'atteso: si dice, e NON in rosso da perdita.
+    expect(t).toContain("in più dell'atteso");
+    const blocchi = [
+      ...fixture.nativeElement.querySelectorAll('.cm__scarto'),
+    ] as HTMLElement[];
+    expect(blocchi.some((b) => b.classList.contains('is-perdita'))).toBeFalse();
+  });
+
+  it('e se non e’ arrivato lo dice, con dove si registra', async () => {
+    await avvia(dettaglio([riga()], { incassoAgente: { attesoCent: 76_567 } }));
+
+    const t = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
+    expect(t).toContain('Non risulta ancora incassato');
+    // ⚠️ Dice DOVE si registra: il comando vive nella scheda Rakeback, e un
+    // avviso che non porta da nessuna parte è il difetto di partenza.
+    expect(t).toContain('Rakeback');
+    // ⚠️ E non inventa una quadratura: «non lo so» e «quadra» sono due fatti
+    // diversi, e `scartoIncassoCent()` vale `null` nel primo.
+    expect(t).not.toContain('Quadra al centesimo');
+  });
+
   it('il prestito e il compenso sono DUE voci, e la restituzione non finisce sul compenso', async () => {
     // ⚠️⚠️ LA REGRESSIONE CHE QUESTO CASO SORVEGLIA, vista in produzione il
     // 12/09/2026: `compensoNonRitiratoCent` si misurava sull'anticipato LORDO,
