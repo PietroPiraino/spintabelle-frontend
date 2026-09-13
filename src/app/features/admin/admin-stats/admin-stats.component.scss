@@ -177,3 +177,11 @@
 .st__limiti {
   margin-top: 0.5rem;
 }
+
+// Le sei tessere di «Abbonati ora» hanno suggerimenti di due-tre righe: con la
+// griglia condivisa a 200px stavano cinque per riga a 1440 — strette, con
+// l'etichetta a capo e la sesta orfana sulla riga sotto. A 260px sono tre e
+// tre (due e due a 1100): stesso rimedio di `.pan__mese` nella Panoramica.
+.st__griglia-sei {
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+}

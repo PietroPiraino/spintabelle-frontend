@@ -75,7 +75,23 @@ const SEZIONI = [
   // `replayer`. Qui conta più che altrove, perché la tabella del rakeback ha
   // dieci colonne e due campi editabili per riga.
   'conteggi-mensili',
+  // ⚠️ Aggiunte il 13/09/2026 col refactoring di Analisi: Statistiche è
+  // passata alle tabelle condivise (prima aveva le sue, invisibili a questa
+  // sonda per costruzione), e la Panoramica — che una tabella non ce l'ha —
+  // va comunque misurata a 390px, perché è la pagina su cui si atterra.
+  'statistiche',
+  '',
 ];
+
+/**
+ * L'URL di una sezione. ⚠️ La Panoramica è il segmento VUOTO: senza il taglio
+ * della barra finale si chiederebbe `/admin/`, che per il router è un
+ * segmento vuoto in più e finisce sul wildcard 404 — la sonda avrebbe misurato
+ * una pagina che non esiste e l'avrebbe dichiarata senza tabella.
+ */
+const urlSezione = (sez) => `${BASE}/admin/${sez}`.replace(/\/$/, '');
+/** Il nome da stampare: il segmento vuoto è la Panoramica. */
+const nomeSezione = (sez) => sez || 'panoramica';
 
 /** Misura ogni `.admin-table__scroll` presente nella pagina. */
 const misura = (page) =>
@@ -204,7 +220,7 @@ try {
 for (const larghezza of LARGHE) {
   await page.setViewportSize({ width: larghezza, height: 900 });
   for (const sez of SEZIONI) {
-    await page.goto(`${BASE}/admin/${sez}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(urlSezione(sez), { waitUntil: 'domcontentloaded' });
     // Si aspetta la RIGA, non un tempo: una sezione che ha davvero una tabella
     // la mostra appena l'API risponde, e una che non ce l'ha esaurisce l'attesa
     // senza costare niente al giro (le altre sono già passate).
@@ -230,7 +246,7 @@ for (const larghezza of LARGHE) {
         if (t.righe === 0) continue;
         misurate += 1;
         const dove =
-          `/${sez}${nomeScheda ? ` · ${nomeScheda}` : ''}` +
+          `/${nomeSezione(sez)}${nomeScheda ? ` · ${nomeScheda}` : ''}` +
           `${tabelle.length > 1 ? ` (tabella ${t.i + 1})` : ''} a ${larghezza}px`;
         if (t.over > 0) {
           const larga = t.colonne.reduce((a, c) => (c.w > a.w ? c : a), t.colonne[0]);
@@ -257,7 +273,7 @@ for (const larghezza of LARGHE) {
 // Sotto i 720px non si misura la tabella — non è più una tabella — ma la pagina.
 await page.setViewportSize({ width: STRETTO, height: 844 });
 for (const sez of SEZIONI) {
-  await page.goto(`${BASE}/admin/${sez}`, { waitUntil: 'domcontentloaded' });
+  await page.goto(urlSezione(sez), { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1400);
   // ⚠️ Anche qui si passa da OGNI scheda, e non è una simmetria gratuita: il
   // giro stretto non ne apriva nessuna, quindi di una sezione a schede misurava
@@ -271,7 +287,7 @@ for (const sez of SEZIONI) {
     });
     if (scorre) {
       guasti.push(
-        `/${sez}${nomeScheda ? ` · ${nomeScheda}` : ''} a ${STRETTO}px: ` +
+        `/${nomeSezione(sez)}${nomeScheda ? ` · ${nomeScheda}` : ''} a ${STRETTO}px: ` +
           'la PAGINA scorre in orizzontale. ' +
           'Sotto i 720px la tabella diventa blocchi impilati: se la pagina scorre, ' +
           'qualcosa è rimasto largo — di solito un `nowrap` non spento o un tetto in px.',
@@ -296,11 +312,11 @@ if (risposteRotte.size) {
 }
 
 if (senzaTabella.length) {
-  console.log(`\n·  Senza tabella (card o cruscotto): ${senzaTabella.join(', ')}.`);
+  console.log(`\n·  Senza tabella (card o cruscotto): ${senzaTabella.map(nomeSezione).join(', ')}.`);
 }
 if (senzaRighe.length) {
   console.log(
-    `\n⚠️  Tabella VUOTA: ${senzaRighe.join(', ')}.\n` +
+    `\n⚠️  Tabella VUOTA: ${senzaRighe.map(nomeSezione).join(', ')}.\n` +
       '   Una tabella senza righe non sfonda mai — qui non è stato verificato\n' +
       '   niente. Semina qualche riga con contenuti lunghi e rilancia.',
   );
