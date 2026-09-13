@@ -1,174 +1,70 @@
-// Panoramica: card "in attesa", KPI e ultime azioni. Chrome dalle .card
-// globali; qui solo tipografia e griglie. NON importa admin-shared.scss.
+// Panoramica: SOLO ciò che non è già un primitivo. Le tessere KPI, gli
+// scheletri, l'avviso e la coda «da fare» stanno in `admin-cruscotto.scss`
+// (quarto foglio condiviso); il ritmo di colonna in `admin-shared.scss`.
+//
+// ⚠️ Fino al 13/09/2026 questo foglio NON importava i fogli condivisi e si
+// disegnava una tessera propria (`.overview__kpi` a 1,6rem, contro lo `.stat`
+// a 2,5rem di Statistiche), con lo stesso `.is-up/.is-down` copiato e una
+// riga `.overview__meta` in mono su un `<p>` — il carattere da ETICHETTA su
+// una frase di prosa, l'anti-pattern che `.admin-nota` esiste per chiudere.
+// Cancellati tutti: `.overview__pending*`, `.overview__kpi*`, `.overview__delta`,
+// `.overview__meta`, `.overview__banner`, `.overview__block h2`.
 
-.overview {
-  display: flex;
-  flex-direction: column;
-  gap: 1.8rem;
+// ── Le code di lavoro ───────────────────────────────────────────────────────
+// 220px e non i 200 della griglia base: l'etichetta più lunga («Affiliazioni
+// in verifica», 24 caratteri in mono maiuscolo spaziato più l'icona) vale
+// ~180px, e coi 38px di padding della tessera una colonna da 200 la manda a
+// capo. Non cambia il ripiegamento: a 1440/1280/1024 stanno in fila, a 1100
+// (788px utili, la fascia più stretta) la quarta va a capo con l'una e con
+// l'altra misura.
+.pan__code {
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 }
 
-// ── Card "in attesa" ────────────────────────────────────────────────────────
-
-.overview__pending {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1rem;
-}
-
-.overview__pending-card {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  padding: 1rem 1.2rem;
-  color: var(--text-muted);
-  text-decoration: none;
-  transition: border-color var(--t-fast), box-shadow var(--t-fast);
-
-  &:hover {
-    border-color: var(--copper-400);
-  }
-
-  // qualcuno sta davvero aspettando: la card lo dice da lontano
-  &.has-items {
-    border-color: var(--copper-400);
-    box-shadow: var(--glow-copper);
-  }
-
-  .app-icon {
-    flex: 0 0 auto;
-    color: var(--copper-600);
-  }
-}
-
-.overview__pending-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-width: 0;
-
-  strong {
-    color: var(--cream-100);
-    font-family: var(--font-display);
-    font-size: 0.95rem;
-  }
-
-  span {
-    font-size: 0.8rem;
-    color: var(--text-faint);
-  }
-}
-
-.overview__pending-count {
-  margin-left: auto;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.6rem;
-  color: var(--ember);
-}
-
-// ── Blocchi con titolo ──────────────────────────────────────────────────────
-
-.overview__block {
-  h2 {
-    font-size: 1.2rem;
-    margin: 0 0 0.9rem;
-  }
-}
-
-.overview__banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.9rem;
-}
-
-// ── KPI ─────────────────────────────────────────────────────────────────────
-
-.overview__kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 1rem;
-}
-
-.overview__kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 1rem 1.2rem;
-}
-
-.overview__kpi-label {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-faint);
-}
-
-.overview__kpi-value {
-  font-family: var(--font-display);
-  font-size: 1.6rem;
-  line-height: 1.1;
-  color: var(--cream-100);
-}
-
-.overview__kpi-sub {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.overview__kpi-sub--row {
+// ── Titolo + pastiglia di stato sulla stessa riga ──────────────────────────
+// `.admin-blocco__testa` è `space-between`: con TRE figli lo spazio si
+// spalmerebbe fra tutti e la pastiglia finirebbe a metà riga. Titolo e stato
+// stanno in UN figlio (stesso rimedio di `.cm__mese` nei Conteggi) — un
+// `<div>`, perché un `<h3>` dentro uno `<span>` non è HTML valido.
+.pan__titolo {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
   flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
-.overview__delta {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-
-  &.is-up {
-    color: var(--felt);
-  }
-
-  &.is-down {
-    color: var(--danger);
-  }
-}
-
-.overview__meta {
-  margin: 0.7rem 0 0;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  color: var(--text-faint);
-}
-
-// ── Ultime azioni ───────────────────────────────────────────────────────────
-
-.overview__audit-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-
-  h2 {
-    margin: 0;
-  }
-}
-
-.overview__audit-all {
-  font-size: 0.85rem;
+// ── «non ancora incassato» dentro una nota ─────────────────────────────────
+// Lo stesso tono di `.admin-kpi__valore.is-manca` (rame = coda di lavoro, non
+// `--danger`: non si è perso niente), ma sulla NOTA della tessera dell'ultimo
+// mese chiuso — il cui valore è il margine congelato, che non manca di niente.
+// ⚠️ Su uno `<span>`, mai su uno `<strong>`: la regola condivisa
+// `.admin-kpi__nota strong` vale (0,3,1) con l'incapsulamento e vincerebbe.
+.pan__manca {
+  font-weight: 600;
   color: var(--copper-600);
 }
 
-.overview__audit-list {
+// ── La banda d'errore con «Riprova» ────────────────────────────────────────
+.pan__banda {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+// Gli scheletri di un elenco (coda «da fare», ultime azioni): una colonna di
+// righe da 44px, la stessa altezza delle righe che sostituiscono.
+.pan__scheletri {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+// ── Ultime azioni ───────────────────────────────────────────────────────────
+.pan__azioni {
   list-style: none;
-  margin: 0.9rem 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -178,7 +74,7 @@
 // Riga flex col gap: testo e data NON adiacenti inline (Angular scarta i nodi
 // di solo whitespace e nascerebbero incollati — la classe di bug dei pulsanti
 // della registrazione in admin-live).
-.overview__audit-row {
+.pan__azione {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
@@ -190,12 +86,12 @@
   }
 }
 
-.overview__audit-target {
+.pan__azione-su {
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
 
-.overview__audit-when {
+.pan__azione-quando {
   margin-left: auto;
   font-family: var(--font-mono);
   font-size: 0.72rem;

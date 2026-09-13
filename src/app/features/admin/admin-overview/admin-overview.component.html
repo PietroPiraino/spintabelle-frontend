@@ -1,53 +1,417 @@
-<div class="overview">
-  <!-- Card "in attesa": i tre punti dove qualcuno aspetta una decisione.
-       ⚠️ La Redazione sta per PRIMA e non è un capriccio d'ordine: le altre due
-       code si svuotano quando capita, questa 3-5 volte al giorno. È il lavoro
-       ricorrente del pannello, e la pagina su cui si atterra deve dirlo. -->
-  <div class="overview__pending">
+<!--
+  ⚠️ `admin-users` è il RITMO condiviso (colonna + `gap: 1rem`) di tredici
+  sezioni su diciotto, non «la classe di /admin/iscritti». Fino al 13/09/2026
+  questa pagina non lo prendeva e si teneva un `.overview` proprio: era l'unica
+  sezione con un altro passo verticale, e nessuno l'aveva deciso.
+-->
+<div class="admin-users pan">
+  <!--
+    1) Code di lavoro: i QUATTRO punti dove qualcuno aspetta una decisione.
+    ⚠️ La Redazione sta per PRIMA e non è un capriccio d'ordine: le altre code
+    si svuotano quando capita, questa 3-5 volte al giorno. È il lavoro
+    ricorrente del pannello, e la pagina su cui si atterra deve dirlo.
+    ⚠️ Il valore è il numero oppure «—»: uno zero al posto di un conteggio
+    fallito direbbe «niente da fare» dove la verità è «non lo so».
+    `data-coda` è l'ancora della spec: il testo di pagina non basta a dire
+    QUALE card porta quale numero.
+  -->
+  <div class="pan__code admin-kpi-griglia">
     <a
-      class="card overview__pending-card"
+      class="card admin-kpi admin-kpi--link"
       routerLink="/admin/redazione"
-      [class.has-items]="(pending.redazione() ?? 0) > 0"
+      data-coda="redazione"
+      [class.is-attivo]="(pending.redazione() ?? 0) > 0"
     >
-      <app-icon name="pen-tool" [size]="22" />
-      <span class="overview__pending-text">
-        <strong>Articoli da rivedere</strong>
-        <span>coda della redazione</span>
+      <span class="admin-kpi__etichetta">
+        <app-icon name="pen-tool" [size]="15" />
+        Articoli da rivedere
       </span>
-      <span class="overview__pending-count">{{ pending.redazione() ?? '—' }}</span>
+      <span class="admin-kpi__valore" [class.is-muto]="pending.redazione() === null">
+        {{ pending.redazione() ?? '—' }}
+      </span>
+      <span class="admin-kpi__nota">coda della redazione</span>
     </a>
     <a
-      class="card overview__pending-card"
+      class="card admin-kpi admin-kpi--link"
       routerLink="/admin/richieste"
-      [class.has-items]="(pending.richieste() ?? 0) > 0"
+      data-coda="richieste"
+      [class.is-attivo]="(pending.richieste() ?? 0) > 0"
     >
-      <app-icon name="inbox" [size]="22" />
-      <span class="overview__pending-text">
-        <strong>Richieste in attesa</strong>
-        <span>abbonamenti da approvare</span>
+      <span class="admin-kpi__etichetta">
+        <app-icon name="inbox" [size]="15" />
+        Richieste in attesa
       </span>
-      <span class="overview__pending-count">{{ pending.richieste() ?? '—' }}</span>
+      <span class="admin-kpi__valore" [class.is-muto]="pending.richieste() === null">
+        {{ pending.richieste() ?? '—' }}
+      </span>
+      <span class="admin-kpi__nota">abbonamenti da approvare</span>
     </a>
     <a
-      class="card overview__pending-card"
+      class="card admin-kpi admin-kpi--link"
       routerLink="/admin/affiliazioni"
-      [class.has-items]="(pending.affiliazioni() ?? 0) > 0"
+      data-coda="affiliazioni"
+      [class.is-attivo]="(pending.affiliazioni() ?? 0) > 0"
     >
-      <app-icon name="link-2" [size]="22" />
-      <span class="overview__pending-text">
-        <strong>Affiliazioni in verifica</strong>
-        <span>username da controllare</span>
+      <span class="admin-kpi__etichetta">
+        <app-icon name="link-2" [size]="15" />
+        Affiliazioni in verifica
       </span>
-      <span class="overview__pending-count">{{ pending.affiliazioni() ?? '—' }}</span>
+      <span class="admin-kpi__valore" [class.is-muto]="pending.affiliazioni() === null">
+        {{ pending.affiliazioni() ?? '—' }}
+      </span>
+      <span class="admin-kpi__nota">username da controllare</span>
+    </a>
+    <!--
+      ⚠️ La QUARTA coda mancava: il badge del Replayer stava in sidebar dal
+      27/08/2026, ma la Panoramica mostrava tre code su quattro — e una
+      segnalazione è la via con cui un terzo esercita l'art. 17, cioè la coda
+      che meno di tutte può aspettare di essere notata.
+    -->
+    <a
+      class="card admin-kpi admin-kpi--link"
+      routerLink="/admin/replayer"
+      data-coda="segnalazioni"
+      [class.is-attivo]="(pending.segnalazioni() ?? 0) > 0"
+    >
+      <span class="admin-kpi__etichetta">
+        <app-icon name="spade" [size]="15" />
+        Mani segnalate
+      </span>
+      <span class="admin-kpi__valore" [class.is-muto]="pending.segnalazioni() === null">
+        {{ pending.segnalazioni() ?? '—' }}
+      </span>
+      <span class="admin-kpi__nota">segnalazioni sul Replayer</span>
     </a>
   </div>
 
-  <!-- Numeri chiave da /admin/stats (risposta cachata: dichiara la sua età). -->
-  <section class="overview__block">
-    <h2>Numeri chiave</h2>
+  <!--
+    2) Da fare nei conteggi: la coda contabile, dal cruscotto (nessuna cache).
+    Ogni voce è un link alla SCHEDA dei Conteggi in cui la cosa si fa
+    (`?mese=&vista=`, il deep-link dell'F3): la Panoramica non registra niente.
+    ⚠️ La banda d'errore del cruscotto vive QUI e una volta sola: i blocchi
+    «Il mese contabile» e «Registro staking» leggono la stessa busta e in
+    errore non rendono zeri — rimandano a questo «Riprova».
+  -->
+  <section class="card card--pad admin-blocco" data-blocco="dafare">
+    <div class="admin-blocco__testa">
+      <h3 class="admin-blocco__titolo">Da fare nei conteggi</h3>
+      <a class="admin-blocco__vai" routerLink="/admin/conteggi-mensili">
+        Apri i conteggi
+        <app-icon name="arrow-right" [size]="14" />
+      </a>
+    </div>
+
+    @if (cruscottoError()) {
+      <div class="form-feedback is-error pan__banda" role="alert">
+        <span>{{ cruscottoError() }}</span>
+        <button type="button" class="btn btn--ghost btn--sm" (click)="loadCruscotto()">
+          <app-icon name="refresh" [size]="15" />
+          Riprova
+        </button>
+      </div>
+    }
+
+    @if (!cruscotto() && cruscottoLoading()) {
+      <div class="pan__scheletri" role="status" aria-label="Lettura dei conteggi">
+        @for (i of scheletriDaFare; track i) {
+          <span class="admin-scheletro admin-scheletro--riga" aria-hidden="true"></span>
+        }
+      </div>
+    } @else if (cruscotto(); as c) {
+      @if (c.daFare.length === 0) {
+        <p class="admin-avviso admin-avviso--ok">
+          <app-icon name="check" [size]="16" />
+          <span>Niente in sospeso nei conteggi.</span>
+        </p>
+      } @else {
+        <ul class="admin-dafare">
+          @for (v of c.daFare; track chiaveDaFare(v)) {
+            @let t = testoDaFare(v);
+            <li>
+              <a
+                class="admin-dafare__voce"
+                routerLink="/admin/conteggi-mensili"
+                [queryParams]="paramsDaFare(v)"
+              >
+                <!--
+                  Il numero sta anche quando non c'è (vuoto, `aria-hidden`):
+                  tiene allineate le righe con e senza conteggio.
+                -->
+                @if (t.n !== null) {
+                  <span class="admin-dafare__n">{{ formattaIntero(t.n) }}</span>
+                } @else {
+                  <span class="admin-dafare__n" aria-hidden="true"></span>
+                }
+                <span class="admin-dafare__testo">
+                  <strong>{{ t.strong }}</strong>
+                  <span>{{ t.span }}</span>
+                </span>
+                <app-icon name="arrow-right" [size]="16" />
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    }
+  </section>
+
+  <!--
+    3) Il mese contabile: il mese APERTO dal vivo («Provvisorio»), l'ultimo
+    CHIUSO congelato a confronto, e il credito dei soci. Ogni tessera porta
+    alla scheda dei Conteggi da cui quel numero viene.
+    ⚠️ DUE «atteso dall'agente» esistono nel backend: qui si stampa
+    `attesoDaAgenteCent` del cruscotto, che è il MARGINE che l'agente bonifica
+    — MAI lo spettante coi ticket dei giocatori dentro (tre volte tanto).
+  -->
+  <section class="card card--pad admin-blocco" data-blocco="mese">
+    @if (cruscotto()?.meseInCorso; as m) {
+      <div class="admin-blocco__testa">
+        <div class="pan__titolo">
+          <h3 class="admin-blocco__titolo">Conteggi di {{ m.etichetta }}</h3>
+          <!--
+            ⚠️ `.admin-stato` e non un `.badge`: «provvisorio» è lo STATO del
+            mese, che cambia da solo quando lo si chiude.
+          -->
+          <span class="admin-stato" data-tono="attesa">Provvisorio</span>
+        </div>
+        <a
+          class="admin-blocco__vai"
+          routerLink="/admin/conteggi-mensili"
+          [queryParams]="paramsConteggi(m.id, 'riepilogo')"
+        >
+          Apri il mese
+          <app-icon name="arrow-right" [size]="14" />
+        </a>
+      </div>
+    } @else {
+      <div class="admin-blocco__testa">
+        <h3 class="admin-blocco__titolo">Il mese contabile</h3>
+        <a class="admin-blocco__vai" routerLink="/admin/conteggi-mensili">
+          Apri i conteggi
+          <app-icon name="arrow-right" [size]="14" />
+        </a>
+      </div>
+    }
+
+    @if (!cruscotto() && cruscottoLoading()) {
+      <div class="admin-kpi-griglia" role="status" aria-label="Lettura del mese contabile">
+        @for (i of scheletriMese; track i) {
+          <div class="card admin-kpi is-scheletro" aria-hidden="true">
+            <span class="admin-scheletro"></span>
+            <span class="admin-scheletro"></span>
+          </div>
+        }
+      </div>
+    } @else if (cruscottoError()) {
+      <p class="admin-nota">
+        Lettura non riuscita: il pulsante «Riprova» sta qui sopra, in «Da fare
+        nei conteggi».
+      </p>
+    } @else if (cruscotto(); as c) {
+      @if (c.meseInCorso; as m) {
+        <div class="admin-kpi-griglia">
+          <a
+            class="card admin-kpi admin-kpi--link"
+            routerLink="/admin/conteggi-mensili"
+            [queryParams]="paramsConteggi(m.id, 'riepilogo')"
+          >
+            <span class="admin-kpi__etichetta">Margine netto</span>
+            <span class="admin-kpi__valore" [class.is-giu]="m.margineNettoCent < 0">
+              {{ formattaCent(m.margineNettoCent) }}
+            </span>
+            <span class="admin-kpi__nota">
+              entrate {{ formattaCent(m.entrate.totaleCent) }} · uscite
+              {{ formattaCent(m.uscite.totaleCent) }}
+            </span>
+          </a>
+
+          <!--
+            L'ultimo mese chiuso, a confronto. ⚠️ È QUI che si dice se il
+            bonifico dell'agente di QUEL mese è arrivato: l'agente paga il
+            rakeback di agosto a settembre, quindi «non ancora incassato» ha
+            senso solo su un mese chiuso — sull'aperto è lo stato normale (vedi
+            la tessera «Atteso dall'agente»). Coerente con la voce
+            INCASSO_AGENTE della coda qui sopra.
+          -->
+          @if (c.ultimoChiuso; as u) {
+            <a
+              class="card admin-kpi admin-kpi--link"
+              routerLink="/admin/conteggi-mensili"
+              [queryParams]="paramsConteggi(u.id, 'riepilogo')"
+            >
+              <span class="admin-kpi__etichetta">
+                Ultimo mese chiuso · {{ u.etichetta }}
+                <span class="admin-stato" data-tono="concluso">Congelato</span>
+              </span>
+              <span class="admin-kpi__valore" [class.is-giu]="u.margineNettoCent < 0">
+                {{ formattaCent(u.margineNettoCent) }}
+              </span>
+              <span class="admin-kpi__nota">
+                @if (u.chiusoAt) {
+                  chiuso il {{ u.chiusoAt | date: 'dd MMM yyyy' }}
+                } @else {
+                  margine congelato
+                }
+                @if (u.incassoAgente; as i) {
+                  · agente: incassato {{ formattaCent(i.importoCent) }} su
+                  {{ cassaLabel(i.cassa) }}
+                } @else if (u.attesoDaAgenteCent > 0) {
+                  <!--
+                    ⚠️ Uno `<span>` e non uno `<strong>`: la regola condivisa
+                    `.admin-kpi__nota strong` (0,3,1 con l'incapsulamento)
+                    batterebbe `.pan__manca` (0,2,0) e il rame non arriverebbe.
+                  -->
+                  · agente: <span class="pan__manca">non ancora incassato</span>
+                }
+              </span>
+            </a>
+          } @else {
+            <div class="card admin-kpi">
+              <span class="admin-kpi__etichetta">Ultimo mese chiuso</span>
+              <span class="admin-kpi__valore is-muto">Nessun mese chiuso</span>
+            </div>
+          }
+
+          <a
+            class="card admin-kpi admin-kpi--link"
+            routerLink="/admin/conteggi-mensili"
+            [queryParams]="paramsConteggi(m.id, 'rakeback')"
+          >
+            <span class="admin-kpi__etichetta">Resta da dare ai giocatori</span>
+            <span class="admin-kpi__valore">{{ formattaCent(m.restaDaDareCent) }}</span>
+            <span class="admin-kpi__nota">di questo mese: il saldo non si trascina</span>
+          </a>
+
+          <a
+            class="card admin-kpi admin-kpi--link"
+            routerLink="/admin/conteggi-mensili"
+            [queryParams]="paramsConteggi(m.id, 'rakeback')"
+          >
+            <span class="admin-kpi__etichetta">Atteso dall'agente (il margine)</span>
+            <span class="admin-kpi__valore">{{ formattaCent(m.attesoDaAgenteCent) }}</span>
+            <span class="admin-kpi__nota">
+              @if (m.incassoAgente; as i) {
+                incassato {{ formattaCent(i.importoCent) }} su {{ cassaLabel(i.cassa) }}
+              } @else {
+                si incassa dopo la chiusura
+              }
+            </span>
+          </a>
+
+          <a
+            class="card admin-kpi admin-kpi--link"
+            routerLink="/admin/conteggi-mensili"
+            [queryParams]="paramsConteggi(m.id, 'soci')"
+          >
+            <span class="admin-kpi__etichetta">Credito non riscosso dei soci</span>
+            <span class="admin-kpi__valore">
+              {{ formattaCent(c.soci.creditoNonRiscossoCent) }}
+            </span>
+            <span class="admin-kpi__nota">{{ notaCredito(c) }}</span>
+          </a>
+
+          <a
+            class="card admin-kpi admin-kpi--link"
+            routerLink="/admin/conteggi-mensili"
+            [queryParams]="paramsConteggi(m.id, 'soci')"
+          >
+            <span class="admin-kpi__etichetta">Prestito ancora da rientrare</span>
+            <span class="admin-kpi__valore">
+              {{ formattaCent(c.soci.prestitoResiduoCent) }}
+            </span>
+            <span class="admin-kpi__nota">
+              sui {{ c.soci.mesiChiusi }} mesi chiusi del registro
+            </span>
+          </a>
+        </div>
+      } @else {
+        <p class="admin-avviso admin-avviso--attenzione">
+          <app-icon name="alert-triangle" [size]="16" />
+          <span>
+            Nessun mese aperto: <a routerLink="/admin/conteggi-mensili">apri il mese dai Conteggi</a>
+            per vedere qui il margine, la cassa e il credito dei soci.
+          </span>
+        </p>
+      }
+      <p class="admin-nota">
+        Letto adesso dai conteggi, senza cache: il mese aperto cambia a ogni
+        rake digitato; quello chiuso è congelato.
+      </p>
+    }
+  </section>
+
+  <!--
+    4) Registro staking: tre numeri dal registro dei fondi ai giocatori, già
+    sommati dal server (`stakings.listAdmin`). ⚠️ «Registro EV» e non «EV da
+    recuperare» + `testoEv`: quella funzione dice già «da recuperare», e
+    l'etichetta lo ripeterebbe — oppure «In pari» sotto «da recuperare».
+  -->
+  <section class="card card--pad admin-blocco" data-blocco="staking">
+    <div class="admin-blocco__testa">
+      <h3 class="admin-blocco__titolo">Registro staking</h3>
+      <a class="admin-blocco__vai" routerLink="/admin/stakings">
+        Apri il registro
+        <app-icon name="arrow-right" [size]="14" />
+      </a>
+    </div>
+
+    @if (!cruscotto() && cruscottoLoading()) {
+      <div class="admin-kpi-griglia" role="status" aria-label="Lettura del registro staking">
+        @for (i of scheletriStaking; track i) {
+          <div class="card admin-kpi is-scheletro" aria-hidden="true">
+            <span class="admin-scheletro"></span>
+            <span class="admin-scheletro"></span>
+          </div>
+        }
+      </div>
+    } @else if (cruscottoError()) {
+      <p class="admin-nota">
+        Lettura non riuscita: il pulsante «Riprova» sta in «Da fare nei
+        conteggi».
+      </p>
+    } @else if (cruscotto(); as c) {
+      <div class="admin-kpi-griglia">
+        <a class="card admin-kpi admin-kpi--link" routerLink="/admin/stakings">
+          <span class="admin-kpi__etichetta">In corso</span>
+          <span class="admin-kpi__valore">{{ formattaIntero(c.staking.inCorso) }}</span>
+          <span class="admin-kpi__nota">giocatori con un registro aperto</span>
+        </a>
+        <a class="card admin-kpi admin-kpi--link" routerLink="/admin/stakings">
+          <span class="admin-kpi__etichetta">Fondi fuori</span>
+          <span class="admin-kpi__valore">{{ formattaCent(c.staking.fondiFuoriCent) }}</span>
+          <span class="admin-kpi__nota">in mano ai giocatori adesso</span>
+        </a>
+        <a class="card admin-kpi admin-kpi--link" routerLink="/admin/stakings">
+          <span class="admin-kpi__etichetta">Registro EV</span>
+          <span
+            class="admin-kpi__valore"
+            [class.is-muto]="c.staking.evDaRecuperareCent === 0"
+          >
+            {{ testoEv(c.staking.evDaRecuperareCent) }}
+          </span>
+          <span class="admin-kpi__nota">sui registri in corso</span>
+        </a>
+      </div>
+    }
+  </section>
+
+  <!--
+    5) Abbonati, da /admin/stats (risposta cachata: dichiara la sua età).
+    ⚠️ EURO float qui, non centesimi: `formattaEur`, mai `formattaCent`.
+    Le tessere per tier sono sparite: il dettaglio vive in Statistiche, dove
+    ogni tessera porta (`?vista=`).
+  -->
+  <section class="card card--pad admin-blocco" data-blocco="abbonati">
+    <div class="admin-blocco__testa">
+      <h3 class="admin-blocco__titolo">Abbonati</h3>
+      <a class="admin-blocco__vai" routerLink="/admin/statistiche">
+        Tutte le statistiche
+        <app-icon name="arrow-right" [size]="14" />
+      </a>
+    </div>
 
     @if (statsError()) {
-      <div class="form-feedback is-error overview__banner" role="alert">
+      <div class="form-feedback is-error pan__banda" role="alert">
         <span>{{ statsError() }}</span>
         <button type="button" class="btn btn--ghost btn--sm" (click)="loadStats()">
           <app-icon name="refresh" [size]="15" />
@@ -57,81 +421,104 @@
     }
 
     @if (!stats() && statsLoading()) {
-      <div class="spinner" role="status" aria-label="Caricamento statistiche"></div>
+      <div class="admin-kpi-griglia" role="status" aria-label="Caricamento statistiche">
+        @for (i of scheletriAbbonati; track i) {
+          <div class="card admin-kpi is-scheletro" aria-hidden="true">
+            <span class="admin-scheletro"></span>
+            <span class="admin-scheletro"></span>
+          </div>
+        }
+      </div>
     } @else if (stats(); as s) {
-      <div class="overview__kpis">
-        <div class="card overview__kpi">
-          <span class="overview__kpi-label">Abbonati attivi</span>
-          <strong class="overview__kpi-value">
-            {{ int(s.abbonati.conAbbonamentoValido) }}
-          </strong>
-          <span class="overview__kpi-sub">
-            con accesso ora: {{ int(s.abbonati.hannoAccessoOra) }}
+      <div class="admin-kpi-griglia">
+        <a class="card admin-kpi admin-kpi--link" routerLink="/admin/iscritti">
+          <span class="admin-kpi__etichetta">Abbonamenti in regola</span>
+          <span class="admin-kpi__valore">
+            {{ formattaIntero(s.abbonati.conAbbonamentoValido) }}
           </span>
-        </div>
+          <span class="admin-kpi__nota">
+            Passano il paywall ora:
+            <strong>{{ formattaIntero(s.abbonati.hannoAccessoOra) }}</strong>
+          </span>
+        </a>
 
-        <div class="card overview__kpi">
-          <span class="overview__kpi-label">Incasso abbonamenti · 30 giorni</span>
-          <strong class="overview__kpi-value">
-            {{ euro(s.incassoAbbonamenti.ultimi30Eur) }}
-          </strong>
-          <span class="overview__kpi-sub overview__kpi-sub--row">
-            <span>
-              {{ int(s.incassoAbbonamenti.ordini30) }}
-              {{ s.incassoAbbonamenti.ordini30 === 1 ? 'ordine' : 'ordini' }}
-            </span>
+        <!--
+          ⚠️ «su M iscritti» e mai «registrazioni completate»: `iscritti`
+          conta anche chi non ha verificato l'email.
+        -->
+        <a
+          class="card admin-kpi admin-kpi--link"
+          routerLink="/admin/statistiche"
+          [queryParams]="{ vista: 'abbonati' }"
+        >
+          <span class="admin-kpi__etichetta">Attivi negli ultimi 30 giorni</span>
+          <span class="admin-kpi__valore">
+            {{ formattaIntero(s.crescita.attivi.ultimi30) }}
+          </span>
+          <span class="admin-kpi__nota">
+            7 giorni: <strong>{{ formattaIntero(s.crescita.attivi.ultimi7) }}</strong> ·
+            su {{ formattaIntero(s.crescita.attivi.iscritti) }} iscritti
+          </span>
+        </a>
+
+        <a
+          class="card admin-kpi admin-kpi--link"
+          routerLink="/admin/statistiche"
+          [queryParams]="{ vista: 'abbonati' }"
+        >
+          <span class="admin-kpi__etichetta">In scadenza entro 7 giorni</span>
+          <span class="admin-kpi__valore">
+            {{ formattaIntero(s.scadenze.entro7.utenti) }}
+          </span>
+          <span class="admin-kpi__nota">
+            entro 30: <strong>{{ formattaIntero(s.scadenze.entro30.utenti) }}</strong>
+          </span>
+        </a>
+
+        <a
+          class="card admin-kpi admin-kpi--link"
+          routerLink="/admin/statistiche"
+          [queryParams]="{ vista: 'incassi' }"
+        >
+          <span class="admin-kpi__etichetta">Incasso abbonamenti · 30 giorni</span>
+          <span class="admin-kpi__valore">
+            {{ formattaEur(s.incassoAbbonamenti.ultimi30Eur) }}
+          </span>
+          <span class="admin-kpi__nota">
+            {{ formattaIntero(s.incassoAbbonamenti.ordini30) }}
+            {{ s.incassoAbbonamenti.ordini30 === 1 ? 'abbonamento approvato' : 'abbonamenti approvati' }}
             @if (s.incassoAbbonamenti.deltaPct !== null) {
               <span
-                class="overview__delta"
-                [class.is-up]="s.incassoAbbonamenti.deltaPct > 0"
-                [class.is-down]="s.incassoAbbonamenti.deltaPct < 0"
+                class="admin-kpi__delta"
+                [class.is-su]="s.incassoAbbonamenti.deltaPct > 0"
+                [class.is-giu]="s.incassoAbbonamenti.deltaPct < 0"
               >
-                {{ delta(s.incassoAbbonamenti.deltaPct) }}
+                {{ formattaDelta(s.incassoAbbonamenti.deltaPct) }}
               </span>
             }
           </span>
-        </div>
-
-        @for (tier of s.abbonati.perTier; track tier.tier) {
-          <div class="card overview__kpi">
-            <span class="overview__kpi-label">{{ roleLabel(tier.tier) }}</span>
-            <strong class="overview__kpi-value">
-              {{ int(tier.conAbbonamentoValido) }}
-            </strong>
-            <span class="overview__kpi-sub">
-              con accesso ora: {{ int(tier.hannoAccessoOra) }}
-            </span>
-          </div>
-        }
-
-        <div class="card overview__kpi">
-          <span class="overview__kpi-label">In scadenza · 7 giorni</span>
-          <strong class="overview__kpi-value">
-            {{ int(s.scadenze.entro7.utenti) }}
-          </strong>
-          <span class="overview__kpi-sub">
-            entro 30: {{ int(s.scadenze.entro30.utenti) }}
-          </span>
-        </div>
+        </a>
       </div>
 
-      <p class="overview__meta">
+      <p class="admin-nota">
         Aggiornato: {{ s.generatoIl | date: 'dd MMM yyyy, HH:mm' }} · ricalcolo
-        ogni {{ s.aggiornatoOgniMinuti }} min · tutti i dettagli nella sezione
-        Statistiche
+        ogni {{ s.aggiornatoOgniMinuti }} min.
       </p>
     }
   </section>
 
-  <!-- Ultime azioni admin (stessa mappa etichette del Log). -->
-  <section class="overview__block">
-    <div class="overview__audit-head">
-      <h2>Ultime azioni admin</h2>
-      <a class="overview__audit-all" routerLink="/admin/log">Vedi tutto il log</a>
+  <!-- 6) Ultime azioni admin (stessa mappa etichette del Log). -->
+  <section class="card card--pad admin-blocco" data-blocco="azioni">
+    <div class="admin-blocco__testa">
+      <h3 class="admin-blocco__titolo">Ultime azioni admin</h3>
+      <a class="admin-blocco__vai" routerLink="/admin/log">
+        Vedi tutto il log
+        <app-icon name="arrow-right" [size]="14" />
+      </a>
     </div>
 
     @if (actionsError()) {
-      <div class="form-feedback is-error overview__banner" role="alert">
+      <div class="form-feedback is-error pan__banda" role="alert">
         <span>{{ actionsError() }}</span>
         <button type="button" class="btn btn--ghost btn--sm" (click)="loadActions()">
           <app-icon name="refresh" [size]="15" />
@@ -141,21 +528,25 @@
     }
 
     @if (!actions() && actionsLoading()) {
-      <div class="spinner" role="status" aria-label="Caricamento log"></div>
+      <div class="pan__scheletri" role="status" aria-label="Caricamento log">
+        @for (i of scheletriAzioni; track i) {
+          <span class="admin-scheletro admin-scheletro--riga" aria-hidden="true"></span>
+        }
+      </div>
     } @else if (actions(); as list) {
       @if (list.length === 0) {
         <div class="empty-state">
           <p>Nessuna azione registrata.</p>
         </div>
       } @else {
-        <ul class="overview__audit-list">
+        <ul class="pan__azioni">
           @for (e of list; track e.id) {
-            <li class="overview__audit-row">
+            <li class="pan__azione">
               <strong>{{ actionLabel(e.action) }}</strong>
               @if (e.userEmail) {
-                <span class="overview__audit-target">su {{ e.userEmail }}</span>
+                <span class="pan__azione-su">su {{ e.userEmail }}</span>
               }
-              <span class="overview__audit-when">
+              <span class="pan__azione-quando">
                 {{ e.createdAt | date: 'dd MMM, HH:mm' }}
               </span>
             </li>
