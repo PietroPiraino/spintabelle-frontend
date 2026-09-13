@@ -1,0 +1,329 @@
+// Il grafico a colonne del pannello admin (`app-grafico-colonne`).
+//
+// Nessun colore letterale: le serie leggono gli alias `--serie-*` di
+// `styles/_tokens.scss` (che i tre temi ridefiniscono da soli), il segno
+// `--felt`/`--danger`. ⚠️ NESSUNA animazione sui dati: un grafico che cresce
+// all'arrivo dell'API è un salto di layout, e non c'è nulla da gatare con
+// `prefers-reduced-motion` — il kill-switch di `_reset.scss` copre gli hover.
+
+.grafico {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.grafico__testa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.grafico__titolo {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.grafico__legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+// La voce di legenda: un quadratino nel colore della serie. ⚠️ Niente pillola,
+// niente maiuscolo: la forma tonda in maiuscoletto è quella di `.admin-stato`,
+// e una legenda che le somiglia si legge come uno stato.
+.grafico__voce {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  &::before {
+    content: '';
+    flex: none;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 2px;
+    background: var(--serie-neutra);
+  }
+
+  &[data-tono='uno']::before {
+    background: var(--serie-1);
+  }
+
+  &[data-tono='due']::before {
+    background: var(--serie-2);
+  }
+
+  &[data-tono='tre']::before {
+    background: var(--serie-3);
+  }
+
+  &[data-tono='segno']::before {
+    background: var(--felt);
+  }
+
+  // La linea sovrapposta: un trattino, non un quadratino.
+  &--linea::before {
+    width: 0.9rem;
+    height: 2px;
+    border-radius: 0;
+    background: var(--cream-100);
+  }
+}
+
+// ── L'area ──────────────────────────────────────────────────────────────────
+// ⚠️ Altezza DICHIARATA da `--grafico-h` (l'input `altezza`), la stessa che
+// `.admin-scheletro--grafico` legge: il grafico vero atterra dove stava lo
+// scheletro, senza spostare niente. Dentro, una FASCIA superiore di 2.4rem
+// resta libera per il tooltip: così non taglia le colonne più alte e non
+// sposta nulla quando compare.
+.grafico__area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: var(--grafico-h, 180px);
+}
+
+.grafico__plot {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin-top: 2.4rem;
+}
+
+.grafico__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.grafico__tick {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.grafico__zero {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+// La barra: `fill: currentColor` e il tono decide il `color`, così il
+// tratteggio della provvisoria (`stroke: currentColor`) esce nello stesso
+// colore del riempimento senza ripetere i cinque toni due volte.
+.grafico__barra {
+  color: var(--serie-neutra);
+  fill: currentColor;
+  stroke: none;
+  stroke-width: 1.5;
+
+  &[data-tono='uno'] {
+    color: var(--serie-1);
+  }
+
+  &[data-tono='due'] {
+    color: var(--serie-2);
+  }
+
+  &[data-tono='tre'] {
+    color: var(--serie-3);
+  }
+
+  &[data-tono='segno'] {
+    color: var(--felt);
+  }
+
+  // ⚠️ DOPO i toni: un valore sotto zero è rosso qualunque sia la serie.
+  &.is-negativa {
+    color: var(--danger);
+  }
+
+  // Il mese aperto: mezza tinta e tratteggio — i numeri cambiano ancora.
+  &.is-provvisoria {
+    fill-opacity: 0.45;
+    stroke: currentColor;
+    stroke-dasharray: 3 2;
+  }
+
+  // La colonna sotto la lente: un contorno nel colore del testo.
+  &.is-scelta {
+    stroke: var(--text);
+  }
+}
+
+.grafico__linea {
+  stroke: var(--cream-100);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+// I tick, in HTML: appoggiati sopra la propria linea, al bordo sinistro. Lo
+// sfondo semitrasparente li tiene leggibili quando una colonna passa sotto.
+.grafico__tick-testo {
+  position: absolute;
+  left: 0.2rem;
+  transform: translateY(-100%);
+  padding: 0 0.25rem;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--surface-1) 80%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+// ── La lente ────────────────────────────────────────────────────────────────
+// Un solo bottone sopra tutta l'area: l'unico stop di Tab del grafico, e la
+// superficie che il dito tocca. ⚠️ 44px dichiarati (sorvegliati da
+// `bersagli-tocco.test.mjs`): con `inset: 0` l'altezza è quella dell'area, e il
+// minimo tiene anche un grafico basso. L'anello di fuoco è quello globale di
+// `:focus-visible`.
+.grafico__lente {
+  position: absolute;
+  inset: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: crosshair;
+  // Lo scorrimento verticale della pagina resta del browser: la lente ascolta
+  // solo dove sta il dito, non lo trattiene.
+  touch-action: pan-y;
+}
+
+// ── Il tooltip ──────────────────────────────────────────────────────────────
+// Vive nella fascia superiore dell'area. `pointer-events: none`: sta sopra la
+// lente e non deve rubarle il puntatore. Nel primo/ultimo 15% si ancora al
+// bordo (`.is-sinistra`/`.is-destra`) invece che al centro della colonna.
+.grafico__tip {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1rem 0.7rem;
+  max-width: 100%;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-pop);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+
+  &.is-sinistra {
+    left: 0;
+    transform: none;
+  }
+
+  &.is-destra {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  strong {
+    color: var(--cream-100);
+  }
+
+  b {
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+// «provvisorio»: un inciso, non uno stato — i numeri cambiano ancora.
+.grafico__tip-nota {
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.grafico__tip-voce::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.35rem;
+  border-radius: 2px;
+  background: var(--serie-neutra);
+  vertical-align: baseline;
+}
+
+.grafico__tip-voce[data-tono='uno']::before {
+  background: var(--serie-1);
+}
+
+.grafico__tip-voce[data-tono='due']::before {
+  background: var(--serie-2);
+}
+
+.grafico__tip-voce[data-tono='tre']::before {
+  background: var(--serie-3);
+}
+
+.grafico__tip-voce[data-tono='segno']::before {
+  background: var(--felt);
+}
+
+.grafico__tip-voce--linea::before {
+  width: 0.7rem;
+  height: 2px;
+  border-radius: 0;
+  background: var(--cream-100);
+}
+
+// ── L'asse X ────────────────────────────────────────────────────────────────
+// Una cella per colonna, larga quanto lo slot dell'SVG: le etichette stanno
+// sotto la propria colonna per costruzione, senza misurare niente.
+.grafico__x {
+  display: flex;
+  margin-top: 0.15rem;
+}
+
+.grafico__x-voce {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-faint);
+}
+
+.grafico__nota {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+// Nessuna colonna: lo spazio resta riservato (è la stessa altezza che avrebbe
+// il grafico) e lo dice, invece di lasciare un rettangolo vuoto.
+.grafico__vuoto {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-faint);
+}

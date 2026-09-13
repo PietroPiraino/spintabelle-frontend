@@ -104,6 +104,18 @@
   --act-raise-3: #e25510; // raise grande
   --act-allin: #d61f5e;
 
+  // La tavolozza dei grafici del pannello admin (`app-grafico-colonne`): ALIAS
+  // di token che i tre temi ridefiniscono, non colori nuovi — per questo stanno
+  // qui UNA volta sola e non nei tre blocchi. ⚠️ Un `var()` dichiarato su
+  // `:root` si risolve sullo stesso elemento su cui `[data-theme]` riscrive
+  // `--copper-500`: il tema cambia da solo, e in Tramonto la prima serie esce
+  // rosa come ogni altro accento della pagina. Per il SEGNO (margine ≥ 0 / < 0)
+  // i grafici usano `--felt`/`--danger`, che esistono già.
+  --serie-1: var(--copper-500); // prima serie (entrate, incasso, riproduzioni)
+  --serie-2: var(--gold); // seconda serie (rinnovi)
+  --serie-3: var(--act-check); // terza serie (ritorni)
+  --serie-neutra: var(--text-faint); // uscite / spese
+
   // Ombre e bagliori neon
   --glow-copper: 0 0 32px rgba(255, 106, 31, 0.3);
   --glow-copper-strong: 0 8px 40px rgba(255, 106, 31, 0.45);

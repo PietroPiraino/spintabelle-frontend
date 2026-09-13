@@ -1,0 +1,144 @@
+<!--
+  Il grafico a colonne del pannello. La forma — e le ragioni di ogni pezzo —
+  stanno nel docblock di `grafico-colonne.component.ts`.
+-->
+<figure class="grafico" [style.--grafico-h.px]="altezza()">
+  <figcaption class="grafico__testa">
+    <span class="grafico__titolo">{{ titolo() }}</span>
+    <span class="grafico__legenda">
+      @for (s of serie(); track s.nome) {
+        <span class="grafico__voce" [attr.data-tono]="s.tono">{{ s.nome }}</span>
+      }
+      @if (etichettaLinea(); as l) {
+        <span class="grafico__voce grafico__voce--linea">{{ l }}</span>
+      }
+    </span>
+  </figcaption>
+
+  <div class="grafico__area" (pointermove)="daPuntatore($event)" (pointerleave)="lascia($event)">
+    <!--
+      Il tracciato: solo forme che si possono stirare. Tick e etichette sono
+      HTML, fuori dall'SVG — un <text> in un viewBox stirato esce deformato.
+    -->
+    <div class="grafico__plot">
+      <svg
+        #svg
+        class="grafico__svg"
+        viewBox="0 0 1000 1000"
+        preserveAspectRatio="none"
+        role="img"
+        [attr.aria-label]="riassunto()"
+      >
+        @for (t of geometria().ticks; track t.v) {
+          @if (t.v !== 0) {
+            <line
+              class="grafico__tick"
+              x1="0"
+              x2="1000"
+              [attr.y1]="t.y"
+              [attr.y2]="t.y"
+              vector-effect="non-scaling-stroke"
+            />
+          }
+        }
+        <line
+          class="grafico__zero"
+          x1="0"
+          x2="1000"
+          [attr.y1]="geometria().zeroY"
+          [attr.y2]="geometria().zeroY"
+          vector-effect="non-scaling-stroke"
+        />
+        @for (b of geometria().barre; track b.chiave) {
+          <rect
+            class="grafico__barra"
+            [attr.data-tono]="b.tono"
+            [class.is-negativa]="b.negativa"
+            [class.is-provvisoria]="b.provvisoria"
+            [class.is-scelta]="scelto() === b.colonna"
+            [attr.x]="b.x"
+            [attr.y]="b.y"
+            [attr.width]="b.w"
+            [attr.height]="b.h"
+            vector-effect="non-scaling-stroke"
+          />
+        }
+        @if (etichettaLinea() && geometria().linea) {
+          <polyline
+            class="grafico__linea"
+            [attr.points]="geometria().linea"
+            fill="none"
+            vector-effect="non-scaling-stroke"
+          />
+        }
+      </svg>
+      @for (t of geometria().ticks; track t.v) {
+        <span class="grafico__tick-testo" aria-hidden="true" [style.top.%]="t.y / 10">{{
+          t.testo
+        }}</span>
+      }
+    </div>
+
+    @if (n() > 0) {
+      <!--
+        La lente: l'unico stop di Tab del grafico. Copre l'area intera, e il
+        puntatore sceglie lo slot più vicino — non deve colpire la barra.
+      -->
+      <button
+        type="button"
+        class="grafico__lente"
+        [attr.aria-label]="'Esplora «' + titolo() + '»: frecce per muoversi, Invio per il dettaglio'"
+        [attr.aria-describedby]="idReadout"
+        (focus)="alFuoco()"
+        (blur)="azzera()"
+        (keydown)="onTasto($event)"
+        (click)="tocca($event)"
+      ></button>
+    } @else {
+      <p class="grafico__vuoto">Nessun dato da mostrare.</p>
+    }
+
+    <!-- Il readout: cambia SOLO da tastiera e da tap, mai a ogni pointermove. -->
+    <span class="visually-hidden" [id]="idReadout" aria-live="polite">{{ annuncio() }}</span>
+
+    @if (colonnaScelta(); as sc) {
+      <div
+        class="grafico__tip"
+        aria-hidden="true"
+        [class.is-sinistra]="ancoraggio(sc.i) === 'sinistra'"
+        [class.is-destra]="ancoraggio(sc.i) === 'destra'"
+        [style.left.%]="ancoraggio(sc.i) === 'centro' ? centroX(sc.i) : null"
+      >
+        <strong class="grafico__tip-titolo">{{ sc.c.etichettaLunga ?? sc.c.etichetta }}</strong>
+        @if (sc.c.provvisorio) {
+          <em class="grafico__tip-nota">provvisorio</em>
+        }
+        @for (s of serie(); track s.nome; let k = $index) {
+          <span class="grafico__tip-voce" [attr.data-tono]="s.tono"
+            >{{ s.nome }} <b>{{ sc.c.testi[k] }}</b></span
+          >
+        }
+        @if (etichettaLinea(); as l) {
+          <span class="grafico__tip-voce grafico__tip-voce--linea"
+            >{{ l }} <b>{{ sc.c.testoLinea }}</b></span
+          >
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Le etichette dell'asse X: una cella per colonna, stampata a passo. -->
+  <div class="grafico__x" aria-hidden="true">
+    @for (c of colonne(); track c.chiave; let i = $index) {
+      <span class="grafico__x-voce">
+        @if (mostraEtichetta(i)) {
+          {{ c.etichetta }}
+        }
+      </span>
+    }
+  </div>
+
+  @if (nota()) {
+    <p class="grafico__nota">{{ nota() }}</p>
+  }
+</figure>

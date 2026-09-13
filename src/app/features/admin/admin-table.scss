@@ -282,6 +282,34 @@
     }
   }
 
+  // ── Le etichette delle celle di sole cifre (OPT-IN) ───────────────────────
+  // ⚠️ Il ripiegamento a blocchi qui sopra presuppone che ogni cella si spieghi
+  // da sé («ogni valore porta con sé la propria etichetta»), e vale per badge,
+  // date e testo. NON vale per una riga di sole cifre: a 390px «86,80 · 26,98 €
+  // · 16,56 €» sono tre numeri di cui non si sa quale sia quale. La cella che
+  // porta `data-etichetta` la stampa davanti al valore.
+  //
+  // ⚠️ OPT-IN per classe sulla tabella, e non un `td[data-etichetta]` generico:
+  // questo foglio è importato da sedici componenti, e le tredici tabelle che il
+  // problema non hanno non devono cambiare di un pixel. Ricetta di
+  // `.cm__rakeback td[data-etichetta]`, che resta locale ai Conteggi finché
+  // quella sezione non migra (follow-up F7).
+  .admin-table--etichettata td[data-etichetta] {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 100%;
+    text-align: left;
+
+    &::before {
+      content: attr(data-etichetta);
+      flex: 0 0 9rem;
+      color: var(--text-faint);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+  }
 }
 
 // La nota che dice dove sono finite le colonne nascoste: solo sullo stretto.

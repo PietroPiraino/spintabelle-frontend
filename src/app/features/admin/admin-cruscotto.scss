@@ -1,0 +1,545 @@
+@use './soglie' as s;
+
+// ── I primitivi del CRUSCOTTO: Panoramica e Statistiche ──────────────────
+//
+// ⚠️ QUARTO foglio condiviso del pannello, e non un'aggiunta ad
+// `admin-shared.scss` — l'idioma è quello di `admin-modale.scss` e
+// `admin-table.scss`: quel foglio è importato da sedici componenti, cinque dei
+// quali non hanno né una tessera KPI né un grafico, e ogni riga aggiunta là
+// viaggia con tutte. Qui stanno le forme che servono SOLO alle due sezioni di
+// «Analisi»: il blocco con titolo e link «Apri», la tessera KPI (col suo
+// scheletro della stessa altezza), l'avviso, la coda «da fare», il conto
+// economico a `<dl>` e il collassabile fuori dalle modali.
+//
+// ⚠️ Nasce perché fino al 13/09/2026 Panoramica e Statistiche avevano DUE
+// tessere diverse (`.overview__kpi` a 1,6rem e `.stat` a 2,5rem) con lo stesso
+// `.is-up/.is-down` copiato in entrambi i fogli, tre note in linea e due
+// blocchi con titolo scritti in casa: nessuno aveva deciso di averne due — la
+// seconda era nata copiando la prima. È la storia delle cinque pastiglie di
+// stato, presa un giro prima.
+//
+// Solo token; le alfa con `color-mix`. Nessun blocco con `border-radius: 999px`
+// e `text-transform: uppercase` insieme: lo STATO è `.admin-stato`, il FATTO
+// è `.badge`, e questo foglio non ne disegna una terza (la regola di confine
+// sta in `admin-shared.scss`).
+
+// ── Il blocco con titolo ────────────────────────────────────────────────────
+// Si applica a `section.card.card--pad`: il chrome lo dà la card, qui c'è solo
+// il ritmo interno. Sostituisce `.admin-stats__block` e `.overview__block`.
+.admin-blocco {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.admin-blocco__testa {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+// ⚠️ Sempre con la classe, mai l'`<h3>` nudo: l'h3 globale vale
+// `clamp(1.2rem, 2.2vw, 1.5rem)` più un margine, e in un blocco da cruscotto
+// il titolo si leggerebbe più grande dell'`h2` della barra sopra.
+.admin-blocco__titolo {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+// Il link che porta alla sezione completa («Apri i conteggi», «Tutti»).
+// ⚠️ 44px dichiarati: un link in linea sta sui 20px e col dito non si prende.
+.admin-blocco__vai {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 44px;
+  font-size: 0.85rem;
+  color: var(--copper-600);
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}
+
+// ── La tessera KPI ──────────────────────────────────────────────────────────
+.admin-kpi-griglia {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 1rem;
+}
+
+// Una tessera su `.card`. ⚠️ `min-height: 6.25rem` NON è una rifinitura: è la
+// stessa altezza dello scheletro qui sotto (`.admin-kpi.is-scheletro`), e la
+// coppia è ciò che azzera il CLS. La Panoramica era uno dei quattro elementi
+// del sito misurati come «salto di layout» dal report Cloudflare del 29-30/08
+// (`section.overview__block`): le tessere nascevano vuote e crescevano
+// all'arrivo dell'API. Con la stessa altezza prima e dopo, non si muove niente.
+.admin-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  min-height: 6.25rem;
+  padding: 1rem 1.2rem;
+}
+
+// L'etichetta: mono, maiuscoletto, tenue — e NESSUN `border-radius`, o avrebbe
+// la forma di una pastiglia di stato (vedi la guardia `pastiglia-stato`).
+.admin-kpi__etichetta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+// Il numero è la cosa che si legge: grande, tabellare, nel colore del testo.
+.admin-kpi__valore {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--cream-100);
+  font-variant-numeric: tabular-nums;
+
+  // «Dati insufficienti», «Nessun confronto», «—» non sono numeri: senza il
+  // peso tipografico di un numero, o si leggono come un valore.
+  &.is-muto {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  &.is-su {
+    color: var(--felt);
+  }
+
+  &.is-giu {
+    color: var(--danger);
+  }
+
+  // Un dato che MANCA e va fornito («non ancora incassato»): rame, cioè il
+  // tono della coda di lavoro, e non `--danger` — non si è perso niente.
+  &.is-manca {
+    color: var(--copper-600);
+  }
+}
+
+.admin-kpi__nota {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+
+  strong {
+    color: var(--cream-100);
+  }
+}
+
+.admin-kpi__delta {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+
+  &.is-su {
+    color: var(--felt);
+  }
+
+  &.is-giu {
+    color: var(--danger);
+  }
+}
+
+// La tessera che PORTA alla sezione: un `<a>` con la stessa forma. Il bordo
+// risponde all'hover come le card «in attesa» di prima; `.is-attivo` è la coda
+// con dentro qualcosa (l'ex `.has-items`): si vede da lontano.
+a.admin-kpi--link {
+  color: inherit;
+  text-decoration: none;
+  transition: border-color var(--t-fast);
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--copper-400);
+  }
+
+  &.is-attivo {
+    border-color: var(--copper-400);
+    box-shadow: var(--glow-copper);
+  }
+}
+
+// Lo scheletro della tessera: stessa scatola, stessa altezza. Dentro, la prima
+// barra è l'etichetta e la seconda il numero.
+.admin-kpi.is-scheletro {
+  min-height: 6.25rem;
+  justify-content: center;
+  gap: 0.6rem;
+
+  .admin-scheletro {
+    width: 45%;
+  }
+
+  .admin-scheletro + .admin-scheletro {
+    width: 65%;
+    height: 1.5rem;
+  }
+}
+
+// ── Lo scheletro ────────────────────────────────────────────────────────────
+// Segnaposto mentre il dato arriva. ⚠️ Uno scheletro e non un trattino: un
+// trattino è un'informazione («non ce n'è»), e vederlo diventare un valore un
+// attimo dopo è una bugia che sfarfalla (stessa scelta di `.admin-table__skel`).
+.admin-scheletro {
+  display: block;
+  width: 100%;
+  height: 0.7rem;
+  border-radius: var(--radius-sm);
+  background: var(--line);
+  animation: admin-scheletro 1.2s ease-in-out infinite;
+
+  // Una riga di elenco: la stessa altezza della riga che sostituisce.
+  &--riga {
+    height: 44px;
+  }
+
+  // Un grafico: la stessa `--grafico-h` che `app-grafico-colonne` dichiara
+  // sulla propria area, così il grafico vero atterra senza spostare niente.
+  &--grafico {
+    height: var(--grafico-h, 180px);
+  }
+}
+
+@keyframes admin-scheletro {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-scheletro {
+    animation: none;
+  }
+}
+
+// ── L'avviso in linea ───────────────────────────────────────────────────────
+// Una spiegazione, non una decorazione (ex `.admin-stats__note`).
+// ⚠️ Modificatori di CLASSE e non un `data-tono`: i vocabolari di tono restano
+// due (percorso e salute) e questo non è né l'uno né l'altro — è il registro di
+// una frase, non lo stato di una riga.
+// ⚠️ Nessun `<code>` qui dentro, di proposito: un avviso che l'owner deve
+// LEGGERE e su cui deve AGIRE non contiene una query Mongo.
+.admin-avviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-0);
+  font-size: 0.83rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+
+  app-icon {
+    flex: none;
+    margin-top: 0.1rem;
+    color: var(--text-faint);
+  }
+
+  strong {
+    color: var(--cream-100);
+  }
+
+  &--attenzione {
+    border-color: var(--copper-400);
+
+    app-icon {
+      color: var(--copper-600);
+    }
+  }
+
+  &--ok app-icon {
+    color: var(--felt);
+  }
+}
+
+// L'elenco delle anomalie (ex `.admin-stats__quality`): ogni voce col bordo
+// rame a sinistra, il dettaglio tecnico sotto in mono.
+.admin-avviso-elenco {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+
+  li {
+    padding-left: 0.9rem;
+    border-left: 2px solid var(--copper-400);
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+
+  strong {
+    color: var(--cream-100);
+  }
+}
+
+.admin-avviso-elenco__dettaglio {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+// ── La coda «da fare» ───────────────────────────────────────────────────────
+// Righe-link: ognuna porta alla scheda dei Conteggi dove la cosa si fa.
+.admin-dafare {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+// ⚠️ 44px dichiarati (sorvegliati da `bersagli-tocco.test.mjs`): una riga di
+// testo con un numero accanto sta sui ~30px, e questa è la riga che si tocca
+// col dito la mattina per andare a registrare una spesa.
+.admin-dafare__voce {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 44px;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--surface-2);
+  }
+
+  // Il chevron in coda: dice che la riga porta da qualche parte.
+  app-icon {
+    flex: none;
+    margin-left: auto;
+    color: var(--text-faint);
+  }
+}
+
+// Il conteggio: quante cose aspettano. Nel colore che il pannello usa già
+// per «qualcuno sta aspettando» (il badge della sidebar, la card in attesa).
+.admin-dafare__n {
+  flex: none;
+  min-width: 2ch;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ember);
+}
+
+.admin-dafare__testo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+
+  strong {
+    color: var(--cream-100);
+  }
+
+  span {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+}
+
+// ── Il conto economico a `<dl>` ─────────────────────────────────────────────
+// ⚠️ Ricetta BYTE-IDENTICA di `dl.cm__conto` in
+// `admin-conteggi-mensili.component.scss`, che resta là finché i Conteggi non
+// migrano (follow-up F7): le ragioni di ogni riga — il column-gap ZERO che
+// tiene continui i filetti dei totali, il tetto di lettura a 34rem, i
+// `tabular-nums` per sommare a occhio — stanno scritte in quel foglio e non si
+// ricopiano: cambiare un valore qui senza cambiarlo là è una deriva che si vede
+// solo mettendo le due schermate una accanto all'altra.
+.admin-conto {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem 0;
+  max-width: 34rem;
+  margin: 0;
+
+  dt {
+    margin: 0;
+    padding-right: 2rem;
+    color: var(--text-muted);
+  }
+
+  dd {
+    margin: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Dentro una griglia di prospetti affiancati il tetto non serve: la colonna
+  // è già la misura di lettura, e lascerebbe le due colonne disallineate.
+  &--piena {
+    max-width: none;
+  }
+}
+
+// Le righe «di cui …»: rientrate e in tono minore, perché SPIEGANO la riga
+// sopra invece di aggiungersi a lei.
+.admin-conto__didi {
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+  color: var(--text-faint);
+}
+
+.admin-conto__somma {
+  border-top: 1px solid var(--line-strong);
+  padding-top: 0.4rem;
+  font-weight: 600;
+}
+
+.admin-conto__margine {
+  border-top: 2px solid var(--copper-600);
+  padding-top: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+// Una riga staccata SENZA filetto (il conguaglio): quel filetto significa
+// «questa riga somma quelle sopra», e questa non somma niente.
+.admin-conto__spazio {
+  padding-top: 0.5rem;
+}
+
+// ⚠️ Una perdita si dichiara col colore E col segno meno che il template già
+// stampa: il solo colore non arriva a chi non lo distingue. Sciolta e non
+// annidata: la usano anche le celle di tabella (il margine in Andamento).
+.is-perdita {
+  color: var(--danger);
+}
+
+// ── Il collassabile FUORI dalle modali ──────────────────────────────────────
+// I limiti dei numeri, le lezioni non misurate: cose da poter leggere senza
+// che occupino lo schermo di chi non le sta cercando. Gemello di
+// `.admin-modale__sez`, che vive dentro il corpo di una `app-modal` e qui non
+// arriva — stessa forma, stesso chevron, così un `<details>` del pannello si
+// apre allo stesso modo dentro e fuori una modale.
+.admin-piega {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+
+  &[open] {
+    border-color: var(--line-strong);
+  }
+}
+
+// ⚠️ Il padding sta sul <summary> e non sul <details>: il bersaglio che apre
+// è il summary, e col padding sul genitore resterebbe una fascia che sembra
+// cliccabile e non lo è (precedente `.faq__item`). 44px dichiarati.
+.admin-piega__sum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  // Il chevron: ruota all'apertura. Lo stesso di `.admin-modale__sum`.
+  &::after {
+    content: '';
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid var(--copper-600);
+    border-bottom: 2px solid var(--copper-600);
+    transform: rotate(45deg);
+    transition: transform var(--t-fast);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--copper-500);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.admin-piega[open] > .admin-piega__sum::after {
+  transform: rotate(225deg);
+}
+
+.admin-piega__corpo {
+  padding: 0 0.9rem 0.9rem;
+}
+
+// L'elenco dei limiti (ex `.admin-stats__limits`): stanno in pagina, verbatim,
+// alla stessa taglia del resto del testo di servizio.
+.admin-piega__elenco {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  li {
+    position: relative;
+    padding-left: 1rem;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+
+    // Maschera e non il carattere: vedi `--mask-quadri` in _tokens.scss.
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.5em;
+      width: 0.5em;
+      height: 0.5em;
+      background: var(--text-faint);
+      mask: var(--mask-quadri) center / contain no-repeat;
+      -webkit-mask: var(--mask-quadri) center / contain no-repeat;
+    }
+  }
+}
+
+// ── Schermi stretti ─────────────────────────────────────────────────────────
+// La stessa soglia del ripiegamento della tabella: sotto, la tessera stringe il
+// padding e il conto economico accorcia la distanza fra etichetta e cifra —
+// 2rem su 390px sono il 10% della riga, tolti a un'etichetta che va a capo.
+@media (max-width: #{s.$bp-tabella-blocchi}) {
+  .admin-kpi {
+    padding: 0.85rem 1rem;
+  }
+
+  .admin-conto dt {
+    padding-right: 1rem;
+  }
+}

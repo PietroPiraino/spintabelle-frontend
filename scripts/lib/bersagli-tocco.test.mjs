@@ -33,7 +33,7 @@ const RADICE = process.cwd();
 const leggi = (p) => readFileSync(resolve(RADICE, p), 'utf8');
 
 /**
- * I NOVE punti in cui il bersaglio di tocco del pannello è dichiarato una
+ * I DODICI punti in cui il bersaglio di tocco del pannello è dichiarato una
  * volta sola — e da cui ogni sezione lo eredita invece di riscriverselo.
  *
  * `dentro` è il selettore che deve esistere; `regola` è la dichiarazione che
@@ -120,6 +120,31 @@ const PUNTI = [
     perche:
       'il comando che apre le sezioni su schermo stretto: senza, il padding lo lascia a 38,1px, e non c\'è altro modo di cambiare sezione dal telefono',
   },
+  {
+    // I tre punti del cruscotto (Panoramica e Statistiche, 13/09/2026).
+    file: 'src/app/features/admin/admin-cruscotto.scss',
+    selettore: '.admin-dafare__voce {',
+    attese: ['min-height: 44px'],
+    perche:
+      'la riga-link della coda «da fare» dei conteggi in Panoramica: una riga di testo con un numero accanto sta sui ~30px, ed è la riga che si tocca col dito per andare a registrare una spesa',
+  },
+  {
+    file: 'src/app/features/admin/admin-cruscotto.scss',
+    selettore: '.admin-piega__sum {',
+    attese: ['min-height: 44px'],
+    perche:
+      'l\'intestazione del collassabile FUORI dalle modali (i limiti dei numeri in Statistiche): gemella di .admin-modale__sum, che là non arriva',
+  },
+  {
+    // ⚠️ L'unico punto fuori da `features/admin/`: il grafico vive in
+    // `shared/ui/`, ma il suo solo stop di Tab è la superficie che il dito
+    // tocca su ogni cruscotto del pannello.
+    file: 'src/app/shared/ui/grafico/grafico-colonne.component.scss',
+    selettore: '.grafico__lente {',
+    attese: ['min-height: 44px'],
+    perche:
+      'la lente del grafico: un bottone con `inset: 0` sopra l\'area, e il minimo tiene anche un grafico basso (i video a 120px)',
+  },
 ];
 
 /** Il corpo del blocco che comincia a `selettore`, bilanciando le graffe. */
@@ -161,5 +186,5 @@ test('⚠️ la guardia sta leggendo davvero qualcosa', () => {
   // Il verso anti-guardia-vuota: se i file si spostassero, ogni `blocco()`
   // tornerebbe null e i test sopra fallirebbero uno per uno — ma se qualcuno
   // svuotasse PUNTI la suite resterebbe verde senza controllare niente.
-  assert.ok(PUNTI.length >= 9, 'l\'elenco dei punti si è accorciato');
+  assert.ok(PUNTI.length >= 12, 'l\'elenco dei punti si è accorciato');
 });
