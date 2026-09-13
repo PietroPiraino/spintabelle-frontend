@@ -49,10 +49,12 @@ const statsView = (over: Partial<AdminStatsView> = {}): AdminStatsView => ({
     precedenti30Eur: 400,
     deltaPct: 12.5,
     attivazioniSenzaCassa30: 2,
+    puntiEur30: 0,
     serieMensile: [
       {
         mese: '2026-07',
         incassoEur: 500,
+        puntiEur: 0,
         ordini: 4,
         stimati: 0,
         perMetodo: [{ metodo: 'paypal', incassoEur: 500, ordini: 4 }],
@@ -76,6 +78,11 @@ const statsView = (over: Partial<AdminStatsView> = {}): AdminStatsView => ({
   },
   acquisizione: { serieMensile: [] },
   conversione: { registrazioniComplete: 200, paganti: 50, tasso: 0.25 },
+  crescita: {
+    attivi: { ultimi7: 12, ultimi30: 30, iscritti: 200 },
+    registrazioniMensili: [],
+    abbonatiFineMese: [],
+  },
   qualitaDati: {
     senzaScadenzaTotale: 0,
     senzaScadenzaPerRuolo: [],
@@ -336,6 +343,7 @@ describe('AdminStatsComponent', () => {
     s.incassoAbbonamenti.serieMensile.push({
       mese: '2025-01',
       incassoEur: 999,
+      puntiEur: 0,
       ordini: 9,
       stimati: 0,
       perMetodo: [],

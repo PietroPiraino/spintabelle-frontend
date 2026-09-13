@@ -44,6 +44,7 @@ const statsView = (over: Partial<AdminStatsView> = {}): AdminStatsView => ({
     precedenti30Eur: 400,
     deltaPct: 12.5,
     attivazioniSenzaCassa30: 2,
+    puntiEur30: 0,
     serieMensile: [],
     senzaCassaMensile: [],
   },
@@ -63,6 +64,11 @@ const statsView = (over: Partial<AdminStatsView> = {}): AdminStatsView => ({
   },
   acquisizione: { serieMensile: [] },
   conversione: { registrazioniComplete: 200, paganti: 50, tasso: 0.25 },
+  crescita: {
+    attivi: { ultimi7: 12, ultimi30: 30, iscritti: 200 },
+    registrazioniMensili: [],
+    abbonatiFineMese: [],
+  },
   qualitaDati: {
     senzaScadenzaTotale: 0,
     senzaScadenzaPerRuolo: [],

@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -20,6 +20,8 @@ ContoRakeback,
   VersamentoView,
   VersamentoPayload,
   SaldiSoci,
+  CruscottoConteggi,
+  AndamentoConteggi,
   SpesaFissaPayload,
   IncassoAgentePayload,
   RegolazioneStakato,
@@ -261,6 +263,29 @@ export class AdminConteggiService {
 
   saldiSoci(): Observable<SaldiSoci> {
     return this.http.get<SaldiSoci>(`${API}/admin/conteggi/soci`);
+  }
+
+  /**
+   * Il cruscotto della Panoramica: UNA lettura, un envelope, nessuna cache
+   * (legge dati che si scrivono). Nessun parametro, per costruzione.
+   */
+  cruscotto(): Observable<CruscottoConteggi> {
+    return this.http.get<CruscottoConteggi>(`${API}/admin/conteggi/cruscotto`);
+  }
+
+  /**
+   * La serie mensile della scheda Andamento.
+   *
+   * ⚠️ Il parametro si chiama `mesi` (1..24), non `months` come su
+   * /admin/stats: il ValidationPipe è `forbidNonWhitelisted`, e un nome
+   * sbagliato è un 400 sull'intera chiamata.
+   */
+  andamento(mesi?: number): Observable<AndamentoConteggi> {
+    let params = new HttpParams();
+    if (mesi) params = params.set('mesi', mesi);
+    return this.http.get<AndamentoConteggi>(`${API}/admin/conteggi/andamento`, {
+      params,
+    });
   }
 
   creaVersamento(body: VersamentoPayload): Observable<VersamentoView> {

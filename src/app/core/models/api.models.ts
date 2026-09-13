@@ -1471,6 +1471,12 @@ export interface MyVoucher {
 export interface StatsMeseIncasso {
   mese: string;
   incassoEur: number;
+  /**
+   * Euro del listino assorbiti dai punti BFF: sta ACCANTO all'incasso e non
+   * dentro — sono euro che non sono mai arrivati. È la colonna «coperti dai
+   * punti» che i limiti promettono (allineato al backend il 13/09/2026).
+   */
+  puntiEur: number;
   ordini: number;
   /** Righe senza snapshot di prezzo, ricostruite dal listino della data. */
   stimati: number;
@@ -1482,6 +1488,21 @@ export interface StatsMeseSenzaCassa {
   mese: string;
   punti: number;
   manuale: number;
+  /** Attivazioni a €0 dal flusso normale (buoni al 100%): metodo di cassa, zero euro. */
+  omaggio: number;
+}
+
+/** Registrazioni di un mese italiano; `verificati` = confermate a OGGI, non entro il mese. */
+export interface StatsMeseRegistrazioni {
+  mese: string;
+  registrati: number;
+  verificati: number;
+}
+
+/** Abbonati con una richiesta approvata ancora valida all'ultimo istante del mese (solo mesi CHIUSI). */
+export interface StatsMeseAbbonatiFine {
+  mese: string;
+  attivi: number;
 }
 
 export interface StatsMeseCoorte {
@@ -1544,6 +1565,8 @@ export interface AdminStatsView {
     deltaPct: number | null;
     /** Volume punti/omaggi: accanto agli euro, MAI sommato. */
     attivazioniSenzaCassa30: number;
+    /** Euro assorbiti dai punti negli ultimi 30 giorni: accanto, MAI sommati. */
+    puntiEur30: number;
     serieMensile: StatsMeseIncasso[];
     senzaCassaMensile: StatsMeseSenzaCassa[];
   };
@@ -1575,6 +1598,32 @@ export interface AdminStatsView {
     paganti: number;
     /** ⚠️ frazione 0..1; null senza denominatore. */
     tasso: number | null;
+  };
+
+  /**
+   * 7) Crescita: tre numeri che rispondono a tre domande diverse e NON vanno
+   * incrociati — le registrazioni sono un flusso mensile, gli attivi una
+   * finestra mobile letta adesso, gli abbonati a fine mese una fotografia per
+   * ogni mese chiuso. Il terzo gradino del funnel (i primi abbonamenti
+   * paganti) sta già in `acquisizione.serieMensile[].paganti.nuovi`.
+   */
+  crescita: {
+    attivi: {
+      /** Iscritti con una SESSIONE USATA (login o rinnovo del token) negli ultimi 7 giorni: non pagine viste. */
+      ultimi7: number;
+      /** Idem, 30 giorni: include i 7. */
+      ultimi30: number;
+      /** Tutti gli iscritti (admin e coach esclusi): il denominatore. */
+      iscritti: number;
+    };
+    /** Serie SPARSA per mese italiano, ascendente, mese corrente compreso: si densifica come le altre. */
+    registrazioniMensili: StatsMeseRegistrazioni[];
+    /**
+     * Solo mesi CHIUSI, DENSA (uno zero è un fatto, non un buco), ascendente,
+     * mese corrente ESCLUSO: l'«adesso» è `abbonati.conAbbonamentoValido`, e i
+     * due possono divergere dopo una scadenza spostata a mano.
+     */
+    abbonatiFineMese: StatsMeseAbbonatiFine[];
   };
 
   /** Quanto fidarsi del resto della pagina: ogni contatore è un'anomalia vera. */
@@ -2991,6 +3040,129 @@ export interface SaldiSoci {
   /** Il prestito letto come un debito verso una banca. */
   banca: BancaSoci;
   versamenti: VersamentoView[];
+}
+
+// ----- Cruscotto e andamento dei conteggi (GET /admin/conteggi/cruscotto | andamento) -----
+// Ricalcati a mano da backend/src/conteggi/conteggi.service.ts il 13/09/2026
+// (le `Date` diventano stringhe ISO). Tutto in CENTESIMI interi sommati dal
+// server: la Panoramica e la scheda Andamento STAMPANO, non sommano.
+
+/**
+ * Le voci della coda «da fare» nei conteggi. ⚠️ Il client fa uno `switch`
+ * ESAUSTIVO su questo tipo: una voce nuova qui è una voce nuova anche là.
+ */
+export type TipoDaFare =
+  | 'SPESE_FISSE'
+  | 'TICKET_NON_PAGATI'
+  | 'STAKATI_DA_REGISTRARE'
+  | 'INCASSO_AGENTE'
+  | 'MESE_APERTO_ARRETRATO'
+  | 'MESE_CORRENTE_NON_APERTO';
+
+export interface VoceDaFare {
+  tipo: TipoDaFare;
+  /** `null` solo per `MESE_CORRENTE_NON_APERTO`: quel mese non esiste ancora. */
+  meseId: string | null;
+  /** «settembre 2026». */
+  etichetta: string;
+  /** Sempre > 0: le voci a zero non viaggiano. */
+  conteggio: number;
+  importoCent?: number;
+}
+
+/**
+ * Un mese nella serie dell'andamento: il conto economico ridotto alle righe
+ * che grafico e tabella stampano. TUTTI i campi presenti, sempre — un mese non
+ * calcolato sta in `nonCalcolati`, mai qui con dei buchi.
+ */
+export interface RigaAndamento {
+  id: string;
+  anno: number;
+  mese: number;
+  /** 'YYYY-MM', allineata alle altre serie del pannello. */
+  chiave: string;
+  etichetta: string;
+  stato: 'APERTO' | 'CHIUSO';
+  /** Il riepilogo NON viene da uno snapshot: cambia a ogni lettura. */
+  provvisorio: boolean;
+  chiusoAt?: string;
+  entrate: {
+    abbonamentiCent: number;
+    gadgetCent: number;
+    commissioniRakebackCent: number;
+    stakingCent: number;
+    altreCent: number;
+    totaleCent: number;
+  };
+  uscite: {
+    speseCent: number;
+    perditeStakingCent: number;
+    totaleCent: number;
+  };
+  conguaglioGiocatoriCent: number;
+  margineNettoCent: number;
+  marginePersonaleCent: number;
+  ripartizione: {
+    titolareCent: number;
+    socioCent: number;
+    quotaTitolareBp: number;
+  };
+}
+
+export interface MeseCruscotto extends RigaAndamento {
+  /** «Resta da dare (di questo mese)» ai giocatori. */
+  restaDaDareCent: number;
+  /**
+   * ⚠️ Il MARGINE che l'agente bonifica (`soci.attesoDaAgenteCent`), MAI lo
+   * spettante coi ticket dei giocatori dentro: confonderli direbbe che
+   * l'agente deve tre volte tanto.
+   */
+  attesoDaAgenteCent: number;
+  /** ⚠️ `null` è «non registrato», che non è zero. */
+  incassoAgente: { importoCent: number; cassa: Cassa; dataAt?: string } | null;
+}
+
+export interface CruscottoConteggi {
+  /** «Letto adesso»: nessuna cache dietro. */
+  generatoIl: string;
+  /** Il più recente mese APERTO, dal vivo. */
+  meseInCorso: MeseCruscotto | null;
+  /** Il più recente mese CHIUSO con snapshot, congelato. */
+  ultimoChiuso: MeseCruscotto | null;
+  /** Solo voci con `conteggio > 0`. */
+  daFare: VoceDaFare[];
+  soci: {
+    creditoNonRiscossoCent: number;
+    pressoAgenteCent: number;
+    daRiscuotereDaiGiocatoriCent: number;
+    /** «Prestito ancora da rientrare». */
+    prestitoResiduoCent: number;
+    mesiChiusi: number;
+  };
+  staking: {
+    inCorso: number;
+    fondiFuoriCent: number;
+    /** Sempre ≤ 0: è un debito, si mostra come tale senza negarlo due volte. */
+    evDaRecuperareCent: number;
+  };
+}
+
+export interface AndamentoConteggi {
+  generatoIl: string;
+  finestraMesi: number;
+  /** Dal più VECCHIO al più nuovo, tutte complete. */
+  mesi: RigaAndamento[];
+  /** I mesi aperti oltre il tetto: si dicono, non si stampano con dei buchi. */
+  nonCalcolati: Array<{ id: string; etichetta: string }>;
+  /** Sui SOLI mesi chiusi della finestra: un aperto cambia ancora. */
+  totaliChiusi: {
+    mesi: number;
+    entrateCent: number;
+    usciteCent: number;
+    margineNettoCent: number;
+  };
+  /** Scritti per l'owner e stampati verbatim in pagina. */
+  limiti: string[];
 }
 
 /**

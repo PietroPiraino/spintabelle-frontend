@@ -14,10 +14,20 @@
  * cambiato di un carattere, e `staking-format.spec.ts` continua a coprirle
  * attraverso la ri-esportazione.
  *
- * ⚠️ Il pannello NON ha ancora una grammatica unica: `/admin/richieste` stampa
- * `€{{ eur }}` grezzo (float col punto inglese, nessun raggruppamento) e
- * `/admin/statistiche` usa `Intl` su euro float. Chi scrive una schermata nuova
- * passa da qui; chi tocca quelle due può finalmente allinearle.
+ * ⚠️ DUE unità di denaro convivono nel pannello, e portano nomi diversi
+ * apposta: `formattaCent` per i CENTESIMI interi di Conteggi e Stakings,
+ * `formattaEur` per gli EURO float di `/admin/stats` (che il backend arrotonda
+ * a due decimali e non convertirà mai in centesimi: mille righe di spec e un
+ * verify lo pinnano così). La scelta sbagliata è un fattore 100 — MAI
+ * incrociarli, e mai un helper «furbo» che indovina l'unità dal valore.
+ * Statistiche e Panoramica sono allineate qui dal 13/09/2026; resta fuori
+ * `/admin/richieste`, che stampa ancora `€{{ eur }}` grezzo.
+ *
+ * ⚠️ E TRE convenzioni di percentuale: i PUNTI BASE di Conteggi
+ * (`formattaBp`, ÷10.000), le FRAZIONI 0..1 di `/admin/stats`
+ * (`formattaFrazione`: tassi di rinnovo e conversione, percentuale vista) e i
+ * PUNTI PERCENTUALI già calcolati (`formattaDelta`: `deltaPct`, 12.5 = +12,5%).
+ * Tre funzioni, perché una sola sbaglierebbe di un fattore 100 due volte su tre.
  */
 
 /** Un importo in centesimi, in euro all'italiana: «1.250,50 €». */
@@ -113,4 +123,67 @@ export function parsePercentualeInBp(raw: string): number | null {
 
   const bp = Math.round(Number(normalizzato) * 100);
   return bp > 10_000 ? null : bp;
+}
+
+/**
+ * Un importo in EURO float (`/admin/stats`), all'italiana: «1.250,50 €»,
+ * «80 €». Intero → niente decimali; altrimenti SEMPRE due: «80,5 €» non è una
+ * cifra di denaro, ed è ciò che `maximumFractionDigits: 2` da solo stampava.
+ */
+export function formattaEur(eur: number): string {
+  const decimali = Number.isInteger(eur) ? 0 : 2;
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: decimali,
+    maximumFractionDigits: decimali,
+  }).format(eur);
+}
+
+/**
+ * Euro float senza decimali, per i tick di un asse: «1.250 €». I decimali
+ * stanno nel tooltip, dove c'è spazio; su un asse a 390px non ci starebbero.
+ */
+export function formattaEurBreve(eur: number): string {
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(eur);
+}
+
+/** Centesimi senza decimali, per i tick di un asse: «1.250 €». */
+export function formattaCentBreve(cent: number): string {
+  return formattaEurBreve(cent / 100);
+}
+
+/**
+ * Una FRAZIONE 0..1 in percentuale, con un decimale: 0.25 → «25%», 0.333 →
+ * «33,3%». È la convenzione dei tassi di `/admin/stats`; per i punti base
+ * c'è `formattaBp`, per una variazione già in punti percentuali
+ * `formattaDelta`.
+ */
+export function formattaFrazione(frazione: number): string {
+  return new Intl.NumberFormat('it-IT', {
+    style: 'percent',
+    maximumFractionDigits: 1,
+  }).format(frazione);
+}
+
+/**
+ * Una variazione GIÀ in punti percentuali, col segno: 12.5 → «+12,5%»,
+ * −3 → «−3%», 0 → «0%». Il segno È il senso della variazione: senza, «12,5%»
+ * dice meno di «+12,5%».
+ */
+export function formattaDelta(puntiPercentuali: number): string {
+  const n = new Intl.NumberFormat('it-IT', {
+    maximumFractionDigits: 1,
+    signDisplay: 'exceptZero',
+  }).format(puntiPercentuali);
+  return `${n}%`;
+}
+
+/** Un intero con il separatore delle migliaia italiano: 150000 → «150.000». */
+export function formattaIntero(n: number): string {
+  return new Intl.NumberFormat('it-IT', { maximumFractionDigits: 0 }).format(n);
 }

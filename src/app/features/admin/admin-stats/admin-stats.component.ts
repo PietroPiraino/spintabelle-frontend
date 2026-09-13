@@ -364,6 +364,7 @@ export class AdminStatsComponent {
         per.get(mese) ?? {
           mese,
           incassoEur: 0,
+          puntiEur: 0,
           ordini: 0,
           stimati: 0,
           perMetodo: [],
@@ -395,7 +396,9 @@ export class AdminStatsComponent {
       finestraMesi(this.meseCorrente(), s.finestraMesi),
       [...per.keys()],
     );
-    return chiavi.map((mese) => per.get(mese) ?? { mese, punti: 0, manuale: 0 });
+    return chiavi.map(
+      (mese) => per.get(mese) ?? { mese, punti: 0, manuale: 0, omaggio: 0 },
+    );
   });
 
   protected readonly senzaCassaRows = computed(() =>
