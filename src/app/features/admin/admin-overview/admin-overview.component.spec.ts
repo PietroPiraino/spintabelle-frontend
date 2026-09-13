@@ -59,15 +59,18 @@ const statsView = (over: Partial<AdminStatsView> = {}): AdminStatsView => ({
     },
     serieMensile: [],
   },
+  // ⚠️ Valori DISTINTIVI, uno per campo: la spec cerca ogni numero DENTRO la
+  // tessera trovata per etichetta, e con «2» e «5» un numero giusto poteva
+  // venire dalla tessera sbagliata (o dai conteggi delle code, 7 · 5 · 3 · 2).
   scadenze: {
-    entro7: { utenti: 2, valoreListinoEur: 250 },
-    entro30: { utenti: 5, valoreListinoEur: 625 },
+    entro7: { utenti: 6, valoreListinoEur: 250 },
+    entro30: { utenti: 9, valoreListinoEur: 625 },
     perTier: [],
   },
   acquisizione: { serieMensile: [] },
   conversione: { registrazioniComplete: 200, paganti: 50, tasso: 0.25 },
   crescita: {
-    attivi: { ultimi7: 12, ultimi30: 30, iscritti: 200 },
+    attivi: { ultimi7: 9, ultimi30: 31, iscritti: 200 },
     registrazioniMensili: [],
     abbonatiFineMese: [],
   },
@@ -85,7 +88,10 @@ const statsView = (over: Partial<AdminStatsView> = {}): AdminStatsView => ({
 /**
  * Un mese del cruscotto, in CENTESIMI interi come sul filo. I numeri sono
  * scelti per essere riconoscibili a schermo: il margine 1.250,50 € è quello
- * che la spec cerca, e non compare in nessun altro campo.
+ * che la spec cerca, e non compare in nessun altro campo. ⚠️ Lo stesso per
+ * `attesoDaAgenteCent` = 765,01 €: le commissioni di rakeback e il credito
+ * presso l'agente valgono entrambi 765,67 €, e con lo stesso numero anche
+ * sull'atteso la spec non poteva dire DA QUALE campo venisse la cifra.
  */
 const meseCruscotto = (over: Partial<MeseCruscotto> = {}): MeseCruscotto => ({
   id: 'm-set',
@@ -109,7 +115,7 @@ const meseCruscotto = (over: Partial<MeseCruscotto> = {}): MeseCruscotto => ({
   marginePersonaleCent: 0,
   ripartizione: { titolareCent: 81_283, socioCent: 43_767, quotaTitolareBp: 6500 },
   restaDaDareCent: 120_020,
-  attesoDaAgenteCent: 76_567,
+  attesoDaAgenteCent: 76_501,
   incassoAgente: null,
   ...over,
 });
@@ -174,6 +180,15 @@ const auditEntries: AdminActionLogEntry[] = [
   },
 ];
 
+/** Otto voci, quante ne riserva lo scheletro: per la spec di geometria. */
+const auditEntries8: AdminActionLogEntry[] = Array.from({ length: 8 }, (_, i) => ({
+  id: `a${i}`,
+  action: 'set-expiry',
+  userEmail: 'utente@esempio.it',
+  adminEmail: 'admin@esempio.it',
+  createdAt: '2026-08-13T09:00:00.000Z',
+}));
+
 describe('AdminOverviewComponent (Panoramica)', () => {
   let fixture: ComponentFixture<AdminOverviewComponent>;
   let http: HttpTestingController;
@@ -218,6 +233,23 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     Array.from(blocco(nome).querySelectorAll<HTMLButtonElement>('button')).find(
       (b) => b.textContent?.includes('Riprova'),
     )!;
+  /**
+   * La tessera di un blocco trovata per ETICHETTA: le asserzioni sui numeri
+   * stanno dentro la tessera giusta, non nel testo dell'intero blocco — dove
+   * un «9» può venire da una tessera qualunque. `textContent` conserva il
+   * caso del sorgente («Atteso dall'agente»): l'uppercase è del CSS.
+   */
+  const tessera = (nome: string, etichetta: string) => {
+    const t = Array.from(blocco(nome).querySelectorAll<HTMLElement>('.admin-kpi')).find(
+      (k) => k.querySelector('.admin-kpi__etichetta')?.textContent?.includes(etichetta),
+    );
+    expect(t).withContext(`tessera «${etichetta}» in [data-blocco="${nome}"]`).toBeDefined();
+    return t!;
+  };
+  const valoreTessera = (nome: string, etichetta: string) =>
+    tessera(nome, etichetta).querySelector('.admin-kpi__valore')?.textContent?.trim();
+  const notaTessera = (nome: string, etichetta: string) =>
+    tessera(nome, etichetta).querySelector('.admin-kpi__nota')?.textContent ?? '';
 
   /** Risponde alle SETTE chiamate del costruttore (cruscotto, stats, audit, 4 conteggi). */
   const flushAll = async ({
@@ -346,12 +378,78 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     // salto di layout (report Cloudflare 29-30/08/2026): le tessere nascevano
     // vuote e crescevano all'arrivo dell'API. Lo scheletro ha la stessa
     // altezza della tessera, e sta lì PRIMA che arrivi un byte.
-    expect(el().querySelectorAll('.admin-kpi.is-scheletro').length).toBeGreaterThanOrEqual(6);
-    expect(el().querySelectorAll('.admin-scheletro--riga').length).toBeGreaterThanOrEqual(3);
+    const tessere = el().querySelectorAll('.admin-kpi.is-scheletro');
+    expect(tessere.length).toBeGreaterThanOrEqual(6);
+    // ⚠️ TRE righe con le classi della tessera vera: due barre nude non sanno
+    // quanto è alto il valore (una `clamp()` su `vw`) e atterravano 15px sotto.
+    tessere.forEach((t) => {
+      expect(t.querySelector(':scope > .admin-kpi__etichetta > .admin-scheletro')).not.toBeNull();
+      expect(t.querySelector(':scope > .admin-kpi__valore > .admin-scheletro')).not.toBeNull();
+      expect(t.querySelector(':scope > .admin-kpi__nota > .admin-scheletro')).not.toBeNull();
+    });
+    // le righe di elenco: `--voce` (61px) e `--azione` (22,5px), MAI `--riga`
+    // (la riga di tabella a 44px: qui non c'è una tabella)
+    expect(blocco('dafare').querySelectorAll('.admin-scheletro--voce').length).toBe(3);
+    expect(blocco('azioni').querySelectorAll('.admin-scheletro--azione').length).toBe(8);
+    expect(el().querySelector('.admin-scheletro--riga')).toBeNull();
+    // la riga «Aggiornato: …» degli abbonati è riservata anche lei
+    expect(blocco('abbonati').querySelector('.pan__nota-scheletro')).not.toBeNull();
     expect(text()).not.toContain('0,00\u00a0€');
 
     await flushAll();
     expect(el().querySelectorAll('.admin-kpi.is-scheletro').length).toBe(0);
+    expect(el().querySelector('.pan__nota-scheletro')).toBeNull();
+  });
+
+  it('GEOMETRIA: ogni blocco è alto uguale PRIMA e DOPO i dati (±4px) — lo scheletro È la tessera', async () => {
+    // ⚠️ È l'asserzione che trasforma «CLS zero» da obiettivo in guardia: chi
+    // tocca il padding di una tessera, l'altezza di una riga o il numero di
+    // scheletri senza toccare l'altra metà lo vede qui, non su Cloudflare.
+    //
+    // ⚠️ Il contenitore è LARGO (3600px) di proposito: la guardia misura la
+    // STRUTTURA (conteggio degli scheletri, altezza delle righe, pavimento
+    // delle tessere), non il contenuto che va a capo. A 800px un'etichetta su
+    // due righe renderebbe rossa una tessera corretta — e il contenuto che va a
+    // capo non è prevedibile da uno scheletro. L'host è un custom element,
+    // cioè `inline` per default: senza `display: block` la larghezza è inerte.
+    const host = el();
+    host.style.display = 'block';
+    host.style.width = '3600px';
+    const misura = () =>
+      Object.fromEntries(
+        Array.from(host.querySelectorAll<HTMLElement>('[data-blocco]')).map((b) => [
+          b.dataset['blocco'],
+          b.getBoundingClientRect().height,
+        ]),
+      );
+
+    const prima = misura();
+    expect(Object.keys(prima)).toEqual(['code', 'dafare', 'mese', 'staking', 'abbonati', 'azioni']);
+
+    // tanti dati quanti scheletri: 3 voci «da fare», 6 + 3 + 4 tessere, 8 azioni
+    await flushAll({
+      cruscotto: cruscottoView({
+        daFare: [
+          { tipo: 'SPESE_FISSE', meseId: 'm-set', etichetta: 'settembre 2026', conteggio: 3 },
+          {
+            tipo: 'TICKET_NON_PAGATI',
+            meseId: 'm-set',
+            etichetta: 'settembre 2026',
+            conteggio: 2,
+            importoCent: 120_020,
+          },
+          { tipo: 'MESE_APERTO_ARRETRATO', meseId: 'm-lug', etichetta: 'luglio 2026', conteggio: 1 },
+        ],
+      }),
+      actions: auditEntries8,
+    });
+    const dopo = misura();
+
+    for (const nome of Object.keys(prima)) {
+      expect(Math.abs(dopo[nome] - prima[nome]))
+        .withContext(`blocco «${nome}»: ${prima[nome].toFixed(1)}px prima → ${dopo[nome].toFixed(1)}px dopo`)
+        .toBeLessThanOrEqual(4);
+    }
   });
 
   // ── Code di lavoro ─────────────────────────────────────────────────────────
@@ -444,6 +542,42 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     expect(n).toEqual(['3', '2', '1']);
   });
 
+  it('una voce SENZA importo stampa la sola etichetta, mai «· 0,00 €»', async () => {
+    // ⚠️ `importoCent` è opzionale sul filo: un importo che manca è un importo
+    // che manca, e il `?? 0` di prima lo stampava come «ticket da zero euro».
+    await flushAll({
+      cruscotto: cruscottoView({
+        daFare: [
+          { tipo: 'TICKET_NON_PAGATI', meseId: 'm-set', etichetta: 'settembre 2026', conteggio: 2 },
+          { tipo: 'INCASSO_AGENTE', meseId: 'm-ago', etichetta: 'agosto 2026', conteggio: 1 },
+        ],
+      }),
+    });
+    const righe = Array.from(
+      blocco('dafare').querySelectorAll('.admin-dafare__testo > span'),
+    ).map((s) => s.textContent?.trim());
+    expect(righe).toEqual(['settembre 2026', 'agosto 2026']);
+    expect(testoBlocco('dafare')).not.toContain('0,00\u00a0€');
+    expect(testoBlocco('dafare')).not.toContain('attesi');
+    // e l'apostrofo è quello dritto, come in tutta la pagina
+    expect(testoBlocco('dafare')).toContain("Incasso dell'agente non registrato");
+  });
+
+  it('i titoli dei blocchi sono `h2` (sotto l’`h1` della shell non c’è un altro livello)', async () => {
+    await flushAll();
+    const titoli = Array.from(el().querySelectorAll('.admin-blocco__titolo')).map(
+      (t) => `${t.tagName.toLowerCase()}:${t.textContent?.trim()}`,
+    );
+    expect(titoli).toEqual([
+      'h2:Da fare nei conteggi',
+      'h2:Conteggi di settembre 2026',
+      'h2:Registro staking',
+      'h2:Abbonati',
+      'h2:Ultime azioni admin',
+    ]);
+    expect(el().querySelector('h1, h3, h4')).toBeNull();
+  });
+
   it('con la coda vuota dice «Niente in sospeso», senza una lista vuota', async () => {
     await flushAll({ cruscotto: cruscottoView({ daFare: [] }) });
 
@@ -467,19 +601,67 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     expect(
       blocco('mese').querySelector('.admin-stato[data-tono="attesa"]')?.textContent,
     ).toContain('Provvisorio');
+    // ⚠️ «Provvisorio» sta in `.pan__titolo`, che va a capo — MAI dentro il
+    // titolo, e non in un flex `nowrap` (la trappola di «Congelato» sotto).
     expect(
-      blocco('mese').querySelector('.admin-stato[data-tono="concluso"]')?.textContent,
-    ).toContain('Congelato');
-    expect(mese).toContain('Ultimo mese chiuso · agosto 2026');
-    expect(mese).toContain('987,65\u00a0€');
-    expect(mese).toContain('chiuso il 05 set 2026');
-    // il credito dei soci e il prestito, dal cruscotto
-    expect(mese).toMatch(/4\.?567,89\u00a0€/);
-    expect(mese).toMatch(/di cui 765,67\u00a0€ presso l’agente, 17,97\u00a0€ dai giocatori/);
-    expect(mese).toMatch(/1\.?824,08\u00a0€/);
-    expect(mese).toMatch(/1\.?200,20\u00a0€/);
+      blocco('mese').querySelector('.pan__titolo > .admin-stato[data-tono="attesa"]'),
+    ).not.toBeNull();
+
+    // L'ultimo mese chiuso, per etichetta: il margine congelato e la data.
+    const chiuso = tessera('mese', 'Ultimo mese chiuso · agosto 2026');
+    expect(valoreTessera('mese', 'Ultimo mese chiuso')).toBe('987,65\u00a0€');
+    expect(notaTessera('mese', 'Ultimo mese chiuso')).toContain('chiuso il 05 set 2026');
+    // ⚠️ «Congelato» sta nella NOTA e MAI nell'etichetta: l'etichetta è un flex
+    // che non va a capo e la pastiglia è `nowrap`, quindi lì dentro stringeva
+    // l'etichetta su cinque righe e la tessera saliva a 224px, trascinando
+    // l'intera riga della griglia (misurato a 1440 il 13/09/2026).
+    const congelato = chiuso.querySelector('.admin-stato[data-tono="concluso"]');
+    expect(congelato?.textContent).toContain('Congelato');
+    expect(congelato?.closest('.admin-kpi__nota')).not.toBeNull();
+    expect(chiuso.querySelector('.admin-kpi__etichetta .admin-stato')).toBeNull();
+
+    // il credito dei soci e il prestito, per tessera
+    expect(valoreTessera('mese', 'Credito non riscosso dei soci')).toMatch(/^4\.?567,89\u00a0€$/);
+    expect(notaTessera('mese', 'Credito non riscosso dei soci')).toMatch(
+      /di cui 765,67\u00a0€ presso l'agente, 17,97\u00a0€ dai giocatori/,
+    );
+    expect(valoreTessera('mese', 'Prestito ancora da rientrare')).toMatch(/^1\.?824,08\u00a0€$/);
+    expect(notaTessera('mese', 'Prestito ancora da rientrare')).toContain(
+      'sui 2 mesi chiusi del registro',
+    );
+    expect(valoreTessera('mese', 'Resta da dare ai giocatori')).toMatch(/^1\.?200,20\u00a0€$/);
     // il margine positivo non è «giù»
     expect(blocco('mese').querySelector('.admin-kpi__valore.is-giu')).toBeNull();
+  });
+
+  it('il prestito: «sul solo mese chiuso del registro» con UN mese chiuso, mai «sui 1 mesi»', async () => {
+    await flushAll({
+      cruscotto: cruscottoView({ soci: { ...cruscottoView().soci, mesiChiusi: 1 } }),
+    });
+    expect(notaTessera('mese', 'Prestito ancora da rientrare')).toContain(
+      'sul solo mese chiuso del registro',
+    );
+    expect(testoBlocco('mese')).not.toContain('1 mesi');
+  });
+
+  it('il prestito: «nessun mese ancora chiuso» con zero, mai «sui 0 mesi»', async () => {
+    await flushAll({
+      cruscotto: cruscottoView({ soci: { ...cruscottoView().soci, mesiChiusi: 0 } }),
+    });
+    expect(notaTessera('mese', 'Prestito ancora da rientrare')).toContain('nessun mese ancora chiuso');
+    expect(testoBlocco('mese')).not.toContain('0 mesi');
+  });
+
+  it('un credito NEGATIVO dai giocatori si legge «da rimborsare ai giocatori», mai «-17,97 €»', async () => {
+    await flushAll({
+      cruscotto: cruscottoView({
+        soci: { ...cruscottoView().soci, daRiscuotereDaiGiocatoriCent: -1_797 },
+      }),
+    });
+    const nota = notaTessera('mese', 'Credito non riscosso dei soci');
+    expect(nota).toContain('17,97\u00a0€ da rimborsare ai giocatori');
+    expect(nota).not.toContain('-17,97');
+    expect(nota).not.toContain('dai giocatori');
   });
 
   it('un margine negativo si vede: `.is-giu` e il segno stampato', async () => {
@@ -490,26 +672,51 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     expect(giu?.textContent).toMatch(/-123,45\u00a0€/);
   });
 
-  it('l’agente: sul mese APERTO «si incassa dopo la chiusura», sull’ultimo CHIUSO senza incasso «non ancora incassato» — mai «0,00 €»', async () => {
+  it("l'agente: sul mese APERTO «si incassa dopo la chiusura», sull'ultimo CHIUSO senza incasso «non ancora incassato» — ognuno nella SUA tessera, mai «0,00 €»", async () => {
     await flushAll({
       cruscotto: cruscottoView({
         ultimoChiuso: ultimoChiuso({ incassoAgente: null }),
       }),
     });
 
+    // «Atteso dall'agente» è il MARGINE (`attesoDaAgenteCent`, 765,01 € nella
+    // fixture — un numero che nessun altro campo porta), non lo spettante coi
+    // ticket dei giocatori dentro; e sul mese aperto l'incasso è di là da venire
+    const atteso = tessera('mese', "Atteso dall'agente (il margine)");
+    expect(valoreTessera('mese', "Atteso dall'agente")).toBe('765,01\u00a0€');
+    expect(notaTessera('mese', "Atteso dall'agente")).toContain('si incassa dopo la chiusura');
+    expect(atteso.querySelector('.is-manca')).toBeNull();
+
+    // sull'ultimo mese CHIUSO senza incasso: il rame «non ancora incassato»,
+    // DENTRO quella tessera (`.is-manca` del foglio condiviso, non un `.pan__manca`)
+    const chiuso = tessera('mese', 'Ultimo mese chiuso');
+    const manca = chiuso.querySelector('.admin-kpi__nota .is-manca');
+    expect(manca?.textContent).toContain('non ancora incassato');
+    expect(chiuso.querySelector('.admin-kpi__nota')?.textContent).not.toContain('si incassa dopo');
+
     const mese = testoBlocco('mese');
-    expect(mese).toContain('si incassa dopo la chiusura');
-    expect(mese).toContain('non ancora incassato');
-    expect(blocco('mese').querySelector('.pan__manca')?.textContent).toContain(
-      'non ancora incassato',
-    );
     expect(mese).not.toContain('0,00\u00a0€');
-    // e «Atteso dall'agente» è il MARGINE, non lo spettante coi ticket
-    expect(mese).toContain("Atteso dall'agente (il margine)");
-    expect(mese).toContain('765,67\u00a0€');
+    // e nel resto del blocco il rame non compare: è UN dato che manca, non un tono
+    expect(blocco('mese').querySelectorAll('.is-manca').length).toBe(1);
   });
 
-  it('con l’incasso dell’agente registrato dice quanto e su quale cassa, e «non ancora incassato» sparisce', async () => {
+  it("sull'ultimo CHIUSO senza incasso e con NIENTE da attendere, nessun «non ancora incassato»", async () => {
+    // un mese chiuso in cui l'agente non deve niente (margine zero) non ha un
+    // bonifico da aspettare: il rame direbbe di aspettare un bonifico che non arriva
+    await flushAll({
+      cruscotto: cruscottoView({
+        ultimoChiuso: ultimoChiuso({ incassoAgente: null, attesoDaAgenteCent: 0 }),
+      }),
+    });
+    const chiuso = tessera('mese', 'Ultimo mese chiuso');
+    expect(chiuso.textContent).not.toContain('non ancora incassato');
+    expect(chiuso.querySelector('.is-manca')).toBeNull();
+    expect(notaTessera('mese', 'Ultimo mese chiuso')).toContain('chiuso il 05 set 2026');
+    // ma «Congelato» resta: è lo stato del mese, non dell'incasso
+    expect(chiuso.querySelector('.admin-stato[data-tono="concluso"]')).not.toBeNull();
+  });
+
+  it("con l'incasso dell'agente registrato dice quanto e su quale cassa, e «non ancora incassato» sparisce", async () => {
     await flushAll({
       cruscotto: cruscottoView({
         meseInCorso: meseCruscotto({
@@ -518,11 +725,12 @@ describe('AdminOverviewComponent (Panoramica)', () => {
       }),
     });
 
+    expect(notaTessera('mese', "Atteso dall'agente")).toContain('incassato 765,67\u00a0€ su Exivezzz');
+    expect(notaTessera('mese', 'Ultimo mese chiuso')).toContain('incassato 765,67\u00a0€ su Pietro');
     const mese = testoBlocco('mese');
-    expect(mese).toContain('incassato 765,67\u00a0€ su Exivezzz');
-    expect(mese).toContain('incassato 765,67\u00a0€ su Pietro');
     expect(mese).not.toContain('non ancora incassato');
     expect(mese).not.toContain('si incassa dopo la chiusura');
+    expect(blocco('mese').querySelector('.is-manca')).toBeNull();
   });
 
   it('senza un mese aperto mostra l’avviso con il link, e nessuno zero', async () => {
@@ -586,28 +794,35 @@ describe('AdminOverviewComponent (Panoramica)', () => {
 
   // ── Abbonati (da /admin/stats) ─────────────────────────────────────────────
 
-  it('abbonati: in regola, attivi 30 giorni con la nota «7 giorni · su M iscritti», scadenze, incasso col delta e l’età', async () => {
+  it("abbonati: in regola, attivi 30 giorni con la nota «7 giorni · su M iscritti», scadenze, incasso col delta e l'età — ogni numero nella SUA tessera", async () => {
     await flushAll();
 
-    const ab = testoBlocco('abbonati');
     // ⚠️ «Abbonamenti in regola» e non «Abbonati attivi» (cambio consapevole,
     // 13/09/2026): «attivi» ora è la finestra degli iscritti con una sessione.
-    expect(ab).toContain('Abbonamenti in regola');
-    expect(ab).toContain('40');
-    expect(ab).toContain('Passano il paywall ora:');
-    expect(ab).toContain('42');
-    expect(ab).toContain('Attivi negli ultimi 30 giorni');
-    expect(ab).toContain('30');
-    expect(ab).toMatch(/7 giorni:\s*12\s*·\s*su 200 iscritti/);
-    expect(ab).toContain('In scadenza entro 7 giorni');
-    expect(ab).toContain('entro 30:');
-    expect(ab).toContain('Incasso abbonamenti');
+    expect(valoreTessera('abbonati', 'Abbonamenti in regola')).toBe('40');
+    expect(notaTessera('abbonati', 'Abbonamenti in regola')).toMatch(/Passano il paywall ora:\s*42/);
+
+    // ⚠️ Fixture DISTINTIVE (31 · 9 · 200): con «30» e «12» il numero poteva
+    // venire da un'altra tessera o da un conteggio delle code.
+    expect(valoreTessera('abbonati', 'Attivi negli ultimi 30 giorni')).toBe('31');
+    expect(notaTessera('abbonati', 'Attivi negli ultimi 30 giorni')).toMatch(
+      /7 giorni:\s*9\s*·\s*su 200 iscritti/,
+    );
+
+    expect(valoreTessera('abbonati', 'In scadenza entro 7 giorni')).toBe('6');
+    expect(notaTessera('abbonati', 'In scadenza entro 7 giorni')).toMatch(/entro 30:\s*9/);
+
     // EURO float: 500 → «500 €», intero senza decimali
-    expect(ab).toContain('500\u00a0€');
-    expect(ab).toContain('4 abbonamenti approvati');
+    expect(valoreTessera('abbonati', 'Incasso abbonamenti')).toBe('500\u00a0€');
+    const incasso = notaTessera('abbonati', 'Incasso abbonamenti');
+    expect(incasso).toContain('4 abbonamenti approvati');
     // DELTA con signDisplay: il segno È il senso della variazione
-    expect(ab).toContain('+12,5%');
-    expect(blocco('abbonati').querySelector('.admin-kpi__delta.is-su')).not.toBeNull();
+    expect(incasso).toContain('+12,5%');
+    expect(
+      tessera('abbonati', 'Incasso abbonamenti').querySelector('.admin-kpi__delta.is-su'),
+    ).not.toBeNull();
+
+    const ab = testoBlocco('abbonati');
     expect(ab).toContain('Aggiornato:');
     expect(ab).toContain('ricalcolo ogni 5 min');
     // le tessere per tier sono sparite: il dettaglio vive in Statistiche

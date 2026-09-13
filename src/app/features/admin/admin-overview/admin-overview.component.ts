@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -49,6 +49,21 @@ interface TestoDaFare {
 }
 
 /**
+ * «settembre 2026 · 1.200,20 €» — o la sola etichetta se l'importo non c'è.
+ * ⚠️ Niente `?? 0`: un importo che manca è un importo che manca, e «· 0,00 €»
+ * direbbe all'owner che i ticket non pagati valgono zero euro.
+ */
+function conImporto(
+  etichetta: string,
+  importoCent: number | undefined,
+  prefisso: string,
+): string {
+  return importoCent === undefined
+    ? etichetta
+    : `${etichetta} · ${prefisso}${formattaCent(importoCent)}`;
+}
+
+/**
  * Panoramica: la home della dashboard admin.
  *
  * QUATTRO fonti dati indipendenti, ognuna con loading/errore propri — un
@@ -81,7 +96,7 @@ interface TestoDaFare {
  */
 @Component({
   selector: 'app-admin-overview',
-  imports: [DatePipe, RouterLink, IconComponent],
+  imports: [DatePipe, NgTemplateOutlet, RouterLink, IconComponent],
   templateUrl: './admin-overview.component.html',
   styleUrls: [
     '../admin-shared.scss',
@@ -220,7 +235,7 @@ export class AdminOverviewComponent {
         return {
           n: v.conteggio,
           strong: 'Ticket non pagati',
-          span: `${v.etichetta} · ${formattaCent(v.importoCent ?? 0)}`,
+          span: conImporto(v.etichetta, v.importoCent, ''),
           vista: 'rakeback',
         };
       case 'STAKATI_DA_REGISTRARE':
@@ -233,8 +248,8 @@ export class AdminOverviewComponent {
       case 'INCASSO_AGENTE':
         return {
           n: null,
-          strong: 'Incasso dell’agente non registrato',
-          span: `${v.etichetta} · attesi ${formattaCent(v.importoCent ?? 0)}`,
+          strong: "Incasso dell'agente non registrato",
+          span: conImporto(v.etichetta, v.importoCent, 'attesi '),
           vista: 'rakeback',
         };
       case 'MESE_APERTO_ARRETRATO':
@@ -283,7 +298,18 @@ export class AdminOverviewComponent {
       g < 0
         ? `${formattaCent(-g)} da rimborsare ai giocatori`
         : `${formattaCent(g)} dai giocatori`;
-    return `di cui ${formattaCent(c.soci.pressoAgenteCent)} presso l’agente, ${giocatori}`;
+    return `di cui ${formattaCent(c.soci.pressoAgenteCent)} presso l'agente, ${giocatori}`;
+  }
+
+  /**
+   * «sui 2 mesi chiusi del registro» — col singolare e con lo zero, perché il
+   * prestito residuo si legge anche il primo mese: «sui 1 mesi chiusi» e «sui
+   * 0 mesi chiusi» sono due frasi sbagliate che il template stampava.
+   */
+  protected notaPrestito(mesiChiusi: number): string {
+    if (mesiChiusi === 0) return 'nessun mese ancora chiuso';
+    if (mesiChiusi === 1) return 'sul solo mese chiuso del registro';
+    return `sui ${formattaIntero(mesiChiusi)} mesi chiusi del registro`;
   }
 
   /** Chiave stabile per il `track`: una voce per tipo e per mese. */

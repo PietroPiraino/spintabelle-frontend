@@ -71,18 +71,28 @@
   gap: 1rem;
 }
 
-// Una tessera su `.card`. ⚠️ `min-height: 6.25rem` NON è una rifinitura: è la
+// Una tessera su `.card`. ⚠️ `min-height: 7.25rem` NON è una rifinitura: è la
 // stessa altezza dello scheletro qui sotto (`.admin-kpi.is-scheletro`), e la
 // coppia è ciò che azzera il CLS. La Panoramica era uno dei quattro elementi
 // del sito misurati come «salto di layout» dal report Cloudflare del 29-30/08
 // (`section.overview__block`): le tessere nascevano vuote e crescevano
 // all'arrivo dell'API. Con la stessa altezza prima e dopo, non si muove niente.
+//
+// ⚠️ Il pavimento è la tessera MINIMA misurata — etichetta, valore e nota su
+// UNA riga: bordo 2 + padding 32 + etichetta 17,92 + valore 35,28 + nota 18,56
+// + due gap 9,6 = 115,4px a 1440, arrotondati al pixel sopra (116 = 7,25rem).
+// Fino al 13/09/2026 (sera) stava a 6,25rem, cioè SOTTO la tessera vera di
+// 15px: lo scheletro riservava 100 e la tessera atterrava a 115, e il CLS
+// misurato sul bundle era 0,127 a 1440 — un numero «riparato» che non lo era.
+// Il pavimento serve anche alla tessera muta («—», «Nessun mese chiuso»), il
+// cui valore a 1,05rem è più basso di un numero: senza, cambierebbe altezza
+// nell'istante in cui il trattino diventa una cifra.
 .admin-kpi {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
   min-width: 0;
-  min-height: 6.25rem;
+  min-height: 7.25rem;
   padding: 1rem 1.2rem;
 }
 
@@ -123,12 +133,18 @@
   &.is-giu {
     color: var(--danger);
   }
+}
 
-  // Un dato che MANCA e va fornito («non ancora incassato»): rame, cioè il
-  // tono della coda di lavoro, e non `--danger` — non si è perso niente.
-  &.is-manca {
-    color: var(--copper-600);
-  }
+// Un dato che MANCA e va fornito («non ancora incassato»): rame, cioè il tono
+// della coda di lavoro, e non `--danger` — non si è perso niente. ⚠️ Sul
+// discendente e non su `.admin-kpi__valore`: lo stesso «manca» sta sul VALORE
+// di una tessera e sulla NOTA di un'altra (l'ultimo mese chiuso, il cui valore
+// è il margine congelato, che non manca di niente). Con una classe per elemento
+// il rame era due regole — e la seconda, `.pan__manca`, viveva nel foglio
+// locale della Panoramica. Vale (0,2,0) più l'incapsulamento: batte anche
+// `.admin-kpi__nota strong`, ma nella nota si usa comunque uno `<span>`.
+.admin-kpi .is-manca {
+  color: var(--copper-600);
 }
 
 .admin-kpi__nota {
@@ -138,6 +154,12 @@
 
   strong {
     color: var(--cream-100);
+  }
+
+  // Nella nota il testo intorno è tenue e il rame da solo non emerge: il peso
+  // lo fa. Il VALORE ha già il suo (700) e questa regola non lo tocca.
+  .is-manca {
+    font-weight: 600;
   }
 }
 
@@ -173,18 +195,42 @@ a.admin-kpi--link {
   }
 }
 
-// Lo scheletro della tessera: stessa scatola, stessa altezza. Dentro, la prima
-// barra è l'etichetta e la seconda il numero.
+// Lo scheletro della tessera: stessa scatola, stessa altezza, STESSE RIGHE.
+//
+// ⚠️ Dal 13/09/2026 (sera) porta TRE righe con le classi della tessera vera
+// (`__etichetta`, `__valore`, `__nota`), ognuna alta ESATTAMENTE una riga di
+// quel testo — `min-height: 1lh`, l'idioma di `.admin-table__ident` — con la
+// barra dentro. Così lo scheletro misura quanto una tessera con etichetta,
+// valore e nota su una riga a OGNI larghezza: il valore è una `clamp()` su
+// `vw`, e un'altezza scritta a mano la rincorrerebbe a ogni finestra (a 390px
+// vale 25px, a 1440 ne vale 35). La forma a DUE barre nude (etichetta +
+// numero, senza le righe) resta valida: la usa ancora Statistiche, e lì il
+// pavimento fa da solo il lavoro delle righe.
 .admin-kpi.is-scheletro {
-  min-height: 6.25rem;
-  justify-content: center;
-  gap: 0.6rem;
+  min-height: 7.25rem;
+
+  > .admin-kpi__etichetta,
+  > .admin-kpi__valore,
+  > .admin-kpi__nota {
+    display: flex;
+    align-items: center;
+    min-height: 1lh;
+  }
 
   .admin-scheletro {
     width: 45%;
   }
 
-  .admin-scheletro + .admin-scheletro {
+  > .admin-kpi__valore .admin-scheletro {
+    width: 65%;
+    height: 1.2rem;
+  }
+
+  > .admin-kpi__nota .admin-scheletro {
+    width: 80%;
+  }
+
+  > .admin-scheletro + .admin-scheletro {
     width: 65%;
     height: 1.5rem;
   }
@@ -202,9 +248,25 @@ a.admin-kpi--link {
   background: var(--line);
   animation: admin-scheletro 1.2s ease-in-out infinite;
 
-  // Una riga di elenco: la stessa altezza della riga che sostituisce.
+  // Una riga di TABELLA: la stessa altezza della riga che sostituisce.
   &--riga {
     height: 44px;
+  }
+
+  // Una riga-link della coda «da fare» (`.admin-dafare__voce`): titolo a 1rem
+  // (25,6) + gap 0,05rem + sotto-testo a 0,8rem (20,48) + padding 0,4rem×2
+  // + filetto 1px = 60,7px. ⚠️ NON i 44px di `--riga`: il `min-height: 44px`
+  // della riga è un PAVIMENTO che il contenuto supera, e fino al 13/09/2026
+  // (sera) lo scheletro era alto il pavimento mentre la riga atterrava a 61 —
+  // 17px di salto per riga, sulla coda che sta sopra la piega.
+  &--voce {
+    height: calc(1.6rem + 0.05rem + 1.28rem + 0.8rem + 1px);
+  }
+
+  // Una riga di «Ultime azioni» (`.pan__azione` nella Panoramica): una riga di
+  // testo a 0,88rem con l'interlinea del body (1,6) = 22,5px. Erano 44.
+  &--azione {
+    height: calc(0.88rem * 1.6);
   }
 
   // Un grafico: la stessa `--grafico-h` che `app-grafico-colonne` dichiara
@@ -538,6 +600,16 @@ a.admin-kpi--link {
 // padding. ⚠️ Il conto economico NON si tocca qui: la sua ricetta è
 // byte-identica a `dl.cm__conto`, che sotto i 720px non cambia niente.
 @media (max-width: #{s.$bp-tabella-blocchi}) {
+  // ⚠️ Il pavimento SCENDE col padding e col valore (che qui è al minimo della
+  // `clamp()`, 1,5rem): la tessera minima misura 100,5px a 390, e i 116 di
+  // sopra lascerebbero 15px di vuoto sotto ogni tessera su un telefono — 17
+  // tessere, 255px di scorrimento in più. Scheletro e tessera scendono INSIEME,
+  // o il CLS torna esattamente dove era.
+  .admin-kpi,
+  .admin-kpi.is-scheletro {
+    min-height: 6.3rem;
+  }
+
   .admin-kpi {
     padding: 0.85rem 1rem;
   }

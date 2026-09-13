@@ -21,6 +21,20 @@
   grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 }
 
+// ── Il mese contabile: colonne da 260px ─────────────────────────────────────
+// ⚠️ 260 e non i 200 della griglia base, misurato a 1440 il 13/09/2026 (sera):
+// con sei tessere su CINQUE colonne da ~200px ogni etichetta andava su due
+// righe e le due note lunghe («di cui … presso l'agente, … dai giocatori»,
+// «chiuso il … · agente: incassato … su …» con la pastiglia) su tre — la riga
+// stava a 174px contro i 133 di Abbonati, e la sesta tessera restava orfana
+// su una riga sua. A 260 le colonne sono TRE a 1440/1280/1024 (due righe di
+// tre, etichette su una riga, note al massimo su due) e DUE a 1100. ⚠️ Va su
+// ENTRAMBE le griglie del blocco, scheletro e dati: le colonne decidono
+// l'altezza, e due griglie diverse sarebbero due altezze diverse.
+.pan__mese {
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+}
+
 // ── Titolo + pastiglia di stato sulla stessa riga ──────────────────────────
 // `.admin-blocco__testa` è `space-between`: con TRE figli lo spazio si
 // spalmerebbe fra tutti e la pastiglia finirebbe a metà riga. Titolo e stato
@@ -33,16 +47,10 @@
   gap: 0.6rem;
 }
 
-// ── «non ancora incassato» dentro una nota ─────────────────────────────────
-// Lo stesso tono di `.admin-kpi__valore.is-manca` (rame = coda di lavoro, non
-// `--danger`: non si è perso niente), ma sulla NOTA della tessera dell'ultimo
-// mese chiuso — il cui valore è il margine congelato, che non manca di niente.
-// ⚠️ Su uno `<span>`, mai su uno `<strong>`: la regola condivisa
-// `.admin-kpi__nota strong` vale (0,3,1) con l'incapsulamento e vincerebbe.
-.pan__manca {
-  font-weight: 600;
-  color: var(--copper-600);
-}
+// «non ancora incassato» nella nota della tessera dell'ultimo mese chiuso è
+// `.is-manca` del foglio condiviso (`admin-cruscotto.scss`): fino al 13/09/2026
+// (sera) qui viveva una copia, `.pan__manca`, con lo stesso rame — due regole
+// per un solo «manca».
 
 // ── La banda d'errore con «Riprova» ────────────────────────────────────────
 .pan__banda {
@@ -53,12 +61,35 @@
   gap: 0.8rem;
 }
 
-// Gli scheletri di un elenco (coda «da fare», ultime azioni): una colonna di
-// righe da 44px, la stessa altezza delle righe che sostituiscono.
+// Gli scheletri di un elenco: una colonna di righe alte quanto le righe che
+// sostituiscono (`--voce` per la coda «da fare», `--azione` per le ultime
+// azioni — mai `--riga`, che è la riga di TABELLA a 44px). Il gap è quello di
+// `.pan__azioni`.
 .pan__scheletri {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+
+  // ⚠️ La coda «da fare» NON ha gap: le sue righe si toccano, separate dal solo
+  // filetto. Tre scheletri col gap valgono 14px più di tre righe vere.
+  &--voci {
+    gap: 0;
+  }
+}
+
+// La riga di nota in fondo ad «Abbonati» mentre i dati arrivano: la data e il
+// ritmo di ricalcolo si sanno solo DOPO, ma la riga occupa una riga di
+// `.admin-nota` (`1lh` del suo carattere) sin da prima — senza, il blocco
+// cresceva di ~34px (riga + gap) all'arrivo, cioè il salto che gli scheletri
+// esistono per togliere.
+.pan__nota-scheletro {
+  display: flex;
+  align-items: center;
+  min-height: 1lh;
+
+  .admin-scheletro {
+    width: 40%;
+  }
 }
 
 // ── Ultime azioni ───────────────────────────────────────────────────────────
