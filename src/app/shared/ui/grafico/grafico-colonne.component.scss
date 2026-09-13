@@ -204,11 +204,18 @@
 
 // ── Il tooltip ──────────────────────────────────────────────────────────────
 // Vive nella fascia superiore dell'area. `pointer-events: none`: sta sopra la
-// lente e non deve rubarle il puntatore. Nel primo/ultimo 15% si ancora al
-// bordo (`.is-sinistra`/`.is-destra`) invece che al centro della colonna.
+// lente e non deve rubarle il puntatore. ⚠️ Il `left` in px lo scrive il
+// componente DOPO averlo misurato (`afterRenderEffect`), stretto fra 0 e
+// `area − larghezza`: qui si dichiara solo il punto di partenza (`left: 0`),
+// che è anche dove si misura. Niente `translateX(-50%)` e niente ancoraggio a
+// percentuale: con quelli, a 340px e tre serie, la fascia centrale usciva
+// dall'area da un lato o dall'altro. Il `max-width: 100%` resta: sopra la
+// larghezza dell'area le voci vanno a capo (`flex-wrap`), e la misura è
+// presa su quel ripiegamento.
 .grafico__tip {
   position: absolute;
   top: 0;
+  left: 0;
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
@@ -226,18 +233,6 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   pointer-events: none;
-  transform: translateX(-50%);
-
-  &.is-sinistra {
-    left: 0;
-    transform: none;
-  }
-
-  &.is-destra {
-    left: auto;
-    right: 0;
-    transform: none;
-  }
 
   strong {
     color: var(--cream-100);
@@ -290,23 +285,41 @@
 }
 
 // ── L'asse X ────────────────────────────────────────────────────────────────
-// Una cella per colonna, larga quanto lo slot dell'SVG: le etichette stanno
-// sotto la propria colonna per costruzione, senza misurare niente.
+// La riga riserva SOLO l'altezza (`1lh` del suo carattere: le voci sono
+// assolute e non la alzerebbero). Ogni etichetta stampata sta al centro del
+// proprio slot con `left: centroX%` + `translateX(-50%)`, senza taglio.
+//
+// ⚠️ Non più una cella flex per colonna con `overflow: hidden`: quella cella
+// era larga uno slot, cioè 7px a novanta colonne, e OGNI etichetta stampata
+// usciva mozza — a 30-90 colonne l'asse era illeggibile senza che nulla lo
+// segnalasse. La geometria «una cella per slot» è giusta per dodici colonne e
+// sbagliata per tutte le altre. L'`overflow: hidden` resta sul CONTENITORE:
+// taglia al bordo dell'asse, mai un'etichetta (le due estreme si ancorano al
+// bordo con `.is-sinistra`/`.is-destra` proprio per non arrivarci).
 .grafico__x {
-  display: flex;
+  position: relative;
+  height: 1lh;
   margin-top: 0.15rem;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--text-faint);
 }
 
 .grafico__x-voce {
-  flex: 1 1 0;
-  min-width: 0;
-  overflow: hidden;
-  text-align: center;
-  text-overflow: ellipsis;
+  position: absolute;
+  top: 0;
   white-space: nowrap;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: var(--text-faint);
+  transform: translateX(-50%);
+
+  &.is-sinistra {
+    transform: none;
+  }
+
+  &.is-destra {
+    transform: translateX(-100%);
+  }
 }
 
 .grafico__nota {

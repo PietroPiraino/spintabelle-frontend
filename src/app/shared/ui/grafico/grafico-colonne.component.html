@@ -9,7 +9,7 @@
       @for (s of serie(); track s.nome) {
         <span class="grafico__voce" [attr.data-tono]="s.tono">{{ s.nome }}</span>
       }
-      @if (etichettaLinea(); as l) {
+      @if (lineaAttiva(); as l) {
         <span class="grafico__voce grafico__voce--linea">{{ l }}</span>
       }
     </span>
@@ -63,7 +63,7 @@
             vector-effect="non-scaling-stroke"
           />
         }
-        @if (etichettaLinea() && geometria().linea) {
+        @if (lineaAttiva() && geometria().linea) {
           <polyline
             class="grafico__linea"
             [attr.points]="geometria().linea"
@@ -83,12 +83,16 @@
       <!--
         La lente: l'unico stop di Tab del grafico. Copre l'area intera, e il
         puntatore sceglie lo slot più vicino — non deve colpire la barra.
+        `pointerdown`/`pointercancel` servono solo alla guardia del fuoco
+        (vedi `alFuoco`): un fuoco che arriva dal puntatore non annuncia.
       -->
       <button
         type="button"
         class="grafico__lente"
         [attr.aria-label]="'Esplora «' + titolo() + '»: frecce per muoversi, Invio per il dettaglio'"
         [attr.aria-describedby]="idReadout"
+        (pointerdown)="premuta()"
+        (pointercancel)="annullata()"
         (focus)="alFuoco()"
         (blur)="azzera()"
         (keydown)="onTasto($event)"
@@ -101,13 +105,17 @@
     <!-- Il readout: cambia SOLO da tastiera e da tap, mai a ogni pointermove. -->
     <span class="visually-hidden" [id]="idReadout" aria-live="polite">{{ annuncio() }}</span>
 
+    <!--
+      Il tooltip: nasce a `left: 0` e NASCOSTO, l'`afterRenderEffect` lo misura
+      e scrive il `left` in px che lo tiene dentro l'area. Tutto in un tick.
+    -->
     @if (colonnaScelta(); as sc) {
       <div
+        #tip
         class="grafico__tip"
         aria-hidden="true"
-        [class.is-sinistra]="ancoraggio(sc.i) === 'sinistra'"
-        [class.is-destra]="ancoraggio(sc.i) === 'destra'"
-        [style.left.%]="ancoraggio(sc.i) === 'centro' ? centroX(sc.i) : null"
+        [style.left.px]="tipX()"
+        [style.visibility]="tipX() === null ? 'hidden' : null"
       >
         <strong class="grafico__tip-titolo">{{ sc.c.etichettaLunga ?? sc.c.etichetta }}</strong>
         @if (sc.c.provvisorio) {
@@ -118,7 +126,7 @@
             >{{ s.nome }} <b>{{ sc.c.testi[k] }}</b></span
           >
         }
-        @if (etichettaLinea(); as l) {
+        @if (lineaAttiva(); as l) {
           <span class="grafico__tip-voce grafico__tip-voce--linea"
             >{{ l }} <b>{{ sc.c.testoLinea }}</b></span
           >
@@ -127,14 +135,22 @@
     }
   </div>
 
-  <!-- Le etichette dell'asse X: una cella per colonna, stampata a passo. -->
+  <!--
+    Le etichette dell'asse X: SOLO le colonne a passo, ognuna assoluta al centro
+    del proprio slot. ⚠️ Non una cella per colonna: a novanta colonne la cella
+    era larga 7px e tagliava ogni etichetta — vedi il docblock del componente.
+  -->
   <div class="grafico__x" aria-hidden="true">
     @for (c of colonne(); track c.chiave; let i = $index) {
-      <span class="grafico__x-voce">
-        @if (mostraEtichetta(i)) {
-          {{ c.etichetta }}
-        }
-      </span>
+      @if (mostraEtichetta(i)) {
+        <span
+          class="grafico__x-voce"
+          [class.is-sinistra]="ancoraggio(i) === 'sinistra'"
+          [class.is-destra]="ancoraggio(i) === 'destra'"
+          [style.left.%]="centroX(i)"
+          >{{ c.etichetta }}</span
+        >
+      }
     }
   </div>
 
