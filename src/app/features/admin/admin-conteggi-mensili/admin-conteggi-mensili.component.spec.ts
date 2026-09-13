@@ -2687,4 +2687,192 @@ describe('AdminConteggiMensiliComponent', () => {
     // Nessuna chiamata di rete: il salvataggio si è fermato prima.
     http.expectNone(`${API}/admin/conteggi/mesi/m1/rakeback`);
   });
+
+  // ── Il deep-link `?mese=&vista=` dalla Panoramica ────────────────────────
+
+  describe('il deep-link ?mese=&vista=', () => {
+    const settembre = mese();
+    const agosto = mese({
+      id: 'm2',
+      mese: 8,
+      etichetta: 'agosto 2026',
+      stato: 'CHIUSO',
+      riepilogoCongelato: true,
+    });
+
+    const tendina = () =>
+      fixture.nativeElement.querySelector(
+        'select[aria-label="Mese contabile"]',
+      ) as HTMLSelectElement;
+
+    /**
+     * L'avvio con DUE mesi in elenco e il dettaglio ancora da chiedere: è il
+     * chiamante a dire quale si aspetta. ⚠️ Gli input vanno impostati PRIMA
+     * di chiamarla — cioè prima che `listMesi` risponda —, perché il primo
+     * `?mese=` si decide dentro quella risposta. Con `setInput` e non con un
+     * `ActivatedRoute` finto: `withComponentInputBinding()` è il router che
+     * scrive negli input, e la spec fa la stessa cosa dalla stessa porta.
+     */
+    const avviaConDueMesi = async () => {
+      await stabilizza();
+      http
+        .expectOne(`${API}/admin/conteggi/mesi`)
+        .flush([settembre, agosto]);
+      http.expectOne(`${API}/admin/conteggi/conti`).flush([]);
+      http.expectOne(`${API}/admin/conteggi/ricorrenti`).flush([]);
+      http.expectOne(`${API}/admin/conteggi/stakati`).flush([]);
+      await stabilizza();
+    };
+
+    it('apre il mese e la scheda del link, e chiede il dettaglio di QUEL mese soltanto', async () => {
+      fixture.componentRef.setInput('mese', 'm2');
+      fixture.componentRef.setInput('vista', 'soci');
+      await avviaConDueMesi();
+
+      // ⚠️ L'asserzione decisiva: si legge agosto e settembre — il primo
+      // dell'elenco, quello del ripiego — non viene MAI chiesto. Senza il
+      // deep-link nel `next` di `carica()` partirebbero due letture, o la
+      // sbagliata.
+      http.expectNone(`${API}/admin/conteggi/mesi/m1`);
+      http
+        .expectOne(`${API}/admin/conteggi/mesi/m2`)
+        .flush(dettaglio([riga()], { mese: agosto }));
+      await stabilizza();
+      // La scheda Soci si carica ENTRANDO, e il deep-link vale come un clic.
+      // ⚠️ `expectOne` e non `match`: la prima lettura del dettaglio è una
+      // LETTURA e non deve invalidare il conguaglio — senza `invalidaSoci:
+      // false` in `carica()` la rotta più cara del modulo partiva DUE volte
+      // all'arrivo con `?vista=soci`.
+      http.expectOne(`${API}/admin/conteggi/soci`).flush(saldi());
+      await stabilizza();
+      http.expectNone(`${API}/admin/conteggi/soci`);
+
+      expect(scheda('Soci').getAttribute('aria-selected')).toBe('true');
+      expect(scheda('Riepilogo').getAttribute('aria-selected')).toBe('false');
+      expect(fixture.componentInstance['mese']()?.id).toBe('m2');
+      expect(tendina().value).toBe('m2');
+      expect(tendina().selectedOptions[0]?.textContent?.trim()).toBe(
+        'agosto 2026',
+      );
+    });
+
+    it('senza parametri si parte dal primo mese e dal Riepilogo, come sempre', async () => {
+      await avviaConDueMesi();
+      http.expectNone(`${API}/admin/conteggi/mesi/m2`);
+      http
+        .expectOne(`${API}/admin/conteggi/mesi/m1`)
+        .flush(dettaglio([riga()], { mese: settembre }));
+      await stabilizza();
+      expect(scheda('Riepilogo').getAttribute('aria-selected')).toBe('true');
+      expect(tendina().value).toBe('m1');
+    });
+
+    it('un mese che non esiste e una scheda che non esiste ripiegano, senza errori', async () => {
+      // ⚠️ `?vista=tutto` è una stringa come le altre: senza la guardia
+      // `isVista` diventerebbe una scheda che nessun `@case` rende — pannello
+      // vuoto, nessun errore. E un `?mese=` di un mese cancellato non deve
+      // chiedere un dettaglio che risponderebbe 404 su una schermata sana.
+      fixture.componentRef.setInput('mese', 'nessuno');
+      fixture.componentRef.setInput('vista', 'tutto');
+      await avviaConDueMesi();
+      http.expectNone(`${API}/admin/conteggi/mesi/nessuno`);
+      http
+        .expectOne(`${API}/admin/conteggi/mesi/m1`)
+        .flush(dettaglio([riga()], { mese: settembre }));
+      await stabilizza();
+      expect(scheda('Riepilogo').getAttribute('aria-selected')).toBe('true');
+      expect(fixture.componentInstance['error']()).toBeNull();
+      expect(tendina().value).toBe('m1');
+    });
+
+    it('un `?mese=` che CAMBIA a componente montato rilegge il mese nuovo, e solo quello', async () => {
+      // ⚠️ Fra due URL della stessa rotta il router RIUSA il componente: due
+      // voci della Panoramica premute una dopo l'altra, o Indietro/Avanti.
+      // Nessun costruttore rilegge il parametro — lo fa l'effect.
+      fixture.componentRef.setInput('mese', 'm1');
+      await avviaConDueMesi();
+      http
+        .expectOne(`${API}/admin/conteggi/mesi/m1`)
+        .flush(dettaglio([riga()], { mese: settembre }));
+      await stabilizza();
+
+      fixture.componentRef.setInput('mese', 'm2');
+      await stabilizza();
+      http.expectNone(`${API}/admin/conteggi/mesi/m1`);
+      http
+        .expectOne(`${API}/admin/conteggi/mesi/m2`)
+        .flush(dettaglio([riga()], { mese: agosto }));
+      await stabilizza();
+      expect(fixture.componentInstance['mese']()?.id).toBe('m2');
+      expect(tendina().value).toBe('m2');
+
+      // ⚠️ La guardia su `meseApplicato`: l'elenco dei mesi si ricarica dopo
+      // ogni apertura o chiusura, e senza il marcatore ogni ricarica
+      // richiederebbe di nuovo lo stesso dettaglio — una lettura in più per
+      // ogni scrittura, su un link che è già stato servito.
+      fixture.componentInstance['mesi'].set([settembre, agosto]);
+      await stabilizza();
+      http.expectNone(`${API}/admin/conteggi/mesi/m2`);
+
+      // E un id che non è nell'elenco, da montato, non fa niente: si resta su
+      // quello che si guardava.
+      fixture.componentRef.setInput('mese', 'nessuno');
+      await stabilizza();
+      http.expectNone(`${API}/admin/conteggi/mesi/nessuno`);
+      expect(fixture.componentInstance['mese']()?.id).toBe('m2');
+    });
+
+    it('«?mese=A → senza parametri → ?mese=A» riapre A: il marcatore si azzera col parametro', async () => {
+      // ⚠️ Il router scrive davvero `undefined` quando il parametro sparisce
+      // dall'URL; senza il reset del marcatore il terzo passo sarebbe
+      // ignorato e l'URL direbbe A mentre la pagina mostra un altro mese.
+      fixture.componentRef.setInput('mese', 'm2');
+      await avviaConDueMesi();
+      http
+        .expectOne(`${API}/admin/conteggi/mesi/m2`)
+        .flush(dettaglio([riga()], { mese: agosto }));
+      await stabilizza();
+
+      fixture.componentRef.setInput('mese', undefined);
+      await stabilizza();
+      http.expectNone(`${API}/admin/conteggi/mesi/m2`);
+      // Nel frattempo si è scelto settembre dalla tendina.
+      fixture.componentInstance['scegliMese']('m1');
+      http
+        .expectOne(`${API}/admin/conteggi/mesi/m1`)
+        .flush(dettaglio([riga()], { mese: settembre }));
+      await stabilizza();
+
+      fixture.componentRef.setInput('mese', 'm2');
+      await stabilizza();
+      http
+        .expectOne(`${API}/admin/conteggi/mesi/m2`)
+        .flush(dettaglio([riga()], { mese: agosto }));
+      await stabilizza();
+      expect(fixture.componentInstance['mese']()?.id).toBe('m2');
+    });
+
+    it('due letture in volo: vince l\x27ULTIMA richiesta, non l\x27ultima risposta', async () => {
+      // ⚠️ Indietro e Avanti in rapida successione lasciano due dettagli in
+      // volo; senza la guardia `dettaglioSeq` la risposta di A che arriva
+      // dopo quella di B vincerebbe, e l'URL direbbe B mentre la pagina
+      // mostra A — per sempre, perché il parametro non cambia più.
+      fixture.componentRef.setInput('mese', 'm1');
+      await avviaConDueMesi();
+      const primaA = http.expectOne(`${API}/admin/conteggi/mesi/m1`);
+
+      fixture.componentRef.setInput('mese', 'm2');
+      await stabilizza();
+      const richiestaB = http.expectOne(`${API}/admin/conteggi/mesi/m2`);
+
+      richiestaB.flush(dettaglio([riga()], { mese: agosto }));
+      await stabilizza();
+      primaA.flush(dettaglio([riga()], { mese: settembre }));
+      await stabilizza();
+
+      expect(fixture.componentInstance['mese']()?.id).toBe('m2');
+      expect(tendina().value).toBe('m2');
+      expect(fixture.componentInstance['loading']()).toBeFalse();
+    });
+  });
 });

@@ -6,6 +6,7 @@ import {
   DestroyRef,
   effect,
   inject,
+  input,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -76,14 +77,25 @@ import {
   motivoSenzaCassa,
 } from '../metodo-pagamento';
 
-type Vista =
-  | 'riepilogo'
-  | 'rakeback'
-  | 'abbonamenti'
-  | 'stakati'
-  | 'voci'
-  | 'soci'
-  | 'anagrafiche';
+/**
+ * Le sette schede, tupla CHIUSA (idioma `ICON_NAMES`): `Vista` si deriva da
+ * qui e `isVista()` è la guardia sul valore di `?vista=`, che arriva dall'URL
+ * come stringa qualunque. Con una `type` a mano e un `as Vista` sul parametro,
+ * `?vista=tutto` diventerebbe una scheda che nessun `@case` rende: pannello
+ * vuoto, nessun errore.
+ */
+const VISTE = [
+  'riepilogo',
+  'rakeback',
+  'abbonamenti',
+  'stakati',
+  'voci',
+  'soci',
+  'anagrafiche',
+] as const;
+type Vista = (typeof VISTE)[number];
+const isVista = (v: string | undefined): v is Vista =>
+  v !== undefined && (VISTE as readonly string[]).includes(v);
 
 /** La bozza di una riga di conteggio: quattro campi di testo, come il rakeback. */
 interface BozzaStakato {
@@ -204,6 +216,38 @@ export class AdminConteggiMensiliComponent {
 
   protected readonly vista = signal<Vista>('riepilogo');
   protected readonly conferma = signal<string | null>(null);
+
+  /**
+   * Il deep-link `?mese=<id>&vista=<scheda>`, con cui la Panoramica porta
+   * dritto sulla riga da sistemare (una spesa fissa da registrare, un ticket
+   * non pagato, l'incasso dell'agente).
+   *
+   * ⚠️ Due `input()` con alias e NON `ActivatedRoute`:
+   * `withComponentInputBinding()` è attivo in `app.config.ts`, quindi il router
+   * scrive qui i query param da solo, e la spec li imposta con
+   * `fixture.componentRef.setInput` — senza uno
+   * stub della rotta né un `provideRouter` in una suite che di router non ha
+   * mai avuto bisogno (un `inject(ActivatedRoute)` qui sarebbe un
+   * NullInjectorError su ogni test esistente, nessuno dei quali c'entra).
+   *
+   * ⚠️ «Iniziale» nel nome perché è un valore di PARTENZA, non uno stato: il
+   * mese si cambia dalla tendina e la scheda dal clic, e nessuno dei due
+   * riscrive l'URL — un `?vista=` che seguisse ogni clic farebbe del tasto
+   * Indietro un giro fra le schede invece di un ritorno alla Panoramica.
+   */
+  readonly meseIniziale = input<string | undefined>(undefined, {
+    alias: 'mese',
+  });
+  readonly vistaIniziale = input<string | undefined>(undefined, {
+    alias: 'vista',
+  });
+  /**
+   * L'ultimo `?mese=` già servito, nella forma in cui è arrivato (anche se non
+   * esisteva e si è ripiegato sul primo mese): è la guardia che tiene distinti
+   * «il parametro è cambiato» e «l'elenco dei mesi si è ricaricato» — vedi
+   * l'effect nel costruttore.
+   */
+  private meseApplicato: string | undefined;
 
   protected readonly CATEGORIE_USCITA = CATEGORIE_USCITA;
   protected readonly CATEGORIE_ENTRATA = CATEGORIE_ENTRATA;
@@ -712,6 +756,53 @@ export class AdminConteggiMensiliComponent {
     });
 
     /**
+     * Il `?vista=` del deep-link apre la scheda, se ne nomina una vera.
+     *
+     * ⚠️ Rientra SOLO quando il parametro cambia valore (un signal non
+     * notifica un `set` uguale al precedente), quindi la scheda scelta a mano
+     * dopo l'arrivo non viene mai sovrascritta: si applica una volta per
+     * valore distinto, ed è tutto ciò che un link di partenza deve fare.
+     * ⚠️ `isVista` e non un cast: `?vista=tutto` è una stringa come le altre,
+     * e senza la guardia sarebbe una scheda che nessun `@case` rende.
+     */
+    effect(() => {
+      const v = this.vistaIniziale();
+      if (isVista(v)) this.vista.set(v);
+    });
+
+    /**
+     * Il `?mese=` che CAMBIA a componente già montato.
+     *
+     * ⚠️ Il primo `?mese=` lo serve `carica()` insieme all'elenco dei mesi (non
+     * c'è ancora niente fra cui scegliere prima). Questo effect copre l'altro
+     * caso: fra due URL della STESSA rotta — due voci della Panoramica premute
+     * una dopo l'altra, o Indietro/Avanti — il router riusa il componente e
+     * non lo ricostruisce, quindi nessun costruttore rilegge il parametro.
+     * ⚠️ La guardia su `meseApplicato` e non sul mese mostrato: `mesi()` si
+     * ricarica dopo ogni apertura o chiusura, e senza il marcatore ogni
+     * ricarica dell'elenco richiederebbe di nuovo lo stesso dettaglio.
+     * ⚠️ Un id che non è nell'elenco non fa niente: il ripiego sul primo mese
+     * vale solo all'arrivo, e da montato si resta su quello che si guardava.
+     */
+    effect(() => {
+      const voluto = this.meseIniziale();
+      const mesi = this.mesi();
+      // ⚠️ Un URL senza `?mese=` AZZERA il marcatore: il router scrive davvero
+      // `undefined` quando il parametro sparisce, e senza questo reset la
+      // sequenza «?mese=A → senza parametri → ?mese=A» non riaprirebbe A.
+      if (voluto === undefined) {
+        this.meseApplicato = undefined;
+        return;
+      }
+      if (!mesi) return;
+      if (voluto === this.meseApplicato) return;
+      if (!mesi.some((m) => m.id === voluto)) return;
+      this.meseApplicato = voluto;
+      // Un link è una LETTURA: il conguaglio già caricato resta valido.
+      this.scegliMese(voluto, { invalidaSoci: false });
+    });
+
+    /**
      * Cambiando VERSO, una categoria rimasta dell'altro verso torna ad «Altro».
      *
      * ⚠️⚠️ Senza, il difetto è muto in pagina e rumoroso al salvataggio: il
@@ -753,7 +844,20 @@ export class AdminConteggiMensiliComponent {
       next: (mesi) => {
         this.mesi.set(mesi);
         this.loading.set(false);
-        if (mesi.length) this.scegliMese(mesi[0].id);
+        if (mesi.length) {
+          // ⚠️ Il `?mese=` del deep-link, se è un mese vero; altrimenti il
+          // primo dell'elenco, come sempre. `meseApplicato` registra il
+          // parametro COSÌ COM'È — anche quando non esiste e si ripiega — così
+          // l'effect nel costruttore non lo riprova a ogni ricarica dell'elenco.
+          const voluto = this.meseIniziale();
+          this.meseApplicato = voluto;
+          // ⚠️ `invalidaSoci: false`: la prima lettura non cambia niente, e
+          // con `?vista=soci` la scheda è già aperta — invalidarla qui
+          // faceva partire DUE letture della rotta più cara del modulo.
+          this.scegliMese(mesi.find((m) => m.id === voluto)?.id ?? mesi[0].id, {
+            invalidaSoci: false,
+          });
+        }
       },
       error: (err) => {
         this.loading.set(false);
@@ -777,20 +881,45 @@ export class AdminConteggiMensiliComponent {
     this.listStakati();
   }
 
-  protected scegliMese(id: string): void {
+  /**
+   * Contatore delle letture del dettaglio: vince l'ULTIMA richiesta, non
+   * l'ultima risposta.
+   *
+   * ⚠️ Serve da quando il `?mese=` del deep-link guida `scegliMese` (Indietro
+   * e Avanti fra due mesi in rapida successione): senza la guardia, se il
+   * dettaglio di A arriva dopo quello di B la pagina mostra A mentre l'URL dice
+   * B, e nessun effect lo correggerà mai perché il parametro non cambia più.
+   * Idioma di `requestSeq` in /lezioni.
+   */
+  private dettaglioSeq = 0;
+
+  protected scegliMese(
+    id: string,
+    opts: { invalidaSoci?: boolean } = {},
+  ): void {
+    const seq = ++this.dettaglioSeq;
     this.loading.set(true);
     this.error.set(null);
     this.api.dettaglio(id).subscribe({
-      next: (d) => this.applica(d),
+      next: (d) => {
+        if (seq !== this.dettaglioSeq) return;
+        this.applica(d, opts.invalidaSoci ?? true);
+      },
       error: (err) => {
+        if (seq !== this.dettaglioSeq) return;
         this.loading.set(false);
         this.error.set(apiErrorMessage(err, 'Non riesco a leggere il mese.'));
       },
     });
   }
 
-  /** Applica il dettaglio e RISEMINA la bozza: il server è l'autorità. */
-  private applica(d: DettaglioMese): void {
+  /**
+   * Applica il dettaglio e RISEMINA la bozza: il server è l'autorità.
+   *
+   * `invalidaSoci` è `false` solo per le LETTURE (l'arrivo sulla pagina e il
+   * deep-link): una lettura non può rendere vecchio il conguaglio.
+   */
+  private applica(d: DettaglioMese, invalidaSoci = true): void {
     this.dett.set(d);
     this.loading.set(false);
     // ⚠️⚠️ Il conguaglio si INVALIDA qui, e non in ognuna delle mutazioni.
@@ -804,7 +933,7 @@ export class AdminConteggiMensiliComponent {
     // ⚠️ Si azzera e basta: se la scheda è aperta l'effect la ricarica subito,
     // altrimenti la paga chi ci entra. Ricaricarla sempre vorrebbe dire pagare
     // il calcolo su tutti i mesi chiusi a ogni cifra digitata nel rakeback.
-    this.soci.set(null);
+    if (invalidaSoci) this.soci.set(null);
     const b: Record<string, BozzaRiga> = {};
     for (const r of d.righe) {
       b[r.contoId] = {
