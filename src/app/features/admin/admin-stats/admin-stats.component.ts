@@ -87,8 +87,22 @@ const MESI_RANGES = [6, 12, 24] as const;
 /** Finestra dell'andamento video (il DTO backend accetta 1..90). */
 const GIORNI_RANGES = [7, 30, 90] as const;
 
-/** Sei tessere di scheletro: quante ne ha la griglia più larga della pagina. */
-const SCHELETRI = [1, 2, 3, 4, 5, 6] as const;
+/**
+ * Lo scheletro di OGNI scheda: le tessere del suo PRIMO blocco e l'altezza del
+ * suo primo grafico. ⚠️ Era uno solo, a sei tessere: non aveva la forma di
+ * nessuna delle quattro schede, quindi riservava lo spazio sbagliato e il
+ * dato atterrava spostando tutto — cioè il salto di layout che uno scheletro
+ * esiste per evitare. Le tessere sono indici perché il `@for` vuole un
+ * elenco; il grafico è in px, la stessa unità di `altezza` sul primitivo.
+ */
+const tessere = (n: number): readonly number[] =>
+  Array.from({ length: n }, (_, i) => i);
+const SCHELETRI: Record<Vista, { tessere: readonly number[]; graficoH: number }> = {
+  abbonati: { tessere: tessere(3), graficoH: 180 },
+  incassi: { tessere: tessere(4), graficoH: 180 },
+  andamento: { tessere: tessere(2), graficoH: 180 },
+  video: { tessere: tessere(4), graficoH: 120 },
+};
 
 // ── Le serie dei grafici ─────────────────────────────────────────────────────
 // I toni sono alias dei token `--serie-*`: il tema li cambia da solo.
@@ -338,9 +352,10 @@ export class AdminStatsComponent {
   private readonly date = inject(DatePipe);
 
   protected readonly SCHEDE = SCHEDE;
-  protected readonly SCHELETRI = SCHELETRI;
   protected readonly vista = signal<Vista>('abbonati');
   protected readonly titoloScheda = computed(() => TITOLI[this.vista()]);
+  /** La sagoma della scheda che si sta guardando, finché il dato non arriva. */
+  protected readonly scheletroScheda = computed(() => SCHELETRI[this.vista()]);
 
   /**
    * Il `?vista=` di un deep-link (dalla Panoramica, o da un URL salvato).
@@ -469,6 +484,23 @@ export class AdminStatsComponent {
         if (v === 'andamento' && this.andamentoSeq === 0) this.loadAndamento();
         if (v === 'video' && this.videoSeq === 0) this.loadVideo();
       });
+    });
+
+    /**
+     * Le due modali tengono una CHIAVE (vedi `meseIncassoAperto`): se una
+     * ricarica sposta la finestra e il mese non c'è più, la modale si chiude
+     * da sé (l'`@if` sul `computed`) — ma `(chiusa)` non scatta, e la chiave
+     * resterebbe. Alla ricarica successiva che riporta quel mese la modale si
+     * RIAPRIREBBE da sola, senza che nessuno l'abbia chiesto: la chiave si
+     * dimentica nell'istante in cui non risolve più niente.
+     */
+    effect(() => {
+      if (this.meseIncassoAperto() !== null && this.incassoAperto() === null) {
+        untracked(() => this.meseIncassoAperto.set(null));
+      }
+      if (this.meseAndamentoAperto() !== null && this.andamentoAperto() === null) {
+        untracked(() => this.meseAndamentoAperto.set(null));
+      }
     });
   }
 
@@ -663,10 +695,16 @@ export class AdminStatsComponent {
     const primi = new Map(
       s.acquisizione.serieMensile.map((r) => [r.mese, r.paganti.nuovi]),
     );
-    const chiavi = chiaviMesi(
-      finestraMesi(this.meseCorrente(), s.finestraMesi),
-      [...reg.keys()],
-    );
+    // ⚠️ L'unione di TUTTE le serie che entrano nella riga, non solo delle
+    // registrazioni: l'invariante di `chiaviMesi` («una riga vera non sparisce
+    // mai») vale per ogni colonna della tabella. Con le sole registrazioni,
+    // una fotografia a fine mese di un mese senza iscritti — fuori dalla
+    // finestra calcolata qui — spariva in silenzio.
+    const chiavi = chiaviMesi(finestraMesi(this.meseCorrente(), s.finestraMesi), [
+      ...reg.keys(),
+      ...fine.keys(),
+      ...primi.keys(),
+    ]);
     return chiavi.map((mese) => ({
       mese,
       registrati: reg.get(mese)?.registrati ?? 0,
@@ -805,13 +843,27 @@ export class AdminStatsComponent {
     })),
   );
 
-  /** Il mese di cui è aperta la modale «Incasso di …», o nessuno. */
-  protected readonly meseIncassoAperto = signal<StatsMeseIncasso | null>(null);
+  /**
+   * La CHIAVE ('YYYY-MM') del mese di cui è aperta la modale «Incasso di …»,
+   * o nessuna. ⚠️ La chiave e non l'oggetto della riga: una ricarica (il
+   * pulsante, o un cambio di finestra) sostituisce `stats()` per intero, e una
+   * modale che tenesse la riga vecchia continuerebbe a dire 500 € sopra una
+   * tabella che dice 750. La riga si risolve a ogni lettura, qui sotto.
+   */
+  protected readonly meseIncassoAperto = signal<string | null>(null);
+
+  /** La riga del mese aperto, letta dai dati di ADESSO; `null` se non c'è più. */
+  protected readonly incassoAperto = computed<StatsMeseIncasso | null>(() => {
+    const mese = this.meseIncassoAperto();
+    return mese === null
+      ? null
+      : (this.incassoAsc().find((r) => r.mese === mese) ?? null);
+  });
 
   /** Dal grafico: l'indice è quello di `incassoAsc`, ascendente come le colonne. */
   protected apriIncassoDaGrafico(i: number): void {
     const r = this.incassoAsc()[i];
-    if (r) this.meseIncassoAperto.set(r);
+    if (r) this.meseIncassoAperto.set(r.mese);
   }
 
   // ── Rinnovi ──────────────────────────────────────────────────────────────
@@ -962,13 +1014,26 @@ export class AdminStatsComponent {
     return cent > 0 ? `+${formattaCent(cent)}` : formattaCent(cent);
   }
 
-  /** Il mese di cui è aperta la modale «Conto economico di …», o nessuno. */
-  protected readonly meseAndamentoAperto = signal<RigaAndamento | null>(null);
+  /**
+   * L'`id` del mese di cui è aperta la modale «Conto economico di …», o
+   * nessuno. La chiave e non la riga, per la ragione scritta su
+   * `meseIncassoAperto`: qui pesa di più, perché `/andamento` non ha cache e
+   * un mese aperto cambia a ogni lettura.
+   */
+  protected readonly meseAndamentoAperto = signal<string | null>(null);
+
+  /** La riga del mese aperto, letta dai dati di ADESSO; `null` se non c'è più. */
+  protected readonly andamentoAperto = computed<RigaAndamento | null>(() => {
+    const id = this.meseAndamentoAperto();
+    return id === null
+      ? null
+      : (this.andamento()?.mesi.find((r) => r.id === id) ?? null);
+  });
 
   /** Dal grafico: l'indice è quello di `andamento().mesi`, ascendente come le colonne. */
   protected apriAndamentoDaGrafico(i: number): void {
     const r = this.andamento()?.mesi[i];
-    if (r) this.meseAndamentoAperto.set(r);
+    if (r) this.meseAndamentoAperto.set(r.id);
   }
 
   /**
@@ -997,6 +1062,15 @@ export class AdminStatsComponent {
       valori: [p.visualizzazioni],
       testi: [formattaIntero(p.visualizzazioni)],
     })),
+  );
+
+  /**
+   * Gli stessi giorni in tabella, il più recente in cima (come ogni tabella
+   * della pagina): il grafico riassume, i numeri esatti stanno qui. Era
+   * l'unico grafico della pagina senza i suoi numeri accanto.
+   */
+  protected readonly videoGiorniRows = computed(() =>
+    [...(this.video()?.andamento?.serie ?? [])].reverse(),
   );
 
   /** I tre gruppi di lezioni saltate, appiattiti per il template. */

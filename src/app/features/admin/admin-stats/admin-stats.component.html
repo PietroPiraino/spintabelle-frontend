@@ -750,10 +750,13 @@
 
             <!--
               ⚠️ AFFIANCATE, non impilate: una pila «incasso + coperti dai
-              punti» sarebbe una somma che il backend vieta due volte.
+              punti» sarebbe una somma che il backend vieta due volte. Il modo
+              è DICHIARATO benché sia il default del primitivo: la scelta
+              portante si legge qui, non nel foglio di un altro componente.
             -->
             <app-grafico-colonne
               titolo="Incasso per mese"
+              modo="affiancate"
               [colonne]="colonneIncasso()"
               [serie]="SERIE_INCASSO"
               [formattaAsse]="formattaEurBreve"
@@ -824,15 +827,18 @@
                           aria-haspopup="dialog"
                           [attr.aria-label]="'Dettaglio dell\'incasso di ' + meseLabel(r.mese)"
                           title="Dettaglio del mese"
-                          (click)="meseIncassoAperto.set(r)"
+                          (click)="meseIncassoAperto.set(r.mese)"
                         >
                           <app-icon name="more-vertical" [size]="18" />
                         </button>
                       </td>
                     </tr>
                   } @empty {
+                    <!-- Le colonne sono cinque, sei con «Stimati»: il colspan le segue. -->
                     <tr>
-                      <td colspan="6" class="admin-table__vuota">Nessun mese nella finestra.</td>
+                      <td [attr.colspan]="haStimati() ? 6 : 5" class="admin-table__vuota">
+                        Nessun mese nella finestra.
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -941,29 +947,46 @@
               ⚠️ I totali arrivano dal SERVER, sui SOLI mesi chiusi e congelati
               della finestra: un mese aperto cambia ancora. La striscia NOMINA
               l'insieme che somma, e il conteggio è quello del server.
-            -->
-            <p class="admin-totali">
-              <span class="admin-totali__voce">
-                Entrate <strong>{{ formattaCent(a.totaliChiusi.entrateCent) }}</strong>
-              </span>
-              <span class="admin-totali__voce">
-                Uscite <strong>{{ formattaCent(a.totaliChiusi.usciteCent) }}</strong>
-              </span>
-              <span class="admin-totali__voce">
-                Margine
-                <strong [class.is-perdita]="a.totaliChiusi.margineNettoCent < 0">{{
-                  formattaCent(a.totaliChiusi.margineNettoCent)
-                }}</strong>
-              </span>
-              <span class="admin-totali__ambito">
-                {{
-                  a.totaliChiusi.mesi === 1
-                    ? "sull'unico mese chiuso della finestra"
-                    : 'sui ' + a.totaliChiusi.mesi + ' mesi chiusi della finestra'
-                }}
-              </span>
-            </p>
 
+              ⚠️ Senza un mese chiuso la striscia NON si mostra: tre «0,00 €»
+              sopra «sui 0 mesi chiusi» sono zeri inventati — non c'è niente
+              che sia stato sommato. Al suo posto, la nota che dice perché.
+            -->
+            @if (a.totaliChiusi.mesi > 0) {
+              <p class="admin-totali">
+                <span class="admin-totali__voce">
+                  Entrate <strong>{{ formattaCent(a.totaliChiusi.entrateCent) }}</strong>
+                </span>
+                <span class="admin-totali__voce">
+                  Uscite <strong>{{ formattaCent(a.totaliChiusi.usciteCent) }}</strong>
+                </span>
+                <span class="admin-totali__voce">
+                  Margine
+                  <strong [class.is-perdita]="a.totaliChiusi.margineNettoCent < 0">{{
+                    formattaCent(a.totaliChiusi.margineNettoCent)
+                  }}</strong>
+                </span>
+                <span class="admin-totali__ambito">
+                  {{
+                    a.totaliChiusi.mesi === 1
+                      ? "sull'unico mese chiuso della finestra"
+                      : 'sui ' + a.totaliChiusi.mesi + ' mesi chiusi della finestra'
+                  }}
+                </span>
+              </p>
+            } @else {
+              <p class="admin-nota">
+                Nessun mese chiuso nella finestra: i totali si mostrano solo sui mesi
+                chiusi e congelati.
+              </p>
+            }
+
+            <!--
+              ⚠️ `.is-perdita` e non `.is-giu` sul margine: `.is-giu` è il tono
+              di una VARIAZIONE che scende (il delta dell'incasso), questo è un
+              importo sotto zero — la stessa classe delle celle della tabella e
+              della modale, così una perdita è rossa allo stesso modo ovunque.
+            -->
             <div class="admin-kpi-griglia">
               @if (meseProvvisorio(); as m) {
                 <a
@@ -975,7 +998,7 @@
                     >Margine di {{ m.etichetta }}
                     <span class="admin-stato" data-tono="attesa">Provvisorio</span></span
                   >
-                  <strong class="admin-kpi__valore" [class.is-giu]="m.margineNettoCent < 0">{{
+                  <strong class="admin-kpi__valore" [class.is-perdita]="m.margineNettoCent < 0">{{
                     formattaCent(m.margineNettoCent)
                   }}</strong>
                   <span class="admin-kpi__nota"
@@ -995,7 +1018,7 @@
                     >Margine di {{ m.etichetta }}
                     <span class="admin-stato" data-tono="concluso">Congelato</span></span
                   >
-                  <strong class="admin-kpi__valore" [class.is-giu]="m.margineNettoCent < 0">{{
+                  <strong class="admin-kpi__valore" [class.is-perdita]="m.margineNettoCent < 0">{{
                     formattaCent(m.margineNettoCent)
                   }}</strong>
                   <span class="admin-kpi__nota"
@@ -1009,12 +1032,14 @@
             </div>
 
             <!--
-              UN grafico: entrate e uscite affiancate, il margine come linea, i
-              mesi aperti tratteggiati. Centesimi dentro, `formattaCentBreve`
-              sull'asse.
+              UN grafico: entrate e uscite AFFIANCATE (dichiarato: impilate,
+              l'altezza direbbe «entrate + uscite», una somma che non significa
+              niente), il margine come linea, i mesi aperti tratteggiati.
+              Centesimi dentro, `formattaCentBreve` sull'asse.
             -->
             <app-grafico-colonne
               titolo="Entrate e uscite per mese"
+              modo="affiancate"
               [colonne]="colonneAndamento()"
               [serie]="SERIE_ANDAMENTO"
               etichettaLinea="Margine netto"
@@ -1047,8 +1072,14 @@
                 <tbody>
                   @for (r of andamentoRows(); track r.id) {
                     <tr>
+                      <!--
+                        ⚠️ Il link nella cella porta i suoi 44px (`.st__mese-link`,
+                        nel foglio locale): un `<a>` in linea sta sui 20px e col
+                        dito non si prende — la stessa aritmetica di `.admin-ico`.
+                      -->
                       <th scope="row" class="admin-table__c-primo">
                         <a
+                          class="st__mese-link"
                           routerLink="/admin/conteggi-mensili"
                           [queryParams]="{ mese: r.id, vista: 'riepilogo' }"
                           >{{ meseLabel(r.chiave) }}</a
@@ -1073,12 +1104,16 @@
                       <td class="is-num" data-etichetta="Uscite">
                         {{ formattaCent(r.uscite.totaleCent) }}
                       </td>
+                      <!--
+                        Col segno, come nella modale e nel readout del grafico:
+                        la convenzione del conguaglio è una sola (`conSegno`).
+                      -->
                       <td
                         class="is-num admin-table__solo-largo"
                         data-etichetta="Conguaglio"
                         [class.is-perdita]="r.conguaglioGiocatoriCent < 0"
                       >
-                        {{ formattaCent(r.conguaglioGiocatoriCent) }}
+                        {{ conSegno(r.conguaglioGiocatoriCent) }}
                       </td>
                       <td
                         class="is-num"
@@ -1094,7 +1129,7 @@
                           aria-haspopup="dialog"
                           [attr.aria-label]="'Conto economico di ' + r.etichetta"
                           title="Conto economico del mese"
-                          (click)="meseAndamentoAperto.set(r)"
+                          (click)="meseAndamentoAperto.set(r.id)"
                         >
                           <app-icon name="more-vertical" [size]="18" />
                         </button>
@@ -1203,8 +1238,57 @@
                   [serie]="SERIE_VIDEO"
                   [altezza]="120"
                   [formattaAsse]="formattaIntero"
-                  nota="Riproduzioni giorno per giorno, dal più vecchio al più recente. La base del disegno è lo zero."
+                  nota="Riproduzioni giorno per giorno, dal più vecchio al più recente. La base del disegno è lo zero. I numeri esatti sono nel collassabile qui sotto."
                 />
+
+                <!--
+                  I numeri esatti del grafico, come per ogni altro grafico della
+                  pagina: era l'unico senza. Dentro un collassabile CHIUSO —
+                  fino a 90 righe non devono occupare lo schermo di chi non le
+                  cerca — e il più recente in cima, come in ogni tabella qui.
+                -->
+                <details class="admin-piega">
+                  <summary class="admin-piega__sum">
+                    Riproduzioni giorno per giorno
+                    <span class="admin-item__meta"
+                      >{{ videoGiorniRows().length }}
+                      {{ videoGiorniRows().length === 1 ? 'giorno' : 'giorni' }}</span
+                    >
+                  </summary>
+                  <div class="admin-piega__corpo">
+                    <div class="admin-table__scroll">
+                      <table class="admin-table admin-table--etichettata">
+                        <caption class="visually-hidden">
+                          Riproduzioni per giorno nella finestra
+                        </caption>
+                        <thead>
+                          <tr>
+                            <th scope="col" class="admin-table__c-primo">Giorno</th>
+                            <th scope="col" class="is-num">Riproduzioni</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (p of videoGiorniRows(); track p.giorno) {
+                            <tr>
+                              <th scope="row" class="admin-table__c-primo">
+                                {{ giornoLabel(p.giorno) }}
+                              </th>
+                              <td class="is-num" data-etichetta="Riproduzioni">
+                                {{ formattaIntero(p.visualizzazioni) }}
+                              </td>
+                            </tr>
+                          } @empty {
+                            <tr>
+                              <td colspan="2" class="admin-table__vuota">
+                                Nessun giorno nella finestra.
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </details>
               }
             </section>
 
@@ -1432,20 +1516,42 @@
   spostare niente. ⚠️ Uno scheletro e non uno spinner: lo spinner non riserva
   lo spazio, e la Panoramica era fra i quattro elementi del sito misurati come
   «salto di layout».
+
+  ⚠️ PER SCHEDA, e dentro lo stesso `section.card.card--pad.admin-blocco` del
+  primo blocco vero: uno scheletro a sei tessere in un `<div>` nudo non aveva
+  la forma di nessuna delle quattro schede — tessere in più, nessun bordo di
+  card, nessun titolo — e riservava lo spazio sbagliato, cioè il salto che
+  esiste per evitare. Le tessere sono quelle del PRIMO blocco della scheda, il
+  grafico è alto quanto il suo primo grafico (120 su Video, 180 altrove), e
+  al posto del titolo c'è una barra: gli offset coincidono.
 -->
 <ng-template #scheletro>
-  <div role="status" aria-label="Caricamento statistiche" class="st__scheletro">
+  @let sk = scheletroScheda();
+  <section
+    class="card card--pad admin-blocco"
+    role="status"
+    aria-label="Caricamento statistiche"
+  >
+    <div class="admin-blocco__testa">
+      <span class="admin-scheletro st__scheletro-titolo"></span>
+    </div>
     <div class="admin-kpi-griglia">
-      @for (i of SCHELETRI; track i) {
+      @for (i of sk.tessere; track i) {
         <div class="card admin-kpi is-scheletro">
           <span class="admin-scheletro"></span>
           <span class="admin-scheletro"></span>
         </div>
       }
     </div>
-    <!-- Il grafico: la stessa `--grafico-h` che `app-grafico-colonne` dichiara. -->
-    <span class="admin-scheletro admin-scheletro--grafico"></span>
-  </div>
+    <!--
+      Il grafico: la stessa `--grafico-h` che `app-grafico-colonne` dichiara,
+      col valore che quella scheda passa in `[altezza]`.
+    -->
+    <span
+      class="admin-scheletro admin-scheletro--grafico"
+      [style.--grafico-h.px]="sk.graficoH"
+    ></span>
+  </section>
 </ng-template>
 
 <!--
@@ -1634,8 +1740,13 @@
   </app-modal>
 }
 
-<!-- «Incasso di lug 2026»: i metodi, il senza cassa, le stime. -->
-@if (meseIncassoAperto(); as r) {
+<!--
+  «Incasso di lug 2026»: i metodi, il senza cassa, le stime.
+  ⚠️ L'`@if` sta sul `computed` che RISOLVE la chiave nei dati di adesso: una
+  ricarica che cambia il mese aggiorna la modale aperta, una che lo toglie
+  dalla finestra la chiude.
+-->
+@if (incassoAperto(); as r) {
   <app-modal
     [titolo]="'Incasso di ' + meseLabel(r.mese)"
     [sottotitolo]="meseLungo(r.mese) + ' · solo gli abbonamenti, in euro'"
@@ -1669,7 +1780,7 @@
                 </caption>
                 <thead>
                   <tr>
-                    <th scope="col">Metodo</th>
+                    <th scope="col" class="admin-table__c-primo">Metodo</th>
                     <th scope="col" class="is-num">Incasso</th>
                     <th scope="col" class="is-num">Abbonamenti</th>
                   </tr>
@@ -1677,7 +1788,7 @@
                 <tbody>
                   @for (m of r.perMetodo; track m.metodo) {
                     <tr>
-                      <th scope="row">{{ metodoLabel(m.metodo) }}</th>
+                      <th scope="row" class="admin-table__c-primo">{{ metodoLabel(m.metodo) }}</th>
                       <td class="is-num" data-etichetta="Incasso">
                         {{ formattaEur(m.incassoEur) }}
                       </td>
@@ -1750,8 +1861,10 @@
 <!--
   «Conto economico di settembre 2026»: il `dl.admin-conto` dei Conteggi, letto
   dai centesimi della riga. ⚠️ Il sottotitolo si chiava su `provvisorio`.
+  ⚠️ L'`@if` sta sul `computed` che risolve l'`id` (vedi la modale sopra): qui
+  pesa di più, perché un mese aperto cambia a ogni lettura di `/andamento`.
 -->
-@if (meseAndamentoAperto(); as r) {
+@if (andamentoAperto(); as r) {
   <app-modal
     [titolo]="'Conto economico di ' + r.etichetta"
     [sottotitolo]="sottotitoloMese(r)"

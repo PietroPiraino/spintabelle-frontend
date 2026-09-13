@@ -72,12 +72,13 @@
 }
 
 // ── Lo scheletro della scheda ───────────────────────────────────────────────
-// Le tessere e, sotto, la sagoma del grafico alla stessa `--grafico-h` che
-// `app-grafico-colonne` dichiara: il dato atterra senza spostare niente.
-.st__scheletro {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+// Lo scheletro vive in un `section.admin-blocco` come il blocco vero (il ritmo
+// lo dà quello); qui c'è solo la barra che sta al posto del titolo, alta come
+// un `.admin-blocco__titolo` (1.05rem × l'interlinea), così le tessere sotto
+// partono dallo stesso offset di quelle vere.
+.st__scheletro-titolo {
+  width: min(12rem, 45%);
+  height: 1.3rem;
 }
 
 // ── La banda d'errore ───────────────────────────────────────────────────────
@@ -120,6 +121,9 @@
   // La riga dei gruppi («Paganti | Non paganti») sta sopra quella delle
   // colonne: due intestazioni sticky con lo stesso `top` si sovrapporrebbero
   // scorrendo — la seconda scende di un'intestazione.
+  // ⚠️ I 36px NON sono un numero di questo foglio: sono l'altezza che
+  // `admin-table.scss` dichiara su `thead th { height: 36px }`. Chi cambia
+  // quella deve cambiare questa, o la seconda riga scorre sotto la prima.
   .st__colonne th {
     top: 36px;
   }
@@ -136,8 +140,37 @@
 // affiancata e la colonna di contenuto è al minimo (788px a 1100). Con cinque
 // colonne numeriche accanto, la cella d'identità della lezione va tenuta più
 // corta del tetto condiviso (20rem in quella fascia), o la tabella sfonda.
-.st__lezioni .admin-table__ident {
-  max-width: 16rem;
+//
+// ⚠️ DENTRO la stessa `@media` della regola condivisa, e non sciolta: sciolta
+// vale (0,2,0) a ogni larghezza, e sotto i 720px batterebbe per specificità
+// il ripiegamento a blocchi di `admin-table.scss` — che toglie il tetto alla
+// cella perché lì il testo va a capo per intero. Un tetto rimasto acceso a
+// 390px è un titolo troncato senza `title` che lo legga (col dito l'hover non
+// esiste). Le soglie vengono da `_soglie.scss`, come negli altri fogli.
+@media (min-width: #{s.$bp-tabella-blocchi + 1}) and (max-width: 1200px) {
+  .st__lezioni .admin-table__ident {
+    max-width: 16rem;
+  }
+}
+
+// Il link «Mese» dentro la cella della tabella Andamento: 44px DICHIARATI. Un
+// `<a>` in linea sta sui 20px e col dito non si prende. Stessa aritmetica di
+// `.admin-table .admin-ico`: il `margin-block` negativo vale esattamente il
+// padding verticale della cella (0.3rem) e lo assorbe, così la riga resta a
+// 44px invece di salire a 53,6.
+.st__mese-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-block: -0.3rem;
+}
+
+@media (max-width: #{s.$bp-tabella-blocchi}) {
+  // Qui la cella ha `padding: 0` (il ripiegamento a blocchi): il rientro
+  // negativo non ha più niente da assorbire e accorcerebbe il blocco.
+  .st__mese-link {
+    margin-block: 0;
+  }
 }
 
 // Il collassabile dei limiti sta in coda a un blocco: un po' d'aria sopra.

@@ -551,6 +551,28 @@ describe('AdminStatsComponent', () => {
     expect(registrati).toBe('0');
   });
 
+  it('crescita: una fotografia a fine mese fuori dalla finestra non sparisce mai', async () => {
+    // La densificazione può solo AGGIUNGERE mesi a zero, mai togliere una riga
+    // vera — e vale per OGNI serie che entra nella tabella, non solo per le
+    // registrazioni: un «abbonati a fine mese» del gennaio 2025 senza una
+    // registrazione in quel mese deve restare in tabella col suo valore.
+    const s = statsView();
+    s.crescita.abbonatiFineMese.push({ mese: '2025-01', attivi: 7 });
+    await flushStats(s);
+    const riga = Array.from(
+      el().querySelectorAll<HTMLTableRowElement>('table.admin-table tbody tr'),
+    ).find(
+      (tr) =>
+        tr.querySelector('[data-etichetta="Abbonati a fine mese"]') &&
+        tr.querySelector('th')?.textContent?.trim() === 'gen 2025',
+    );
+    expect(riga).withContext('la riga di gennaio 2025').toBeTruthy();
+    expect(
+      riga!.querySelector('[data-etichetta="Abbonati a fine mese"]')?.textContent?.trim(),
+    ).toBe('7');
+    expect(riga!.querySelector('[data-etichetta="Registrati"]')?.textContent?.trim()).toBe('0');
+  });
+
   it('i limiti sono resi in pagina, verbatim, dentro un collassabile', async () => {
     await flushStats();
     const limiti = el().querySelector('details.st__limiti');
@@ -678,6 +700,60 @@ describe('AdminStatsComponent', () => {
     expect(text()).toContain('Un limite dei conteggi dichiarato dal backend.');
   });
 
+  it('andamento: lo stato si chiava su `provvisorio` e MAI su `stato`; i mesi chiusi li conta il server', async () => {
+    await flushStats();
+    await apriScheda('Andamento');
+    // Un mese CHIUSO il cui riepilogo non si è salvato alla chiusura si
+    // ricalcola a ogni lettura: è provvisorio a tutti gli effetti, e il server
+    // lo tiene fuori dai totali. Chiavando su `stato` direbbe «Chiuso».
+    await flushAndamento(
+      andamentoView({
+        mesi: [
+          rigaAndamento({
+            id: 'm-2026-08',
+            mese: 8,
+            chiave: '2026-08',
+            etichetta: 'agosto 2026',
+            stato: 'CHIUSO',
+            provvisorio: false,
+            chiusoAt: '2026-09-02T10:00:00.000Z',
+          }),
+          rigaAndamento({ stato: 'CHIUSO', provvisorio: true }),
+        ],
+        // ⚠️ Un solo mese non provvisorio nella risposta, ma il server ne
+        // dichiara TRE: la striscia stampa il numero del server, mai un
+        // conteggio fatto qui sulle righe (la finestra dei totali è sua).
+        totaliChiusi: {
+          mesi: 3,
+          entrateCent: 300_000,
+          usciteCent: 90_000,
+          margineNettoCent: 210_000,
+        },
+      }),
+    );
+
+    const rigaSettembre = Array.from(
+      el().querySelectorAll<HTMLTableRowElement>('table.admin-table tbody tr'),
+    ).find((tr) => tr.querySelector('th')?.textContent?.trim() === 'set 2026');
+    expect(rigaSettembre).toBeTruthy();
+    const pill = rigaSettembre!.querySelector('.admin-stato');
+    expect(pill?.getAttribute('data-tono')).toBe('attesa');
+    expect(pill?.textContent?.trim()).toBe('Provvisorio');
+    // La tessera del mese aperto lo prende, benché lo `stato` dica CHIUSO.
+    expect(tessera('Margine di settembre 2026')!.textContent).toContain('Provvisorio');
+
+    expect(el().querySelector('.admin-totali__ambito')?.textContent).toContain(
+      'sui 3 mesi chiusi della finestra',
+    );
+
+    // E il sottotitolo della modale: «Provvisorio», non «Congelato».
+    comando('Conto economico di settembre 2026')!.click();
+    await stabilizza();
+    const d = dialogo();
+    expect(d?.textContent).toContain('Provvisorio');
+    expect(d?.textContent).not.toContain('Congelato');
+  });
+
   it('andamento: i mesi non calcolati si dicono, e nessun NaN', async () => {
     await flushStats();
     await apriScheda('Andamento');
@@ -708,6 +784,14 @@ describe('AdminStatsComponent', () => {
       'Nessun mese contabile',
     );
     expect(text()).not.toContain('NaN');
+    // ⚠️ Nessuna striscia dei totali: tre «0,00 €» sopra «sui 0 mesi chiusi»
+    // sono zeri inventati — non c'è niente che sia stato sommato. Al suo
+    // posto, la nota che dice perché.
+    expect(el().querySelector('.admin-totali')).toBeNull();
+    expect(text()).not.toContain('sui 0 mesi');
+    expect(text()).toContain(
+      'Nessun mese chiuso nella finestra: i totali si mostrano solo sui mesi chiusi e congelati.',
+    );
   });
 
   it('errore su /andamento: banda con «Riprova» che rifà SOLO quella rotta', async () => {
@@ -851,12 +935,33 @@ describe('AdminStatsComponent', () => {
   // l'etichetta del comando di riga, e resta una rete solo se il test la cerca.
   const comando = (etichetta: string) =>
     el().querySelector<HTMLButtonElement>(`button[aria-label="${etichetta}"]`);
+  /**
+   * Le barre di un grafico, nell'ordine in cui il primitivo le emette: per
+   * ogni colonna, una barra per serie. Con due serie, la colonna `i` è la
+   * coppia `[2i, 2i+1]`.
+   *
+   * ⚠️ La GEOMETRIA e non il solo conteggio: `n × m` barre escono uguali sia
+   * affiancate sia impilate, quindi un `length` non distingue i due modi — e
+   * il modo È la scelta portante di questi grafici (una pila di «incasso +
+   * coperti dai punti» sarebbe una somma che il backend vieta).
+   */
+  const barreDi = (titolo: string) =>
+    Array.from(grafico(titolo).querySelectorAll<SVGRectElement>('rect.grafico__barra'));
+  const attr = (e: Element, nome: string) => Number(e.getAttribute(nome));
 
   it('crescita: il grafico impila verificate e non verificate, e la linea si ferma al mese chiuso', async () => {
     await flushStats();
     const fig = grafico('Registrazioni e abbonati per mese');
     // Tre mesi × due serie: la pila è il totale delle registrazioni.
-    expect(fig.querySelectorAll('rect.grafico__barra').length).toBe(6);
+    const barre = barreDi('Registrazioni e abbonati per mese');
+    expect(barre.length).toBe(6);
+    // IMPILATE: giugno (colonna 1) ha 9 verificate e 3 no. Le due barre hanno
+    // la stessa `x`, e la seconda POGGIA sulla prima — il suo piede è la
+    // testa della prima. Affiancate, le `x` sarebbero diverse.
+    const [prima, seconda] = barre.slice(2, 4);
+    expect(attr(seconda, 'x')).toBe(attr(prima, 'x'));
+    expect(attr(seconda, 'width')).toBe(attr(prima, 'width'));
+    expect(attr(seconda, 'y') + attr(seconda, 'height')).toBeCloseTo(attr(prima, 'y'), 6);
     // La linea c'è (maggio e giugno hanno una fotografia a fine mese).
     expect(fig.querySelector('polyline.grafico__linea')).toBeTruthy();
 
@@ -944,12 +1049,54 @@ describe('AdminStatsComponent', () => {
     expect(d!.textContent).toContain('Omaggi');
   });
 
+  it('la modale dell\'incasso segue la CHIAVE: dopo una ricarica mostra il valore nuovo, e si chiude se il mese sparisce', async () => {
+    await flushStats();
+    await apriScheda('Incassi');
+    comando("Dettaglio dell'incasso di lug 2026")!.click();
+    await stabilizza();
+    expect(dialogo()?.textContent).toMatch(/500\s?€/);
+
+    // «Ricarica» rifà /admin/stats e luglio torna con un altro incasso: la
+    // modale tiene la chiave del mese, non l'oggetto della riga vecchia — che
+    // continuerebbe a dire 500 sopra una tabella che dice 750.
+    const ricarica = () => el().querySelector<HTMLButtonElement>('button.st__ricarica')!;
+    ricarica().click();
+    const s = statsView();
+    s.incassoAbbonamenti.serieMensile[0].incassoEur = 750;
+    s.incassoAbbonamenti.serieMensile[0].perMetodo = [
+      { metodo: 'paypal', incassoEur: 750, ordini: 4 },
+    ];
+    http.expectOne(isStats).flush(s);
+    await stabilizza();
+    const d = dialogo();
+    expect(d).withContext('la modale resta aperta sulla riga nuova').toBeTruthy();
+    expect(d!.textContent).toMatch(/750\s?€/);
+    expect(d!.textContent).not.toMatch(/500\s?€/);
+
+    // E se la finestra si sposta e luglio non c'è più, la chiave non risolve
+    // niente: la modale si chiude, invece di restare aperta su un mese che
+    // la tabella non ha.
+    ricarica().click();
+    const s2 = statsView({ generatoIl: '2026-03-15T10:00:00.000Z' });
+    s2.incassoAbbonamenti.serieMensile = [];
+    http.expectOne(isStats).flush(s2);
+    await stabilizza();
+    expect(dialogo()).toBeNull();
+  });
+
   it('il grafico dell\'incasso è affiancato, e un Invio sulla colonna apre il mese', async () => {
     await flushStats();
     await apriScheda('Incassi');
-    const fig = grafico('Incasso per mese');
+    grafico('Incasso per mese');
     // Tre mesi × due serie affiancate, mai una pila: quegli euro non si sommano.
-    expect(fig.querySelectorAll('rect.grafico__barra').length).toBe(6);
+    const barre = barreDi('Incasso per mese');
+    expect(barre.length).toBe(6);
+    // AFFIANCATE: luglio (colonna 2) ha incasso 500 e 12,50 coperti dai punti.
+    // Le due barre hanno `x` DIVERSE, e la seconda comincia dove finisce la
+    // prima: una accanto all'altra, mai una sopra l'altra.
+    const [incasso, punti] = barre.slice(4, 6);
+    expect(attr(punti, 'x')).not.toBe(attr(incasso, 'x'));
+    expect(attr(punti, 'x')).toBeCloseTo(attr(incasso, 'x') + attr(incasso, 'width'), 6);
 
     const lente = lenteDi('Incasso per mese');
     lente.dispatchEvent(new Event('focus'));
@@ -1009,7 +1156,14 @@ describe('AdminStatsComponent', () => {
     const fig = grafico('Entrate e uscite per mese');
     // Settembre è aperto: le sue due barre sono provvisorie, quelle di agosto no.
     expect(fig.querySelectorAll('rect.is-provvisoria').length).toBe(2);
-    expect(fig.querySelectorAll('rect.grafico__barra').length).toBe(4);
+    const barre = barreDi('Entrate e uscite per mese');
+    expect(barre.length).toBe(4);
+    // AFFIANCATE: entrate e uscite di agosto (colonna 0) stanno una accanto
+    // all'altra — impilate, l'altezza direbbe «entrate + uscite», una somma
+    // che non significa niente.
+    const [entrate, uscite] = barre.slice(0, 2);
+    expect(attr(uscite, 'x')).not.toBe(attr(entrate, 'x'));
+    expect(attr(uscite, 'x')).toBeCloseTo(attr(entrate, 'x') + attr(entrate, 'width'), 6);
     expect(fig.querySelector('polyline.grafico__linea')).toBeTruthy();
 
     const lente = lenteDi('Entrate e uscite per mese');
@@ -1038,5 +1192,63 @@ describe('AdminStatsComponent', () => {
     const fig = grafico('Riproduzioni al giorno');
     expect(fig.style.getPropertyValue('--grafico-h')).toBe('120px');
     expect(fig.querySelectorAll('rect.grafico__barra').length).toBe(2);
+  });
+
+  it('video: le riproduzioni giorno per giorno stanno anche in tabella, tutti i giorni della finestra', async () => {
+    // Ogni grafico della pagina è accompagnato dai suoi numeri esatti: il
+    // disegno riassume, non sostituisce. Quello giornaliero era l'unico senza.
+    await flushStats();
+    await apriScheda('Video');
+    await flushVideo();
+    const piega = Array.from(el().querySelectorAll<HTMLDetailsElement>('details.admin-piega')).find(
+      (d) => d.querySelector('summary')?.textContent?.includes('Riproduzioni giorno per giorno'),
+    );
+    expect(piega).withContext('il collassabile «Riproduzioni giorno per giorno»').toBeTruthy();
+    // Chiuso di default: 90 righe non devono occupare lo schermo di chi non le cerca.
+    expect(piega!.open).toBeFalse();
+    const righe = Array.from(piega!.querySelectorAll('table.admin-table tbody tr'));
+    expect(righe.length).toBe(2);
+    // Il più recente in cima, come in ogni tabella della pagina.
+    expect(righe.map((tr) => tr.querySelector('th')?.textContent?.trim())).toEqual([
+      '14 lug',
+      '13 lug',
+    ]);
+    expect(
+      righe.map((tr) => tr.querySelector('td[data-etichetta="Riproduzioni"]')?.textContent?.trim()),
+    ).toEqual(['30', '10']);
+  });
+
+  // ── Lo scheletro ─────────────────────────────────────────────────────────
+
+  it('lo scheletro è per scheda: Video ha quattro tessere e un grafico da 120px, Abbonati tre e 180', async () => {
+    // Uno scheletro che non ha la forma di ciò che sostituisce riserva lo
+    // spazio sbagliato: il dato atterra e sposta tutto. Ogni scheda ha il
+    // proprio, con le tessere del suo PRIMO blocco e l'altezza del suo primo
+    // grafico, dentro lo stesso `section.admin-blocco` del blocco vero.
+    const scheletro = () =>
+      el().querySelector<HTMLElement>('section.card.admin-blocco[role="status"]');
+    const tessereScheletro = () =>
+      scheletro()?.querySelectorAll('.admin-kpi.is-scheletro').length ?? -1;
+    const graficoH = () =>
+      scheletro()
+        ?.querySelector<HTMLElement>('.admin-scheletro--grafico')
+        ?.style.getPropertyValue('--grafico-h');
+
+    // Abbonati, con /admin/stats in volo: tre tessere («Crescita») e 180px.
+    fixture.detectChanges();
+    expect(scheletro()).withContext('scheletro di Abbonati').toBeTruthy();
+    expect(tessereScheletro()).toBe(3);
+    expect(graficoH()).toBe('180px');
+    await flushStats();
+    expect(scheletro()).toBeNull();
+
+    // Video, con /admin/stats/video in volo: quattro tessere («Libreria») e
+    // il grafico giornaliero, che è alto 120.
+    await apriScheda('Video');
+    expect(scheletro()).withContext('scheletro di Video').toBeTruthy();
+    expect(tessereScheletro()).toBe(4);
+    expect(graficoH()).toBe('120px');
+    await flushVideo();
+    expect(scheletro()).toBeNull();
   });
 });

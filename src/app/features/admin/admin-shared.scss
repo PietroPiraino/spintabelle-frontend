@@ -586,6 +586,14 @@
   }
 }
 
+// ⚠️ Un totale in perdita nella striscia: la regola qui sopra vale (0,1,1) e
+// batteva la `.is-perdita` sciolta (0,1,0) di `admin-cruscotto.scss` — la
+// classe era nel markup e INERTE, il margine negativo restava del colore del
+// testo. Va scritta qui, con la stessa radice, o non passa.
+.admin-totali__voce strong.is-perdita {
+  color: var(--danger);
+}
+
 // L'insieme sommato, in coda alla striscia e in tono minore: è il contesto del
 // numero, non un numero.
 .admin-totali__ambito {
