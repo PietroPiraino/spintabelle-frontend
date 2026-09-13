@@ -1,34 +1,85 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
+  input,
   signal,
+  untracked,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
   AdminStatsView,
   AdminVideoStatsView,
-  Role,
+  AndamentoConteggi,
+  RigaAndamento,
+  RigaVideoLezione,
   StatsMeseAcquisizione,
   StatsMeseCoorte,
   StatsMeseIncasso,
   StatsMeseSenzaCassa,
 } from '../../../core/models/api.models';
+import { AdminConteggiService } from '../../../core/services/admin-conteggi.service';
 import { AdminStatsService } from '../../../core/services/admin-stats.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
-import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import {
   FiltroComponent,
   VoceFiltro,
 } from '../../../shared/ui/filtro/filtro.component';
-import { ROLE_LABELS } from '../role-labels';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import {
+  SchedeComponent,
+  VoceScheda,
+} from '../../../shared/ui/schede/schede.component';
+import {
+  formattaCent,
+  formattaDelta,
+  formattaEur,
+  formattaFrazione,
+  formattaIntero,
+} from '../denaro';
 import { metodoLabelDaSlug } from '../metodo-pagamento';
+import { roleLabel } from '../role-labels';
+
+/**
+ * Le quattro schede, tupla CHIUSA (idioma `ICON_NAMES` e `VISTE` dei
+ * Conteggi): `Vista` si deriva da qui e `isVista()` è la guardia sul valore di
+ * `?vista=`, che arriva dall'URL come stringa qualunque. Con una `type` a mano
+ * e un `as Vista` sul parametro, `?vista=tutto` diventerebbe una scheda che
+ * nessun `@case` rende: pannello vuoto, nessun errore.
+ */
+const VISTE = ['abbonati', 'incassi', 'andamento', 'video'] as const;
+type Vista = (typeof VISTE)[number];
+const isVista = (v: string | undefined): v is Vista =>
+  v !== undefined && (VISTE as readonly string[]).includes(v);
+
+const SCHEDE: readonly VoceScheda<Vista>[] = [
+  { valore: 'abbonati', etichetta: 'Abbonati' },
+  { valore: 'incassi', etichetta: 'Incassi' },
+  { valore: 'andamento', etichetta: 'Andamento' },
+  { valore: 'video', etichetta: 'Video' },
+];
+
+/**
+ * Il titolo della barra dice in che SCHEDA si è, non come si chiama la
+ * sezione: «Statistiche» la stampa già la topbar della shell.
+ */
+const TITOLI: Record<Vista, string> = {
+  abbonati: 'Abbonati e rinnovi',
+  incassi: 'Incassi degli abbonamenti',
+  andamento: 'Andamento dei conteggi',
+  video: 'Video',
+};
 
 /** Profondità della serie mensile (il DTO backend accetta 1..24). */
 const MESI_RANGES = [6, 12, 24] as const;
 /** Finestra dell'andamento video (il DTO backend accetta 1..90). */
 const GIORNI_RANGES = [7, 30, 90] as const;
+
+/** Sei tessere di scheletro: quante ne ha la griglia più larga della pagina. */
+const SCHELETRI = [1, 2, 3, 4, 5, 6] as const;
 
 /** `visibility` arriva come stringa libera dal backend: fallback sul grezzo. */
 const VISIBILITY_LABELS: Record<string, string> = {
@@ -37,26 +88,20 @@ const VISIBILITY_LABELS: Record<string, string> = {
   SQUALO: 'Squalo',
 };
 
-const NF = new Intl.NumberFormat('it-IT');
-const NF_DEC = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 1 });
-const EUR = new Intl.NumberFormat('it-IT', {
-  style: 'currency',
-  currency: 'EUR',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
-const PCT = new Intl.NumberFormat('it-IT', {
-  style: 'percent',
-  maximumFractionDigits: 1,
-});
-/** Il segno È il senso della variazione: "+12,5%" dice più di "12,5%". */
-const DELTA = new Intl.NumberFormat('it-IT', {
-  maximumFractionDigits: 1,
-  signDisplay: 'exceptZero',
-});
+/**
+ * Le ore guardate, con al più un decimale: «200,5 h». Non è denaro, e non
+ * passa da `denaro.ts` di proposito — è l'unico numero della pagina che non è
+ * né un conteggio, né una frazione, né un importo.
+ */
+const ORE = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 1 });
 
 const MESE_LABEL_FMT = new Intl.DateTimeFormat('it-IT', {
   month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+const MESE_LUNGO_FMT = new Intl.DateTimeFormat('it-IT', {
+  month: 'long',
   year: 'numeric',
   timeZone: 'UTC',
 });
@@ -83,6 +128,13 @@ function meseLabel(chiave: string): string {
   const [anno, mese] = chiave.split('-').map(Number);
   if (!anno || !mese) return chiave;
   return MESE_LABEL_FMT.format(new Date(Date.UTC(anno, mese - 1, 1)));
+}
+
+/** 'YYYY-MM' → "giugno 2026", per tooltip, readout e titoli di modale. */
+function meseLungo(chiave: string): string {
+  const [anno, mese] = chiave.split('-').map(Number);
+  if (!anno || !mese) return chiave;
+  return MESE_LUNGO_FMT.format(new Date(Date.UTC(anno, mese - 1, 1)));
 }
 
 /** 'YYYY-MM-DD' → "12 lug". */
@@ -144,62 +196,98 @@ function mesePrecedente(chiave: string): string {
 }
 
 /**
- * Punti di una sparkline in un viewBox 100×24.
- *
- * La base è SEMPRE lo zero, non il minimo della serie: una sparkline ancorata
- * al minimo trasforma un +5% in una scalata, cioè disegna una cosa che i numeri
- * accanto non dicono. Con meno di due punti non si disegna niente: una linea
- * fatta di un punto solo è una tendenza inventata.
+ * Una riga della tabella «Crescita»: il funnel del mese, denso.
+ * `abbonatiFine` è `null` dove il backend non ha una fotografia — il mese
+ * corrente, che non è ancora chiuso — e la tabella stampa «—», mai uno zero.
  */
-function sparkline(valori: number[]): string {
-  if (valori.length < 2) return '';
-  const max = Math.max(...valori, 0);
-  const min = Math.min(...valori, 0);
-  const span = max - min || 1;
-  const w = 100;
-  const h = 24;
-  return valori
-    .map((v, i) => {
-      const x = (i / (valori.length - 1)) * w;
-      const y = h - ((v - min) / span) * h;
-      return `${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(' ');
+interface RigaCrescita {
+  mese: string;
+  registrati: number;
+  verificati: number;
+  /** `acquisizione.paganti.nuovi`: il terzo gradino del funnel, già calcolato. */
+  primiAbbonamenti: number;
+  abbonatiFine: number | null;
 }
 
 /**
- * Tab "Statistiche": sei numeri per decidere, non una plancia da esplorare.
+ * La sezione «Statistiche»: quattro schede — Abbonati · Incassi · Andamento ·
+ * Video — su tre letture indipendenti, ognuna col proprio errore e il proprio
+ * «Riprova».
  *
- * Due caricamenti indipendenti (`/admin/stats` su Mongo, `/admin/stats/video`
- * su Bunny) con errore e retry propri, come le due rotte lato backend: un
- * guasto di Bunny non deve spegnere i numeri di business, che con Bunny non
- * c'entrano nulla.
+ * ⚠️ TRE fonti e non una: `/admin/stats` (aggregazioni Mongo, cache 5 min) per
+ * Abbonati e Incassi, `/admin/conteggi/andamento` (senza cache: i mesi aperti
+ * si ricalcolano a ogni lettura) per Andamento, `/admin/stats/video` (una
+ * chiamata di rete a Bunny) per Video. Un guasto di Bunny non deve spegnere i
+ * numeri di business, e i conteggi non passano da nessuna delle altre due.
+ *
+ * ⚠️ Andamento e Video si caricano PIGRAMENTE, al primo ingresso nella scheda
+ * (precedente `caricaSoci` nei Conteggi): erano tre chiamate nel costruttore,
+ * di cui una a Bunny, per chi apriva la pagina a leggere gli abbonati. Una
+ * volta sola per scheda — un errore lascia la banda col suo «Riprova», non un
+ * secondo tentativo automatico a ogni cambio di scheda.
+ *
+ * ⚠️ DUE unità di denaro convivono in questa pagina e non si incrociano MAI:
+ * `/admin/stats` manda EURO float (`formattaEur`), i conteggi mandano
+ * CENTESIMI interi (`formattaCent`). La scelta sbagliata è un fattore 100.
+ * E il client non SOMMA denaro: ogni totale arriva dal server.
  */
 @Component({
   selector: 'app-admin-stats',
-  imports: [DatePipe, IconComponent, FiltroComponent],
+  imports: [
+    DatePipe,
+    NgTemplateOutlet,
+    RouterLink,
+    IconComponent,
+    FiltroComponent,
+    SchedeComponent,
+  ],
   templateUrl: './admin-stats.component.html',
-  styleUrls: ['../admin-shared.scss', './admin-stats.component.scss'],
+  styleUrls: [
+    '../admin-shared.scss',
+    '../admin-table.scss',
+    '../admin-modale.scss',
+    '../admin-cruscotto.scss',
+    './admin-stats.component.scss',
+  ],
+  providers: [DatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminStatsComponent {
   private readonly api = inject(AdminStatsService);
+  private readonly conteggi = inject(AdminConteggiService);
+  // ⚠️ Il `DatePipe` si INIETTA, non si riscrive: segue il `LOCALE_ID`
+  // dell'applicazione, e una data composta a mano con `toLocaleDateString`
+  // diverge dal template — è successo sul sotto-testo delle news.
+  private readonly date = inject(DatePipe);
 
-  protected readonly mesiRanges = MESI_RANGES;
+  protected readonly SCHEDE = SCHEDE;
+  protected readonly SCHELETRI = SCHELETRI;
+  protected readonly vista = signal<Vista>('abbonati');
+  protected readonly titoloScheda = computed(() => TITOLI[this.vista()]);
 
   /**
-   * Le due finestre temporali, per `app-filtro`.
+   * Il `?vista=` di un deep-link (dalla Panoramica, o da un URL salvato).
+   *
+   * ⚠️ «Iniziale» nel nome perché è un valore di PARTENZA, non uno stato: la
+   * scheda si cambia dal clic e nessuno riscrive l'URL — un `?vista=` che
+   * seguisse ogni clic farebbe del tasto Indietro un giro fra le schede invece
+   * di un ritorno alla Panoramica. Stesso nome di parametro dei Conteggi.
+   */
+  readonly vistaIniziale = input<string | undefined>(undefined, {
+    alias: 'vista',
+  });
+
+  /**
+   * Le finestre temporali, per `app-filtro`.
    *
    * ⚠️ I valori sono STRINGHE perché `VoceFiltro<T extends string>` lo impone,
    * e il vincolo non è un capriccio del primitivo: quel valore finisce in un
    * `data-*` e in un `aria-checked`, cioè attraversa il DOM, dove i numeri non
-   * esistono. Il ritorno a numero sta in una riga sola, qui accanto, invece che
-   * sparso in due template.
+   * esistono. Il ritorno a numero sta in una riga sola, qui accanto.
    */
   protected readonly vociMesi: readonly VoceFiltro<string>[] = MESI_RANGES.map(
     (r) => ({ valore: String(r), etichetta: `${r} mesi` }),
   );
-
   protected readonly vociGiorni: readonly VoceFiltro<string>[] =
     GIORNI_RANGES.map((r) => ({ valore: String(r), etichetta: `${r} giorni` }));
 
@@ -208,19 +296,44 @@ export class AdminStatsComponent {
    *
    * ⚠️ E non `String(mesi())` nel template: nei template Angular sono
    * raggiungibili solo i membri del componente, quindi `String` non esiste e
-   * l'espressione non compila. Un `computed` è anche la forma giusta — si
-   * ricalcola quando il signal cambia, invece di essere rivalutato a ogni giro.
+   * l'espressione non compila.
    */
   protected readonly mesiScelto = computed(() => String(this.mesi()));
+  protected readonly mesiAndamentoScelto = computed(() =>
+    String(this.mesiAndamento()),
+  );
   protected readonly giorniScelto = computed(() => String(this.giorni()));
-  protected readonly giorniRanges = GIORNI_RANGES;
+
   protected readonly meseLabel = meseLabel;
+  protected readonly meseLungo = meseLungo;
   protected readonly giornoLabel = giornoLabel;
+  protected readonly formattaCent = formattaCent;
+  protected readonly formattaEur = formattaEur;
+  protected readonly formattaFrazione = formattaFrazione;
+  protected readonly formattaDelta = formattaDelta;
+  protected readonly formattaIntero = formattaIntero;
+  protected readonly roleLabel = roleLabel;
+  /**
+   * ⚠️ Era una mappa di DUE voci (paypal, skrill) con ripiego sullo slug: non
+   * conosceva né `manuale`, né `punti`, né `contanti`. Passa dalla funzione
+   * condivisa, che il ripiego sullo slug lo conserva — qui il metodo arriva
+   * dentro un'aggregazione come `string`, e davanti a un valore ignoto la
+   * stringa grezza è una domanda, mentre un metodo plausibile sarebbe
+   * un'affermazione falsa.
+   */
+  protected readonly metodoLabel = metodoLabelDaSlug;
+
+  // ── Le tre fonti ──────────────────────────────────────────────────────────
 
   protected readonly stats = signal<AdminStatsView | null>(null);
   protected readonly statsLoading = signal(false);
   protected readonly statsError = signal<string | null>(null);
   protected readonly mesi = signal<number>(12);
+
+  protected readonly andamento = signal<AndamentoConteggi | null>(null);
+  protected readonly andamentoLoading = signal(false);
+  protected readonly andamentoError = signal<string | null>(null);
+  protected readonly mesiAndamento = signal<number>(12);
 
   protected readonly video = signal<AdminVideoStatsView | null>(null);
   protected readonly videoLoading = signal(false);
@@ -229,12 +342,43 @@ export class AdminStatsComponent {
 
   // Guardie anti-sorpasso: cambiare finestra due volte in fretta può far
   // arrivare per ultima la risposta vecchia (stesso schema di /lezioni).
+  // ⚠️ Sono anche la memoria del «già chiesto una volta» dei caricamenti pigri:
+  // a zero, la scheda non ha mai chiesto niente.
   private statsSeq = 0;
+  private andamentoSeq = 0;
   private videoSeq = 0;
 
   constructor() {
     this.loadStats();
-    this.loadVideo();
+
+    /**
+     * Il `?vista=` del deep-link apre la scheda, se ne nomina una vera.
+     * ⚠️ `isVista` e non un cast: `?vista=tutto` è una stringa come le altre,
+     * e senza la guardia sarebbe una scheda che nessun `@case` rende.
+     */
+    effect(() => {
+      const v = this.vistaIniziale();
+      if (isVista(v)) this.vista.set(v);
+    });
+
+    /**
+     * I caricamenti PIGRI: un effect e non una chiamata nel click, perché la
+     * scheda si sceglie anche da tastiera e dal deep-link, e l'unico posto che
+     * vede ogni cambio è il signal.
+     *
+     * ⚠️ La guardia è «mai chiesto» (`seq === 0`) e NON «non ho il dato»: con
+     * `!video()` un 500 lascerebbe il dato vuoto, l'effect rientrerebbe alla
+     * fine del caricamento (legge i signal che cambiano) e chiederebbe di
+     * nuovo, per sempre. Un errore resta nella banda col suo «Riprova».
+     * ⚠️ `untracked` sulle scritture: l'effect dipende dalla sola scheda.
+     */
+    effect(() => {
+      const v = this.vista();
+      untracked(() => {
+        if (v === 'andamento' && this.andamentoSeq === 0) this.loadAndamento();
+        if (v === 'video' && this.videoSeq === 0) this.loadVideo();
+      });
+    });
   }
 
   // ── Caricamento ──────────────────────────────────────────────────────────
@@ -261,6 +405,26 @@ export class AdminStatsComponent {
     });
   }
 
+  protected loadAndamento(): void {
+    const seq = ++this.andamentoSeq;
+    this.andamentoLoading.set(true);
+    this.andamentoError.set(null);
+    this.conteggi.andamento(this.mesiAndamento()).subscribe({
+      next: (data) => {
+        if (seq !== this.andamentoSeq) return;
+        this.andamento.set(data);
+        this.andamentoLoading.set(false);
+      },
+      error: (err: unknown) => {
+        if (seq !== this.andamentoSeq) return;
+        this.andamentoLoading.set(false);
+        this.andamentoError.set(
+          apiErrorMessage(err, 'Caricamento dei conteggi non riuscito.'),
+        );
+      },
+    });
+  }
+
   protected loadVideo(): void {
     const seq = ++this.videoSeq;
     this.videoLoading.set(true);
@@ -281,12 +445,57 @@ export class AdminStatsComponent {
     });
   }
 
+  /** La richiesta in volo della scheda che si sta guardando. */
+  protected readonly caricamentoScheda = computed(() => {
+    switch (this.vista()) {
+      case 'abbonati':
+      case 'incassi':
+        return this.statsLoading();
+      case 'andamento':
+        return this.andamentoLoading();
+      case 'video':
+        return this.videoLoading();
+    }
+  });
+
+  /** L'errore della scheda che si sta guardando: la banda ne mostra uno solo. */
+  protected readonly erroreScheda = computed(() => {
+    switch (this.vista()) {
+      case 'abbonati':
+      case 'incassi':
+        return this.statsError();
+      case 'andamento':
+        return this.andamentoError();
+      case 'video':
+        return this.videoError();
+    }
+  });
+
+  /** «Ricarica» e «Riprova» rifanno SOLO la rotta della scheda. */
+  protected ricaricaScheda(): void {
+    switch (this.vista()) {
+      case 'abbonati':
+      case 'incassi':
+        this.loadStats();
+        return;
+      case 'andamento':
+        this.loadAndamento();
+        return;
+      case 'video':
+        this.loadVideo();
+        return;
+    }
+  }
+
   /** Il ponte fra il valore-stringa del filtro e il signal numerico. */
   protected setMesiDaFiltro(v: string): void {
     this.setMesi(Number(v));
   }
 
-  /** Il ponte fra il valore-stringa del filtro e il signal numerico. */
+  protected setMesiAndamentoDaFiltro(v: string): void {
+    this.setMesiAndamento(Number(v));
+  }
+
   protected setGiorniDaFiltro(v: string): void {
     this.setGiorni(Number(v));
   }
@@ -297,18 +506,25 @@ export class AdminStatsComponent {
     this.loadStats();
   }
 
+  protected setMesiAndamento(n: number): void {
+    if (n === this.mesiAndamento()) return;
+    this.mesiAndamento.set(n);
+    this.loadAndamento();
+  }
+
   protected setGiorni(n: number): void {
     if (n === this.giorni()) return;
     this.giorni.set(n);
     this.loadVideo();
   }
 
-  // ── 1) Abbonati ──────────────────────────────────────────────────────────
+  // ── Abbonati ─────────────────────────────────────────────────────────────
 
   /**
    * `hannoAccessoOra - conAbbonamentoValido`: quanti entrano SENZA un
    * abbonamento in regola. L'identità dichiarata dal backend dice che sono
    * tutti e soli `senzaScadenza + daDeclassare`, cioè accessi dati a mano.
+   * ⚠️ È una differenza fra CONTEGGI di persone, non denaro.
    */
   protected readonly accessoSenzaAbbonamento = computed(() => {
     const a = this.stats()?.abbonati;
@@ -329,8 +545,6 @@ export class AdminStatsComponent {
     ),
   );
 
-  // ── 2) Incasso abbonamenti ───────────────────────────────────────────────
-
   /**
    * L'ultimo mese della finestra: il mese IN CORSO, calcolato dal `generatoIl`
    * della risposta (l'ora del backend) e non dall'orologio del browser — che a
@@ -343,13 +557,55 @@ export class AdminStatsComponent {
   });
 
   /**
+   * Il funnel mensile, denso: registrazioni (sparse dal backend), le
+   * verificate a oggi, i primi abbonamenti paganti (da `acquisizione`) e la
+   * fotografia degli abbonati a fine mese — che il backend manda SOLO per i
+   * mesi chiusi: il mese corrente resta `null`, e la tabella stampa «—».
+   */
+  private readonly crescitaAsc = computed<RigaCrescita[]>(() => {
+    const s = this.stats();
+    if (!s) return [];
+    const reg = new Map(s.crescita.registrazioniMensili.map((r) => [r.mese, r]));
+    const fine = new Map(
+      s.crescita.abbonatiFineMese.map((r) => [r.mese, r.attivi]),
+    );
+    const primi = new Map(
+      s.acquisizione.serieMensile.map((r) => [r.mese, r.paganti.nuovi]),
+    );
+    const chiavi = chiaviMesi(
+      finestraMesi(this.meseCorrente(), s.finestraMesi),
+      [...reg.keys()],
+    );
+    return chiavi.map((mese) => ({
+      mese,
+      registrati: reg.get(mese)?.registrati ?? 0,
+      verificati: reg.get(mese)?.verificati ?? 0,
+      primiAbbonamenti: primi.get(mese) ?? 0,
+      abbonatiFine: fine.get(mese) ?? null,
+    }));
+  });
+
+  /** In tabella il mese più recente sta in cima: è quello che si legge per primo. */
+  protected readonly crescitaRows = computed(() =>
+    [...this.crescitaAsc()].reverse(),
+  );
+
+  /** Le registrazioni del mese in corso, per la tessera. */
+  protected readonly registrazioniMese = computed<RigaCrescita | null>(() => {
+    const corrente = this.meseCorrente();
+    return this.crescitaAsc().find((r) => r.mese === corrente) ?? null;
+  });
+
+  // ── Incassi ──────────────────────────────────────────────────────────────
+
+  /**
    * Serie densa in ordine cronologico: i mesi senza righe rientrano come €0.
    *
    * Il backend restituisce solo i mesi CON dati. Un mese assente dalla tabella
-   * si legge "non è successo niente" invece di "zero euro incassati", e nella
-   * sparkline sposterebbe i punti come se quel mese non fosse mai esistito.
+   * si legge "non è successo niente" invece di "zero euro incassati", e nel
+   * grafico sposterebbe le colonne come se quel mese non fosse mai esistito.
    */
-  private readonly incassoAsc = computed<StatsMeseIncasso[]>(() => {
+  protected readonly incassoAsc = computed<StatsMeseIncasso[]>(() => {
     const s = this.stats();
     if (!s) return [];
     const per = new Map(
@@ -372,13 +628,8 @@ export class AdminStatsComponent {
     );
   });
 
-  /** In tabella il mese più recente sta in cima: è quello che si legge per primo. */
   protected readonly incassoRows = computed(() =>
     [...this.incassoAsc()].reverse(),
-  );
-
-  protected readonly incassoSpark = computed(() =>
-    sparkline(this.incassoAsc().map((r) => r.incassoEur)),
   );
 
   /** La colonna "stimati" compare solo se c'è davvero qualcosa di stimato. */
@@ -407,10 +658,17 @@ export class AdminStatsComponent {
 
   /** Tabella di soli zeri = rumore: si mostra solo se c'è stata un'attivazione. */
   protected readonly haSenzaCassa = computed(() =>
-    this.senzaCassaAsc().some((r) => r.punti > 0 || r.manuale > 0),
+    this.senzaCassaAsc().some(
+      (r) => r.punti > 0 || r.manuale > 0 || r.omaggio > 0,
+    ),
   );
 
-  // ── 3) Rinnovi ───────────────────────────────────────────────────────────
+  /** Le attivazioni senza cassa di UN mese, per la modale dell'incasso. */
+  protected senzaCassaDel(mese: string): StatsMeseSenzaCassa | null {
+    return this.senzaCassaAsc().find((r) => r.mese === mese) ?? null;
+  }
+
+  // ── Rinnovi ──────────────────────────────────────────────────────────────
 
   /**
    * Coorti dense: la finestra finisce col mese appena CHIUSO, mai con quello in
@@ -440,9 +698,9 @@ export class AdminStatsComponent {
 
   protected readonly coortiRows = computed(() => [...this.coortiAsc()].reverse());
 
-  // ── 5) Acquisizione ──────────────────────────────────────────────────────
+  // ── Acquisizione ─────────────────────────────────────────────────────────
 
-  private readonly acquisizioneAsc = computed<StatsMeseAcquisizione[]>(() => {
+  protected readonly acquisizioneAsc = computed<StatsMeseAcquisizione[]>(() => {
     const s = this.stats();
     if (!s) return [];
     const per = new Map(s.acquisizione.serieMensile.map((r) => [r.mese, r]));
@@ -479,13 +737,33 @@ export class AdminStatsComponent {
     );
   });
 
-  // ── Video ────────────────────────────────────────────────────────────────
+  // ── Andamento (dai Conteggi, in CENTESIMI) ───────────────────────────────
 
-  protected readonly videoSpark = computed(() =>
-    sparkline(
-      (this.video()?.andamento?.serie ?? []).map((p) => p.visualizzazioni),
-    ),
+  /** In tabella il mese più recente sta in cima. */
+  protected readonly andamentoRows = computed<RigaAndamento[]>(() =>
+    [...(this.andamento()?.mesi ?? [])].reverse(),
   );
+
+  /**
+   * Il mese aperto più recente e l'ultimo congelato, per le due tessere.
+   * ⚠️ Chiavati su `provvisorio` e MAI su `stato`: un mese CHIUSO il cui
+   * riepilogo non si è salvato alla chiusura si ricalcola a ogni lettura ed è
+   * provvisorio a tutti gli effetti — e il server lo tiene fuori dai totali.
+   */
+  protected readonly meseProvvisorio = computed<RigaAndamento | null>(
+    () => this.andamentoRows().find((r) => r.provvisorio) ?? null,
+  );
+
+  protected readonly meseCongelato = computed<RigaAndamento | null>(
+    () => this.andamentoRows().find((r) => !r.provvisorio) ?? null,
+  );
+
+  /** «settembre 2026, ottobre 2026»: i mesi che il server non ha calcolato. */
+  protected readonly nonCalcolatiEtichette = computed(() =>
+    (this.andamento()?.nonCalcolati ?? []).map((m) => m.etichetta).join(', '),
+  );
+
+  // ── Video ────────────────────────────────────────────────────────────────
 
   protected readonly videoQualitaPulita = computed(() => {
     const q = this.video()?.qualitaDati;
@@ -515,32 +793,11 @@ export class AdminStatsComponent {
     ].filter((g) => g.gruppo.totale > 0);
   });
 
-  // ── Formattatori ─────────────────────────────────────────────────────────
+  // ── Formattatori propri della pagina ─────────────────────────────────────
 
-  protected n(v: number): string {
-    return NF.format(v);
-  }
-
-  protected dec(v: number): string {
-    return NF_DEC.format(v);
-  }
-
-  protected eur(v: number): string {
-    return EUR.format(v);
-  }
-
-  /** ⚠️ per le FRAZIONI 0..1 (tassoRinnovo, conversione, percentualeVisione). */
-  protected pct(v: number): string {
-    return PCT.format(v);
-  }
-
-  /** ⚠️ per `deltaPct`, che il backend manda GIÀ in punti percentuali. */
-  protected delta(v: number): string {
-    return `${DELTA.format(v)}%`;
-  }
-
-  protected roleLabel(r: Role): string {
-    return ROLE_LABELS[r] ?? r;
+  /** Le ore guardate: «200,5». */
+  protected ore(v: number): string {
+    return ORE.format(v);
   }
 
   protected visibilityLabel(v: string): string {
@@ -548,14 +805,25 @@ export class AdminStatsComponent {
   }
 
   /**
-   * ⚠️ Era una mappa di DUE voci (paypal, skrill) con ripiego sullo slug: non
-   * conosceva né `manuale`, né `punti`, né `contanti`. Ora passa dalla funzione
-   * condivisa, che il ripiego sullo slug lo conserva — qui il metodo arriva
-   * dentro un'aggregazione come `string`, e davanti a un valore ignoto la
-   * stringa grezza è una domanda, mentre un metodo plausibile sarebbe
-   * un'affermazione falsa.
+   * Il sotto-testo della lezione nella tabella video: «High · 12/07/2026 ·
+   * guid», più il titolo Bunny se diverge. Una stringa sola perché va sia nel
+   * testo sia nel `title` che rende leggibile ciò che l'ellissi taglia — e due
+   * composizioni della stessa riga divergono (precedente delle news).
    */
-  protected readonly metodoLabel = metodoLabelDaSlug;
+  protected subLezione(r: RigaVideoLezione): string {
+    const pezzi: string[] = [];
+    if (r.stakes) pezzi.push(r.stakes === 'HIGH' ? 'High' : 'Low');
+    if (r.videoDate) {
+      const d = this.date.transform(r.videoDate, 'dd/MM/yyyy');
+      if (d) pezzi.push(d);
+    }
+    pezzi.push(r.guid);
+    let sub = pezzi.join(' · ');
+    if (r.titoloVideo && r.titoloVideo !== r.titolo) {
+      sub += ` · su Bunny: "${r.titoloVideo}"`;
+    }
+    return sub;
+  }
 
   /** Secondi → "1h 23m" / "12m 30s" / "45s". */
   protected durata(secondi: number): string {
@@ -566,12 +834,5 @@ export class AdminStatsComponent {
     if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
     if (m > 0) return `${m}m ${String(r).padStart(2, '0')}s`;
     return `${r}s`;
-  }
-
-  /** Riepilogo compatto dei metodi di pagamento di un mese. */
-  protected metodi(riga: StatsMeseIncasso): string {
-    return riga.perMetodo
-      .map((m) => `${this.metodoLabel(m.metodo)} ${this.eur(m.incassoEur)}`)
-      .join(' · ');
   }
 }

@@ -1,447 +1,137 @@
-// Tab Statistiche — numeri grandi, leggibili, e sempre con la loro etichetta.
+// Statistiche — il pezzo SPECIFICO di questa sezione.
 //
-// Nessun colore letterale qui dentro: ogni valore viene dai token di
-// styles/_tokens.scss, che hanno tre blocchi (light / tramonto / dark). Un
-// numero che sparisce nel tema scuro è un bug, non una svista estetica.
+// ⚠️ Tutto il resto (barra, tabella col ripiegamento a blocchi, comando
+// solo-icona, pastiglia di stato, striscia dei totali, modale, tessera KPI,
+// avviso, collassabile) arriva dai QUATTRO fogli condivisi dichiarati in
+// `styleUrls`. Qui non si ricopia niente di quello: una riscrittura locale di
+// un primitivo lo BATTE per specificità e produce una schermata che sembra
+// allineata e non lo è.
+//
+// ⚠️ Fino al 13/09/2026 questo foglio era di 11,7 kB — a tre righe dal budget
+// di avviso — e conteneva sette tabelle proprie (`.admin-stats__table`, senza
+// ripiegamento mobile e invisibili alla sonda), due tessere (`.stat*`) copiate
+// poi dalla Panoramica, una sparkline privata e una pastiglia `.is-flag`. Tutto
+// quello vive ora nei fogli condivisi, e qui restano gli ~otto selettori che
+// hanno una ragione locale.
+//
+// Nessun colore letterale: ogni valore viene dai token di `styles/_tokens.scss`.
 
-.admin-stats {
+@use '../soglie' as s;
+
+// ── Il pannello delle schede ────────────────────────────────────────────────
+// Copia di `.cm__pannello`: il ritmo della colonna, e un contorno visibile per
+// il pannello focalizzabile (`tabindex="0"`) — senza, chi arriva da tastiera
+// non sa dov'è finito.
+.st__pannello {
   display: flex;
   flex-direction: column;
-  gap: 1.4rem;
-}
-
-// ── Testata ────────────────────────────────────────────────────────────────
-
-.admin-stats__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
   gap: 1rem;
-  flex-wrap: wrap;
-}
 
-// La sezione video comincia qui: caricamento, errore e retry sono suoi.
-.admin-stats__head--video {
-  margin-top: 1.2rem;
-  padding-top: 1.6rem;
-  border-top: 1px solid var(--line);
-}
-
-.admin-stats__title {
-  min-width: 0;
-
-  h2 {
-    margin: 0;
-    font-size: 1.2rem;
+  &:focus-visible {
+    outline: 2px solid var(--copper-600);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
   }
 }
 
-// L'età dei dati sta accanto al titolo, non in un tooltip: la pagina non è live
-// e deve dirlo da sola.
-// ⚠️ Non più monospace. Sono due frasi intere («Calcolate il … alle … · si
-// aggiornano ogni N minuti: non sono in tempo reale»), non un'etichetta da tre
-// parole, e in mono da 11,5px con `letter-spacing` si leggevano come output di
-// un terminale — lo stesso difetto di `.admin-item__meta` usata sui `<p>`, qui
-// travestito da classe locale, quindi invisibile a quella correzione.
-.admin-stats__age {
-  margin: 0.3rem 0 0;
-  max-width: 74ch;
-  font-size: 0.8rem;
-  line-height: 1.5;
-  color: var(--text-faint);
+// ── La barra: il filtro e il «ricarica» ─────────────────────────────────────
+//
+// ⚠️⚠️ Il `>` è OBBLIGATORIO ed è la trappola scritta per esteso in
+// `admin-shared.scss`: l'incapsulamento di Angular attacca un attributo a OGNI
+// pezzo del selettore, quindi il catch-all `.admin-barra > *` (che mette tutti
+// a `order: 3`) vale (0,3,0) e batterebbe una `.st__finestra` sciolta, che
+// vale (0,2,0). Col combinatore siamo a (0,4,0) e l'ordine è quello che si
+// legge.
+//
+// ⚠️ Il «ricarica» NON è `.admin-barra__crea`: quella classe è il `+` che crea
+// una riga, e qui non si crea niente. Ne prende la posizione (a destra, in
+// coda) con una regola propria, così un domani un `+` vero non se la
+// contenderebbe.
+.admin-barra > .st__finestra {
+  order: 2;
 }
 
-.admin-stats__controls {
-  gap: 0.5rem;
+.admin-barra > .st__ricarica {
+  order: 9;
+  margin-left: auto;
 }
 
-.admin-stats__pills {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
+// Sotto i 720px la barra si incolonna come nelle altre sezioni: titolo e
+// «ricarica» sulla prima riga, il filtro a tutta larghezza sotto (gli ordini
+// della barra condivisa arrivano a 4 e il default è 5).
+@media (max-width: #{s.$bp-tabella-blocchi}) {
+  .admin-barra > .st__ricarica {
+    order: 2;
+    margin-left: 0;
+  }
 
-  .btn.is-active {
-    color: var(--copper-600);
-    border-color: var(--copper-400);
+  .admin-barra > .st__finestra {
+    order: 3;
+    flex: 1 1 100%;
   }
 }
 
-.admin-stats__banner {
+// ── La banda d'errore ───────────────────────────────────────────────────────
+// Messaggio a sinistra, «Riprova» a destra; a capo se non ci sta. ⚠️ 44px
+// dichiarati sul bottone: un `.btn--sm` nudo sta sui 38.
+.st__errore {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-}
 
-// ── Blocchi ────────────────────────────────────────────────────────────────
-
-.admin-stats__block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.admin-stats__h3 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.admin-stats__h4 {
-  margin: 0.4rem 0 -0.3rem;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
-.admin-stats__sub {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.55;
-  color: var(--text-muted);
-
-  strong {
-    color: var(--cream-100);
+  .btn {
+    min-height: 44px;
   }
 }
 
-// ── I numeri ───────────────────────────────────────────────────────────────
-
-.admin-stats__figures {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
-  gap: 1.2rem;
+// Il comando di testa di un blocco («Dettaglio»): stessa aritmetica.
+.admin-blocco__testa .btn {
+  min-height: 44px;
 }
 
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
+// ── Le tabelle ──────────────────────────────────────────────────────────────
+
+// Un'anomalia in tabella (accessi a vita, scaduti in attesa del cron, importi
+// stimati): rame, cioè il tono della coda di lavoro, e non `--danger` — non si
+// è perso niente, c'è qualcosa da sistemare.
+.st__anomalia {
+  color: var(--copper-600);
 }
 
-.stat__label {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-// Il numero è la cosa che si legge: grande, tabellare, nel colore del testo.
-.stat__value {
-  font-family: var(--font-display);
-  font-size: clamp(1.9rem, 4vw, 2.5rem);
-  font-weight: 700;
-  line-height: 1.05;
-  color: var(--cream-100);
-  font-variant-numeric: tabular-nums;
-
-  // "Dati insufficienti"/"Nessun confronto" non sono numeri: non devono avere
-  // il peso tipografico di un numero, o si leggono come un valore.
-  &.is-muted {
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: var(--text-muted);
-  }
-
-  &.is-up {
-    color: var(--felt);
-  }
-
-  &.is-down {
-    color: var(--danger);
-  }
-}
-
-.stat__hint {
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--text-muted);
-
-  strong {
-    color: var(--cream-100);
-  }
-}
-
-// ── Note in linea (spiegazioni, non decorazioni) ───────────────────────────
-
-.admin-stats__note {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  margin: 0;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--bg-0);
-  font-size: 0.83rem;
-  line-height: 1.55;
-  color: var(--text-muted);
-
-  app-icon {
-    flex: none;
-    margin-top: 0.1rem;
-    color: var(--text-faint);
-  }
-
-  strong {
-    color: var(--cream-100);
-  }
-
-  // Nessun `code` qui dentro di proposito: un avviso che l'owner deve LEGGERE
-  // e su cui deve AGIRE non contiene una query Mongo. Il perché tecnico sta nei
-  // commenti del backend, che è il suo lettore.
-
-  &.is-warn {
-    border-color: var(--copper-400);
-
-    app-icon {
-      color: var(--copper-600);
-    }
-  }
-
-  &.is-ok app-icon {
-    color: var(--felt);
-  }
-}
-
-// ── Tabelle ────────────────────────────────────────────────────────────────
-
-// Le tabelle larghe scorrono dentro il proprio contenitore: la pagina non
-// scorre mai in orizzontale.
-//
-// ⚠️ Lo scorrimento DEVE dichiararsi. Su un telefono «Nuovi, rinnovi e ritorni»
-// è larga quasi il doppio del suo contenitore e il taglio cade pulito sul bordo
-// della card, subito dopo una colonna intera: senza un segno la tabella SEMBRA
-// FINITA, e l'owner legge i soli paganti credendo di aver visto tutto — mentre
-// il paragrafo sopra gli dice che le due metà non vanno sommate, parlandogli di
-// una metà che non può vedere. Una barra di scorrimento su touch non c'è finché
-// non scorri: è un'affordance che si mostra solo a chi ha già capito.
-//
-// CSS puro, niente JS: due coppie di livelli sfumati.
-//   • le COPERTURE (`local`) scorrono COL CONTENUTO e sono dipinte del colore
-//     della card (`--surface-1`, lo stesso di `.card`): sul fondo sono
-//     invisibili, e il loro unico compito è appoggiarsi sopra l'ombra e
-//     spegnerla quando da quel lato non c'è più niente;
-//   • le OMBRE (`scroll`) restano incollate al contenitore.
-// Risultato: la sfumatura appare solo dal lato in cui esiste davvero altro
-// contenuto, si scopre progressivamente mentre si scorre e sparisce da sola su
-// una tabella che ci sta tutta.
-//
-// Le ombre sono LINEARI e non radiali: una radiale `farthest-side` concentra il
-// velo a metà altezza e si spegne sopra e sotto — su una tabella di dodici mesi
-// sparisce proprio agli angoli, e un'affordance che si vede solo se la cerchi
-// non è un'affordance. Il colore è `--text-faint` (≈0.4 in tutti e tre i temi,
-// il doppio di `--line-strong`): è già tarato per-tema, quindi in Notte l'ombra
-// è chiara e si vede — un nero fisso sparirebbe sul fondo scuro.
-.admin-stats__scroll {
-  overflow-x: auto;
-  background-image:
-    linear-gradient(to right, var(--surface-1) 55%, transparent),
-    linear-gradient(to left, var(--surface-1) 55%, transparent),
-    linear-gradient(to right, var(--text-faint), transparent),
-    linear-gradient(to left, var(--text-faint), transparent);
-  background-position:
-    0 0,
-    100% 0,
-    0 0,
-    100% 0;
-  background-size:
-    46px 100%,
-    46px 100%,
-    24px 100%,
-    24px 100%;
-  background-repeat: no-repeat;
-  background-attachment: local, local, scroll, scroll;
-}
-
-.admin-stats__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-
-  th,
-  td {
-    text-align: left;
-    padding: 0.5rem 0.7rem;
-    border-bottom: 1px solid var(--line);
-    white-space: nowrap;
-  }
-
-  thead th {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--copper-600);
-  }
-
-  tbody th {
-    font-weight: 600;
-    color: var(--cream-100);
-  }
-
-  tbody td {
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .is-num {
-    text-align: right;
-  }
-
-  // Un contatore di anomalie sopra lo zero si vede: è il suo unico scopo.
-  .is-flag {
-    color: var(--copper-600);
-    font-weight: 600;
-  }
-
-  .is-empty {
-    padding: 1.2rem 0.7rem;
-    text-align: center;
-    color: var(--text-faint);
-    white-space: normal;
-  }
-
-  .is-muted {
-    color: var(--text-faint);
-  }
-
-  // Intestazioni di gruppo (Paganti | Non paganti): la riga verticale dice a
-  // colpo d'occhio che le due metà non si sommano.
-  .admin-stats__corner {
-    border-bottom-color: transparent;
-  }
-
-  thead th.admin-stats__group {
-    text-align: center;
-    border-bottom-color: var(--line-strong);
-  }
-
-  .is-split {
+// «Nuovi, rinnovi e ritorni»: il confine fra le due metà che non si sommano.
+// Annidato sotto `.admin-table` per specificità: `.admin-table th` vale
+// (0,1,1) e una `.st__split` sciolta (0,1,0) non passerebbe.
+.admin-table {
+  .st__split {
     border-left: 1px solid var(--line-strong);
   }
 
-  tbody td.admin-stats__methods {
-    white-space: normal;
-    font-size: 0.78rem;
-    color: var(--text-faint);
-  }
-
-  tbody th.admin-stats__lesson {
-    max-width: 26rem;
-    white-space: normal;
+  // La riga dei gruppi («Paganti | Non paganti») sta sopra quella delle
+  // colonne: due intestazioni sticky con lo stesso `top` si sovrapporrebbero
+  // scorrendo — la seconda scende di un'intestazione.
+  .st__colonne th {
+    top: 36px;
   }
 }
 
-.admin-stats__group-note {
-  text-transform: none;
-  letter-spacing: 0.02em;
-  color: var(--text-faint);
-}
-
-// ── Sparkline ──────────────────────────────────────────────────────────────
-
-// Nessuna libreria di grafici: una polilinea SVG che prende il colore dai
-// token. Serve a dare la forma; i numeri esatti stanno nella tabella accanto.
-.admin-stats__spark {
-  margin: 0;
-
-  svg {
-    display: block;
-    width: 100%;
-    height: 56px;
-    color: var(--copper-500);
-    border-bottom: 1px solid var(--line);
-  }
-
-  figcaption {
-    margin-top: 0.4rem;
-    font-size: 0.75rem;
-    line-height: 1.45;
-    color: var(--text-faint);
-  }
-}
-
-// ── Qualità dati e limiti ──────────────────────────────────────────────────
-
-.admin-stats__quality {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-
-  li {
-    padding-left: 0.9rem;
-    border-left: 2px solid var(--copper-400);
-    font-size: 0.85rem;
-    line-height: 1.55;
-    color: var(--text-muted);
-  }
-
-  strong {
-    color: var(--cream-100);
-  }
-}
-
-.admin-stats__quality-detail {
-  display: block;
-  margin-top: 0.2rem;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--text-faint);
-}
-
-// I limiti si leggono: stanno in pagina, alla stessa taglia del resto del
-// testo di servizio, non nascosti dietro un'icona.
-.admin-stats__limits {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-
-  li {
-    position: relative;
-    padding-left: 1rem;
-    font-size: 0.82rem;
-    line-height: 1.6;
-    color: var(--text-muted);
-
-    // Maschera e non il carattere: vedi `--mask-quadri` in _tokens.scss.
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0.5em;
-      width: 0.5em;
-      height: 0.5em;
-      background: var(--text-faint);
-      mask: var(--mask-quadri) center / contain no-repeat;
-      -webkit-mask: var(--mask-quadri) center / contain no-repeat;
-    }
-  }
-}
-
-// ── Tabella lezioni ────────────────────────────────────────────────────────
-
-.admin-stats__lesson-title {
-  display: block;
-}
-
-// Il guid non è la chiave di lettura (il titolo lo è), ma è l'unico modo di
-// ritrovare il video su Bunny quando un numero sembra sbagliato.
-.admin-stats__lesson-meta {
-  display: block;
-  margin-top: 0.15rem;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
+.st__gruppo-nota {
   font-weight: 400;
-  letter-spacing: 0.04em;
-  color: var(--text-faint);
-  overflow-wrap: anywhere;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+// ⚠️ La fascia stretta del pannello (721-1200px): la sidebar è ancora
+// affiancata e la colonna di contenuto è al minimo (788px a 1100). Con cinque
+// colonne numeriche accanto, la cella d'identità della lezione va tenuta più
+// corta del tetto condiviso (20rem in quella fascia), o la tabella sfonda.
+.st__lezioni .admin-table__ident {
+  max-width: 16rem;
+}
+
+// Il collassabile dei limiti sta in coda a un blocco: un po' d'aria sopra.
+.st__limiti {
+  margin-top: 0.5rem;
 }

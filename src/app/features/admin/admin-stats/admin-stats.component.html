@@ -1,627 +1,1445 @@
-<div class="admin-stats">
-  <!-- ── Testata: la pagina dichiara la propria età ─────────────────────── -->
-  <div class="admin-stats__head">
-    <div class="admin-stats__title">
-      <h2>Statistiche</h2>
-      @if (stats(); as s) {
-        <p class="admin-stats__age">
-          Calcolate il {{ s.generatoIl | date: 'dd MMM yyyy' }} alle
-          {{ s.generatoIl | date: 'HH:mm' }} · si aggiornano ogni
-          {{ s.aggiornatoOgniMinuti }}
-          {{ s.aggiornatoOgniMinuti === 1 ? 'minuto' : 'minuti' }}: non sono in
-          tempo reale.
-        </p>
-      }
-    </div>
+<!--
+  ⚠️ `admin-users` è il RITMO condiviso (colonna + `gap: 1rem`) di tredici
+  sezioni su diciotto, non «la classe di /admin/iscritti». Le schede stanno IN
+  CIMA e la barra vive dentro il pannello, come nelle altre quattro sezioni a
+  schede (conteggi, affiliazioni, negozio, partecipazione).
 
-    <div class="row admin-stats__controls">
-      <!--
-        ⚠️ Erano bottoni con `aria-pressed` dentro un `role="group"`: la
-        grammatica dei TOGGLE INDIPENDENTI su una scelta ESCLUSIVA. Uno screen
-        reader annunciava «tre interruttori, uno premuto» invece di «radio 2 di
-        3». È lo stesso difetto già corretto su `/admin/news`, rimasto vivo qui
-        perché questa sezione non era nel perimetro di quel lotto.
-      -->
-      <app-filtro
-        etichetta="Profondità della serie mensile"
-        [voci]="vociMesi"
-        [scelto]="mesiScelto()"
-        [inerte]="statsLoading()"
-        (scegli)="setMesiDaFiltro($event)"
-      />
+  ⚠️ `[primarie]="true"` e mai l'attributo nudo: un attributo statico lega
+  l'input alla stringa vuota, che è falsa, e la variante resta inerte.
+-->
+<div class="admin-users st">
+  <app-schede
+    #sch
+    etichetta="Sezioni delle statistiche"
+    [primarie]="true"
+    [voci]="SCHEDE"
+    [scelto]="vista()"
+    (scegli)="vista.set($event)"
+  />
+
+  <div
+    role="tabpanel"
+    tabindex="0"
+    class="st__pannello"
+    [id]="sch.idPannello()"
+    [attr.aria-labelledby]="sch.idSchedaAttiva()"
+  >
+    <!--
+      ⚠️ Il titolo dice in che SCHEDA si è, non come si chiama la sezione:
+      «Statistiche» la stampa già la topbar della shell.
+
+      ⚠️ Il filtro cambia l'ELENCO (la finestra dei mesi o dei giorni) e non il
+      genere di cosa che si vede: è un `app-filtro` (radiogroup), non una
+      seconda fila di schede. Erano bottoni con `aria-pressed` dentro un
+      `role="group"`: la grammatica dei toggle INDIPENDENTI su una scelta
+      esclusiva — uno screen reader annunciava «tre interruttori, uno premuto»
+      invece di «radio 2 di 3».
+
+      ⚠️ «Ricarica» è un `.admin-ico` e NON un `.admin-barra__crea`: quella
+      classe è il `+` che crea una riga, e qui non si crea niente. L'ordine
+      nella barra lo dichiara il foglio locale, col combinatore.
+    -->
+    <div class="admin-barra">
+      <h2 class="admin-barra__titolo">{{ titoloScheda() }}</h2>
+
+      @switch (vista()) {
+        @case ('andamento') {
+          <app-filtro
+            class="st__finestra"
+            etichetta="Finestra dei mesi contabili"
+            [voci]="vociMesi"
+            [scelto]="mesiAndamentoScelto()"
+            [inerte]="andamentoLoading()"
+            (scegli)="setMesiAndamentoDaFiltro($event)"
+          />
+        }
+        @case ('video') {
+          <app-filtro
+            class="st__finestra"
+            etichetta="Finestra dell'andamento giornaliero"
+            [voci]="vociGiorni"
+            [scelto]="giorniScelto()"
+            [inerte]="videoLoading()"
+            (scegli)="setGiorniDaFiltro($event)"
+          />
+        }
+        @default {
+          <app-filtro
+            class="st__finestra"
+            etichetta="Profondità della serie mensile"
+            [voci]="vociMesi"
+            [scelto]="mesiScelto()"
+            [inerte]="statsLoading()"
+            (scegli)="setMesiDaFiltro($event)"
+          />
+        }
+      }
+
       <button
         type="button"
-        class="btn btn--ghost btn--sm"
-        [disabled]="statsLoading()"
-        (click)="loadStats()"
+        class="admin-ico st__ricarica"
+        [attr.aria-label]="'Ricarica ' + titoloScheda()"
+        title="Ricarica"
+        [disabled]="caricamentoScheda()"
+        (click)="ricaricaScheda()"
       >
-        <app-icon name="refresh" [size]="15" />
-        Ricarica
+        <app-icon name="refresh" [size]="18" />
       </button>
     </div>
-  </div>
 
-  @if (statsError()) {
-    <div class="form-feedback is-error admin-stats__banner" role="alert">
-      <span>{{ statsError() }}</span>
-      <button type="button" class="btn btn--ghost btn--sm" (click)="loadStats()">
-        <app-icon name="refresh" [size]="15" />
-        Riprova
-      </button>
-    </div>
-  }
-
-  @if (!stats() && statsLoading()) {
-    <div class="spinner" role="status" aria-label="Caricamento statistiche"></div>
-  }
-
-  @if (stats(); as s) {
-    <!-- ── 1) Abbonati ─────────────────────────────────────────────────── -->
-    <section class="card card--pad admin-stats__block">
-      <h3 class="admin-stats__h3">Abbonati ora</h3>
-
-      <div class="admin-stats__figures">
-        <div class="stat">
-          <span class="stat__label">Abbonamenti in regola</span>
-          <strong class="stat__value">{{
-            n(s.abbonati.conAbbonamentoValido)
-          }}</strong>
-          <span class="stat__hint"
-            >Tier attivo <em>e</em> scadenza nel futuro: la domanda del
-            fatturato.</span
-          >
-        </div>
-        <div class="stat">
-          <span class="stat__label">Passano il paywall ora</span>
-          <strong class="stat__value">{{ n(s.abbonati.hannoAccessoOra) }}</strong>
-          <span class="stat__hint"
-            >Chi entra <em>adesso</em>: il paywall guarda il ruolo, non la
-            scadenza.</span
-          >
-        </div>
-      </div>
-
-      @if (accessoSenzaAbbonamento() > 0) {
-        <p class="admin-stats__note is-warn">
-          <app-icon name="alert-triangle" [size]="16" />
-          <span>
-            <strong>{{ n(accessoSenzaAbbonamento()) }}</strong>
-            {{
-              accessoSenzaAbbonamento() === 1 ? 'persona entra' : 'persone entrano'
-            }}
-            senza un abbonamento in regola: sono accessi dati a mano.
-            <strong>{{ n(senzaScadenzaTier()) }}</strong>
-            {{ senzaScadenzaTier() === 1 ? 'ha' : 'hanno' }} un tier
-            <em>senza scadenza</em> (accesso a vita: il job notturno non li vede
-            e resteranno lì finché non li sistemi a mano),
-            <strong>{{ n(daDeclassareTier()) }}</strong>
-            {{ daDeclassareTier() === 1 ? 'è scaduto' : 'sono scaduti' }} ma il
-            cron non li ha ancora declassati (sotto le 24 ore è fisiologico; se
-            il numero resta stabilmente sopra lo zero, il cron non sta girando).
-          </span>
-        </p>
-      } @else {
-        <p class="admin-stats__note is-ok">
-          <app-icon name="check" [size]="16" />
-          <span
-            >I due numeri coincidono: nessun accesso concesso a mano, nessuno
-            scaduto in attesa del cron.</span
-          >
-        </p>
+    <!--
+      L'età dei dati sta in pagina, non in un tooltip: la pagina non è live e
+      deve dirlo da sola. Ogni scheda dichiara la propria, perché le tre fonti
+      hanno tre orologi diversi (cache 5 min, nessuna cache, cache 15 min).
+    -->
+    @switch (vista()) {
+      @case ('andamento') {
+        @if (andamento(); as a) {
+          <p class="admin-nota">
+            Letto adesso ({{ a.generatoIl | date: 'HH:mm' }}), senza cache: i
+            mesi aperti sono provvisori e cambiano a ogni cifra scritta nei
+            Conteggi.
+          </p>
+        }
       }
-
-      <div class="admin-stats__scroll">
-        <table class="admin-stats__table">
-          <caption class="visually-hidden">
-            Abbonati per tier
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Tier</th>
-              <th scope="col" class="is-num">In regola</th>
-              <th scope="col" class="is-num">Accesso ora</th>
-              <th scope="col" class="is-num">Senza scadenza</th>
-              <th scope="col" class="is-num">Da declassare</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (t of s.abbonati.perTier; track t.tier) {
-              <tr>
-                <th scope="row">{{ roleLabel(t.tier) }}</th>
-                <td class="is-num">{{ n(t.conAbbonamentoValido) }}</td>
-                <td class="is-num">{{ n(t.hannoAccessoOra) }}</td>
-                <td class="is-num" [class.is-flag]="t.senzaScadenza > 0">
-                  {{ n(t.senzaScadenza) }}
-                </td>
-                <td class="is-num" [class.is-flag]="t.daDeclassare > 0">
-                  {{ n(t.daDeclassare) }}
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="5" class="is-empty">Nessun abbonato attivo.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <!--
-        ⚠️ Riga a parte e non un'altra riga della tabella qui sopra: queste
-        persone entrano come un abbonato ma non hanno comprato niente e non
-        hanno una scadenza, quindi nelle colonne «In regola», «Senza scadenza»
-        e «Da declassare» non avrebbero un valore vero da mostrare — e in
-        «Senza scadenza», che è una colonna di ANOMALIA, comparirebbero tutte,
-        accendendo per sempre un allarme che serve a segnalare tutt'altro.
-        Compare solo se esiste davvero qualcuno.
-      -->
-      @if (s.abbonati.accessoNonAbbonato.length) {
-        <div class="admin-stats__scroll" style="margin-top: 0.8rem">
-          <table class="admin-stats__table">
-            <caption class="visually-hidden">
-              Accesso completo senza abbonamento
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Accesso senza abbonamento</th>
-                <th scope="col" class="is-num">Persone</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (r of s.abbonati.accessoNonAbbonato; track r.ruolo) {
-                <tr>
-                  <th scope="row">{{ roleLabel(r.ruolo) }}</th>
-                  <td class="is-num">{{ n(r.utenti) }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-        <p class="admin-stats__note">
-          Hanno accesso pieno ai contenuti, non hanno una scadenza e non hanno
-          portato un euro: non sono sommati né agli abbonati né agli incassi.
-        </p>
+      @case ('video') {
+        @if (video(); as v) {
+          <p class="admin-nota">
+            Calcolate il {{ v.generatoIl | date: 'dd MMM yyyy' }} alle
+            {{ v.generatoIl | date: 'HH:mm' }} · si aggiornano ogni
+            {{ v.aggiornatoOgniMinuti }}
+            {{ v.aggiornatoOgniMinuti === 1 ? 'minuto' : 'minuti' }}: passano da
+            Bunny e non sono in tempo reale.
+          </p>
+        }
       }
-    </section>
-
-    <!-- ── 2) Incasso abbonamenti ──────────────────────────────────────── -->
-    <section class="card card--pad admin-stats__block">
-      <h3 class="admin-stats__h3">Incasso abbonamenti</h3>
-      <p class="admin-stats__sub">
-        Solo la cassa <strong>degli abbonamenti</strong> (richieste approvate
-        pagate PayPal/Skrill). Gli ordini gadget in euro del Negozio sono
-        pagamenti veri, ma vivono altrove e non sono conteggiati qui: non è
-        l'incasso totale della scuola.
-      </p>
-
-      <div class="admin-stats__figures">
-        <div class="stat">
-          <span class="stat__label">Ultimi 30 giorni</span>
-          <strong class="stat__value">{{
-            eur(s.incassoAbbonamenti.ultimi30Eur)
-          }}</strong>
-          <span class="stat__hint">
-            {{ n(s.incassoAbbonamenti.ordini30) }}
-            {{
-              s.incassoAbbonamenti.ordini30 === 1
-                ? 'abbonamento approvato'
-                : 'abbonamenti approvati'
-            }}
-          </span>
-        </div>
-
-        <div class="stat">
-          <span class="stat__label">Rispetto ai 30 giorni prima</span>
-          @if (s.incassoAbbonamenti.deltaPct !== null) {
-            <strong
-              class="stat__value"
-              [class.is-up]="s.incassoAbbonamenti.deltaPct > 0"
-              [class.is-down]="s.incassoAbbonamenti.deltaPct < 0"
-              >{{ delta(s.incassoAbbonamenti.deltaPct) }}</strong
-            >
-            <span class="stat__hint"
-              >Prima: {{ eur(s.incassoAbbonamenti.precedenti30Eur) }}</span
-            >
-          } @else {
-            <strong class="stat__value is-muted">Nessun confronto</strong>
-            <span class="stat__hint"
-              >Nei 30 giorni precedenti non è entrato nulla: una variazione
-              percentuale su zero non esiste.</span
-            >
-          }
-        </div>
-
-        <div class="stat">
-          <span class="stat__label">Attivazioni senza cassa (30 gg)</span>
-          <strong class="stat__value">{{
-            n(s.incassoAbbonamenti.attivazioniSenzaCassa30)
-          }}</strong>
-          <span class="stat__hint"
-            >Punti e omaggi: <strong>€0 incassati</strong>. Sono volume, non si
-            sommano agli euro qui accanto.</span
-          >
-        </div>
-      </div>
-
-      @if (incassoSpark(); as pts) {
-        <figure class="admin-stats__spark">
-          <svg
-            viewBox="0 0 100 24"
-            preserveAspectRatio="none"
-            role="img"
-            [attr.aria-label]="
-              'Andamento dell\'incasso negli ultimi ' + mesi() + ' mesi'
-            "
-          >
-            <polyline
-              [attr.points]="pts"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-              vector-effect="non-scaling-stroke"
-            />
-          </svg>
-          <figcaption>
-            Incasso mensile, dal più vecchio al più recente. La base del disegno
-            è lo zero. I numeri esatti sono nella tabella qui sotto.
-          </figcaption>
-        </figure>
+      @default {
+        @if (stats(); as s) {
+          <p class="admin-nota">
+            Calcolate il {{ s.generatoIl | date: 'dd MMM yyyy' }} alle
+            {{ s.generatoIl | date: 'HH:mm' }} · si aggiornano ogni
+            {{ s.aggiornatoOgniMinuti }}
+            {{ s.aggiornatoOgniMinuti === 1 ? 'minuto' : 'minuti' }}: non sono
+            in tempo reale.
+          </p>
+        }
       }
+    }
 
-      <div class="admin-stats__scroll">
-        <table class="admin-stats__table">
-          <caption class="visually-hidden">
-            Incasso abbonamenti per mese
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Mese</th>
-              <th scope="col" class="is-num">Incasso</th>
-              <th scope="col" class="is-num">Abbonamenti</th>
-              @if (haStimati()) {
-                <th scope="col" class="is-num">Stimati</th>
-              }
-              <th scope="col">Metodi</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (r of incassoRows(); track r.mese) {
-              <tr>
-                <th scope="row">{{ meseLabel(r.mese) }}</th>
-                <td class="is-num">{{ eur(r.incassoEur) }}</td>
-                <td class="is-num">{{ n(r.ordini) }}</td>
-                @if (haStimati()) {
-                  <td class="is-num" [class.is-flag]="r.stimati > 0">
-                    {{ r.stimati > 0 ? n(r.stimati) : '—' }}
-                  </td>
+    <!--
+      Una banda sola, quella della scheda che si guarda: un errore di Bunny non
+      compare sopra gli abbonati, che con Bunny non c'entrano. «Riprova» rifà
+      SOLO la rotta di questa scheda.
+    -->
+    @if (erroreScheda(); as errore) {
+      <div class="form-feedback is-error st__errore" role="alert">
+        <span>{{ errore }}</span>
+        <button type="button" class="btn btn--ghost btn--sm" (click)="ricaricaScheda()">
+          <app-icon name="refresh" [size]="15" />
+          Riprova
+        </button>
+      </div>
+    }
+
+    @switch (vista()) {
+      <!-- ══ Abbonati ═══════════════════════════════════════════════════════ -->
+      @case ('abbonati') {
+        @if (!stats() && statsLoading()) {
+          <ng-container [ngTemplateOutlet]="scheletro" />
+        }
+
+        @if (stats(); as s) {
+          <!--
+            ⚠️ La crescita in TESTA: è la domanda che precede tutte le altre
+            («la scuola cresce?»), e i tre numeri rispondono a tre domande
+            diverse che NON si incrociano — un flusso mensile (registrazioni),
+            una finestra mobile letta adesso (attivi), una fotografia per ogni
+            mese chiuso (abbonati a fine mese).
+          -->
+          <section class="card card--pad admin-blocco">
+            <div class="admin-blocco__testa">
+              <h3 class="admin-blocco__titolo">Crescita</h3>
+            </div>
+
+            <div class="admin-kpi-griglia">
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Attivi negli ultimi 7 giorni</span>
+                <strong class="admin-kpi__valore">{{
+                  formattaIntero(s.crescita.attivi.ultimi7)
+                }}</strong>
+                <span class="admin-kpi__nota"
+                  >Iscritti con una sessione usata: un accesso o un rinnovo
+                  del token, non una pagina vista.</span
+                >
+              </div>
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Attivi negli ultimi 30 giorni</span>
+                <strong class="admin-kpi__valore">{{
+                  formattaIntero(s.crescita.attivi.ultimi30)
+                }}</strong>
+                <!--
+                  ⚠️ «su M iscritti» e mai «registrazioni completate»:
+                  `iscritti` conta anche chi non ha ancora confermato l'email.
+                -->
+                <span class="admin-kpi__nota"
+                  >su <strong>{{ formattaIntero(s.crescita.attivi.iscritti) }}</strong>
+                  iscritti · include i 7 giorni</span
+                >
+              </div>
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Registrazioni nel mese</span>
+                @if (registrazioniMese(); as r) {
+                  <strong class="admin-kpi__valore">{{
+                    formattaIntero(r.registrati)
+                  }}</strong>
+                  <span class="admin-kpi__nota"
+                    >verificate <strong>{{ formattaIntero(r.verificati) }}</strong> ·
+                    {{ meseLungo(r.mese) }}, ancora in corso</span
+                  >
+                } @else {
+                  <strong class="admin-kpi__valore is-muto">—</strong>
+                  <span class="admin-kpi__nota">Il mese corrente non è nella finestra.</span>
                 }
-                <td class="admin-stats__methods">{{ metodi(r) || '—' }}</td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="5" class="is-empty">Nessun mese nella finestra.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+              </div>
+            </div>
 
-      @if (haStimati()) {
-        <p class="admin-stats__note">
-          <app-icon name="info" [size]="16" />
-          <span
-            >Gli importi <strong>stimati</strong> sono righe senza snapshot di
-            prezzo, ricostruite dal listino in vigore alla data della richiesta:
-            sono una stima, e la colonna dice quante sono.</span
-          >
-        </p>
-      }
-
-      @if (haSenzaCassa()) {
-        <h4 class="admin-stats__h4">Attivazioni senza cassa (€0)</h4>
-        <p class="admin-stats__sub">
-          Tabella separata di proposito: questi abbonamenti non hanno portato
-          euro e non vanno sommati all'incasso qui sopra.
-        </p>
-        <div class="admin-stats__scroll">
-          <table class="admin-stats__table">
-            <caption class="visually-hidden">
-              Attivazioni senza cassa per mese
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Mese</th>
-                <th scope="col" class="is-num">Con punti</th>
-                <th scope="col" class="is-num">Omaggi / manuali</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (r of senzaCassaRows(); track r.mese) {
-                <tr>
-                  <th scope="row">{{ meseLabel(r.mese) }}</th>
-                  <td class="is-num">{{ n(r.punti) }}</td>
-                  <td class="is-num">{{ n(r.manuale) }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </section>
-
-    <!-- ── 3) Rinnovi ──────────────────────────────────────────────────── -->
-    <section class="card card--pad admin-stats__block">
-      <h3 class="admin-stats__h3">Rinnovi</h3>
-      <p class="admin-stats__sub">
-        Coorti di soli mesi <strong>chiusi</strong>, un utente = una riga: di chi
-        è scaduto in quel mese, quanti hanno rinnovato.
-      </p>
-
-      @let u = s.rinnovi.ultimoMeseChiuso;
-      <div class="admin-stats__figures">
-        <div class="stat">
-          <span class="stat__label"
-            >Ultimo mese chiuso · {{ meseLabel(u.mese) }}</span
-          >
-          @if (u.tassoRinnovo !== null) {
-            <strong class="stat__value">{{ pct(u.tassoRinnovo) }}</strong>
-            <span class="stat__hint">
-              {{ n(u.rinnovati) }} {{ u.rinnovati === 1 ? 'rinnovo' : 'rinnovi' }}
-              su {{ n(u.scaduti) }}
-              {{ u.scaduti === 1 ? 'scadenza' : 'scadenze' }}
-            </span>
-          } @else {
-            <strong class="stat__value is-muted">Dati insufficienti</strong>
-            <span class="stat__hint">
-              @if (u.scaduti > 0) {
-                {{ n(u.rinnovati) }} su {{ n(u.scaduti) }}: la coorte è troppo
-                piccola perché una percentuale voglia dire qualcosa.
-              } @else {
-                Nessun abbonamento è scaduto in questo mese: non c'era niente da
-                rinnovare — che non è "nessuno ha rinnovato".
-              }
-            </span>
-          }
-        </div>
-      </div>
-
-      <div class="admin-stats__scroll">
-        <table class="admin-stats__table">
-          <caption class="visually-hidden">
-            Coorti di rinnovo per mese
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Mese</th>
-              <th scope="col" class="is-num">Scaduti</th>
-              <th scope="col" class="is-num">Rinnovati</th>
-              <th scope="col" class="is-num">Tasso</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (r of coortiRows(); track r.mese) {
-              <tr>
-                <th scope="row">{{ meseLabel(r.mese) }}</th>
-                <td class="is-num">{{ n(r.scaduti) }}</td>
-                <td class="is-num">{{ n(r.rinnovati) }}</td>
-                <td class="is-num">
-                  @if (r.tassoRinnovo !== null) {
-                    {{ pct(r.tassoRinnovo) }}
-                  } @else {
-                    <span
-                      class="is-muted"
-                      [title]="
-                        r.scaduti > 0
-                          ? 'Coorte troppo piccola per una percentuale'
-                          : 'Nessuna scadenza in questo mese'
-                      "
-                    >
-                      {{ r.scaduti > 0 ? n(r.rinnovati) + ' su ' + n(r.scaduti) : '—' }}
-                    </span>
+            <div class="admin-table__scroll">
+              <table class="admin-table admin-table--etichettata">
+                <caption class="visually-hidden">
+                  Crescita per mese: registrazioni, verificate, primi abbonamenti e
+                  abbonati a fine mese
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="admin-table__c-primo">Mese</th>
+                    <th scope="col" class="is-num">Registrati</th>
+                    <th scope="col" class="is-num">Verificate</th>
+                    <th scope="col" class="is-num">Primi abbonamenti</th>
+                    <th scope="col" class="is-num">Abbonati a fine mese</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of crescitaRows(); track r.mese) {
+                    <tr>
+                      <th scope="row" class="admin-table__c-primo">{{ meseLabel(r.mese) }}</th>
+                      <td class="is-num" data-etichetta="Registrati">
+                        {{ formattaIntero(r.registrati) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Verificate">
+                        {{ formattaIntero(r.verificati) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Primi abbonamenti">
+                        {{ formattaIntero(r.primiAbbonamenti) }}
+                      </td>
+                      <!--
+                        ⚠️ Il mese corrente non ha una fotografia a fine mese
+                        (non è finito): un trattino, MAI uno zero, che si
+                        leggerebbe «a fine mese nessun abbonato».
+                      -->
+                      <td class="is-num" data-etichetta="Abbonati a fine mese">
+                        @if (r.abbonatiFine !== null) {
+                          {{ formattaIntero(r.abbonatiFine) }}
+                        } @else {
+                          <span class="is-vuota" title="Il mese non è ancora chiuso">—</span>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="5" class="admin-table__vuota">Nessun mese nella finestra.</td>
+                    </tr>
                   }
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="4" class="is-empty">
-                  Nessun mese chiuso nella finestra.
-                </td>
-              </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="admin-nota">
+              «Verificate» sono le registrazioni del mese confermate <em>a oggi</em>,
+              non entro il mese; «Primi abbonamenti» sono i clienti paganti nuovi
+              di quel mese; «Abbonati a fine mese» viene dalle richieste approvate
+              ancora valide all'ultimo istante del mese, e può divergere dal
+              numero di adesso dopo una scadenza spostata a mano.
+            </p>
+          </section>
+
+          <section class="card card--pad admin-blocco">
+            <div class="admin-blocco__testa">
+              <h3 class="admin-blocco__titolo">Abbonati ora</h3>
+            </div>
+
+            <div class="admin-kpi-griglia">
+              <a class="card admin-kpi admin-kpi--link" routerLink="/admin/iscritti">
+                <span class="admin-kpi__etichetta">Abbonamenti in regola</span>
+                <strong class="admin-kpi__valore">{{
+                  formattaIntero(s.abbonati.conAbbonamentoValido)
+                }}</strong>
+                <span class="admin-kpi__nota"
+                  >Tier attivo <em>e</em> scadenza nel futuro: la domanda del
+                  fatturato. Apre gli iscritti.</span
+                >
+              </a>
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Passano il paywall ora</span>
+                <strong class="admin-kpi__valore">{{
+                  formattaIntero(s.abbonati.hannoAccessoOra)
+                }}</strong>
+                <span class="admin-kpi__nota"
+                  >Chi entra <em>adesso</em>: il paywall guarda il ruolo, non la
+                  scadenza.</span
+                >
+              </div>
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">In scadenza entro 7 giorni</span>
+                <strong class="admin-kpi__valore">{{
+                  formattaIntero(s.scadenze.entro7.utenti)
+                }}</strong>
+                <span class="admin-kpi__nota"
+                  >{{ formattaEur(s.scadenze.entro7.valoreListinoEur) }} a rischio,
+                  a listino corrente</span
+                >
+              </div>
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Entro 30 giorni</span>
+                <strong class="admin-kpi__valore">{{
+                  formattaIntero(s.scadenze.entro30.utenti)
+                }}</strong>
+                <span class="admin-kpi__nota"
+                  >{{ formattaEur(s.scadenze.entro30.valoreListinoEur) }} a rischio ·
+                  include i 7 giorni</span
+                >
+              </div>
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Conversione registrati → paganti</span>
+                @if (s.conversione.tasso !== null) {
+                  <strong class="admin-kpi__valore">{{
+                    formattaFrazione(s.conversione.tasso)
+                  }}</strong>
+                  <span class="admin-kpi__nota">
+                    {{ formattaIntero(s.conversione.paganti) }}
+                    {{ s.conversione.paganti === 1 ? 'pagante' : 'paganti' }} su
+                    {{ formattaIntero(s.conversione.registrazioniComplete) }}
+                    {{
+                      s.conversione.registrazioniComplete === 1
+                        ? 'registrazione completata'
+                        : 'registrazioni completate'
+                    }}
+                    · dall'inizio, non di questo mese
+                  </span>
+                } @else {
+                  <strong class="admin-kpi__valore is-muto">Dati insufficienti</strong>
+                  <span class="admin-kpi__nota">
+                    @if (s.conversione.registrazioniComplete > 0) {
+                      {{ formattaIntero(s.conversione.paganti) }} su
+                      {{ formattaIntero(s.conversione.registrazioniComplete) }}: troppo
+                      pochi iscritti perché una percentuale voglia dire qualcosa.
+                    } @else {
+                      Nessuno si è ancora iscritto: non c'è niente da convertire.
+                    }
+                  </span>
+                }
+              </div>
+              @let u = s.rinnovi.ultimoMeseChiuso;
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta"
+                  >Rinnovi · ultimo mese chiuso · {{ meseLabel(u.mese) }}</span
+                >
+                @if (u.tassoRinnovo !== null) {
+                  <strong class="admin-kpi__valore">{{
+                    formattaFrazione(u.tassoRinnovo)
+                  }}</strong>
+                  <span class="admin-kpi__nota">
+                    {{ formattaIntero(u.rinnovati) }}
+                    {{ u.rinnovati === 1 ? 'rinnovo' : 'rinnovi' }} su
+                    {{ formattaIntero(u.scaduti) }}
+                    {{ u.scaduti === 1 ? 'scadenza' : 'scadenze' }}
+                  </span>
+                } @else {
+                  <strong class="admin-kpi__valore is-muto">Dati insufficienti</strong>
+                  <span class="admin-kpi__nota">
+                    @if (u.scaduti > 0) {
+                      {{ formattaIntero(u.rinnovati) }} su
+                      {{ formattaIntero(u.scaduti) }}: la coorte è troppo piccola
+                      perché una percentuale voglia dire qualcosa.
+                    } @else {
+                      Nessun abbonamento è scaduto in questo mese: non c'era niente
+                      da rinnovare — che non è "nessuno ha rinnovato".
+                    }
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!--
+              ⚠️ Un avviso da LEGGERE e su cui AGIRE: niente `<code>`, niente
+              query Mongo. Il perché tecnico sta nei commenti del backend.
+            -->
+            @if (accessoSenzaAbbonamento() > 0) {
+              <p class="admin-avviso admin-avviso--attenzione">
+                <app-icon name="alert-triangle" [size]="16" />
+                <span>
+                  <strong>{{ formattaIntero(accessoSenzaAbbonamento()) }}</strong>
+                  {{
+                    accessoSenzaAbbonamento() === 1 ? 'persona entra' : 'persone entrano'
+                  }}
+                  senza un abbonamento in regola: sono accessi dati a mano.
+                  <strong>{{ formattaIntero(senzaScadenzaTier()) }}</strong>
+                  {{ senzaScadenzaTier() === 1 ? 'ha' : 'hanno' }} un tier
+                  <em>senza scadenza</em> (accesso a vita: il job notturno non li vede
+                  e resteranno lì finché non li sistemi a mano),
+                  <strong>{{ formattaIntero(daDeclassareTier()) }}</strong>
+                  {{ daDeclassareTier() === 1 ? 'è scaduto' : 'sono scaduti' }} ma il
+                  cron non li ha ancora declassati (sotto le 24 ore è fisiologico; se
+                  il numero resta stabilmente sopra lo zero, il cron non sta girando).
+                </span>
+              </p>
+            } @else {
+              <p class="admin-avviso admin-avviso--ok">
+                <app-icon name="check" [size]="16" />
+                <span
+                  >I due numeri coincidono: nessun accesso concesso a mano, nessuno
+                  scaduto in attesa del cron.</span
+                >
+              </p>
             }
-          </tbody>
-        </table>
-      </div>
-    </section>
 
-    <!-- ── 4) Scadenze imminenti ───────────────────────────────────────── -->
-    <section class="card card--pad admin-stats__block">
-      <h3 class="admin-stats__h3">Scadenze imminenti</h3>
-      <p class="admin-stats__sub">
-        L'unico numero su cui si può agire oggi. Gli euro sono il valore a
-        <strong>listino corrente</strong>: assumono che rinnovino tutti, allo
-        stesso tier, a prezzo pieno.
-      </p>
+            <p class="admin-nota">
+              Il denominatore della conversione sono le registrazioni
+              <em>completate</em>: chi ha confermato l'email <em>oppure</em> ha
+              pagato, non i soli confermati — un pagamento prova che la registrazione
+              è andata a buon fine, e correggendo un'email dal pannello Iscritti
+              l'utente torna non confermato. Gli admin e i coach sono esclusi da
+              entrambi i numeri; chi è in staking resta contato.
+            </p>
 
-      <div class="admin-stats__figures">
-        <div class="stat">
-          <span class="stat__label">Entro 7 giorni</span>
-          <strong class="stat__value">{{ n(s.scadenze.entro7.utenti) }}</strong>
-          <span class="stat__hint"
-            >{{ eur(s.scadenze.entro7.valoreListinoEur) }} a rischio</span
-          >
-        </div>
-        <div class="stat">
-          <span class="stat__label">Entro 30 giorni</span>
-          <strong class="stat__value">{{ n(s.scadenze.entro30.utenti) }}</strong>
-          <span class="stat__hint">
-            {{ eur(s.scadenze.entro30.valoreListinoEur) }} a rischio · include i
-            7 giorni
-          </span>
-        </div>
-      </div>
+            <div class="admin-table__scroll">
+              <table class="admin-table admin-table--etichettata">
+                <caption class="visually-hidden">
+                  Abbonati per tier
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="admin-table__c-primo">Tier</th>
+                    <th scope="col" class="is-num">In regola</th>
+                    <th scope="col" class="is-num">Accesso ora</th>
+                    <th scope="col" class="is-num">Senza scadenza</th>
+                    <th scope="col" class="is-num">Da declassare</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (t of s.abbonati.perTier; track t.tier) {
+                    <tr>
+                      <th scope="row" class="admin-table__c-primo">{{ roleLabel(t.tier) }}</th>
+                      <td class="is-num" data-etichetta="In regola">
+                        {{ formattaIntero(t.conAbbonamentoValido) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Accesso ora">
+                        {{ formattaIntero(t.hannoAccessoOra) }}
+                      </td>
+                      <td
+                        class="is-num"
+                        data-etichetta="Senza scadenza"
+                        [class.st__anomalia]="t.senzaScadenza > 0"
+                      >
+                        {{ formattaIntero(t.senzaScadenza) }}
+                      </td>
+                      <td
+                        class="is-num"
+                        data-etichetta="Da declassare"
+                        [class.st__anomalia]="t.daDeclassare > 0"
+                      >
+                        {{ formattaIntero(t.daDeclassare) }}
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="5" class="admin-table__vuota">Nessun abbonato attivo.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
 
-      <div class="admin-stats__scroll">
-        <table class="admin-stats__table">
-          <caption class="visually-hidden">
-            Scadenze imminenti per tier
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Tier</th>
-              <th scope="col" class="is-num">Entro 7 gg</th>
-              <th scope="col" class="is-num">Entro 30 gg</th>
-              <th scope="col" class="is-num">Valore a listino</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (t of s.scadenze.perTier; track t.tier) {
-              <tr>
-                <th scope="row">{{ roleLabel(t.tier) }}</th>
-                <td class="is-num">{{ n(t.entro7) }}</td>
-                <td class="is-num">{{ n(t.entro30) }}</td>
-                <td class="is-num">{{ eur(t.valoreListinoEur) }}</td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="4" class="is-empty">
-                  Nessuna scadenza nei prossimi 30 giorni.
-                </td>
-              </tr>
+            <!--
+              ⚠️ Tabella a parte e non un'altra riga della tabella qui sopra:
+              queste persone entrano come un abbonato ma non hanno comprato
+              niente e non hanno una scadenza, quindi in «In regola», «Senza
+              scadenza» e «Da declassare» non avrebbero un valore vero — e in
+              «Senza scadenza», che è una colonna di ANOMALIA, comparirebbero
+              tutte, accendendo per sempre un allarme che serve a segnalare
+              tutt'altro. Compare solo se esiste davvero qualcuno.
+            -->
+            @if (s.abbonati.accessoNonAbbonato.length) {
+              <div class="admin-table__scroll">
+                <table class="admin-table admin-table--etichettata">
+                  <caption class="visually-hidden">
+                    Accesso completo senza abbonamento
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-table__c-primo">Accesso senza abbonamento</th>
+                      <th scope="col" class="is-num">Persone</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of s.abbonati.accessoNonAbbonato; track r.ruolo) {
+                      <tr>
+                        <th scope="row" class="admin-table__c-primo">{{ roleLabel(r.ruolo) }}</th>
+                        <td class="is-num" data-etichetta="Persone">
+                          {{ formattaIntero(r.utenti) }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <p class="admin-nota">
+                Hanno accesso pieno ai contenuti, non hanno una scadenza e non hanno
+                portato un euro: non sono sommati né agli abbonati né agli incassi.
+              </p>
             }
-          </tbody>
-        </table>
-      </div>
-    </section>
+          </section>
 
-    <!-- ── 5) Acquisizione ─────────────────────────────────────────────── -->
-    <section class="card card--pad admin-stats__block">
-      <h3 class="admin-stats__h3">Nuovi, rinnovi e ritorni</h3>
-      <p class="admin-stats__sub">
-        Clienti <strong>distinti</strong> per mese (un utente = una riga,
-        classificato dalla sua prima decisione del mese): distingue la crescita
-        dal mantenimento. Le due metà della tabella
-        <strong>non vanno sommate</strong>: un omaggio non è un cliente
-        acquisito.
-      </p>
+          <!-- ── Nuovi, rinnovi e ritorni ─────────────────────────────────── -->
+          <section class="card card--pad admin-blocco">
+            <div class="admin-blocco__testa">
+              <h3 class="admin-blocco__titolo">Nuovi, rinnovi e ritorni</h3>
+            </div>
+            <p class="admin-nota">
+              Clienti <strong>distinti</strong> per mese (un utente = una riga,
+              classificato dalla sua prima decisione del mese): distingue la crescita
+              dal mantenimento. Le due metà della tabella
+              <strong>non vanno sommate</strong>: un omaggio non è un cliente
+              acquisito.
+            </p>
+            <ng-container [ngTemplateOutlet]="tabellaAcquisizione" />
+          </section>
 
-      <div class="admin-stats__scroll">
-        <table class="admin-stats__table">
-          <caption class="visually-hidden">
-            Acquisizione per mese, separando paganti e non paganti
-          </caption>
-          <thead>
-            <tr>
-              <td class="admin-stats__corner"></td>
-              <th scope="colgroup" colspan="3" class="admin-stats__group">
-                Paganti <span class="admin-stats__group-note">(euro veri)</span>
-              </th>
-              <th scope="colgroup" colspan="3" class="admin-stats__group">
-                Non paganti
-                <span class="admin-stats__group-note">(punti/omaggi, €0)</span>
-              </th>
-            </tr>
-            <tr>
-              <th scope="col">Mese</th>
-              <th scope="col" class="is-num">Nuovi</th>
-              <th scope="col" class="is-num">Rinnovi</th>
-              <th scope="col" class="is-num">Ritorni</th>
-              <th scope="col" class="is-num is-split">Nuovi</th>
-              <th scope="col" class="is-num">Rinnovi</th>
-              <th scope="col" class="is-num">Ritorni</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (r of acquisizioneRows(); track r.mese) {
-              <tr>
-                <th scope="row">{{ meseLabel(r.mese) }}</th>
-                <td class="is-num">{{ n(r.paganti.nuovi) }}</td>
-                <td class="is-num">{{ n(r.paganti.rinnovi) }}</td>
-                <td class="is-num">{{ n(r.paganti.ritorni) }}</td>
-                <td class="is-num is-split">{{ n(r.nonPaganti.nuovi) }}</td>
-                <td class="is-num">{{ n(r.nonPaganti.rinnovi) }}</td>
-                <td class="is-num">{{ n(r.nonPaganti.ritorni) }}</td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="7" class="is-empty">Nessun mese nella finestra.</td>
-              </tr>
+          <!-- ── Coorti di rinnovo ────────────────────────────────────────── -->
+          <section class="card card--pad admin-blocco">
+            <div class="admin-blocco__testa">
+              <h3 class="admin-blocco__titolo">Coorti di rinnovo</h3>
+            </div>
+            <p class="admin-nota">
+              Coorti di soli mesi <strong>chiusi</strong>, un utente = una riga: di
+              chi è scaduto in quel mese, quanti hanno rinnovato.
+            </p>
+            <div class="admin-table__scroll">
+              <table class="admin-table admin-table--etichettata">
+                <caption class="visually-hidden">
+                  Coorti di rinnovo per mese
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="admin-table__c-primo">Mese</th>
+                    <th scope="col" class="is-num">Scaduti</th>
+                    <th scope="col" class="is-num">Rinnovati</th>
+                    <th scope="col" class="is-num">Tasso</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of coortiRows(); track r.mese) {
+                    <tr>
+                      <th scope="row" class="admin-table__c-primo">{{ meseLabel(r.mese) }}</th>
+                      <td class="is-num" data-etichetta="Scaduti">
+                        {{ formattaIntero(r.scaduti) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Rinnovati">
+                        {{ formattaIntero(r.rinnovati) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Tasso">
+                        @if (r.tassoRinnovo !== null) {
+                          {{ formattaFrazione(r.tassoRinnovo) }}
+                        } @else {
+                          <span
+                            class="is-vuota"
+                            [title]="
+                              r.scaduti > 0
+                                ? 'Coorte troppo piccola per una percentuale'
+                                : 'Nessuna scadenza in questo mese'
+                            "
+                          >
+                            {{
+                              r.scaduti > 0
+                                ? formattaIntero(r.rinnovati) + ' su ' + formattaIntero(r.scaduti)
+                                : '—'
+                            }}
+                          </span>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="4" class="admin-table__vuota">
+                        Nessun mese chiuso nella finestra.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- ── Scadenze imminenti ───────────────────────────────────────── -->
+          <section class="card card--pad admin-blocco">
+            <div class="admin-blocco__testa">
+              <h3 class="admin-blocco__titolo">Scadenze imminenti per tier</h3>
+            </div>
+            <p class="admin-nota">
+              L'unico numero su cui si può agire oggi. Gli euro sono il valore a
+              <strong>listino corrente</strong>: assumono che rinnovino tutti, allo
+              stesso tier, a prezzo pieno.
+            </p>
+            <div class="admin-table__scroll">
+              <table class="admin-table admin-table--etichettata">
+                <caption class="visually-hidden">
+                  Scadenze imminenti per tier
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="admin-table__c-primo">Tier</th>
+                    <th scope="col" class="is-num">Entro 7 gg</th>
+                    <th scope="col" class="is-num">Entro 30 gg</th>
+                    <th scope="col" class="is-num">Valore a listino</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (t of s.scadenze.perTier; track t.tier) {
+                    <tr>
+                      <th scope="row" class="admin-table__c-primo">{{ roleLabel(t.tier) }}</th>
+                      <td class="is-num" data-etichetta="Entro 7 gg">
+                        {{ formattaIntero(t.entro7) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Entro 30 gg">
+                        {{ formattaIntero(t.entro30) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Valore a listino">
+                        {{ formattaEur(t.valoreListinoEur) }}
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="4" class="admin-table__vuota">
+                        Nessuna scadenza nei prossimi 30 giorni.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <ng-container [ngTemplateOutlet]="fiducia" />
+        }
+      }
+
+      <!-- ══ Incassi ════════════════════════════════════════════════════════ -->
+      @case ('incassi') {
+        @if (!stats() && statsLoading()) {
+          <ng-container [ngTemplateOutlet]="scheletro" />
+        }
+
+        @if (stats(); as s) {
+          <section class="card card--pad admin-blocco">
+            <div class="admin-blocco__testa">
+              <h3 class="admin-blocco__titolo">Incasso degli abbonamenti</h3>
+            </div>
+            <p class="admin-nota">
+              Solo la cassa <strong>degli abbonamenti</strong> (richieste approvate
+              pagate PayPal, Skrill o in contanti). Gli ordini gadget in euro del
+              Negozio sono pagamenti veri, ma vivono altrove e non sono conteggiati
+              qui: non è l'incasso totale della scuola.
+            </p>
+
+            <div class="admin-kpi-griglia">
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Ultimi 30 giorni</span>
+                <strong class="admin-kpi__valore">{{
+                  formattaEur(s.incassoAbbonamenti.ultimi30Eur)
+                }}</strong>
+                <span class="admin-kpi__nota">
+                  {{ formattaIntero(s.incassoAbbonamenti.ordini30) }}
+                  {{
+                    s.incassoAbbonamenti.ordini30 === 1
+                      ? 'abbonamento approvato'
+                      : 'abbonamenti approvati'
+                  }}
+                </span>
+              </div>
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Rispetto ai 30 giorni prima</span>
+                @if (s.incassoAbbonamenti.deltaPct !== null) {
+                  <strong
+                    class="admin-kpi__valore"
+                    [class.is-su]="s.incassoAbbonamenti.deltaPct > 0"
+                    [class.is-giu]="s.incassoAbbonamenti.deltaPct < 0"
+                    >{{ formattaDelta(s.incassoAbbonamenti.deltaPct) }}</strong
+                  >
+                  <span class="admin-kpi__nota"
+                    >Prima: {{ formattaEur(s.incassoAbbonamenti.precedenti30Eur) }}</span
+                  >
+                } @else {
+                  <strong class="admin-kpi__valore is-muto">Nessun confronto</strong>
+                  <span class="admin-kpi__nota"
+                    >Nei 30 giorni precedenti non è entrato nulla: una variazione
+                    percentuale su zero non esiste.</span
+                  >
+                }
+              </div>
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Attivazioni senza cassa (30 gg)</span>
+                <strong class="admin-kpi__valore">{{
+                  formattaIntero(s.incassoAbbonamenti.attivazioniSenzaCassa30)
+                }}</strong>
+                <span class="admin-kpi__nota"
+                  >Punti e omaggi: <strong>€0 incassati</strong>. Sono volume, non si
+                  sommano agli euro qui accanto.</span
+                >
+              </div>
+              <!--
+                ⚠️ La colonna che i limiti PROMETTONO («coperti dai punti»): fino
+                al 13/09/2026 il limite la nominava e la pagina non la rendeva.
+              -->
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Coperti dai punti (30 gg)</span>
+                <strong class="admin-kpi__valore">{{
+                  formattaEur(s.incassoAbbonamenti.puntiEur30)
+                }}</strong>
+                <span class="admin-kpi__nota"
+                  >Euro di listino pagati coi punti BFF: stanno accanto all'incasso,
+                  mai dentro — non sono mai arrivati sul conto.</span
+                >
+              </div>
+            </div>
+
+            <p class="admin-nota admin-table__nota-mobile">
+              Su schermi stretti la colonna «Metodi» è nascosta.
+            </p>
+            <div class="admin-table__scroll">
+              <table class="admin-table admin-table--etichettata">
+                <caption class="visually-hidden">
+                  Incasso abbonamenti per mese
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="admin-table__c-primo">Mese</th>
+                    <th scope="col" class="is-num">Incasso</th>
+                    <th scope="col" class="is-num">Coperti dai punti</th>
+                    <th scope="col" class="is-num">Abbonamenti</th>
+                    @if (haStimati()) {
+                      <th scope="col" class="is-num">Stimati</th>
+                    }
+                    <th scope="col" class="admin-table__solo-largo">Metodi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of incassoRows(); track r.mese) {
+                    <tr>
+                      <th scope="row" class="admin-table__c-primo">{{ meseLabel(r.mese) }}</th>
+                      <td class="is-num" data-etichetta="Incasso">
+                        {{ formattaEur(r.incassoEur) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Coperti dai punti">
+                        {{ formattaEur(r.puntiEur) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Abbonamenti">
+                        {{ formattaIntero(r.ordini) }}
+                      </td>
+                      @if (haStimati()) {
+                        <td
+                          class="is-num"
+                          data-etichetta="Stimati"
+                          [class.st__anomalia]="r.stimati > 0"
+                        >
+                          @if (r.stimati > 0) {
+                            {{ formattaIntero(r.stimati) }}
+                          } @else {
+                            <span class="is-vuota">—</span>
+                          }
+                        </td>
+                      }
+                      <td class="admin-table__solo-largo">
+                        @if (r.perMetodo.length) {
+                          @for (m of r.perMetodo; track m.metodo) {
+                            {{ metodoLabel(m.metodo) }} {{ formattaEur(m.incassoEur) }}@if (!$last) {
+                              ·
+                            }
+                          }
+                        } @else {
+                          <span class="is-vuota">—</span>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="6" class="admin-table__vuota">Nessun mese nella finestra.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            @if (haStimati()) {
+              <p class="admin-avviso">
+                <app-icon name="info" [size]="16" />
+                <span
+                  >Gli importi <strong>stimati</strong> sono righe senza snapshot di
+                  prezzo, ricostruite dal listino in vigore alla data della richiesta:
+                  sono una stima, e la colonna dice quante sono.</span
+                >
+              </p>
             }
-          </tbody>
-        </table>
-      </div>
-    </section>
+          </section>
 
-    <!-- ── 6) Conversione ──────────────────────────────────────────────── -->
-    <section class="card card--pad admin-stats__block">
-      <h3 class="admin-stats__h3">Conversione registrati → paganti</h3>
-
-      <div class="admin-stats__figures">
-        <div class="stat">
-          <span class="stat__label">Chi si iscrive, poi paga</span>
-          @if (s.conversione.tasso !== null) {
-            <strong class="stat__value">{{ pct(s.conversione.tasso) }}</strong>
-            <span class="stat__hint">
-              {{ n(s.conversione.paganti) }}
-              {{ s.conversione.paganti === 1 ? 'pagante' : 'paganti' }} su
-              {{ n(s.conversione.registrazioniComplete) }}
-              {{
-                s.conversione.registrazioniComplete === 1
-                  ? 'registrazione completata'
-                  : 'registrazioni completate'
-              }}
-              · dall'inizio, non di questo mese
-            </span>
-          } @else {
-            <strong class="stat__value is-muted">Dati insufficienti</strong>
-            <span class="stat__hint">
-              @if (s.conversione.registrazioniComplete > 0) {
-                {{ n(s.conversione.paganti) }} su
-                {{ n(s.conversione.registrazioniComplete) }}: troppo pochi
-                iscritti perché una percentuale voglia dire qualcosa.
-              } @else {
-                Nessuno si è ancora iscritto: non c'è niente da convertire.
-              }
-            </span>
+          @if (haSenzaCassa()) {
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Attivazioni senza cassa (€0)</h3>
+              </div>
+              <p class="admin-nota">
+                Tabella separata di proposito: questi abbonamenti non hanno portato
+                euro e non vanno sommati all'incasso qui sopra. «Omaggi» sono le
+                attivazioni a zero euro dal flusso normale (un buono al 100%).
+              </p>
+              <div class="admin-table__scroll">
+                <table class="admin-table admin-table--etichettata">
+                  <caption class="visually-hidden">
+                    Attivazioni senza cassa per mese
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-table__c-primo">Mese</th>
+                      <th scope="col" class="is-num">Con punti</th>
+                      <th scope="col" class="is-num">Manuali</th>
+                      <th scope="col" class="is-num">Omaggi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of senzaCassaRows(); track r.mese) {
+                      <tr>
+                        <th scope="row" class="admin-table__c-primo">{{ meseLabel(r.mese) }}</th>
+                        <td class="is-num" data-etichetta="Con punti">
+                          {{ formattaIntero(r.punti) }}
+                        </td>
+                        <td class="is-num" data-etichetta="Manuali">
+                          {{ formattaIntero(r.manuale) }}
+                        </td>
+                        <td class="is-num" data-etichetta="Omaggi">
+                          {{ formattaIntero(r.omaggio) }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
           }
-        </div>
+
+          <ng-container [ngTemplateOutlet]="fiducia" />
+        }
+      }
+
+      <!-- ══ Andamento (dai Conteggi, in centesimi) ═════════════════════════ -->
+      @case ('andamento') {
+        @if (!andamento() && andamentoLoading()) {
+          <ng-container [ngTemplateOutlet]="scheletro" />
+        }
+
+        @if (andamento(); as a) {
+          @if (a.nonCalcolati.length) {
+            <!--
+              ⚠️ Un mese che il server non ha calcolato si DICE, non si stampa
+              con dei buchi: il tetto sui mesi aperti spinge a chiudere i mesi,
+              non a leggere un totale a cui manca qualcosa.
+            -->
+            <p class="admin-avviso admin-avviso--attenzione">
+              <app-icon name="alert-triangle" [size]="16" />
+              <span>
+                <strong>{{ nonCalcolatiEtichette() }}</strong>
+                {{
+                  a.nonCalcolati.length === 1
+                    ? 'non è calcolato: si calcolano'
+                    : 'non sono calcolati: si calcolano'
+                }}
+                al massimo 4 mesi aperti per lettura. Chiudi i mesi vecchi nei
+                Conteggi.
+              </span>
+            </p>
+          }
+
+          <section class="card card--pad admin-blocco">
+            <div class="admin-blocco__testa">
+              <h3 class="admin-blocco__titolo">Entrate, uscite e margine per mese</h3>
+              <a
+                class="admin-blocco__vai"
+                routerLink="/admin/conteggi-mensili"
+                >Apri i conteggi <app-icon name="arrow-right" [size]="16"
+              /></a>
+            </div>
+
+            <!--
+              ⚠️ I totali arrivano dal SERVER, sui SOLI mesi chiusi e congelati
+              della finestra: un mese aperto cambia ancora. La striscia NOMINA
+              l'insieme che somma, e il conteggio è quello del server.
+            -->
+            <p class="admin-totali">
+              <span class="admin-totali__voce">
+                Entrate <strong>{{ formattaCent(a.totaliChiusi.entrateCent) }}</strong>
+              </span>
+              <span class="admin-totali__voce">
+                Uscite <strong>{{ formattaCent(a.totaliChiusi.usciteCent) }}</strong>
+              </span>
+              <span class="admin-totali__voce">
+                Margine
+                <strong [class.is-perdita]="a.totaliChiusi.margineNettoCent < 0">{{
+                  formattaCent(a.totaliChiusi.margineNettoCent)
+                }}</strong>
+              </span>
+              <span class="admin-totali__ambito">
+                {{
+                  a.totaliChiusi.mesi === 1
+                    ? "sull'unico mese chiuso della finestra"
+                    : 'sui ' + a.totaliChiusi.mesi + ' mesi chiusi della finestra'
+                }}
+              </span>
+            </p>
+
+            <div class="admin-kpi-griglia">
+              @if (meseProvvisorio(); as m) {
+                <a
+                  class="card admin-kpi admin-kpi--link"
+                  routerLink="/admin/conteggi-mensili"
+                  [queryParams]="{ mese: m.id, vista: 'riepilogo' }"
+                >
+                  <span class="admin-kpi__etichetta"
+                    >Margine di {{ m.etichetta }}
+                    <span class="admin-stato" data-tono="attesa">Provvisorio</span></span
+                  >
+                  <strong class="admin-kpi__valore" [class.is-giu]="m.margineNettoCent < 0">{{
+                    formattaCent(m.margineNettoCent)
+                  }}</strong>
+                  <span class="admin-kpi__nota"
+                    >Entrate {{ formattaCent(m.entrate.totaleCent) }} · uscite
+                    {{ formattaCent(m.uscite.totaleCent) }} · cambia a ogni cifra
+                    scritta nei Conteggi</span
+                  >
+                </a>
+              }
+              @if (meseCongelato(); as m) {
+                <a
+                  class="card admin-kpi admin-kpi--link"
+                  routerLink="/admin/conteggi-mensili"
+                  [queryParams]="{ mese: m.id, vista: 'riepilogo' }"
+                >
+                  <span class="admin-kpi__etichetta"
+                    >Margine di {{ m.etichetta }}
+                    <span class="admin-stato" data-tono="concluso">Congelato</span></span
+                  >
+                  <strong class="admin-kpi__valore" [class.is-giu]="m.margineNettoCent < 0">{{
+                    formattaCent(m.margineNettoCent)
+                  }}</strong>
+                  <span class="admin-kpi__nota"
+                    >Entrate {{ formattaCent(m.entrate.totaleCent) }} · uscite
+                    {{ formattaCent(m.uscite.totaleCent) }}@if (m.chiusoAt) {
+                      · chiuso il {{ m.chiusoAt | date: 'dd/MM/yyyy' }}
+                    }</span
+                  >
+                </a>
+              }
+            </div>
+
+            <p class="admin-nota admin-table__nota-mobile">
+              Su schermi stretti la colonna «Conguaglio» è nascosta: la trovi nel
+              riepilogo del mese nei Conteggi.
+            </p>
+            <div class="admin-table__scroll">
+              <table class="admin-table admin-table--etichettata">
+                <caption class="visually-hidden">
+                  Entrate, uscite, conguaglio e margine per mese contabile
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="admin-table__c-primo">Mese</th>
+                    <th scope="col">Stato</th>
+                    <th scope="col" class="is-num">Entrate</th>
+                    <th scope="col" class="is-num">Uscite</th>
+                    <th scope="col" class="is-num admin-table__solo-largo">Conguaglio</th>
+                    <th scope="col" class="is-num">Margine</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of andamentoRows(); track r.id) {
+                    <tr>
+                      <th scope="row" class="admin-table__c-primo">
+                        <a
+                          routerLink="/admin/conteggi-mensili"
+                          [queryParams]="{ mese: r.id, vista: 'riepilogo' }"
+                          >{{ meseLabel(r.chiave) }}</a
+                        >
+                      </th>
+                      <!--
+                        ⚠️ `.admin-stato` e non un `.badge`: lo stato del mese
+                        CAMBIA da sé. E si chiava su `provvisorio`, non su
+                        `stato`: un mese chiuso senza snapshot si ricalcola a
+                        ogni lettura, ed è provvisorio a tutti gli effetti.
+                      -->
+                      <td>
+                        <span
+                          class="admin-stato"
+                          [attr.data-tono]="r.provvisorio ? 'attesa' : 'concluso'"
+                          >{{ r.provvisorio ? 'Provvisorio' : 'Chiuso' }}</span
+                        >
+                      </td>
+                      <td class="is-num" data-etichetta="Entrate">
+                        {{ formattaCent(r.entrate.totaleCent) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Uscite">
+                        {{ formattaCent(r.uscite.totaleCent) }}
+                      </td>
+                      <td
+                        class="is-num admin-table__solo-largo"
+                        data-etichetta="Conguaglio"
+                        [class.is-perdita]="r.conguaglioGiocatoriCent < 0"
+                      >
+                        {{ formattaCent(r.conguaglioGiocatoriCent) }}
+                      </td>
+                      <td
+                        class="is-num"
+                        data-etichetta="Margine"
+                        [class.is-perdita]="r.margineNettoCent < 0"
+                      >
+                        <strong>{{ formattaCent(r.margineNettoCent) }}</strong>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="6" class="admin-table__vuota">
+                        Nessun mese contabile: apri il primo nei Conteggi.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <details class="admin-piega st__limiti">
+              <summary class="admin-piega__sum">
+                Cosa questi numeri non dicono
+                <span class="admin-item__meta"
+                  >{{ a.limiti.length }} {{ a.limiti.length === 1 ? 'nota' : 'note' }}</span
+                >
+              </summary>
+              <div class="admin-piega__corpo">
+                <ul class="admin-piega__elenco">
+                  @for (l of a.limiti; track l) {
+                    <li>{{ l }}</li>
+                  }
+                </ul>
+              </div>
+            </details>
+          </section>
+        }
+      }
+
+      <!-- ══ Video (Bunny Stream) ═══════════════════════════════════════════ -->
+      @case ('video') {
+        @if (!video() && videoLoading()) {
+          <ng-container [ngTemplateOutlet]="scheletro" />
+        }
+
+        @if (video(); as v) {
+          @if (!v.disponibile) {
+            <!-- Niente zeri: uno zero qui si leggerebbe "nessuno guarda i video",
+                 che è l'opposto di "non lo sappiamo". -->
+            <p class="admin-avviso admin-avviso--attenzione">
+              <app-icon name="alert-triangle" [size]="16" />
+              <span>
+                <strong>Statistiche video non disponibili.</strong>
+                {{ v.motivo }} Gli altri numeri di questa pagina non passano da
+                Bunny e restano validi.
+              </span>
+            </p>
+          } @else {
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Libreria</h3>
+              </div>
+              <p class="admin-nota">
+                Totali <strong>di sempre</strong> su <em>tutti</em> i video della
+                libreria Bunny, compresi quelli senza lezione: non è la somma della
+                tabella qui sotto, e i due numeri non sono confrontabili. Le
+                riproduzioni nel periodo rispondono a un'altra domanda ancora: la
+                libreria la guardano <em>ancora</em>?
+              </p>
+
+              <div class="admin-kpi-griglia">
+                @if (v.libreria; as lib) {
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">Video in libreria</span>
+                    <strong class="admin-kpi__valore">{{ formattaIntero(lib.video) }}</strong>
+                  </div>
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">Riproduzioni totali</span>
+                    <strong class="admin-kpi__valore">{{
+                      formattaIntero(lib.visualizzazioni)
+                    }}</strong>
+                    <span class="admin-kpi__nota">Dall'inizio, non nella finestra.</span>
+                  </div>
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">Tempo guardato</span>
+                    <strong class="admin-kpi__valore">{{ ore(lib.tempoVisioneOre) }} h</strong>
+                    <span class="admin-kpi__nota">{{ durata(lib.tempoVisioneSecondi) }}</span>
+                  </div>
+                }
+                @if (v.andamento; as an) {
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta"
+                      >Riproduzioni negli ultimi {{ v.periodo.giorni }} giorni</span
+                    >
+                    <strong class="admin-kpi__valore">{{
+                      formattaIntero(an.visualizzazioniPeriodo)
+                    }}</strong>
+                    <span class="admin-kpi__nota"
+                      >{{ giornoLabel(v.periodo.dal) }} → {{ giornoLabel(v.periodo.al) }}</span
+                    >
+                  </div>
+                }
+              </div>
+            </section>
+
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Lezioni più guardate</h3>
+              </div>
+              <p class="admin-nota">
+                Numeri <strong>di sempre</strong> per lezione (la finestra qui sopra
+                non li tocca). "% vista" è il tempo medio diviso la durata del video.
+              </p>
+              <p class="admin-nota admin-table__nota-mobile">
+                Su schermi stretti «Tempo medio» e «Durata» sono nascosti.
+              </p>
+              <div class="admin-table__scroll">
+                <table class="admin-table admin-table--etichettata st__lezioni">
+                  <caption class="visually-hidden">
+                    Lezioni ordinate per riproduzioni
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-table__c-primo">Lezione</th>
+                      <th scope="col" class="is-num">Riproduzioni</th>
+                      <th scope="col" class="is-num admin-table__solo-largo">Tempo medio</th>
+                      <th scope="col" class="is-num">% vista</th>
+                      <th scope="col" class="is-num admin-table__solo-largo">Durata</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of v.lezioni; track r.lezioneId) {
+                      <tr>
+                        <th scope="row" class="admin-table__c-primo">
+                          <span class="admin-table__ident">
+                            <span class="admin-table__ident-riga">
+                              <strong [title]="r.titolo">{{ r.titolo }}</strong>
+                              <!--
+                                ⚠️ `.badge` e non `.admin-stato`: la visibilità
+                                di una lezione è un FATTO, non uno stato che
+                                cambia da sé.
+                              -->
+                              <span class="badge badge--tag">{{
+                                visibilityLabel(r.visibility)
+                              }}</span>
+                            </span>
+                            <span class="admin-table__sub" [title]="subLezione(r)">{{
+                              subLezione(r)
+                            }}</span>
+                          </span>
+                        </th>
+                        <td class="is-num" data-etichetta="Riproduzioni">
+                          {{ formattaIntero(r.visualizzazioni) }}
+                        </td>
+                        <td class="is-num admin-table__solo-largo" data-etichetta="Tempo medio">
+                          {{ durata(r.tempoMedioSecondi) }}
+                        </td>
+                        <td class="is-num" data-etichetta="% vista">
+                          @if (r.percentualeVisione !== null) {
+                            {{ formattaFrazione(r.percentualeVisione) }}
+                          } @else {
+                            <span class="is-vuota" title="Bunny non riporta la durata">—</span>
+                          }
+                        </td>
+                        <td class="is-num admin-table__solo-largo" data-etichetta="Durata">
+                          @if (r.durataSecondi !== null) {
+                            {{ durata(r.durataSecondi) }}
+                          } @else {
+                            <span class="is-vuota">—</span>
+                          }
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="5" class="admin-table__vuota">
+                          Nessuna lezione con un video misurabile.
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            @if (v.saltate.totale > 0) {
+              <details class="admin-piega">
+                <summary class="admin-piega__sum">
+                  Lezioni non misurate
+                  <span class="admin-item__meta">{{ formattaIntero(v.saltate.totale) }}</span>
+                </summary>
+                <div class="admin-piega__corpo">
+                  <p class="admin-nota">
+                    Queste lezioni <strong>non sono nella tabella</strong> qui sopra.
+                    Non vuol dire che non le guardi nessuno: vuol dire che non sono
+                    state misurate.
+                  </p>
+                  @for (g of gruppiSaltate(); track g.chiave) {
+                    <p class="admin-nota"><strong>{{ g.titolo }}</strong> · {{ formattaIntero(g.gruppo.totale) }}</p>
+                    <ul class="admin-history">
+                      @for (l of g.gruppo.esempi; track l.lezioneId) {
+                        <li>
+                          <strong>{{ l.titolo }}</strong>
+                          @if (l.dettaglio) {
+                            — {{ l.dettaglio }}
+                          }
+                        </li>
+                      }
+                      @if (g.gruppo.totale > g.gruppo.esempi.length) {
+                        <li>
+                          … e altre
+                          {{ formattaIntero(g.gruppo.totale - g.gruppo.esempi.length) }}
+                          (elenco troncato)
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
+              </details>
+            }
+
+            @if (v.videoNonAssociati.totale > 0) {
+              <details class="admin-piega">
+                <summary class="admin-piega__sum">
+                  Video senza lezione
+                  <span class="admin-item__meta">{{
+                    formattaIntero(v.videoNonAssociati.totale)
+                  }}</span>
+                </summary>
+                <div class="admin-piega__corpo">
+                  <p class="admin-nota">
+                    Su Bunny ma non collegati a nessuna lezione: registrazioni live
+                    non ancora pubblicate o caricamenti di prova. Sono il motivo per
+                    cui i totali della libreria superano la somma della tabella — e a
+                    volte sono residui da cancellare (occupano storage).
+                  </p>
+                  <ul class="admin-history">
+                    @for (x of v.videoNonAssociati.esempi; track x.guid) {
+                      <li>
+                        <strong>{{ x.titolo || x.guid }}</strong> ·
+                        {{ formattaIntero(x.visualizzazioni) }}
+                        {{ x.visualizzazioni === 1 ? 'riproduzione' : 'riproduzioni' }}
+                      </li>
+                    }
+                    @if (v.videoNonAssociati.totale > v.videoNonAssociati.esempi.length) {
+                      <li>
+                        … e altri
+                        {{
+                          formattaIntero(
+                            v.videoNonAssociati.totale - v.videoNonAssociati.esempi.length
+                          )
+                        }}
+                        (elenco troncato)
+                      </li>
+                    }
+                  </ul>
+                </div>
+              </details>
+            }
+
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Quanto fidarsi dei numeri video</h3>
+              </div>
+              @if (videoQualitaPulita()) {
+                <p class="admin-avviso admin-avviso--ok">
+                  <app-icon name="check" [size]="16" />
+                  <span
+                    >Nessuna anomalia: nessun video puntato da più lezioni, elenco
+                    completo.</span
+                  >
+                </p>
+              } @else {
+                <ul class="admin-avviso-elenco">
+                  @if (v.qualitaDati.guidDuplicati > 0) {
+                    <li>
+                      <strong>{{ formattaIntero(v.qualitaDati.guidDuplicati) }}</strong>
+                      {{
+                        v.qualitaDati.guidDuplicati === 1
+                          ? 'video è puntato'
+                          : 'video sono puntati'
+                      }}
+                      da più lezioni: quelle righe mostrano gli stessi numeri, e una
+                      somma della tabella li conterebbe due volte.
+                    </li>
+                  }
+                  @if (v.qualitaDati.paginaTroncata) {
+                    <li>
+                      La libreria ha più video del massimo che si può leggere in una
+                      volta: <strong>l'elenco è incompleto</strong>.
+                    </li>
+                  }
+                </ul>
+              }
+              <details class="admin-piega st__limiti">
+                <summary class="admin-piega__sum">
+                  Cosa i numeri video non dicono
+                  <span class="admin-item__meta"
+                    >{{ v.limiti.length }} {{ v.limiti.length === 1 ? 'nota' : 'note' }}</span
+                  >
+                </summary>
+                <div class="admin-piega__corpo">
+                  <ul class="admin-piega__elenco">
+                    @for (l of v.limiti; track l) {
+                      <li>{{ l }}</li>
+                    }
+                  </ul>
+                </div>
+              </details>
+            </section>
+          }
+        }
+      }
+    }
+  </div>
+</div>
+
+<!--
+  ══ Frammenti riusati ═══════════════════════════════════════════════════════
+  Dichiarati fuori dal pannello e consumati con `ngTemplateOutlet`: sono la
+  stessa cosa in due schede, e due copie sarebbero due elenchi da tenere
+  allineati.
+-->
+
+<!--
+  Lo scheletro: la stessa altezza delle tessere che sostituisce
+  (`.admin-kpi.is-scheletro` = `.admin-kpi`), così il dato atterra senza
+  spostare niente. ⚠️ Uno scheletro e non uno spinner: lo spinner non riserva
+  lo spazio, e la Panoramica era fra i quattro elementi del sito misurati come
+  «salto di layout».
+-->
+<ng-template #scheletro>
+  <div class="admin-kpi-griglia" role="status" aria-label="Caricamento statistiche">
+    @for (i of SCHELETRI; track i) {
+      <div class="card admin-kpi is-scheletro">
+        <span class="admin-scheletro"></span>
+        <span class="admin-scheletro"></span>
       </div>
+    }
+  </div>
+</ng-template>
 
-      <p class="admin-stats__note">
-        <app-icon name="info" [size]="16" />
-        <span
-          >Il denominatore sono le registrazioni <em>completate</em>: chi ha
-          confermato l'email <em>oppure</em> ha pagato, non i soli confermati —
-          un pagamento prova che la registrazione è andata a buon fine, e
-          correggendo un'email dal pannello Iscritti l'utente torna non
-          confermato. Gli admin sono esclusi da entrambi i numeri.</span
-        >
-      </p>
-    </section>
+<!--
+  «Nuovi, rinnovi e ritorni» per mese, a sette colonne: paganti e non paganti
+  fianco a fianco, MAI sommati. Le etichette `data-etichetta` portano il gruppo
+  («Paganti · nuovi»), perché sotto i 720px le due intestazioni spariscono e
+  «Nuovi 3» da solo non dice di quale metà.
+-->
+<ng-template #tabellaAcquisizione>
+  <div class="admin-table__scroll">
+    <table class="admin-table admin-table--etichettata">
+      <caption class="visually-hidden">
+        Acquisizione per mese, separando paganti e non paganti
+      </caption>
+      <thead>
+        <tr class="st__gruppi">
+          <td class="admin-table__c-primo"></td>
+          <th scope="colgroup" colspan="3">
+            Paganti <span class="st__gruppo-nota">(euro veri)</span>
+          </th>
+          <th scope="colgroup" colspan="3" class="st__split">
+            Non paganti <span class="st__gruppo-nota">(punti/omaggi, €0)</span>
+          </th>
+        </tr>
+        <tr class="st__colonne">
+          <th scope="col" class="admin-table__c-primo">Mese</th>
+          <th scope="col" class="is-num">Nuovi</th>
+          <th scope="col" class="is-num">Rinnovi</th>
+          <th scope="col" class="is-num">Ritorni</th>
+          <th scope="col" class="is-num st__split">Nuovi</th>
+          <th scope="col" class="is-num">Rinnovi</th>
+          <th scope="col" class="is-num">Ritorni</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of acquisizioneRows(); track r.mese) {
+          <tr>
+            <th scope="row" class="admin-table__c-primo">{{ meseLabel(r.mese) }}</th>
+            <td class="is-num" data-etichetta="Paganti · nuovi">
+              {{ formattaIntero(r.paganti.nuovi) }}
+            </td>
+            <td class="is-num" data-etichetta="Paganti · rinnovi">
+              {{ formattaIntero(r.paganti.rinnovi) }}
+            </td>
+            <td class="is-num" data-etichetta="Paganti · ritorni">
+              {{ formattaIntero(r.paganti.ritorni) }}
+            </td>
+            <td class="is-num st__split" data-etichetta="Non paganti · nuovi">
+              {{ formattaIntero(r.nonPaganti.nuovi) }}
+            </td>
+            <td class="is-num" data-etichetta="Non paganti · rinnovi">
+              {{ formattaIntero(r.nonPaganti.rinnovi) }}
+            </td>
+            <td class="is-num" data-etichetta="Non paganti · ritorni">
+              {{ formattaIntero(r.nonPaganti.ritorni) }}
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="7" class="admin-table__vuota">Nessun mese nella finestra.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</ng-template>
 
-    <!-- ── Qualità dei dati ────────────────────────────────────────────── -->
-    <section class="card card--pad admin-stats__block">
-      <h3 class="admin-stats__h3">Quanto fidarsi di questi numeri</h3>
+<!--
+  «Quanto fidarsi»: la qualità dei dati e i limiti, in coda ad Abbonati e
+  Incassi. ⚠️ I `limiti[]` stanno IN PAGINA, verbatim, dentro un `<details>`
+  chiuso — non in un tooltip: il testo c'è (Ctrl+F lo trova), occupa lo schermo
+  solo di chi lo sta cercando.
+-->
+<ng-template #fiducia>
+  @if (stats(); as s) {
+    <section class="card card--pad admin-blocco">
+      <div class="admin-blocco__testa">
+        <h3 class="admin-blocco__titolo">Quanto fidarsi di questi numeri</h3>
+      </div>
 
       @if (qualitaPulita()) {
-        <p class="admin-stats__note is-ok">
+        <p class="admin-avviso admin-avviso--ok">
           <app-icon name="check" [size]="16" />
-          <span>Nessuna anomalia: nessun accesso a vita, nessuno scaduto in
-            attesa del cron, nessun importo stimato.</span
+          <span
+            >Nessuna anomalia: nessun accesso a vita, nessuno scaduto in attesa del
+            cron, nessun importo stimato.</span
           >
         </p>
       } @else {
-        <ul class="admin-stats__quality">
+        <ul class="admin-avviso-elenco">
           @if (s.qualitaDati.senzaScadenzaTotale > 0) {
             <li>
-              <strong>{{ n(s.qualitaDati.senzaScadenzaTotale) }}</strong>
+              <strong>{{ formattaIntero(s.qualitaDati.senzaScadenzaTotale) }}</strong>
               {{
                 s.qualitaDati.senzaScadenzaTotale === 1 ? 'utente ha' : 'utenti hanno'
               }}
               un tier <em>senza scadenza</em>: accesso a vita, invisibile al job
               notturno — non scadrà mai da solo.
-              <span class="admin-stats__quality-detail">
+              <span class="admin-avviso-elenco__dettaglio">
                 @for (r of s.qualitaDati.senzaScadenzaPerRuolo; track r.ruolo) {
-                  {{ roleLabel(r.ruolo) }}: {{ n(r.utenti) }}@if (!$last) {
+                  {{ roleLabel(r.ruolo) }}: {{ formattaIntero(r.utenti) }}@if (!$last) {
                     <span> · </span>
                   }
                 }
@@ -630,7 +1448,7 @@
           }
           @if (s.qualitaDati.daDeclassare > 0) {
             <li>
-              <strong>{{ n(s.qualitaDati.daDeclassare) }}</strong>
+              <strong>{{ formattaIntero(s.qualitaDati.daDeclassare) }}</strong>
               {{
                 s.qualitaDati.daDeclassare === 1
                   ? 'abbonamento è scaduto'
@@ -643,19 +1461,19 @@
           }
           @if (s.qualitaDati.stimati > 0) {
             <li>
-              <strong>{{ n(s.qualitaDati.stimati) }}</strong>
+              <strong>{{ formattaIntero(s.qualitaDati.stimati) }}</strong>
               {{
                 s.qualitaDati.stimati === 1
                   ? 'importo è ricostruito'
                   : 'importi sono ricostruiti'
               }}
-              dal listino della data (nessuno snapshot di prezzo sulla
-              richiesta): l'incasso di quei mesi è una stima.
+              dal listino della data (nessuno snapshot di prezzo sulla richiesta):
+              l'incasso di quei mesi è una stima.
             </li>
           }
           @if (s.qualitaDati.approvedSenzaDecidedAt > 0) {
             <li>
-              <strong>{{ n(s.qualitaDati.approvedSenzaDecidedAt) }}</strong>
+              <strong>{{ formattaIntero(s.qualitaDati.approvedSenzaDecidedAt) }}</strong>
               {{
                 s.qualitaDati.approvedSenzaDecidedAt === 1
                   ? 'richiesta approvata è senza data di decisione'
@@ -665,317 +1483,22 @@
           }
         </ul>
       }
-    </section>
 
-    <!-- ── Limiti: in pagina, non in un tooltip ────────────────────────── -->
-    <section class="card card--pad admin-stats__block">
-      <h3 class="admin-stats__h3">Cosa questi numeri non dicono</h3>
-      <ul class="admin-stats__limits">
-        @for (l of s.limiti; track l) {
-          <li>{{ l }}</li>
-        }
-      </ul>
-    </section>
-  }
-
-  <!-- ── Video (Bunny Stream): caricamento e guasto indipendenti ───────── -->
-  <div class="admin-stats__head admin-stats__head--video">
-    <div class="admin-stats__title">
-      <h2>Video</h2>
-      @if (video(); as v) {
-        <p class="admin-stats__age">
-          Calcolate il {{ v.generatoIl | date: 'dd MMM yyyy' }} alle
-          {{ v.generatoIl | date: 'HH:mm' }} · si aggiornano ogni
-          {{ v.aggiornatoOgniMinuti }}
-          {{ v.aggiornatoOgniMinuti === 1 ? 'minuto' : 'minuti' }}.
-        </p>
-      }
-    </div>
-
-    <div class="row admin-stats__controls">
-      <app-filtro
-        etichetta="Finestra dell'andamento giornaliero"
-        [voci]="vociGiorni"
-        [scelto]="giorniScelto()"
-        [inerte]="videoLoading()"
-        (scegli)="setGiorniDaFiltro($event)"
-      />
-      <button
-        type="button"
-        class="btn btn--ghost btn--sm"
-        [disabled]="videoLoading()"
-        (click)="loadVideo()"
-      >
-        <app-icon name="refresh" [size]="15" />
-        Ricarica
-      </button>
-    </div>
-  </div>
-
-  @if (videoError()) {
-    <div class="form-feedback is-error admin-stats__banner" role="alert">
-      <span>{{ videoError() }}</span>
-      <button type="button" class="btn btn--ghost btn--sm" (click)="loadVideo()">
-        <app-icon name="refresh" [size]="15" />
-        Riprova
-      </button>
-    </div>
-  }
-
-  @if (!video() && videoLoading()) {
-    <div
-      class="spinner"
-      role="status"
-      aria-label="Caricamento statistiche video"
-    ></div>
-  }
-
-  @if (video(); as v) {
-    @if (!v.disponibile) {
-      <!-- Niente zeri: uno zero qui si leggerebbe "nessuno guarda i video",
-           che è l'opposto di "non lo sappiamo". -->
-      <section class="card card--pad admin-stats__block">
-        <p class="admin-stats__note is-warn">
-          <app-icon name="alert-triangle" [size]="16" />
-          <span>
-            <strong>Statistiche video non disponibili.</strong>
-            {{ v.motivo }} Gli altri numeri di questa pagina non passano da
-            Bunny e restano validi.
-          </span>
-        </p>
-      </section>
-    } @else {
-      <section class="card card--pad admin-stats__block">
-        <h3 class="admin-stats__h3">Libreria</h3>
-        <p class="admin-stats__sub">
-          Totali <strong>di sempre</strong> su <em>tutti</em> i video della
-          libreria Bunny, compresi quelli senza lezione: non è la somma della
-          tabella qui sotto, e i due numeri non sono confrontabili.
-        </p>
-
-        @if (v.libreria; as lib) {
-          <div class="admin-stats__figures">
-            <div class="stat">
-              <span class="stat__label">Video in libreria</span>
-              <strong class="stat__value">{{ n(lib.video) }}</strong>
-            </div>
-            <div class="stat">
-              <span class="stat__label">Riproduzioni totali</span>
-              <strong class="stat__value">{{ n(lib.visualizzazioni) }}</strong>
-              <span class="stat__hint">Dall'inizio, non nella finestra.</span>
-            </div>
-            <div class="stat">
-              <span class="stat__label">Tempo guardato</span>
-              <strong class="stat__value">{{ dec(lib.tempoVisioneOre) }} h</strong>
-              <span class="stat__hint">{{ durata(lib.tempoVisioneSecondi) }}</span>
-            </div>
-          </div>
-        }
-
-        @if (v.andamento; as a) {
-          <h4 class="admin-stats__h4">
-            Ultimi {{ v.periodo.giorni }} giorni · {{ giornoLabel(v.periodo.dal) }}
-            → {{ giornoLabel(v.periodo.al) }}
-          </h4>
-          <p class="admin-stats__sub">
-            Un'altra domanda ancora rispetto ai totali di sempre: la libreria la
-            guardano <em>ancora</em>?
-          </p>
-          <div class="admin-stats__figures">
-            <div class="stat">
-              <span class="stat__label">Riproduzioni nel periodo</span>
-              <strong class="stat__value">{{ n(a.visualizzazioniPeriodo) }}</strong>
-            </div>
-          </div>
-          @if (videoSpark(); as pts) {
-            <figure class="admin-stats__spark">
-              <svg
-                viewBox="0 0 100 24"
-                preserveAspectRatio="none"
-                role="img"
-                [attr.aria-label]="
-                  'Riproduzioni giorno per giorno negli ultimi ' +
-                  v.periodo.giorni +
-                  ' giorni'
-                "
-              >
-                <polyline
-                  [attr.points]="pts"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  vector-effect="non-scaling-stroke"
-                />
-              </svg>
-              <figcaption>
-                Riproduzioni giorno per giorno, dal più vecchio al più recente.
-                La base del disegno è lo zero.
-              </figcaption>
-            </figure>
-          }
-        }
-      </section>
-
-      <section class="card card--pad admin-stats__block">
-        <h3 class="admin-stats__h3">Lezioni più guardate</h3>
-        <p class="admin-stats__sub">
-          Numeri <strong>di sempre</strong> per lezione (la finestra qui sopra
-          non li tocca). "% vista" è il tempo medio diviso la durata del video.
-        </p>
-
-        <div class="admin-stats__scroll">
-          <table class="admin-stats__table">
-            <caption class="visually-hidden">
-              Lezioni ordinate per riproduzioni
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Lezione</th>
-                <th scope="col">Accesso</th>
-                <th scope="col" class="is-num">Riproduzioni</th>
-                <th scope="col" class="is-num">Tempo medio</th>
-                <th scope="col" class="is-num">% vista</th>
-                <th scope="col" class="is-num">Durata</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (r of v.lezioni; track r.lezioneId) {
-                <tr>
-                  <th scope="row" class="admin-stats__lesson">
-                    <span class="admin-stats__lesson-title">{{ r.titolo }}</span>
-                    <span class="admin-stats__lesson-meta">
-                      @if (r.stakes) { {{ r.stakes === 'HIGH' ? 'High' : 'Low' }} · }
-                      @if (r.videoDate) { {{ r.videoDate | date: 'dd/MM/yyyy' }} · }
-                      <span [title]="'Video Bunny ' + r.guid">{{ r.guid }}</span>
-                      @if (r.titoloVideo && r.titoloVideo !== r.titolo) {
-                        <span> · su Bunny: "{{ r.titoloVideo }}"</span>
-                      }
-                    </span>
-                  </th>
-                  <td>{{ visibilityLabel(r.visibility) }}</td>
-                  <td class="is-num">{{ n(r.visualizzazioni) }}</td>
-                  <td class="is-num">{{ durata(r.tempoMedioSecondi) }}</td>
-                  <td class="is-num">
-                    @if (r.percentualeVisione !== null) {
-                      {{ pct(r.percentualeVisione) }}
-                    } @else {
-                      <span class="is-muted" title="Bunny non riporta la durata">—</span>
-                    }
-                  </td>
-                  <td class="is-num">
-                    {{ r.durataSecondi !== null ? durata(r.durataSecondi) : '—' }}
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="6" class="is-empty">
-                    Nessuna lezione con un video misurabile.
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+      <details class="admin-piega st__limiti">
+        <summary class="admin-piega__sum">
+          Cosa questi numeri non dicono
+          <span class="admin-item__meta"
+            >{{ s.limiti.length }} {{ s.limiti.length === 1 ? 'nota' : 'note' }}</span
+          >
+        </summary>
+        <div class="admin-piega__corpo">
+          <ul class="admin-piega__elenco">
+            @for (l of s.limiti; track l) {
+              <li>{{ l }}</li>
+            }
+          </ul>
         </div>
-      </section>
-
-      @if (v.saltate.totale > 0) {
-        <section class="card card--pad admin-stats__block">
-          <h3 class="admin-stats__h3">
-            Lezioni non misurate ({{ n(v.saltate.totale) }})
-          </h3>
-          <p class="admin-stats__sub">
-            Queste lezioni <strong>non sono nella tabella</strong> qui sopra. Non
-            vuol dire che non le guardi nessuno: vuol dire che non sono state
-            misurate.
-          </p>
-
-          @for (g of gruppiSaltate(); track g.chiave) {
-            <h4 class="admin-stats__h4">
-              {{ g.titolo }} · {{ n(g.gruppo.totale) }}
-            </h4>
-            <ul class="admin-history">
-              @for (l of g.gruppo.esempi; track l.lezioneId) {
-                <li>
-                  <strong>{{ l.titolo }}</strong>
-                  @if (l.dettaglio) { — {{ l.dettaglio }} }
-                </li>
-              }
-              @if (g.gruppo.totale > g.gruppo.esempi.length) {
-                <li class="is-muted">
-                  … e altre
-                  {{ n(g.gruppo.totale - g.gruppo.esempi.length) }} (elenco
-                  troncato)
-                </li>
-              }
-            </ul>
-          }
-        </section>
-      }
-
-      @if (v.videoNonAssociati.totale > 0) {
-        <section class="card card--pad admin-stats__block">
-          <h3 class="admin-stats__h3">
-            Video senza lezione ({{ n(v.videoNonAssociati.totale) }})
-          </h3>
-          <p class="admin-stats__sub">
-            Su Bunny ma non collegati a nessuna lezione: registrazioni live non
-            ancora pubblicate o caricamenti di prova. Sono il motivo per cui i
-            totali della libreria superano la somma della tabella — e a volte
-            sono residui da cancellare (occupano storage).
-          </p>
-          <ul class="admin-history">
-            @for (x of v.videoNonAssociati.esempi; track x.guid) {
-              <li>
-                <strong>{{ x.titolo || x.guid }}</strong> ·
-                {{ n(x.visualizzazioni) }}
-                {{ x.visualizzazioni === 1 ? 'riproduzione' : 'riproduzioni' }}
-              </li>
-            }
-            @if (v.videoNonAssociati.totale > v.videoNonAssociati.esempi.length) {
-              <li class="is-muted">
-                … e altri
-                {{ n(v.videoNonAssociati.totale - v.videoNonAssociati.esempi.length) }}
-                (elenco troncato)
-              </li>
-            }
-          </ul>
-        </section>
-      }
-
-      @if (!videoQualitaPulita()) {
-        <section class="card card--pad admin-stats__block">
-          <h3 class="admin-stats__h3">Quanto fidarsi dei numeri video</h3>
-          <ul class="admin-stats__quality">
-            @if (v.qualitaDati.guidDuplicati > 0) {
-              <li>
-                <strong>{{ n(v.qualitaDati.guidDuplicati) }}</strong>
-                {{
-                  v.qualitaDati.guidDuplicati === 1
-                    ? 'video è puntato'
-                    : 'video sono puntati'
-                }}
-                da più lezioni: quelle righe mostrano gli stessi numeri, e una
-                somma della tabella li conterebbe due volte.
-              </li>
-            }
-            @if (v.qualitaDati.paginaTroncata) {
-              <li>
-                La libreria ha più video del massimo che si può leggere in una
-                volta: <strong>l'elenco è incompleto</strong>.
-              </li>
-            }
-          </ul>
-        </section>
-      }
-
-      <section class="card card--pad admin-stats__block">
-        <h3 class="admin-stats__h3">Cosa i numeri video non dicono</h3>
-        <ul class="admin-stats__limits">
-          @for (l of v.limiti; track l) {
-            <li>{{ l }}</li>
-          }
-        </ul>
-      </section>
-    }
+      </details>
+    </section>
   }
-</div>
+</ng-template>
