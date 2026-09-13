@@ -71,6 +71,15 @@
   }
 }
 
+// ── Lo scheletro della scheda ───────────────────────────────────────────────
+// Le tessere e, sotto, la sagoma del grafico alla stessa `--grafico-h` che
+// `app-grafico-colonne` dichiara: il dato atterra senza spostare niente.
+.st__scheletro {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 // ── La banda d'errore ───────────────────────────────────────────────────────
 // Messaggio a sinistra, «Riprova» a destra; a capo se non ci sta. ⚠️ 44px
 // dichiarati sul bottone: un `.btn--sm` nudo sta sui 38.

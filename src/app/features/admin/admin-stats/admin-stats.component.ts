@@ -28,15 +28,24 @@ import {
   FiltroComponent,
   VoceFiltro,
 } from '../../../shared/ui/filtro/filtro.component';
+import {
+  ColonnaGrafico,
+  GraficoColonneComponent,
+  SerieGrafico,
+} from '../../../shared/ui/grafico/grafico-colonne.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
 import {
   SchedeComponent,
   VoceScheda,
 } from '../../../shared/ui/schede/schede.component';
 import {
+  formattaBp,
   formattaCent,
+  formattaCentBreve,
   formattaDelta,
   formattaEur,
+  formattaEurBreve,
   formattaFrazione,
   formattaIntero,
 } from '../denaro';
@@ -81,6 +90,41 @@ const GIORNI_RANGES = [7, 30, 90] as const;
 /** Sei tessere di scheletro: quante ne ha la griglia più larga della pagina. */
 const SCHELETRI = [1, 2, 3, 4, 5, 6] as const;
 
+// ── Le serie dei grafici ─────────────────────────────────────────────────────
+// I toni sono alias dei token `--serie-*`: il tema li cambia da solo.
+
+/**
+ * ⚠️ Impilate `[verificate, registrati − verificate]`: l'altezza della pila è
+ * il totale delle registrazioni, e la parte piena quelle confermate. È una
+ * SOTTRAZIONE fra conteggi di persone, non denaro — l'unica aritmetica che il
+ * client fa su una serie.
+ */
+const SERIE_CRESCITA: readonly SerieGrafico[] = [
+  { nome: 'Verificate', tono: 'uno' },
+  { nome: 'Non verificate', tono: 'neutra' },
+];
+const SERIE_ACQUISIZIONE: readonly SerieGrafico[] = [
+  { nome: 'Nuovi', tono: 'uno' },
+  { nome: 'Rinnovi', tono: 'due' },
+  { nome: 'Ritorni', tono: 'tre' },
+];
+/**
+ * ⚠️ AFFIANCATE e non impilate: l'altezza di una pila «incasso + coperti dai
+ * punti» sarebbe una somma che il backend vieta due volte — quegli euro non
+ * sono mai arrivati sul conto.
+ */
+const SERIE_INCASSO: readonly SerieGrafico[] = [
+  { nome: 'Incasso', tono: 'uno' },
+  { nome: 'Coperti dai punti', tono: 'due' },
+];
+const SERIE_ANDAMENTO: readonly SerieGrafico[] = [
+  { nome: 'Entrate', tono: 'uno' },
+  { nome: 'Uscite', tono: 'neutra' },
+];
+const SERIE_VIDEO: readonly SerieGrafico[] = [
+  { nome: 'Riproduzioni', tono: 'uno' },
+];
+
 /** `visibility` arriva come stringa libera dal backend: fallback sul grezzo. */
 const VISIBILITY_LABELS: Record<string, string> = {
   USER: 'Gratis',
@@ -103,6 +147,10 @@ const MESE_LABEL_FMT = new Intl.DateTimeFormat('it-IT', {
 const MESE_LUNGO_FMT = new Intl.DateTimeFormat('it-IT', {
   month: 'long',
   year: 'numeric',
+  timeZone: 'UTC',
+});
+const MESE_BREVE_FMT = new Intl.DateTimeFormat('it-IT', {
+  month: 'short',
   timeZone: 'UTC',
 });
 const GIORNO_LABEL_FMT = new Intl.DateTimeFormat('it-IT', {
@@ -137,11 +185,31 @@ function meseLungo(chiave: string): string {
   return MESE_LUNGO_FMT.format(new Date(Date.UTC(anno, mese - 1, 1)));
 }
 
+/**
+ * 'YYYY-MM' → "set", per l'asse X del grafico: a dodici colonne in 390px lo
+ * slot è largo 30px e «set 2026» non ci sta. Gennaio porta l'anno («gen 2026»)
+ * così su ventiquattro colonne si capisce dove cambia.
+ */
+function meseBreve(chiave: string): string {
+  const [anno, mese] = chiave.split('-').map(Number);
+  if (!anno || !mese) return chiave;
+  return mese === 1
+    ? meseLabel(chiave)
+    : MESE_BREVE_FMT.format(new Date(Date.UTC(anno, mese - 1, 1)));
+}
+
 /** 'YYYY-MM-DD' → "12 lug". */
 function giornoLabel(chiave: string): string {
   const [anno, mese, giorno] = chiave.split('-').map(Number);
   if (!anno || !mese || !giorno) return chiave;
   return GIORNO_LABEL_FMT.format(new Date(Date.UTC(anno, mese - 1, giorno)));
+}
+
+/** 'YYYY-MM-DD' → "12", e "1 lug" sul primo del mese: l'asse X dei giorni. */
+function giornoBreve(chiave: string): string {
+  const giorno = Number(chiave.split('-')[2]);
+  if (!giorno) return chiave;
+  return giorno === 1 ? giornoLabel(chiave) : String(giorno);
 }
 
 /** 'YYYY-MM' del mese in cui cade `iso`, a Roma. */
@@ -230,6 +298,13 @@ interface RigaCrescita {
  * `/admin/stats` manda EURO float (`formattaEur`), i conteggi mandano
  * CENTESIMI interi (`formattaCent`). La scelta sbagliata è un fattore 100.
  * E il client non SOMMA denaro: ogni totale arriva dal server.
+ *
+ * ⚠️ I grafici sono `app-grafico-colonne`, l'unico tipo di grafico del
+ * pannello, e ricevono NUMERI per la geometria e STRINGHE già formattate per
+ * tooltip e readout: l'unità non li attraversa mai. Ogni grafico è
+ * accompagnato dai numeri esatti in una tabella o in una modale — il disegno
+ * riassume, non sostituisce. Le tre modali sono di sola lettura: nessun
+ * toast, nessuna scrittura.
  */
 @Component({
   selector: 'app-admin-stats',
@@ -240,6 +315,8 @@ interface RigaCrescita {
     IconComponent,
     FiltroComponent,
     SchedeComponent,
+    ModalComponent,
+    GraficoColonneComponent,
   ],
   templateUrl: './admin-stats.component.html',
   styleUrls: [
@@ -312,6 +389,20 @@ export class AdminStatsComponent {
   protected readonly formattaFrazione = formattaFrazione;
   protected readonly formattaDelta = formattaDelta;
   protected readonly formattaIntero = formattaIntero;
+  protected readonly formattaBp = formattaBp;
+  /**
+   * I tick degli assi: il grafico non conosce l'unità, gliela presta il
+   * chiamante. ⚠️ `formattaCentBreve` per i centesimi dei Conteggi,
+   * `formattaEurBreve` per gli euro float di `/admin/stats`, `formattaIntero`
+   * per i conteggi di persone e riproduzioni.
+   */
+  protected readonly formattaCentBreve = formattaCentBreve;
+  protected readonly formattaEurBreve = formattaEurBreve;
+  protected readonly SERIE_CRESCITA = SERIE_CRESCITA;
+  protected readonly SERIE_ACQUISIZIONE = SERIE_ACQUISIZIONE;
+  protected readonly SERIE_INCASSO = SERIE_INCASSO;
+  protected readonly SERIE_ANDAMENTO = SERIE_ANDAMENTO;
+  protected readonly SERIE_VIDEO = SERIE_VIDEO;
   protected readonly roleLabel = roleLabel;
   /**
    * ⚠️ Era una mappa di DUE voci (paypal, skrill) con ripiego sullo slug: non
@@ -596,6 +687,35 @@ export class AdminStatsComponent {
     return this.crescitaAsc().find((r) => r.mese === corrente) ?? null;
   });
 
+  /**
+   * Il grafico della crescita: pila `[verificate, non verificate]` con la
+   * linea «Abbonati a fine mese». ⚠️ Il mese corrente è SENZA `linea` (né zero
+   * né altro): il valore non esiste ancora, e la polyline si ferma al mese
+   * chiuso prima — uno zero disegnato lì sarebbe un crollo inventato.
+   */
+  protected readonly colonneCrescita = computed<ColonnaGrafico[]>(() =>
+    this.crescitaAsc().map((r) => {
+      const nonVerificate = Math.max(0, r.registrati - r.verificati);
+      const colonna: ColonnaGrafico = {
+        chiave: r.mese,
+        etichetta: meseBreve(r.mese),
+        etichettaLunga: meseLungo(r.mese),
+        valori: [r.verificati, nonVerificate],
+        testi: [formattaIntero(r.verificati), formattaIntero(nonVerificate)],
+        dettaglio: `${formattaIntero(r.registrati)} ${
+          r.registrati === 1 ? 'registrazione' : 'registrazioni'
+        }`,
+      };
+      return r.abbonatiFine === null
+        ? colonna
+        : {
+            ...colonna,
+            linea: r.abbonatiFine,
+            testoLinea: formattaIntero(r.abbonatiFine),
+          };
+    }),
+  );
+
   // ── Incassi ──────────────────────────────────────────────────────────────
 
   /**
@@ -668,6 +788,32 @@ export class AdminStatsComponent {
     return this.senzaCassaAsc().find((r) => r.mese === mese) ?? null;
   }
 
+  /**
+   * Il grafico dell'incasso: euro float, AFFIANCATI (vedi `SERIE_INCASSO`).
+   * I `testi` passano da `formattaEur`, l'asse da `formattaEurBreve`.
+   */
+  protected readonly colonneIncasso = computed<ColonnaGrafico[]>(() =>
+    this.incassoAsc().map((r) => ({
+      chiave: r.mese,
+      etichetta: meseBreve(r.mese),
+      etichettaLunga: meseLungo(r.mese),
+      valori: [r.incassoEur, r.puntiEur],
+      testi: [formattaEur(r.incassoEur), formattaEur(r.puntiEur)],
+      dettaglio: `${formattaIntero(r.ordini)} ${
+        r.ordini === 1 ? 'abbonamento' : 'abbonamenti'
+      }`,
+    })),
+  );
+
+  /** Il mese di cui è aperta la modale «Incasso di …», o nessuno. */
+  protected readonly meseIncassoAperto = signal<StatsMeseIncasso | null>(null);
+
+  /** Dal grafico: l'indice è quello di `incassoAsc`, ascendente come le colonne. */
+  protected apriIncassoDaGrafico(i: number): void {
+    const r = this.incassoAsc()[i];
+    if (r) this.meseIncassoAperto.set(r);
+  }
+
   // ── Rinnovi ──────────────────────────────────────────────────────────────
 
   /**
@@ -723,6 +869,28 @@ export class AdminStatsComponent {
     [...this.acquisizioneAsc()].reverse(),
   );
 
+  /**
+   * Il grafico dei clienti paganti, impilati per come sono entrati. I non
+   * paganti NON sono nel disegno: sono nella tabella del dettaglio, e le due
+   * metà non vanno mai sommate.
+   */
+  protected readonly colonneAcquisizione = computed<ColonnaGrafico[]>(() =>
+    this.acquisizioneAsc().map((r) => ({
+      chiave: r.mese,
+      etichetta: meseBreve(r.mese),
+      etichettaLunga: meseLungo(r.mese),
+      valori: [r.paganti.nuovi, r.paganti.rinnovi, r.paganti.ritorni],
+      testi: [
+        formattaIntero(r.paganti.nuovi),
+        formattaIntero(r.paganti.rinnovi),
+        formattaIntero(r.paganti.ritorni),
+      ],
+    })),
+  );
+
+  /** La modale «Nuovi, rinnovi e ritorni per mese»: la tabella vive lì. */
+  protected readonly dettaglioAcquisizioneAperto = signal(false);
+
   // ── Qualità dei dati ─────────────────────────────────────────────────────
 
   /** Nessuna anomalia: va detto, altrimenti la sezione sembra rotta. */
@@ -763,12 +931,73 @@ export class AdminStatsComponent {
     (this.andamento()?.nonCalcolati ?? []).map((m) => m.etichetta).join(', '),
   );
 
+  /**
+   * Il grafico dell'andamento: CENTESIMI, entrate e uscite affiancate, la
+   * linea del margine, i mesi aperti tratteggiati.
+   * ⚠️ Il conguaglio coi giocatori va detto nel `dettaglio` quando c'è: senza,
+   * la linea del margine non è la differenza delle due colonne e il disegno
+   * sembra sbagliato di quel termine.
+   */
+  protected readonly colonneAndamento = computed<ColonnaGrafico[]>(() =>
+    (this.andamento()?.mesi ?? []).map((r) => {
+      const c = r.conguaglioGiocatoriCent;
+      const colonna: ColonnaGrafico = {
+        chiave: r.chiave,
+        etichetta: meseBreve(r.chiave),
+        etichettaLunga: r.etichetta,
+        valori: [r.entrate.totaleCent, r.uscite.totaleCent],
+        testi: [formattaCent(r.entrate.totaleCent), formattaCent(r.uscite.totaleCent)],
+        linea: r.margineNettoCent,
+        testoLinea: formattaCent(r.margineNettoCent),
+        provvisorio: r.provvisorio,
+      };
+      return c === 0
+        ? colonna
+        : { ...colonna, dettaglio: `Conguaglio coi giocatori ${this.conSegno(c)}` };
+    }),
+  );
+
+  /** Centesimi col segno stampato: «+348,29 €», «-12,00 €». */
+  protected conSegno(cent: number): string {
+    return cent > 0 ? `+${formattaCent(cent)}` : formattaCent(cent);
+  }
+
+  /** Il mese di cui è aperta la modale «Conto economico di …», o nessuno. */
+  protected readonly meseAndamentoAperto = signal<RigaAndamento | null>(null);
+
+  /** Dal grafico: l'indice è quello di `andamento().mesi`, ascendente come le colonne. */
+  protected apriAndamentoDaGrafico(i: number): void {
+    const r = this.andamento()?.mesi[i];
+    if (r) this.meseAndamentoAperto.set(r);
+  }
+
+  /**
+   * Il sottotitolo della modale del conto economico. ⚠️ Chiavato su
+   * `provvisorio`, mai su `stato` (vedi `meseProvvisorio`).
+   */
+  protected sottotitoloMese(r: RigaAndamento): string {
+    if (r.provvisorio) return 'Provvisorio: cambia a ogni cifra scritta nei Conteggi';
+    const quando = r.chiusoAt ? this.date.transform(r.chiusoAt, 'dd/MM/yyyy') : null;
+    return quando ? `Congelato il ${quando}` : 'Congelato alla chiusura del mese';
+  }
+
   // ── Video ────────────────────────────────────────────────────────────────
 
   protected readonly videoQualitaPulita = computed(() => {
     const q = this.video()?.qualitaDati;
     return !!q && q.guidDuplicati === 0 && !q.paginaTroncata;
   });
+
+  /** Le riproduzioni giorno per giorno: fino a 90 colonne, una serie sola. */
+  protected readonly colonneVideo = computed<ColonnaGrafico[]>(() =>
+    (this.video()?.andamento?.serie ?? []).map((p) => ({
+      chiave: p.giorno,
+      etichetta: giornoBreve(p.giorno),
+      etichettaLunga: giornoLabel(p.giorno),
+      valori: [p.visualizzazioni],
+      testi: [formattaIntero(p.visualizzazioni)],
+    })),
+  );
 
   /** I tre gruppi di lezioni saltate, appiattiti per il template. */
   protected readonly gruppiSaltate = computed(() => {

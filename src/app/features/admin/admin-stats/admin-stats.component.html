@@ -203,6 +203,22 @@
               </div>
             </div>
 
+            <!--
+              ⚠️ Colonne e linea sullo STESSO asse: in questa scuola sono
+              conteggi di persone dello stesso ordine di grandezza
+              (registrazioni 5-20, abbonati 30-50). Se un giorno le colonne
+              collassassero sotto la linea, si spezza in due grafici.
+            -->
+            <app-grafico-colonne
+              titolo="Registrazioni e abbonati per mese"
+              modo="impilate"
+              [colonne]="colonneCrescita()"
+              [serie]="SERIE_CRESCITA"
+              etichettaLinea="Abbonati a fine mese"
+              [formattaAsse]="formattaIntero"
+              nota="La pila è il totale delle registrazioni del mese; la linea si ferma all'ultimo mese chiuso. I numeri esatti sono nella tabella qui sotto."
+            />
+
             <div class="admin-table__scroll">
               <table class="admin-table admin-table--etichettata">
                 <caption class="visually-hidden">
@@ -502,15 +518,37 @@
           <section class="card card--pad admin-blocco">
             <div class="admin-blocco__testa">
               <h3 class="admin-blocco__titolo">Nuovi, rinnovi e ritorni</h3>
+              <!--
+                La tabella a sette colonne vive nella modale: qui il disegno
+                riassume, e «Dettaglio» (o un clic su una colonna) apre i
+                numeri esatti. `aria-haspopup="dialog"`: apre una scheda, non un
+                menu.
+              -->
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                aria-haspopup="dialog"
+                (click)="dettaglioAcquisizioneAperto.set(true)"
+              >
+                Dettaglio
+              </button>
             </div>
             <p class="admin-nota">
               Clienti <strong>distinti</strong> per mese (un utente = una riga,
               classificato dalla sua prima decisione del mese): distingue la crescita
-              dal mantenimento. Le due metà della tabella
-              <strong>non vanno sommate</strong>: un omaggio non è un cliente
+              dal mantenimento. Paganti e non paganti
+              <strong>non vanno sommati</strong>: un omaggio non è un cliente
               acquisito.
             </p>
-            <ng-container [ngTemplateOutlet]="tabellaAcquisizione" />
+            <app-grafico-colonne
+              titolo="Clienti paganti per mese"
+              modo="impilate"
+              [colonne]="colonneAcquisizione()"
+              [serie]="SERIE_ACQUISIZIONE"
+              [formattaAsse]="formattaIntero"
+              nota="Clienti paganti distinti per mese. I non paganti non sono nel disegno: sono nella tabella del dettaglio."
+              (scegli)="dettaglioAcquisizioneAperto.set(true)"
+            />
           </section>
 
           <!-- ── Coorti di rinnovo ────────────────────────────────────────── -->
@@ -710,9 +748,24 @@
               </div>
             </div>
 
-            <p class="admin-nota admin-table__nota-mobile">
-              Su schermi stretti la colonna «Metodi» è nascosta.
-            </p>
+            <!--
+              ⚠️ AFFIANCATE, non impilate: una pila «incasso + coperti dai
+              punti» sarebbe una somma che il backend vieta due volte.
+            -->
+            <app-grafico-colonne
+              titolo="Incasso per mese"
+              [colonne]="colonneIncasso()"
+              [serie]="SERIE_INCASSO"
+              [formattaAsse]="formattaEurBreve"
+              nota="La base è lo zero. I numeri esatti sono nella tabella qui sotto; un clic su una colonna apre il dettaglio del mese."
+              (scegli)="apriIncassoDaGrafico($event)"
+            />
+
+            <!--
+              ⚠️ La colonna «Metodi» NON c'è più: era testo lungo che sfondava
+              la fascia stretta a 1100px. I metodi stanno nella scheda del mese
+              (il `⋮`), dove hanno spazio.
+            -->
             <div class="admin-table__scroll">
               <table class="admin-table admin-table--etichettata">
                 <caption class="visually-hidden">
@@ -727,7 +780,9 @@
                     @if (haStimati()) {
                       <th scope="col" class="is-num">Stimati</th>
                     }
-                    <th scope="col" class="admin-table__solo-largo">Metodi</th>
+                    <th scope="col" class="admin-table__c-ultimo">
+                      <span class="visually-hidden">Azioni</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -756,16 +811,23 @@
                           }
                         </td>
                       }
-                      <td class="admin-table__solo-largo">
-                        @if (r.perMetodo.length) {
-                          @for (m of r.perMetodo; track m.metodo) {
-                            {{ metodoLabel(m.metodo) }} {{ formattaEur(m.incassoEur) }}@if (!$last) {
-                              ·
-                            }
-                          }
-                        } @else {
-                          <span class="is-vuota">—</span>
-                        }
+                      <td class="admin-table__c-ultimo">
+                        <!--
+                          ⚠️ Comando solo-icona, quindi il nome accessibile
+                          NOMINA LA RIGA: `app-icon` porta `aria-hidden`
+                          sull'host, e dodici bottoni con la stessa etichetta
+                          sarebbero dodici bottoni anonimi.
+                        -->
+                        <button
+                          type="button"
+                          class="admin-ico"
+                          aria-haspopup="dialog"
+                          [attr.aria-label]="'Dettaglio dell\'incasso di ' + meseLabel(r.mese)"
+                          title="Dettaglio del mese"
+                          (click)="meseIncassoAperto.set(r)"
+                        >
+                          <app-icon name="more-vertical" [size]="18" />
+                        </button>
                       </td>
                     </tr>
                   } @empty {
@@ -946,9 +1008,23 @@
               }
             </div>
 
+            <!--
+              UN grafico: entrate e uscite affiancate, il margine come linea, i
+              mesi aperti tratteggiati. Centesimi dentro, `formattaCentBreve`
+              sull'asse.
+            -->
+            <app-grafico-colonne
+              titolo="Entrate e uscite per mese"
+              [colonne]="colonneAndamento()"
+              [serie]="SERIE_ANDAMENTO"
+              etichettaLinea="Margine netto"
+              [formattaAsse]="formattaCentBreve"
+              nota="Mesi aperti tratteggiati: si ricalcolano a ogni modifica. I chiusi sono congelati alla chiusura. I numeri esatti sono nella tabella qui sotto; un clic su una colonna apre il conto economico del mese."
+              (scegli)="apriAndamentoDaGrafico($event)"
+            />
+
             <p class="admin-nota admin-table__nota-mobile">
-              Su schermi stretti la colonna «Conguaglio» è nascosta: la trovi nel
-              riepilogo del mese nei Conteggi.
+              Conguaglio e quote stanno nel dettaglio del mese.
             </p>
             <div class="admin-table__scroll">
               <table class="admin-table admin-table--etichettata">
@@ -963,6 +1039,9 @@
                     <th scope="col" class="is-num">Uscite</th>
                     <th scope="col" class="is-num admin-table__solo-largo">Conguaglio</th>
                     <th scope="col" class="is-num">Margine</th>
+                    <th scope="col" class="admin-table__c-ultimo">
+                      <span class="visually-hidden">Azioni</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1008,10 +1087,22 @@
                       >
                         <strong>{{ formattaCent(r.margineNettoCent) }}</strong>
                       </td>
+                      <td class="admin-table__c-ultimo">
+                        <button
+                          type="button"
+                          class="admin-ico"
+                          aria-haspopup="dialog"
+                          [attr.aria-label]="'Conto economico di ' + r.etichetta"
+                          title="Conto economico del mese"
+                          (click)="meseAndamentoAperto.set(r)"
+                        >
+                          <app-icon name="more-vertical" [size]="18" />
+                        </button>
+                      </td>
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="6" class="admin-table__vuota">
+                      <td colspan="7" class="admin-table__vuota">
                         Nessun mese contabile: apri il primo nei Conteggi.
                       </td>
                     </tr>
@@ -1103,6 +1194,18 @@
                   </div>
                 }
               </div>
+
+              @if (v.andamento) {
+                <!-- Fino a 90 colonne: la lente sceglie lo slot più vicino. -->
+                <app-grafico-colonne
+                  titolo="Riproduzioni al giorno"
+                  [colonne]="colonneVideo()"
+                  [serie]="SERIE_VIDEO"
+                  [altezza]="120"
+                  [formattaAsse]="formattaIntero"
+                  nota="Riproduzioni giorno per giorno, dal più vecchio al più recente. La base del disegno è lo zero."
+                />
+              }
             </section>
 
             <section class="card card--pad admin-blocco">
@@ -1331,13 +1434,17 @@
   «salto di layout».
 -->
 <ng-template #scheletro>
-  <div class="admin-kpi-griglia" role="status" aria-label="Caricamento statistiche">
-    @for (i of SCHELETRI; track i) {
-      <div class="card admin-kpi is-scheletro">
-        <span class="admin-scheletro"></span>
-        <span class="admin-scheletro"></span>
-      </div>
-    }
+  <div role="status" aria-label="Caricamento statistiche" class="st__scheletro">
+    <div class="admin-kpi-griglia">
+      @for (i of SCHELETRI; track i) {
+        <div class="card admin-kpi is-scheletro">
+          <span class="admin-scheletro"></span>
+          <span class="admin-scheletro"></span>
+        </div>
+      }
+    </div>
+    <!-- Il grafico: la stessa `--grafico-h` che `app-grafico-colonne` dichiara. -->
+    <span class="admin-scheletro admin-scheletro--grafico"></span>
   </div>
 </ng-template>
 
@@ -1502,3 +1609,219 @@
     </section>
   }
 </ng-template>
+
+<!--
+  ══ Le modali di sola lettura ═══════════════════════════════════════════════
+  Create e distrutte con l'`@if` del chiamante (mai montate nascoste). Non
+  scrivono niente, quindi niente toast: l'unica cosa che può succedere è
+  chiuderle.
+
+  ⚠️ `app-modal` PROIETTA il contenuto e non aggiunge alcuna classe: i 44px dei
+  controlli e il ritmo delle sezioni arrivano solo dal wrapper `.admin-modale`.
+-->
+
+<!-- «Nuovi, rinnovi e ritorni per mese»: la tabella a sette colonne. -->
+@if (dettaglioAcquisizioneAperto()) {
+  <app-modal
+    titolo="Nuovi, rinnovi e ritorni per mese"
+    sottotitolo="Clienti distinti per mese: paganti e non paganti non si sommano"
+    taglia="larga"
+    (chiusa)="dettaglioAcquisizioneAperto.set(false)"
+  >
+    <div class="admin-modale">
+      <ng-container [ngTemplateOutlet]="tabellaAcquisizione" />
+    </div>
+  </app-modal>
+}
+
+<!-- «Incasso di lug 2026»: i metodi, il senza cassa, le stime. -->
+@if (meseIncassoAperto(); as r) {
+  <app-modal
+    [titolo]="'Incasso di ' + meseLabel(r.mese)"
+    [sottotitolo]="meseLungo(r.mese) + ' · solo gli abbonamenti, in euro'"
+    taglia="media"
+    (chiusa)="meseIncassoAperto.set(null)"
+  >
+    <div class="admin-modale">
+      <dl class="admin-modale__anagrafica">
+        <div>
+          <dt>Incasso</dt>
+          <dd>{{ formattaEur(r.incassoEur) }}</dd>
+        </div>
+        <div>
+          <dt>Coperti dai punti</dt>
+          <dd>{{ formattaEur(r.puntiEur) }}</dd>
+        </div>
+        <div>
+          <dt>Abbonamenti</dt>
+          <dd>{{ formattaIntero(r.ordini) }}</dd>
+        </div>
+      </dl>
+
+      <details class="admin-modale__sez" open>
+        <summary class="admin-modale__sum">Per metodo</summary>
+        <div class="admin-modale__corpo">
+          @if (r.perMetodo.length) {
+            <div class="admin-table__scroll">
+              <table class="admin-table admin-table--etichettata">
+                <caption class="visually-hidden">
+                  Incasso del mese per metodo di pagamento
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Metodo</th>
+                    <th scope="col" class="is-num">Incasso</th>
+                    <th scope="col" class="is-num">Abbonamenti</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of r.perMetodo; track m.metodo) {
+                    <tr>
+                      <th scope="row">{{ metodoLabel(m.metodo) }}</th>
+                      <td class="is-num" data-etichetta="Incasso">
+                        {{ formattaEur(m.incassoEur) }}
+                      </td>
+                      <td class="is-num" data-etichetta="Abbonamenti">
+                        {{ formattaIntero(m.ordini) }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="admin-nota">Nessun incasso in questo mese.</p>
+          }
+        </div>
+      </details>
+
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Senza cassa</summary>
+        <div class="admin-modale__corpo">
+          @if (senzaCassaDel(r.mese); as sc) {
+            <dl class="admin-modale__anagrafica">
+              <div>
+                <dt>Con punti</dt>
+                <dd>{{ formattaIntero(sc.punti) }}</dd>
+              </div>
+              <div>
+                <dt>Manuali</dt>
+                <dd>{{ formattaIntero(sc.manuale) }}</dd>
+              </div>
+              <div>
+                <dt>Omaggi</dt>
+                <dd>{{ formattaIntero(sc.omaggio) }}</dd>
+              </div>
+            </dl>
+          }
+          <p class="admin-nota">
+            Attivazioni a zero euro: coi punti, concesse a mano, o un buono al
+            100% (omaggi). Sono volume, non cassa: non entrano nell'incasso qui
+            sopra.
+          </p>
+        </div>
+      </details>
+
+      <details class="admin-modale__sez">
+        <summary class="admin-modale__sum">Stime</summary>
+        <div class="admin-modale__corpo">
+          @if (r.stimati > 0) {
+            <p class="admin-nota">
+              <strong>{{ formattaIntero(r.stimati) }}</strong>
+              {{
+                r.stimati === 1
+                  ? 'importo è ricostruito'
+                  : 'importi sono ricostruiti'
+              }}
+              dal listino in vigore alla data della richiesta (nessuno snapshot di
+              prezzo): l'incasso di questo mese è una stima.
+            </p>
+          } @else {
+            <p class="admin-nota">
+              Nessuna stima: ogni riga di questo mese porta il prezzo pagato.
+            </p>
+          }
+        </div>
+      </details>
+    </div>
+  </app-modal>
+}
+
+<!--
+  «Conto economico di settembre 2026»: il `dl.admin-conto` dei Conteggi, letto
+  dai centesimi della riga. ⚠️ Il sottotitolo si chiava su `provvisorio`.
+-->
+@if (meseAndamentoAperto(); as r) {
+  <app-modal
+    [titolo]="'Conto economico di ' + r.etichetta"
+    [sottotitolo]="sottotitoloMese(r)"
+    taglia="media"
+    (chiusa)="meseAndamentoAperto.set(null)"
+  >
+    <div class="admin-modale">
+      <dl class="admin-conto admin-conto--piena">
+        <dt>Abbonamenti</dt>
+        <dd>{{ formattaCent(r.entrate.abbonamentiCent) }}</dd>
+        <dt>Gadget</dt>
+        <dd>{{ formattaCent(r.entrate.gadgetCent) }}</dd>
+        <dt>Commissioni rakeback</dt>
+        <dd>{{ formattaCent(r.entrate.commissioniRakebackCent) }}</dd>
+        <dt>Staking</dt>
+        <dd>{{ formattaCent(r.entrate.stakingCent) }}</dd>
+        <dt>Altre entrate</dt>
+        <dd>{{ formattaCent(r.entrate.altreCent) }}</dd>
+        <dt class="admin-conto__somma">Totale entrate</dt>
+        <dd class="admin-conto__somma">{{ formattaCent(r.entrate.totaleCent) }}</dd>
+
+        <dt class="admin-conto__spazio">Spese</dt>
+        <dd class="admin-conto__spazio">− {{ formattaCent(r.uscite.speseCent) }}</dd>
+        <!-- Compare solo se c'è: una riga a 0,00 € in un conto economico è rumore. -->
+        @if (r.uscite.perditeStakingCent) {
+          <dt>Capitale di roll perso</dt>
+          <dd>− {{ formattaCent(r.uscite.perditeStakingCent) }}</dd>
+        }
+        <dt class="admin-conto__somma">Totale uscite</dt>
+        <dd class="admin-conto__somma">− {{ formattaCent(r.uscite.totaleCent) }}</dd>
+
+        <!--
+          Il conguaglio coi giocatori: col segno, sempre — anche a zero, perché
+          è una riga del conto economico e non una coda di lavoro.
+        -->
+        <dt class="admin-conto__spazio">Conguaglio coi giocatori</dt>
+        <dd class="admin-conto__spazio" [class.is-perdita]="r.conguaglioGiocatoriCent < 0">
+          {{ conSegno(r.conguaglioGiocatoriCent) }}
+        </dd>
+
+        <dt class="admin-conto__margine">Margine netto della scuola</dt>
+        <dd class="admin-conto__margine" [class.is-perdita]="r.margineNettoCent < 0">
+          {{ formattaCent(r.margineNettoCent) }}
+        </dd>
+        <dt class="admin-conto__didi">
+          Quota titolare ({{ formattaBp(r.ripartizione.quotaTitolareBp) }})
+        </dt>
+        <dd class="admin-conto__didi" [class.is-perdita]="r.ripartizione.titolareCent < 0">
+          {{ formattaCent(r.ripartizione.titolareCent) }}
+        </dd>
+        <dt class="admin-conto__didi">
+          Quota socio ({{ formattaBp(10000 - r.ripartizione.quotaTitolareBp) }})
+        </dt>
+        <dd class="admin-conto__didi" [class.is-perdita]="r.ripartizione.socioCent < 0">
+          {{ formattaCent(r.ripartizione.socioCent) }}
+        </dd>
+
+        <dt class="admin-conto__spazio">Margine personale (fuori dal riparto)</dt>
+        <dd class="admin-conto__spazio" [class.is-perdita]="r.marginePersonaleCent < 0">
+          {{ formattaCent(r.marginePersonaleCent) }}
+        </dd>
+      </dl>
+    </div>
+    <div moPiede>
+      <a
+        class="btn btn--ghost btn--sm"
+        routerLink="/admin/conteggi-mensili"
+        [queryParams]="{ mese: r.id, vista: 'riepilogo' }"
+        >Apri nei Conteggi</a
+      >
+    </div>
+  </app-modal>
+}

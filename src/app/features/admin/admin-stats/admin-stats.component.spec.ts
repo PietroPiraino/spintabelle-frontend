@@ -378,7 +378,13 @@ describe('AdminStatsComponent', () => {
     expect(valoreTessera('Rinnovi')).toBe('Dati insufficienti');
     expect(t!.textContent).toContain('2 su 3');
     expect(t!.textContent).not.toContain('0%');
-    // E nella colonna Tasso della coorte densificata: un trattino, mai «0%».
+    // E nella colonna Tasso della coorte densificata (zero scadenze): un
+    // trattino, mai «0%».
+    const tassi = Array.from(el().querySelectorAll('td[data-etichetta="Tasso"]')).map(
+      (td) => td.textContent?.trim(),
+    );
+    expect(tassi.length).toBeGreaterThan(0);
+    expect(tassi.every((v) => v === '—')).toBeTrue();
     expect(text()).not.toContain('0%');
   });
 
@@ -821,5 +827,216 @@ describe('AdminStatsComponent', () => {
     await stabilizza();
     // nessuna nuova chiamata a /admin/stats/video né a /andamento: la
     // verifica in afterEach fallirebbe se ne fosse partita una non risposta.
+  });
+
+  // ── Grafici e modali ─────────────────────────────────────────────────────
+
+  /** Il `<figure class="grafico">` col titolo dato. */
+  const grafico = (titolo: string): HTMLElement => {
+    const fig = Array.from(el().querySelectorAll<HTMLElement>('figure.grafico')).find(
+      (f) => f.querySelector('.grafico__titolo')?.textContent?.trim() === titolo,
+    );
+    expect(fig).withContext(`grafico «${titolo}»`).toBeTruthy();
+    return fig!;
+  };
+  const lenteDi = (titolo: string) =>
+    grafico(titolo).querySelector<HTMLButtonElement>('button.grafico__lente')!;
+  const readoutDi = (titolo: string) =>
+    grafico(titolo).querySelector<HTMLElement>('[aria-live="polite"]')!.textContent ?? '';
+  const tasto = (key: string) => new KeyboardEvent('keydown', { key, bubbles: true });
+  /** Invio/Spazio sulla lente: il bottone li traduce in un clic con `detail: 0`. */
+  const invio = () => new MouseEvent('click', { bubbles: true, detail: 0 });
+  const dialogo = () => el().querySelector<HTMLDialogElement>('dialog[open]');
+  // ⚠️ Per `aria-label`, mai per classe: è l'unica riga del repo che nomina
+  // l'etichetta del comando di riga, e resta una rete solo se il test la cerca.
+  const comando = (etichetta: string) =>
+    el().querySelector<HTMLButtonElement>(`button[aria-label="${etichetta}"]`);
+
+  it('crescita: il grafico impila verificate e non verificate, e la linea si ferma al mese chiuso', async () => {
+    await flushStats();
+    const fig = grafico('Registrazioni e abbonati per mese');
+    // Tre mesi × due serie: la pila è il totale delle registrazioni.
+    expect(fig.querySelectorAll('rect.grafico__barra').length).toBe(6);
+    // La linea c'è (maggio e giugno hanno una fotografia a fine mese).
+    expect(fig.querySelector('polyline.grafico__linea')).toBeTruthy();
+
+    // Il fuoco sceglie l'ULTIMA colonna, luglio: nel readout ci sono i testi
+    // già formattati, il dettaglio delle registrazioni, e NIENTE linea — il
+    // mese corrente non ha una fotografia a fine mese.
+    lenteDi('Registrazioni e abbonati per mese').dispatchEvent(new Event('focus'));
+    await stabilizza();
+    let detto = readoutDi('Registrazioni e abbonati per mese');
+    expect(detto).toContain('luglio 2026');
+    expect(detto).toContain('Verificate 4');
+    expect(detto).toContain('Non verificate 1');
+    expect(detto).toContain('5 registrazioni');
+    expect(detto).not.toContain('Abbonati a fine mese');
+
+    // ArrowLeft: giugno, che è chiuso e porta la linea.
+    lenteDi('Registrazioni e abbonati per mese').dispatchEvent(tasto('ArrowLeft'));
+    await stabilizza();
+    detto = readoutDi('Registrazioni e abbonati per mese');
+    expect(detto).toContain('giugno 2026');
+    expect(detto).toContain('Verificate 9');
+    expect(detto).toContain('Non verificate 3');
+    expect(detto).toContain('Abbonati a fine mese 35');
+    expect(detto).toContain('12 registrazioni');
+  });
+
+  it('«Dettaglio» di Nuovi, rinnovi e ritorni apre la modale con la tabella a sette colonne', async () => {
+    await flushStats();
+    expect(dialogo()).toBeNull();
+    // La tabella NON è in pagina: vive nella modale.
+    expect(el().querySelector('td[data-etichetta="Paganti · nuovi"]')).toBeNull();
+
+    const bottone = Array.from(
+      el().querySelectorAll<HTMLButtonElement>('button[aria-haspopup="dialog"]'),
+    ).find((b) => b.textContent?.trim() === 'Dettaglio');
+    expect(bottone).toBeTruthy();
+    bottone!.click();
+    await stabilizza();
+
+    const d = dialogo();
+    expect(d).toBeTruthy();
+    expect(d!.textContent).toContain('Nuovi, rinnovi e ritorni per mese');
+    expect(d!.querySelectorAll('table.admin-table--etichettata .st__colonne th').length).toBe(7);
+    expect(
+      d!.querySelector('td[data-etichetta="Paganti · nuovi"]')?.textContent?.trim(),
+    ).toBe('3');
+    expect(
+      d!.querySelector('td[data-etichetta="Non paganti · nuovi"]')?.textContent?.trim(),
+    ).toBe('1');
+  });
+
+  it('un Invio sulla lente di «Clienti paganti per mese» apre la stessa modale', async () => {
+    await flushStats();
+    const lente = lenteDi('Clienti paganti per mese');
+    lente.dispatchEvent(new Event('focus'));
+    lente.dispatchEvent(invio());
+    await stabilizza();
+    expect(dialogo()?.textContent).toContain('Nuovi, rinnovi e ritorni per mese');
+  });
+
+  it('il ⋮ «Dettaglio dell\'incasso di lug 2026» apre la modale coi metodi, e la colonna «Metodi» non è più in tabella', async () => {
+    await flushStats();
+    await apriScheda('Incassi');
+    const th = Array.from(el().querySelectorAll('table.admin-table thead th')).map(
+      (h) => h.textContent?.trim(),
+    );
+    expect(th).not.toContain('Metodi');
+    // Nessuna cella porta il metodo: sta nella scheda del mese.
+    const celle = Array.from(el().querySelectorAll('table.admin-table td')).map(
+      (td) => td.textContent ?? '',
+    );
+    expect(celle.some((t) => t.includes('PayPal'))).toBeFalse();
+
+    const c = comando("Dettaglio dell'incasso di lug 2026");
+    expect(c).toBeTruthy();
+    expect(c!.getAttribute('aria-haspopup')).toBe('dialog');
+    c!.click();
+    await stabilizza();
+
+    const d = dialogo();
+    expect(d).toBeTruthy();
+    expect(d!.textContent).toContain('Incasso di lug 2026');
+    expect(d!.textContent).toContain('PayPal');
+    expect(d!.textContent).toMatch(/500\s?€/);
+    expect(d!.textContent).toContain('Omaggi');
+  });
+
+  it('il grafico dell\'incasso è affiancato, e un Invio sulla colonna apre il mese', async () => {
+    await flushStats();
+    await apriScheda('Incassi');
+    const fig = grafico('Incasso per mese');
+    // Tre mesi × due serie affiancate, mai una pila: quegli euro non si sommano.
+    expect(fig.querySelectorAll('rect.grafico__barra').length).toBe(6);
+
+    const lente = lenteDi('Incasso per mese');
+    lente.dispatchEvent(new Event('focus'));
+    await stabilizza();
+    const detto = readoutDi('Incasso per mese');
+    expect(detto).toContain('luglio 2026');
+    expect(detto).toMatch(/Incasso 500\s?€/);
+    expect(detto).toMatch(/Coperti dai punti 12,50\s?€/);
+    expect(detto).toContain('4 abbonamenti');
+
+    lente.dispatchEvent(invio());
+    await stabilizza();
+    expect(dialogo()?.textContent).toContain('Incasso di lug 2026');
+  });
+
+  it('andamento: il ⋮ «Conto economico di settembre 2026» apre il conto economico', async () => {
+    await flushStats();
+    await apriScheda('Andamento');
+    await flushAndamento();
+
+    const c = comando('Conto economico di settembre 2026');
+    expect(c).toBeTruthy();
+    c!.click();
+    await stabilizza();
+
+    const d = dialogo();
+    expect(d).toBeTruthy();
+    expect(d!.querySelector('dl.admin-conto')).toBeTruthy();
+    expect(d!.textContent).toContain('Margine netto della scuola');
+    expect(d!.textContent).toMatch(/950,50\s?€/);
+    // Il sottotitolo si chiava su `provvisorio`.
+    expect(d!.textContent).toContain('Provvisorio');
+    // Le quote in punti base, il piede che porta ai Conteggi col deep-link.
+    expect(d!.textContent).toMatch(/Quota titolare \(65\s?%\)/);
+    expect(d!.textContent).toMatch(/Quota socio \(35\s?%\)/);
+    const link = d!.querySelector<HTMLAnchorElement>('a.btn');
+    expect(link?.textContent).toContain('Apri nei Conteggi');
+    expect(link?.getAttribute('href')).toContain('mese=m-2026-09');
+    expect(link?.getAttribute('href')).toContain('vista=riepilogo');
+  });
+
+  it('andamento: un mese congelato dice quando, e il conguaglio porta il segno', async () => {
+    await flushStats();
+    await apriScheda('Andamento');
+    await flushAndamento();
+    comando('Conto economico di agosto 2026')!.click();
+    await stabilizza();
+    const d = dialogo()!;
+    expect(d.textContent).toContain('Congelato il 02/09/2026');
+    expect(d.textContent).toMatch(/\+348,29\s?€/);
+  });
+
+  it('andamento: il grafico tratteggia il mese aperto e dice il conguaglio nel readout', async () => {
+    await flushStats();
+    await apriScheda('Andamento');
+    await flushAndamento();
+    const fig = grafico('Entrate e uscite per mese');
+    // Settembre è aperto: le sue due barre sono provvisorie, quelle di agosto no.
+    expect(fig.querySelectorAll('rect.is-provvisoria').length).toBe(2);
+    expect(fig.querySelectorAll('rect.grafico__barra').length).toBe(4);
+    expect(fig.querySelector('polyline.grafico__linea')).toBeTruthy();
+
+    const lente = lenteDi('Entrate e uscite per mese');
+    lente.dispatchEvent(new Event('focus'));
+    await stabilizza();
+    expect(readoutDi('Entrate e uscite per mese')).toContain('settembre 2026, provvisorio');
+    // Agosto: il conguaglio nel dettaglio, o la linea del margine sembra
+    // sbagliata di quel termine.
+    lente.dispatchEvent(tasto('ArrowLeft'));
+    await stabilizza();
+    const detto = readoutDi('Entrate e uscite per mese');
+    expect(detto).toContain('agosto 2026');
+    expect(detto).toMatch(/Margine netto 1\.?298,79\s?€/);
+    expect(detto).toMatch(/Conguaglio coi giocatori \+348,29\s?€/);
+
+    // E Invio apre il conto economico del mese selezionato.
+    lente.dispatchEvent(invio());
+    await stabilizza();
+    expect(dialogo()?.textContent).toContain('Conto economico di agosto 2026');
+  });
+
+  it('video: il grafico giornaliero è alto 120px, dichiarati', async () => {
+    await flushStats();
+    await apriScheda('Video');
+    await flushVideo();
+    const fig = grafico('Riproduzioni al giorno');
+    expect(fig.style.getPropertyValue('--grafico-h')).toBe('120px');
+    expect(fig.querySelectorAll('rect.grafico__barra').length).toBe(2);
   });
 });
