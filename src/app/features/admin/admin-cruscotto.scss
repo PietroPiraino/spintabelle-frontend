@@ -375,7 +375,10 @@ a.admin-kpi--link {
 // tiene continui i filetti dei totali, il tetto di lettura a 34rem, i
 // `tabular-nums` per sommare a occhio — stanno scritte in quel foglio e non si
 // ricopiano: cambiare un valore qui senza cambiarlo là è una deriva che si vede
-// solo mettendo le due schermate una accanto all'altra.
+// solo mettendo le due schermate una accanto all'altra. ⚠️ Vale anche per ciò
+// che NON c'è: nessuna `@media` sul `dt` — i Conteggi non ne hanno una, e la
+// prima stesura ne aveva messa una qui (padding a 1rem sotto i 720px) che
+// rompeva la promessa senza che nessuno la vedesse.
 .admin-conto {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -532,14 +535,10 @@ a.admin-kpi--link {
 
 // ── Schermi stretti ─────────────────────────────────────────────────────────
 // La stessa soglia del ripiegamento della tabella: sotto, la tessera stringe il
-// padding e il conto economico accorcia la distanza fra etichetta e cifra —
-// 2rem su 390px sono il 10% della riga, tolti a un'etichetta che va a capo.
+// padding. ⚠️ Il conto economico NON si tocca qui: la sua ricetta è
+// byte-identica a `dl.cm__conto`, che sotto i 720px non cambia niente.
 @media (max-width: #{s.$bp-tabella-blocchi}) {
   .admin-kpi {
     padding: 0.85rem 1rem;
-  }
-
-  .admin-conto dt {
-    padding-right: 1rem;
   }
 }

@@ -5,6 +5,7 @@ import {
   ElementRef,
   afterRenderEffect,
   computed,
+  effect,
   inject,
   input,
   linkedSignal,
@@ -36,11 +37,24 @@ export interface ColonnaGrafico {
   readonly valori: readonly number[];
   /** `valori` già formattati, uno per serie. */
   readonly testi: readonly string[];
-  /** Il punto della linea sovrapposta (il margine), se `etichettaLinea` è dato. */
+  /**
+   * Il punto della linea sovrapposta (il margine), se `etichettaLinea` è dato.
+   * ⚠️ Una colonna SENZA `linea` non ha un punto: la polyline si ferma (o si
+   * spezza) invece di scendere a zero, e la riga della linea non compare né
+   * nel tooltip né nel readout di quella colonna. È il mese corrente di
+   * «Abbonati a fine mese»: il valore non esiste ancora, e uno zero
+   * disegnato lì sarebbe un crollo inventato.
+   */
   readonly linea?: number;
   readonly testoLinea?: string;
   /** Un mese aperto: colonna tratteggiata e parola «provvisorio» nel tooltip. */
   readonly provvisorio?: boolean;
+  /**
+   * Una riga libera in coda al tooltip e al readout («3 nuovi iscritti, 1
+   * disdetta»): ciò che i numeri della colonna non dicono da soli. Già
+   * formattata dal chiamante, come tutto il resto.
+   */
+  readonly dettaglio?: string;
 }
 
 export interface SerieGrafico {
@@ -72,8 +86,13 @@ interface Geometria {
   readonly zeroY: number;
   readonly ticks: readonly Tick[];
   readonly barre: readonly Barra[];
-  /** Gli `points` della polyline, o '' se nessuna colonna porta un `linea`. */
-  readonly linea: string;
+  /**
+   * Gli `points` di UNA polyline per ogni tratto CONTIGUO di colonne con un
+   * `linea`: vuoto se nessuna ne porta uno. Un buco spezza la linea in due
+   * tratti invece di farle attraversare lo slot vuoto con un segmento
+   * inventato.
+   */
+  readonly linee: readonly string[];
 }
 
 /** Il viewBox è quadrato e si stira: le proporzioni le dà il CSS, non l'SVG. */
@@ -82,6 +101,15 @@ const V = 1000;
 const RIEMPIMENTO = 0.7;
 
 let seq = 0;
+
+/**
+ * L'UNICA definizione di «questa colonna ha un punto sulla linea»: la leggono
+ * il dominio, la geometria, il tooltip e il readout. `undefined`, `null` e
+ * `NaN` valgono tutti «nessun punto», mai zero.
+ */
+function puntoLinea(c: ColonnaGrafico): c is ColonnaGrafico & { linea: number } {
+  return c.linea != null && Number.isFinite(c.linea);
+}
 
 /**
  * Tick «belli» (1/2/5 × 10^k) su un dominio che comprende sempre lo zero.
@@ -156,7 +184,7 @@ function dominio(
         min = Math.min(min, v);
       }
     }
-    if (conLinea && c.linea != null && Number.isFinite(c.linea)) {
+    if (conLinea && puntoLinea(c)) {
       if (!Number.isInteger(c.linea)) interi = false;
       max = Math.max(max, c.linea);
       min = Math.min(min, c.linea);
@@ -186,18 +214,32 @@ function dominio(
  * ⚠️ La «LENTE»: un solo `button.grafico__lente` sopra l'SVG è l'unico stop di
  * Tab del grafico. Il MOUSE che passa muove il tooltip VISIVO sulla colonna
  * più vicina (regge anche 90 colonne da 8px: si sceglie lo slot, non si
- * colpisce la barra); un tap/clic la FISSA — resta finché non si tocca fuori
- * — ed emette `scegli`; frecce/Home/End la muovono da tastiera, Escape
- * azzera, Invio/Spazio (il default del bottone) equivale al clic. Al primo
- * fuoco senza selezione si sceglie l'ULTIMA colonna, la più recente; il fuoco
- * che TORNA dopo un blur ritrova la colonna che era fissata (Escape, che è un
- * congedo esplicito, la dimentica).
+ * colpisce la barra); un clic la FISSA — resta finché non si tocca fuori —
+ * ed emette `scegli`; frecce/Home/End la muovono da tastiera, Escape azzera,
+ * Invio/Spazio (il default del bottone) emette sulla colonna selezionata. Al
+ * primo fuoco senza selezione si sceglie l'ULTIMA colonna, la più recente; il
+ * fuoco che TORNA dopo un blur ritrova la colonna che era fissata (Escape,
+ * che è un congedo esplicito, la dimentica).
  *
- * ⚠️ Col DITO il `pointermove` non sceglie niente: un dito che striscia sul
- * grafico sta scorrendo la pagina (`touch-action: pan-y`), e non esiste un
- * «fuori» che lo azzeri — il dito si alza, e la prima stesura lasciava un
- * tooltip orfano sull'ultima colonna sfiorata. Col dito si sceglie SOLO col
- * tap, che fissa e arma il tocco-fuori.
+ * ⚠️ Col DITO (e con la penna) il `pointermove` non sceglie niente: un dito
+ * che striscia sul grafico sta scorrendo la pagina (`touch-action: pan-y`), e
+ * non esiste un «fuori» che lo azzeri — il dito si alza, e la prima stesura
+ * lasciava un tooltip orfano sull'ultima colonna sfiorata. Col dito si sceglie
+ * SOLO col tap, e **il PRIMO tocco è la lente, il SECONDO il dettaglio**: il
+ * primo tap fissa la colonna e mostra il tooltip (non c'è un hover che l'abbia
+ * già mostrato), il secondo tap sulla STESSA colonna emette `scegli`; un tap
+ * su un'altra colonna la sposta, ed è di nuovo lente. Col mouse il clic fa
+ * le due cose insieme, perché il tooltip c'era già. Il tipo di puntatore si
+ * legge dal `pointerdown` che precede il `click` (il `click` di Firefox
+ * vecchio è un `MouseEvent` senza `pointerType`): senza un `pointerdown`
+ * prima, il clic vale come mouse — il caso predefinito non è mai il dito.
+ *
+ * ⚠️ La selezione SOPRAVVIVE a un cambio di `colonne` solo se l'indice esiste
+ * ancora: se le colonne diventano meno di quante servono, si azzera tutto —
+ * tooltip, readout, `fisso`, il tocco-fuori, la memoria del fuoco. Con la
+ * sola guardia di `colonnaScelta` il tooltip spariva ma `fisso` restava vero:
+ * il mouse non muoveva più niente, il readout parlava di una colonna sparita
+ * e un listener su `document` restava armato per una selezione inesistente.
  *
  * ⚠️ Il readout `aria-live` cambia SOLO da tastiera e da tap, MAI a ogni
  * `pointermove`: uno screen reader che leggesse dodici mesi mentre il mouse
@@ -271,6 +313,13 @@ export class GraficoColonneComponent {
    * partito sulla lente non produce alcun clic).
    */
   private fuocoDaPuntatore = false;
+  /**
+   * Il `pointerType` dell'ultimo `pointerdown` sulla lente, consumato dal
+   * `click` che segue: decide se quel clic è un tap (primo tocco = lente) o un
+   * clic di mouse (fissa ed emette). `'mouse'` per assenza: un clic senza
+   * `pointerdown` prima è un mouse, mai un dito.
+   */
+  private tipoPuntatore = 'mouse';
 
   private readonly svg = viewChild<ElementRef<SVGSVGElement>>('svg');
   private readonly tipEl = viewChild<ElementRef<HTMLElement>>('tip');
@@ -279,6 +328,19 @@ export class GraficoColonneComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.smetti());
+
+    // Le colonne cambiano sotto la selezione: se l'indice non esiste più si
+    // azzera TUTTO (vedi il docblock), e la memoria del fuoco si dimentica una
+    // colonna che non c'è. ⚠️ Le scritture stanno in `untracked`: l'effetto
+    // dipende dalle sole colonne, non dalla selezione che sta azzerando.
+    effect(() => {
+      const n = this.colonne().length;
+      untracked(() => {
+        if (this.ultimoFisso !== null && this.ultimoFisso >= n) this.ultimoFisso = null;
+        const i = this.scelto();
+        if (i !== null && i >= n) this.azzera();
+      });
+    });
 
     // La misura del tooltip: DOPO il render, quando esiste ed è largo quanto il
     // suo contenuto. ⚠️ Non legge `tipX`, o si rieseguirebbe da sola; e misura
@@ -316,6 +378,9 @@ export class GraficoColonneComponent {
 
   protected readonly geometria = computed<Geometria>(() => {
     const cols = this.colonne();
+    // ⚠️ Senza colonne si ferma QUI: `niceTicks(0, 0)` inventerebbe un
+    // dominio 0..1 e due tick su un grafico che dice «nessun dato».
+    if (!cols.length) return { zeroY: V, ticks: [], barre: [], linee: [] };
     const ser = this.serie();
     const impilate = this.modo() === 'impilate';
     const conLinea = this.lineaAttiva() !== null;
@@ -331,7 +396,18 @@ export class GraficoColonneComponent {
     const bordo = (slot - interno) / 2;
     const m = ser.length;
     const barre: Barra[] = [];
-    const punti: string[] = [];
+    // I tratti della linea: il tratto corrente si chiude alla prima colonna
+    // senza punto. ⚠️ Un tratto di UN solo punto lo ripete: una polyline con
+    // un punto solo non disegna niente, mentre «x,y x,y» è un segmento a
+    // lunghezza zero che i cap tondi (`stroke-linecap: round`) rendono come un
+    // punto — e un mese con un valore fra due senza deve restare visibile.
+    const linee: string[] = [];
+    let tratto: string[] = [];
+    const chiudiTratto = () => {
+      if (tratto.length === 1) tratto.push(tratto[0]);
+      if (tratto.length) linee.push(tratto.join(' '));
+      tratto = [];
+    };
 
     cols.forEach((c, i) => {
       let sopra = 0;
@@ -373,16 +449,19 @@ export class GraficoColonneComponent {
           provvisoria: !!c.provvisorio,
         });
       }
-      if (conLinea && c.linea != null && Number.isFinite(c.linea)) {
-        punti.push(`${i * slot + slot / 2},${y(c.linea)}`);
+      if (conLinea && puntoLinea(c)) {
+        tratto.push(`${i * slot + slot / 2},${y(c.linea)}`);
+      } else {
+        chiudiTratto();
       }
     });
+    chiudiTratto();
 
     return {
       zeroY,
       ticks: ticks.map((v) => ({ v, y: y(v), testo: fmt(v) })),
       barre,
-      linea: punti.join(' '),
+      linee,
     };
   });
 
@@ -408,6 +487,18 @@ export class GraficoColonneComponent {
     if (i === null) return null;
     const c = this.colonne()[i];
     return c ? { i, c } : null;
+  });
+
+  /**
+   * La riga della linea nel tooltip: SOLO se la linea è attiva E la colonna
+   * scelta ha un punto. Una colonna senza `linea` non la mostra, né vuota né
+   * a zero — è la stessa regola della polyline, letta dallo stesso predicato.
+   */
+  protected readonly rigaLinea = computed<{ nome: string; testo: string } | null>(() => {
+    const nome = this.lineaAttiva();
+    const sc = this.colonnaScelta();
+    if (!nome || !sc || !puntoLinea(sc.c)) return null;
+    return { nome, testo: sc.c.testoLinea ?? '' };
   });
 
   /**
@@ -463,14 +554,19 @@ export class GraficoColonneComponent {
     if (i !== null) this.scelto.set(i);
   }
 
-  /** Un `pointerdown` sulla lente: il fuoco che segue non deve annunciare. */
-  protected premuta(): void {
+  /**
+   * Un `pointerdown` sulla lente: il fuoco che segue non deve annunciare, e
+   * il `click` che segue saprà se viene da un dito o da un mouse.
+   */
+  protected premuta(e: PointerEvent): void {
     this.fuocoDaPuntatore = true;
+    this.tipoPuntatore = e.pointerType || 'mouse';
   }
 
   /** Il puntatore annullato (uno scorrimento partito qui): nessun clic seguirà. */
   protected annullata(): void {
     this.fuocoDaPuntatore = false;
+    this.tipoPuntatore = 'mouse';
   }
 
   /**
@@ -484,19 +580,39 @@ export class GraficoColonneComponent {
   }
 
   /**
-   * Clic o tap sulla lente (e Invio/Spazio, che il bottone traduce in un clic
-   * con `detail === 0`): fissa la colonna, aggiorna il readout, emette.
+   * Il `click` sulla lente, che arriva in tre modi e vale tre cose diverse:
+   * - Invio/Spazio (il bottone li traduce in un clic con `detail === 0`):
+   *   emette sulla colonna già selezionata, o sull'ultima;
+   * - il MOUSE: fissa la colonna sotto il puntatore ED emette — l'hover ha
+   *   già mostrato il tooltip, il clic è il dettaglio;
+   * - il DITO o la penna: il primo tocco FISSA soltanto (è la lente: mostra il
+   *   tooltip e aggiorna il readout), il secondo tocco sulla STESSA colonna
+   *   emette. Un tocco su un'altra colonna la sposta, ed è di nuovo lente.
    */
   protected tocca(e: MouseEvent): void {
     this.fuocoDaPuntatore = false;
+    const tipo = this.tipoPuntatore;
+    this.tipoPuntatore = 'mouse';
     const n = this.n();
     if (!n) return;
-    const daTastiera = e.detail === 0;
-    const i = daTastiera
-      ? (this.scelto() ?? n - 1)
-      : (this.vicina(e) ?? this.scelto() ?? n - 1);
+    if (e.detail === 0) {
+      const i = this.scelto() ?? n - 1;
+      this.fissa(i);
+      this.scegli.emit(i);
+      return;
+    }
+    const i = this.vicina(e) ?? this.scelto() ?? n - 1;
+    if (tipo === 'mouse') {
+      this.fissa(i);
+      this.scegli.emit(i);
+      return;
+    }
+    // Dito o penna: secondo tocco sulla colonna già fissa = dettaglio.
+    if (this.fisso() && this.scelto() === i) {
+      this.scegli.emit(i);
+      return;
+    }
     this.fissa(i);
-    this.scegli.emit(i);
   }
 
   /**
@@ -585,15 +701,23 @@ export class GraficoColonneComponent {
     return Math.min(n - 1, Math.max(0, Math.floor(frac * n)));
   }
 
-  /** «set 2026, provvisorio: Entrate 1.200,00 €, Uscite 300,00 €, Margine 900,00 €» */
+  /**
+   * «set 2026, provvisorio: Entrate 1.200,00 €, Uscite 300,00 €, Margine
+   * 900,00 €. 3 nuovi iscritti, 1 disdetta» — la linea solo se la colonna ha
+   * un punto (lo stesso predicato della polyline), il `dettaglio` in coda
+   * come frase a sé.
+   */
   private annuncia(i: number): void {
     const c = this.colonne()[i];
     if (!c) return;
     const voci = this.serie().map((s, k) => `${s.nome} ${c.testi[k] ?? ''}`.trim());
     const linea = this.lineaAttiva();
-    if (linea && c.testoLinea != null) voci.push(`${linea} ${c.testoLinea}`);
+    if (linea && puntoLinea(c)) voci.push(`${linea} ${c.testoLinea ?? ''}`.trim());
     const nome = c.etichettaLunga ?? c.etichetta;
-    this.annuncio.set(`${nome}${c.provvisorio ? ', provvisorio' : ''}: ${voci.join(', ')}`);
+    const dettaglio = c.dettaglio ? `. ${c.dettaglio}` : '';
+    this.annuncio.set(
+      `${nome}${c.provvisorio ? ', provvisorio' : ''}: ${voci.join(', ')}${dettaglio}`,
+    );
   }
 
   // ── Chiudere toccando fuori ───────────────────────────────────────────────

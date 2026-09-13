@@ -284,6 +284,18 @@
   background: var(--cream-100);
 }
 
+// Il dettaglio libero della colonna («3 nuovi iscritti, 1 disdetta»): una
+// riga SUA in coda al tooltip (`flex-basis: 100%` la spinge sotto le voci, che
+// altrimenti la prenderebbero accanto come una serie in più), in tono minore.
+// ⚠️ Va a capo: è prosa, non una cifra, e il `nowrap` del tooltip su una frase
+// lunga la farebbe uscire dall'area prima che la misura la stringa.
+.grafico__tip-dettaglio {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  white-space: normal;
+}
+
 // ── L'asse X ────────────────────────────────────────────────────────────────
 // La riga riserva SOLO l'altezza (`1lh` del suo carattere: le voci sono
 // assolute e non la alzerebbero). Ogni etichetta stampata sta al centro del

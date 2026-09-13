@@ -168,9 +168,15 @@ describe('app-grafico-colonne', () => {
   });
 
   it('la colonna provvisoria è tratteggiata e il tooltip lo dice a parole', async () => {
-    const provvisorie = rects().filter((r) => r.classList.contains('is-provvisoria'));
-    // Tutte e sole le barre dell'ultima colonna.
-    expect(provvisorie.length).toBe(SERIE.length);
+    // ⚠️ Tutte e sole le barre dell'ULTIMA colonna: i rect escono in ordine
+    // colonna × serie, quindi le ultime `SERIE.length` sono la sua. Contarle
+    // e basta passerebbe anche con la classe messa sulla colonna sbagliata.
+    const tutte = rects();
+    const ultima = tutte.slice(-SERIE.length);
+    const altre = tutte.slice(0, -SERIE.length);
+    expect(ultima.length).toBe(SERIE.length);
+    for (const r of ultima) expect(r.classList.contains('is-provvisoria')).toBeTrue();
+    for (const r of altre) expect(r.classList.contains('is-provvisoria')).toBeFalse();
     // Al primo fuoco si seleziona l'ULTIMA colonna, che qui è quella provvisoria.
     // ⚠️ L'evento si spedisce a mano: `focus()` in un browser senza fuoco di
     // finestra può non emettere niente, e la spec direbbe il falso.
@@ -304,6 +310,11 @@ describe('app-grafico-colonne', () => {
     await stabilizza();
     expect(rects().length).toBe(0);
     expect(el().querySelector('button.grafico__lente')).toBeNull();
+    // ⚠️ La geometria si ferma PRIMA dei tick: senza colonne `niceTicks(0, 0)`
+    // inventava un dominio 0..1 e stampava due tick su un grafico vuoto.
+    expect(tickTesti()).toEqual([]);
+    expect(el().querySelector('polyline.grafico__linea')).toBeNull();
+    expect(el().querySelector('line.grafico__zero')).toBeNull();
     expect(el().querySelector('figcaption')!.textContent).toContain('Entrate e uscite');
     expect(svg().getAttribute('aria-label')).toContain('nessun dato');
     // Lo spazio resta riservato: la figura ha ancora la sua altezza dichiarata.
@@ -397,12 +408,22 @@ describe('app-grafico-colonne', () => {
     expect(tip()).withContext('nessun tooltip rimasto dopo che il dito si alza').toBeNull();
 
     // Il tap: pointerdown (nessun `focus`, come su iOS) e poi il click.
+    // ⚠️ Il PRIMO tocco è la lente — mostra il tooltip e NON emette: col dito
+    // non c'è un hover che l'abbia già mostrato, e un tap che apre subito il
+    // dettaglio non lascia mai leggere i numeri della colonna.
     lente().dispatchEvent(puntatore('pointerdown', 0.01, { pointerType: 'touch' }));
     lente().dispatchEvent(clic(0.01));
     await stabilizza();
     expect(tip()).toBeTruthy();
     expect(tip()!.textContent).toContain('gennaio 2026');
-    expect(ospite.scelti).toEqual([0]);
+    expect(ospite.scelti).withContext('primo tocco = lente, nessun scegli').toEqual([]);
+
+    // Il SECONDO tocco sulla stessa colonna è l'attivazione: emette una volta.
+    lente().dispatchEvent(puntatore('pointerdown', 0.01, { pointerType: 'touch' }));
+    lente().dispatchEvent(clic(0.01));
+    await stabilizza();
+    expect(ospite.scelti).withContext('secondo tocco = dettaglio').toEqual([0]);
+    expect(tip()!.textContent).toContain('gennaio 2026');
 
     document.body.dispatchEvent(
       new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }),
@@ -509,7 +530,9 @@ describe('app-grafico-colonne', () => {
     lente().dispatchEvent(clic(0.01));
     await stabilizza();
     expect(readout().textContent).toContain('gennaio 2026');
-    expect(ospite.scelti).toEqual([0]);
+    // Un tap col dito: primo tocco = lente, quindi nessun `scegli` (vedi la
+    // spec del dito); qui conta che l'annuncio sia arrivato UNA volta sola.
+    expect(ospite.scelti).toEqual([]);
 
     // E il fuoco da TASTIERA annuncia ancora: la guardia si consuma col clic.
     lente().dispatchEvent(new Event('blur'));
@@ -517,5 +540,196 @@ describe('app-grafico-colonne', () => {
     lente().dispatchEvent(new Event('focus'));
     await stabilizza();
     expect(readout().textContent).toContain('gennaio 2026');
+  });
+
+  // ── Il tap: mouse, dito, penna ────────────────────────────────────────────
+
+  it('⚠️ un tap col dito su una colonna NON ancora fissa la sceglie senza emettere; la penna uguale', async () => {
+    // Col dito: primo tocco = lente (tooltip), nessun `scegli`.
+    lente().dispatchEvent(puntatore('pointerdown', 0.5, { pointerType: 'touch' }));
+    lente().dispatchEvent(clic(0.5));
+    await stabilizza();
+    expect(tip()!.textContent).toContain('febbraio 2026');
+    expect(readout().textContent).toContain('febbraio 2026');
+    expect(ospite.scelti).toEqual([]);
+
+    // Un tocco su un'ALTRA colonna la sposta: è ancora lente, non dettaglio.
+    lente().dispatchEvent(puntatore('pointerdown', 0.01, { pointerType: 'touch' }));
+    lente().dispatchEvent(clic(0.01));
+    await stabilizza();
+    expect(tip()!.textContent).toContain('gennaio 2026');
+    expect(ospite.scelti).toEqual([]);
+
+    // Il secondo tocco sulla STESSA colonna emette, una volta.
+    lente().dispatchEvent(puntatore('pointerdown', 0.01, { pointerType: 'touch' }));
+    lente().dispatchEvent(clic(0.01));
+    await stabilizza();
+    expect(ospite.scelti).toEqual([0]);
+
+    // La penna si comporta come il dito.
+    lente().dispatchEvent(puntatore('pointerdown', 0.99, { pointerType: 'pen' }));
+    lente().dispatchEvent(clic(0.99));
+    await stabilizza();
+    expect(tip()!.textContent).toContain('marzo 2026');
+    expect(ospite.scelti).withContext('penna: primo tocco = lente').toEqual([0]);
+  });
+
+  it("un clic col MOUSE fissa ED emette al primo colpo: l'hover ha già mostrato il tooltip", async () => {
+    lente().dispatchEvent(puntatore('pointerdown', 0.5, { pointerType: 'mouse' }));
+    lente().dispatchEvent(clic(0.5));
+    await stabilizza();
+    expect(ospite.scelti).toEqual([1]);
+    // E un clic senza alcun `pointerdown` prima (un browser che non li manda)
+    // vale come mouse: il caso predefinito non è mai il dito.
+    lente().dispatchEvent(clic(0.01));
+    await stabilizza();
+    expect(ospite.scelti).toEqual([1, 0]);
+  });
+
+  // ── La selezione che sopravvive a un cambio di colonne ───────────────────
+
+  it('⚠️ se le colonne cambiano e la scelta è fuori elenco, la selezione si azzera e la lente torna a funzionare', async () => {
+    ospite.colonne.set(moltiColonne(12));
+    await stabilizza();
+    lente().dispatchEvent(new Event('focus'));
+    lente().dispatchEvent(tasto('ArrowLeft'));
+    await stabilizza();
+    expect(readout().textContent).toContain('colonna 10');
+    expect(tip()!.textContent).toContain('colonna 10');
+
+    // Arrivano 7 colonne: la decima non esiste più.
+    const spia = spyOn(document, 'removeEventListener').and.callThrough();
+    ospite.colonne.set(moltiColonne(7));
+    await stabilizza();
+    expect(tip()).withContext("nessun tooltip su una colonna che non c'è").toBeNull();
+    expect(rects().some((r) => r.classList.contains('is-scelta'))).toBeFalse();
+    expect(readout().textContent!.trim())
+      .withContext('il readout non parla di una colonna sparita')
+      .toBe('');
+    // Il tocco-fuori si è disarmato con la selezione: non resta un listener
+    // su `document` per una selezione che non c'è più.
+    expect(spia).toHaveBeenCalledWith('pointerdown', jasmine.any(Function));
+
+    // E non è rimasta «fissa» su niente: il mouse che passa muove di nuovo il
+    // tooltip. Con `fisso` ancora vero, `daPuntatore` lo ignorava e il grafico
+    // sembrava morto finché non si toccava fuori.
+    lente().dispatchEvent(puntatore('pointermove', 0.01));
+    await stabilizza();
+    expect(tip()!.textContent).toContain('colonna 0');
+    area().dispatchEvent(puntatore('pointerleave', 0.01));
+    await stabilizza();
+    expect(tip()).toBeNull();
+
+    // Il fuoco che torna sceglie l'ultima colonna, come al primo fuoco: la
+    // decima non c'è più e non va ricordata.
+    lente().dispatchEvent(new Event('blur'));
+    lente().dispatchEvent(new Event('focus'));
+    await stabilizza();
+    expect(tip()!.textContent).toContain('colonna 6');
+    expect(readout().textContent).toContain('colonna 6');
+  });
+
+  // ── Una colonna senza linea ───────────────────────────────────────────────
+
+  it('⚠️ una colonna senza `linea` non ha un punto: la polyline si ferma, e la riga della linea sparisce da tooltip e readout', async () => {
+    ospite.colonne.set([
+      COLONNE[0],
+      COLONNE[1],
+      // Il mese corrente senza «a fine mese»: niente linea, niente testo.
+      {
+        chiave: '2026-03',
+        etichetta: 'mar',
+        etichettaLunga: 'marzo 2026',
+        valori: [500, 200],
+        testi: ['500', '200'],
+      },
+    ]);
+    await stabilizza();
+    const linee = [...el().querySelectorAll('polyline.grafico__linea')];
+    expect(linee.length).toBe(1);
+    // Due punti, non tre: la colonna senza valore non scende a zero.
+    expect(linee[0].getAttribute('points')!.trim().split(/\s+/).length).toBe(2);
+
+    // Sull'ultima colonna nessuna riga «Margine netto» — né vuota né a zero.
+    lente().dispatchEvent(new Event('focus'));
+    await stabilizza();
+    expect(tip()!.textContent).toContain('marzo 2026');
+    expect(tip()!.querySelector('.grafico__tip-voce--linea')).toBeNull();
+    expect(tip()!.textContent).not.toContain('Margine netto');
+    expect(readout().textContent).not.toContain('Margine netto');
+
+    // Sulla prima c'è.
+    lente().dispatchEvent(tasto('Home'));
+    await stabilizza();
+    expect(tip()!.querySelector('.grafico__tip-voce--linea')!.textContent).toContain('900,00 €');
+    expect(readout().textContent).toContain('Margine netto 900,00 €');
+  });
+
+  it('un buco in mezzo spezza la linea in due tratti, e un punto isolato resta un punto', async () => {
+    const con = (i: number, linea?: number): ColonnaGrafico => ({
+      chiave: `c${i}`,
+      etichetta: `c${i}`,
+      valori: [10, 0],
+      testi: ['10', '0'],
+      ...(linea === undefined ? {} : { linea, testoLinea: String(linea) }),
+    });
+    ospite.colonne.set([con(0, 5), con(1, 6), con(2), con(3, 7), con(4, 8)]);
+    await stabilizza();
+    let linee = [...el().querySelectorAll('polyline.grafico__linea')];
+    expect(linee.length).toBe(2);
+    for (const l of linee) expect(l.getAttribute('points')!.trim().split(/\s+/).length).toBe(2);
+    // Nessun punto nello slot vuoto (il terzo su cinque: x fra 400 e 600).
+    const xs = linee.flatMap((l) =>
+      l
+        .getAttribute('points')!
+        .trim()
+        .split(/\s+/)
+        .map((p) => Number(p.split(',')[0])),
+    );
+    for (const x of xs) {
+      expect(x < 400 || x > 600)
+        .withContext(`x=${x} nello slot vuoto`)
+        .toBeTrue();
+    }
+
+    // Un punto isolato: la polyline lo ripete, così il tratto a lunghezza zero
+    // con i cap tondi si disegna come un punto invece di sparire.
+    ospite.colonne.set([con(0, 5), con(1), con(2, 7)]);
+    await stabilizza();
+    linee = [...el().querySelectorAll('polyline.grafico__linea')];
+    expect(linee.length).toBe(2);
+    for (const l of linee) {
+      const p = l.getAttribute('points')!.trim().split(/\s+/);
+      expect(p.length).toBe(2);
+      expect(p[0]).toBe(p[1]);
+    }
+  });
+
+  // ── Il dettaglio libero della colonna ─────────────────────────────────────
+
+  it('`dettaglio` è una riga in coda al tooltip e una frase in coda al readout', async () => {
+    ospite.colonne.set([
+      COLONNE[0],
+      COLONNE[1],
+      { ...COLONNE[2], dettaglio: '3 nuovi iscritti, 1 disdetta' },
+    ]);
+    await stabilizza();
+    lente().dispatchEvent(new Event('focus'));
+    await stabilizza();
+    const riga = tip()!.querySelector('.grafico__tip-dettaglio');
+    expect(riga).toBeTruthy();
+    expect(riga!.textContent).toContain('3 nuovi iscritti, 1 disdetta');
+    // In coda: è l'ultimo figlio del tooltip.
+    expect(tip()!.lastElementChild).toBe(riga);
+    // Nel readout viene DOPO i valori, come frase a sé.
+    const detto = readout().textContent!;
+    expect(detto).toContain('3 nuovi iscritti, 1 disdetta');
+    expect(detto.indexOf('Uscite 200,00 €')).toBeLessThan(detto.indexOf('3 nuovi iscritti'));
+
+    // Senza `dettaglio` la riga non c'è: niente contenitore vuoto.
+    lente().dispatchEvent(tasto('Home'));
+    await stabilizza();
+    expect(tip()!.querySelector('.grafico__tip-dettaglio')).toBeNull();
+    expect(readout().textContent).not.toContain('nuovi iscritti');
   });
 });

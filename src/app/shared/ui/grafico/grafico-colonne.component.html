@@ -41,14 +41,17 @@
             />
           }
         }
-        <line
-          class="grafico__zero"
-          x1="0"
-          x2="1000"
-          [attr.y1]="geometria().zeroY"
-          [attr.y2]="geometria().zeroY"
-          vector-effect="non-scaling-stroke"
-        />
+        <!-- Lo zero solo con dei dati: su «nessun dato» non c'è una scala. -->
+        @if (n() > 0) {
+          <line
+            class="grafico__zero"
+            x1="0"
+            x2="1000"
+            [attr.y1]="geometria().zeroY"
+            [attr.y2]="geometria().zeroY"
+            vector-effect="non-scaling-stroke"
+          />
+        }
         @for (b of geometria().barre; track b.chiave) {
           <rect
             class="grafico__barra"
@@ -63,10 +66,14 @@
             vector-effect="non-scaling-stroke"
           />
         }
-        @if (lineaAttiva() && geometria().linea) {
+        <!--
+          Un tratto per ogni sequenza contigua di colonne con un `linea`: una
+          colonna senza punto spezza la linea, non la tira a zero.
+        -->
+        @for (tratto of geometria().linee; track $index) {
           <polyline
             class="grafico__linea"
-            [attr.points]="geometria().linea"
+            [attr.points]="tratto"
             fill="none"
             vector-effect="non-scaling-stroke"
           />
@@ -83,15 +90,21 @@
       <!--
         La lente: l'unico stop di Tab del grafico. Copre l'area intera, e il
         puntatore sceglie lo slot più vicino — non deve colpire la barra.
-        `pointerdown`/`pointercancel` servono solo alla guardia del fuoco
-        (vedi `alFuoco`): un fuoco che arriva dal puntatore non annuncia.
+        `pointerdown` serve alla guardia del fuoco (vedi `alFuoco`: un fuoco
+        che arriva dal puntatore non annuncia) e dice al `click` che segue se
+        è un dito o un mouse — col dito, primo tocco = lente, secondo =
+        dettaglio (vedi `tocca`). `pointercancel` azzera entrambe le cose.
       -->
       <button
         type="button"
         class="grafico__lente"
-        [attr.aria-label]="'Esplora «' + titolo() + '»: frecce per muoversi, Invio per il dettaglio'"
+        [attr.aria-label]="
+          'Esplora «' +
+          titolo() +
+          '»: frecce per muoversi, Invio per il dettaglio; col dito, un tocco sceglie la colonna e un secondo tocco apre il dettaglio'
+        "
         [attr.aria-describedby]="idReadout"
-        (pointerdown)="premuta()"
+        (pointerdown)="premuta($event)"
         (pointercancel)="annullata()"
         (focus)="alFuoco()"
         (blur)="azzera()"
@@ -126,10 +139,15 @@
             >{{ s.nome }} <b>{{ sc.c.testi[k] }}</b></span
           >
         }
-        @if (lineaAttiva(); as l) {
+        <!-- Solo se QUESTA colonna ha un punto: senza, né vuota né a zero. -->
+        @if (rigaLinea(); as l) {
           <span class="grafico__tip-voce grafico__tip-voce--linea"
-            >{{ l }} <b>{{ sc.c.testoLinea }}</b></span
+            >{{ l.nome }} <b>{{ l.testo }}</b></span
           >
+        }
+        <!-- Il dettaglio libero: in coda, su una riga sua. -->
+        @if (sc.c.dettaglio) {
+          <span class="grafico__tip-dettaglio">{{ sc.c.dettaglio }}</span>
         }
       </div>
     }
