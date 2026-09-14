@@ -1,3 +1,4 @@
+import { formattaEur } from '../admin/denaro';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -174,6 +175,15 @@ export class ShopComponent {
 
   protected fmt(n: number): string {
     return new Intl.NumberFormat('it-IT').format(n);
+  }
+
+  /**
+   * Gli euro nella grammatica di tutto il sito (`denaro.ts`): «10 €», «12,50 €».
+   * Fino al 14/09/2026 il Negozio scriveva «€10» e «€12.50» a mano — col punto
+   * — mentre l'area personale e i conteggi scrivevano «230,59 €».
+   */
+  protected eur(n: number | null | undefined): string {
+    return n == null ? '' : formattaEur(n);
   }
 
   protected canAfford(price: number): boolean {
@@ -382,7 +392,7 @@ export class ShopComponent {
   }
 
   protected voucherValueLabel(v: MyVoucher): string {
-    return v.kind === 'PERCENT' ? `${v.value}%` : `€${v.value}`;
+    return v.kind === 'PERCENT' ? `${v.value}%` : formattaEur(v.value);
   }
 
   /** Email destinataria del metodo di pagamento selezionato. */

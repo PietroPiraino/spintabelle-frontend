@@ -124,11 +124,14 @@
       <div class="header__auth">
         @if (!auth.ready()) {
           <!-- sessione in ripristino: evita il lampeggio Accedi → nickname -->
-          <span class="header__auth-wait" aria-hidden="true"></span>
+          <span class="scheletro header__auth-wait" aria-hidden="true"></span>
         } @else if (auth.isAuthenticated()) {
           @if (auth.points() > 0) {
+            <!-- Il gettone porta ai MOVIMENTI (scheda «Acquisti e punti»), non
+                 alla Panoramica: chi lo tocca vuole vedere i punti. -->
             <a
               routerLink="/account"
+              [queryParams]="{ vista: 'acquisti' }"
               (click)="closeMenu()"
               class="header__points"
               title="Punti BFF"

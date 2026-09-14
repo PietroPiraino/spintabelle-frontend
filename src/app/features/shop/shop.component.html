@@ -166,7 +166,7 @@
             >
               <div class="voucher-card__stub" aria-hidden="true">
                 <span class="voucher-card__chip">
-                  <span class="voucher-card__chip-val">€{{ fmt(v.eurValue) }}</span>
+                  <span class="voucher-card__chip-val">{{ eur(v.eurValue) }}</span>
                 </span>
                 <span class="voucher-card__tag">sconto</span>
               </div>
@@ -174,7 +174,7 @@
                 <div class="shop-card__body">
                   <h3>{{ v.label }}</h3>
                   <p class="shop-card__desc">
-                    Sconto di €{{ fmt(v.eurValue) }} su abbonamenti o gadget in euro.
+                    Sconto di {{ eur(v.eurValue) }} su abbonamenti o gadget in euro.
                   </p>
                 </div>
                 <div class="shop-card__foot">
@@ -367,7 +367,7 @@
                     @if (g.pricePoints != null) {
                       <span class="text-muted"> · </span>
                     }
-                    €{{ g.priceEur }}
+                    {{ eur(g.priceEur) }}
                   }
                 </span>
                 @if (g.outOfStock) {
@@ -395,7 +395,7 @@
                         (click)="openOrder(g, 'euro')"
                         [disabled]="actingId() !== null"
                       >
-                        {{ g.pricePoints != null ? 'Euro (€' + g.priceEur + ')' : 'Ordina (€' + g.priceEur + ')' }}
+                        {{ g.pricePoints != null ? 'Euro (' + eur(g.priceEur) + ')' : 'Ordina (' + eur(g.priceEur) + ')' }}
                       </button>
                     }
                   </div>
@@ -572,10 +572,10 @@
                     <!-- Riepilogo prezzo -->
                     <p class="gadget-card__euro-price" style="margin-top: 0.6rem">
                       @if (euroDiscounts()) {
-                        <span class="text-muted" style="text-decoration: line-through">€{{ g.priceEur }}</span>
+                        <span class="text-muted" style="text-decoration: line-through">{{ eur(g.priceEur) }}</span>
                         &nbsp;
                       }
-                      <strong>€{{ effectivePrice(g).toFixed(2) }}</strong>
+                      <strong>{{ eur(effectivePrice(g)) }}</strong>
                     </p>
 
                     <!-- Pagamento off-site (nascosto se omaggio) -->
@@ -592,7 +592,7 @@
                         </div>
                         @if (receiver()) {
                           <p class="text-muted">
-                            Invia <strong>€{{ effectivePrice(g).toFixed(2) }}</strong> a
+                            Invia <strong>{{ eur(effectivePrice(g)) }}</strong> a
                             <strong>{{ receiver() }}</strong>
                             ({{ paymentMethodControl.value === 'skrill' ? 'Skrill' : 'PayPal' }}),
                             poi conferma l'ordine.
@@ -626,7 +626,7 @@
                       {{ actingId() === 'gadget:' + g.id
                           ? 'Invio…'
                           : (orderCurrency() === 'euro'
-                              ? 'Conferma ordine (€' + effectivePrice(g).toFixed(2) + ')'
+                              ? 'Conferma ordine (' + eur(effectivePrice(g)) + ')'
                               : 'Conferma ordine (' + fmt(g.pricePoints ?? 0) + ' pt)') }}
                     </button>
                     <button

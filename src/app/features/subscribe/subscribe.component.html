@@ -50,7 +50,7 @@
           @if (p.pointsSpent) {
             <p class="subscribe__muted">
               Hai usato <strong>{{ fmtPunti(p.pointsSpent) }} punti</strong>
-              @if (p.pointsDiscountEur) { (−€{{ p.pointsDiscountEur }}) }
+              @if (p.pointsDiscountEur) { (−{{ eur(p.pointsDiscountEur) }}) }
               su questa richiesta: sono già stati scalati dal saldo e tornano
               indietro se la richiesta viene rifiutata o ritirata.
             </p>
@@ -114,7 +114,7 @@
                 }
               </div>
               <p class="subscribe__price">
-                <strong>€{{ priceFor(tier) }}</strong> <span>/ mese</span>
+                <strong>{{ eur(priceFor(tier)) }}</strong> <span>/ mese</span>
               </p>
               <ul class="subscribe__features">
                 @for (f of features[tier]; track f) {
@@ -172,13 +172,13 @@
                   @if (pointsToSpend() > 0) {
                     Coprendo tutto coi punti non c'è
                     <strong>niente da pagare</strong>:
-                    <s class="subscribe__strike">€{{ selectedPrice() }}</s>
-                    <strong>€0</strong>.
+                    <s class="subscribe__strike">{{ eur(selectedPrice()) }}</s>
+                    <strong>0 €</strong>.
                   } @else {
                     Con questi buoni l'abbonamento è
                     <strong>in omaggio</strong>:
-                    <s class="subscribe__strike">€{{ selectedPrice() }}</s>
-                    <strong>€0</strong>, nessun pagamento richiesto.
+                    <s class="subscribe__strike">{{ eur(selectedPrice()) }}</s>
+                    <strong>0 €</strong>, nessun pagamento richiesto.
                   }
                 </li>
                 <li>Invia la richiesta: la approveremo a breve.</li>
@@ -187,9 +187,9 @@
                 <li>
                   Invia
                   @if (discounts() || pointsToSpend() > 0) {
-                    <s class="subscribe__strike">€{{ selectedPrice() }}</s>
+                    <s class="subscribe__strike">{{ eur(selectedPrice()) }}</s>
                   }
-                  <strong>€{{ effectivePrice() }}</strong> all'indirizzo qui
+                  <strong>{{ eur(effectivePrice()) }}</strong> all'indirizzo qui
                   sotto via {{ methodLabel() }}.
                 </li>
                 <li>
@@ -230,8 +230,8 @@
                     <p class="subscribe__muted">{{ d.message }}</p>
                   } @else {
                     <p class="subscribe__muted">
-                      <s class="subscribe__strike">€{{ d.listPriceEur }}</s>
-                      <strong>€{{ d.discountedPriceEur }}</strong> —
+                      <s class="subscribe__strike">{{ eur(d.listPriceEur) }}</s>
+                      <strong>{{ eur(d.discountedPriceEur) }}</strong> —
                       {{ d.message }}
                     </p>
                   }
@@ -271,7 +271,7 @@
                       [disabled]="applying()"
                     >
                       Aggiungi {{ v.code }} ·
-                      {{ v.kind === 'PERCENT' ? v.value + '%' : '€' + v.value }}
+                      {{ v.kind === 'PERCENT' ? v.value + '%' : eur(v.value) }}
                     </button>
                   }
                 </div>
@@ -333,7 +333,7 @@
                     <strong>{{ fmtPunti(pointsToSpend()) }}</strong> pt
                     @if (pointsToSpend() > 0) {
                       <span class="subscribe__points-eur">
-                        −€{{ pointsDiscountEur() }}
+                        −{{ eur(pointsDiscountEur()) }}
                       </span>
                     }
                   </output>

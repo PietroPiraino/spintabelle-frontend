@@ -218,8 +218,9 @@ describe('SubscribeComponent', () => {
     // di quattro cifre. È lo stesso formattatore del gettone in header, e va
     // lasciato tale — la coerenza vale più di un separatore in più.
     expect(valore).toContain('2000 pt');
-    expect(valore).toContain('−€2');
-    expect(text(ctx.fixture)).toContain('€123');
+    // Euro nella grammatica di denaro.ts: «−2 €», «123 €» (NBSP prima di «€»)
+    expect(valore).toMatch(/−2\s€/);
+    expect(text(ctx.fixture)).toMatch(/123\s€/);
   });
 
   it('«usa il massimo» si ferma al saldo, non al prezzo', async () => {
@@ -235,7 +236,7 @@ describe('SubscribeComponent', () => {
     });
     button(ctx.fixture, 'Usa il massimo')!.click();
     await ctx.fixture.whenStable();
-    expect(text(ctx.fixture)).toContain('€85');
+    expect(text(ctx.fixture)).toMatch(/85\s€/);
   });
 
   /**

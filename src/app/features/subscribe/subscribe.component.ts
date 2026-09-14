@@ -1,3 +1,4 @@
+import { formattaEur } from '../admin/denaro';
 import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -276,6 +277,11 @@ export class SubscribeComponent {
         error: () => undefined,
       });
     });
+  }
+
+  /** Gli euro nella grammatica di tutto il sito (`denaro.ts`): «125 €». */
+  protected eur(n: number | null | undefined): string {
+    return n == null ? '' : formattaEur(n);
   }
 
   protected priceFor(tier: SubscriptionTier): number | null {
