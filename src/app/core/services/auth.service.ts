@@ -192,11 +192,20 @@ export class AuthService {
     });
   }
 
-  /** Cancellazione account e dati collegati (diritto all'oblio). */
+  /**
+   * Cancellazione account e dati collegati (diritto all'oblio).
+   *
+   * ⚠️ `tap` sul solo SUCCESSO, non `finalize`: quello girava anche
+   * sull'errore, e una cancellazione fallita (rete giù, 5xx a metà cascata)
+   * buttava via la sessione lo stesso — l'utente leggeva «Cancellazione non
+   * riuscita» su una pagina che si era svuotata, e premendo di nuovo la
+   * richiesta partiva senza token. Con status 0 i token sul server sono
+   * intatti: la sessione resta, e si può riprovare.
+   */
   deleteAccount(): Observable<unknown> {
     return this.http
       .delete(`${API}/account`, { withCredentials: true })
-      .pipe(finalize(() => this.clearSession()));
+      .pipe(tap({ next: () => this.clearSession() }));
   }
 
   clearSession(): void {

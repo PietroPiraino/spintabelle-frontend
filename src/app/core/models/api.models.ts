@@ -30,6 +30,58 @@ export interface User {
   points?: number;
   /** preferenza opt-out: avvisi email sulle nuove lezioni (default true) */
   notifyNewLessons?: boolean;
+  /**
+   * Data d'iscrizione (ISO), dal 14/09/2026: «iscritto dal» nell'area
+   * personale. Assente da un backend più vecchio.
+   */
+  createdAt?: string | null;
+}
+
+// ----- Area personale: «Il mio percorso» (GET /account/percorso) -----
+// Ricalcato su backend/src/account/account.service.ts (PercorsoView).
+// Ogni blocco è `null` sul PROPRIO errore lato server: un modulo giù spegne
+// una porta, non la card.
+
+export interface PercorsoLezione {
+  lessonId: string;
+  titolo: string;
+  /** Stima per difetto (A12): in pagina va detta «circa». */
+  percentualeMax: number;
+  ultimaAperturaAt: string;
+}
+
+export interface PercorsoLive {
+  sessionId: string;
+  titolo: string;
+  primoIngresso: string;
+  minuti: number;
+  /** L'uscita non è stata registrata: la durata è una stima. */
+  stimata: boolean;
+}
+
+export interface ConsensoRegistrazione {
+  sessionId: string;
+  titolo: string;
+  version: string;
+  createdAt: string;
+}
+
+export interface Percorso {
+  lezioni: { viste: number; riprendi: PercorsoLezione[] } | null;
+  allenamento: {
+    sessioni: number;
+    risposte: number;
+    /** Frazione 0..1, o null sotto la soglia minima di risposte. */
+    precisione: number | null;
+  } | null;
+  preset: number | null;
+  /** `tetto === -1` = nessun tetto (admin). */
+  mani: { usate: number; tetto: number } | null;
+  live: {
+    seguite: number;
+    ultime: PercorsoLive[];
+    consensi: ConsensoRegistrazione[];
+  } | null;
 }
 
 // ----- Punti BFF -----
@@ -46,6 +98,15 @@ export interface PointsLedgerEntry {
 export interface MyPoints {
   balance: number;
   history: PointsLedgerEntry[];
+  /**
+   * Paginazione (dal 14/09/2026): `total` è ciò che dice se ci sono altri
+   * movimenti oltre a quelli ricevuti. Opzionali perché un backend più vecchio
+   * non li manda — e allora si nasconde «Carica altri», non si inventa un
+   * totale.
+   */
+  page?: number;
+  limit?: number;
+  total?: number;
 }
 
 export interface AdjustPointsResult {
@@ -393,6 +454,21 @@ export interface MySubscription {
   tier: SubscriptionTier | null;
   subscriptionExpiresAt: string | null;
   pendingRequest: SubscriptionRequest | null;
+  /**
+   * L'ultima richiesta RIFIUTATA, solo quando non c'è né un piano né una
+   * pending (dal 14/09/2026): l'unico caso in cui l'area personale, senza
+   * questo campo, taceva il motivo. Vista dedicata lato server: mai
+   * `incassatoDa`, `paymentReference` o l'email.
+   */
+  ultimaRifiutata?: UltimaRichiestaRifiutata | null;
+}
+
+export interface UltimaRichiestaRifiutata {
+  tier: SubscriptionTier;
+  tierLabel: string;
+  createdAt: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
 }
 
 /** Info di pagamento per la pagina /abbonati (email destinatarie + prezzi). */

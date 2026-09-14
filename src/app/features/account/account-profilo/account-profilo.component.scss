@@ -1,0 +1,72 @@
+// Profilo e sicurezza: i tre form, i dati, l'eliminazione.
+
+.pr__nonverificata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.pr__badge-warn {
+  color: var(--copper-600);
+  border-color: color-mix(in srgb, var(--copper-500) 40%, transparent);
+  background: color-mix(in srgb, var(--copper-500) 8%, transparent);
+}
+
+// La spunta delle notifiche: la ricetta di `.aff-choice` (44px dichiarati,
+// `accent-color` a token, input 1.05rem) e non `.field--check .check`, che è
+// pensata per la riga di consenso (flex-start, testo secondario). Prima non
+// aveva UNA regola: ~13px col colore di sistema.
+.pr__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 44px;
+  cursor: pointer;
+  color: var(--text);
+
+  input {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex-shrink: 0;
+    margin: 0;
+    accent-color: var(--copper-500);
+    cursor: pointer;
+  }
+}
+
+.pr__nota-servizio {
+  margin-top: 0.6rem;
+}
+
+.pr__consensi-titolo {
+  margin-top: 1.4rem;
+}
+
+.pr__nota-anon {
+  margin-bottom: 0.9rem;
+}
+
+// La conferma dell'email non è un'azione irreversibile: bordo e fondo in
+// rame, non in danger.
+.conferma--attesa {
+  border-color: color-mix(in srgb, var(--copper-500) 40%, transparent);
+  background: color-mix(in srgb, var(--copper-500) 6%, transparent);
+
+  p {
+    color: var(--text);
+  }
+
+  .nota {
+    margin-bottom: 0.8rem;
+  }
+}
+
+.pr__danger {
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+
+  h2 {
+    color: var(--danger);
+  }
+}

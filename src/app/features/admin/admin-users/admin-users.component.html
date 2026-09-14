@@ -501,7 +501,15 @@
                 formControlName="motivo"
                 maxlength="200"
                 placeholder="es. bonus di benvenuto"
+                aria-describedby="mod-motivo-aiuto"
               />
+              <!-- ⚠️ Il motivo raggiunge lo schermo dell'utente tale e quale
+                   (area personale, movimenti punti): un «bonus per i 2.000
+                   spin di agosto su X» porterebbe nome di sala e volume di
+                   gioco accanto a un premio. -->
+              <span id="mod-motivo-aiuto" class="admin-nota">
+                Lo legge l'utente nel suo account: descrivi l'accredito, non il gioco.
+              </span>
             </div>
             <button
               type="button"

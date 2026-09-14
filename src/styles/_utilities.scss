@@ -721,3 +721,142 @@
 html.is-modale {
   overflow: hidden;
 }
+
+// ── Elenchi a righe: `.lista-righe` / `.riga` ─────────────────────────────────
+//
+// La riga di un elenco applicativo (un buono, un ordine, un movimento, una
+// pratica): testo a sinistra, stato e comando a destra, filetto sotto,
+// 44px dichiarati. Promossa il 14/09/2026 alla TERZA copia: `.aff-list`
+// (/affiliazioni) e `.dc__riga` (/allenamento) restano dove sono, questa la
+// consumano /account e chiunque arrivi dopo.
+//
+// ⚠️ `role="list"` sull'`<ul>`: WebKit toglie il ruolo di lista a una `<ul>`
+// con `list-style: none`, e VoiceOver smette di annunciare «elenco, 3
+// elementi». Il markup lo deve dichiarare, il foglio non può.
+//
+// ⚠️ Sotto i 720px la riga si INCOLONNA sempre — testo sopra, stato e comando
+// sotto — e non «finché ci stanno»: con `flex-wrap` due righe adiacenti
+// prendevano due impaginazioni diverse a seconda della lunghezza del testo
+// (il difetto già pagato su `.admin-table__ident`). La soglia è la stessa già
+// usata da /affiliazioni, una pagina pubblica; non `$bp-tabella-blocchi`, che
+// il suo stesso file dichiara del pannello admin.
+.lista-righe {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.riga {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  min-height: 44px;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.riga__testo {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.riga__sub {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.riga__coda {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .riga {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .riga__coda {
+    justify-self: start;
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+}
+
+// ── Il gettone ────────────────────────────────────────────────────────────────
+//
+// La fiche in CSS puro: nucleo oro + tacche rame sul bordo. Terza copia il
+// 14/09/2026 (`.header__points-coin`, `.aff-coin`, e /account): promossa qui
+// con la ricetta di `.aff-coin` — 8 settori, che a 18-20px si leggono, mentre
+// i 16 della prima stesura diventavano fango — e l'ombra inset a token.
+// ⚠️ Niente `rgba(255, 106, 31, …)` a mano: in Tramonto il rame è rosa.
+.gettone {
+  flex: 0 0 auto;
+  width: var(--gettone-size, 20px);
+  height: var(--gettone-size, 20px);
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, var(--gold) 0 50%, rgba(0, 0, 0, 0) 52%),
+    repeating-conic-gradient(
+      var(--copper-500) 0 45deg,
+      var(--surface-2) 45deg 90deg
+    );
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+// ── Scheletro di caricamento ──────────────────────────────────────────────────
+//
+// Lo shimmer a gradiente, A SOLI TOKEN (la ricetta di `.pf__skeleton`, non
+// quella di `.header__auth-wait`, che porta un arancio scritto a mano). Nasce
+// per /account, dove ogni blocco asincrono riserva la SUA altezza prima che i
+// dati arrivino — è la forma esatta del CLS 0,719 misurato su /lezioni. Le
+// altre copie (`.pf__skeleton`, `.header__auth-wait`, `.vz__skel-bar`, e le
+// due a pulsazione del pannello admin) restano dove sono: ognuna vive su una
+// pagina con misure CLS proprie e si migra misurando, non «per coerenza».
+//
+// ⚠️ Lo scheletro DEVE misurare quanto la riga che sostituisce: un pavimento
+// più basso è uno spostamento, uno più alto è un buco.
+.scheletro {
+  display: block;
+  min-height: 1lh;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    100deg,
+    var(--bg-0) 30%,
+    var(--line) 50%,
+    var(--bg-0) 70%
+  );
+  background-size: 220% 100%;
+  animation: scheletro-shimmer 1.4s linear infinite;
+}
+
+.scheletro--riga {
+  min-height: 44px;
+}
+
+.scheletro--blocco {
+  min-height: 7rem;
+}
+
+@keyframes scheletro-shimmer {
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scheletro {
+    animation: none;
+  }
+}

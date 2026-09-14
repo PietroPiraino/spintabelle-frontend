@@ -2,372 +2,186 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
+  input,
   signal,
+  untracked,
 } from '@angular/core';
-import {
-  AbstractControl,
-  FormBuilder,
-  ReactiveFormsModule,
-  ValidationErrors,
-  Validators,
-} from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
-import {
-  MyAffiliation,
-  MyPoints,
-  MyVoucher,
-  ShopOrder,
-  ProspettoMese,
-} from '../../core/models/api.models';
-import { AffiliationsService } from '../../core/services/affiliations.service';
+import { RouterLink } from '@angular/router';
+import { AccountService } from '../../core/services/account.service';
+import { AdminConteggiService } from '../../core/services/admin-conteggi.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PointsService } from '../../core/services/points.service';
-import { ShopService } from '../../core/services/shop.service';
-import { formattaBp, formattaCent } from '../admin/denaro';
-import { AdminConteggiService } from '../../core/services/admin-conteggi.service';
+import { SubscriptionsService } from '../../core/services/subscriptions.service';
+import {
+  MyPoints,
+  MySubscription,
+  Percorso,
+  ProspettoMese,
+} from '../../core/models/api.models';
 import { apiErrorMessage } from '../../core/utils/http-error';
+import { SchedeComponent, VoceScheda } from '../../shared/ui/schede/schede.component';
+import { AccountAcquistiComponent } from './account-acquisti/account-acquisti.component';
+import { AccountConteggiComponent } from './account-conteggi/account-conteggi.component';
+import { AccountPanoramicaComponent } from './account-panoramica/account-panoramica.component';
+import { AccountProfiloComponent } from './account-profilo/account-profilo.component';
+import {
+  CARICO,
+  Carico,
+  ETICHETTE_VISTE,
+  VistaAccount,
+  errore,
+  isVistaAccount,
+  ok,
+} from './account.types';
 
-function passwordsMatch(group: AbstractControl): ValidationErrors | null {
-  const p = group.get('newPassword')?.value as string;
-  const c = group.get('confirm')?.value as string;
-  return p && c && p !== c ? { passwordsMismatch: true } : null;
-}
-
+/**
+ * «Il mio account» — la SHELL: testata, schede, `?vista=`, e le letture che
+ * servono a più schede insieme. Riscritta il 14/09/2026 (PLAN-account.md):
+ * prima erano undici card uguali in una colonna da 640px.
+ *
+ * ⚠️ Le schede cambiano il GENERE di cosa si vede (Panoramica · Acquisti e
+ * punti · Conteggi · Profilo e sicurezza), quindi `app-schede` e non
+ * `app-filtro`; una rotta sola, con `?vista=` come deep-link (l'email del
+ * prospetto atterra su `?vista=conteggi`). Niente sotto-rotte: ognuna
+ * vorrebbe una riga in `_redirects` E in `_headers`.
+ *
+ * ⚠️ Quattro letture qui, ognuna nel suo `Carico`: l'abbonamento (`/subscriptions/me`,
+ * che la card «Il tuo accesso» legge per la richiesta in attesa — fino al
+ * 14/09/2026 la pagina non la chiamava e diceva «Nessun abbonamento» a chi
+ * aveva già pagato), i punti (pagina 1: la Panoramica mostra il saldo, la
+ * scheda Acquisti i movimenti), il prospetto (decide se la scheda Conteggi
+ * ESISTE) e il percorso (Panoramica e Profilo). Le affiliazioni le carica la
+ * Panoramica da sé, buoni e ordini la scheda Acquisti al primo ingresso.
+ *
+ * ⚠️ Punti e Conteggi restano due schede diverse e nessun `computed` li
+ * incrocia (`gdpr/valutazione-prospetto-e-punti.md` §D/§H).
+ */
 @Component({
   selector: 'app-account',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe],
+  imports: [
+    DatePipe,
+    RouterLink,
+    SchedeComponent,
+    AccountPanoramicaComponent,
+    AccountAcquistiComponent,
+    AccountConteggiComponent,
+    AccountProfiloComponent,
+  ],
   templateUrl: './account.component.html',
-  styleUrl: './account.component.scss',
+  styleUrls: ['./account-shared.scss', './account.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountComponent {
-  private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+  private readonly subscriptionsApi = inject(SubscriptionsService);
   private readonly pointsApi = inject(PointsService);
-  private readonly shop = inject(ShopService);
-  private readonly conteggi = inject(AdminConteggiService);
-  private readonly affiliationsApi = inject(AffiliationsService);
-  private readonly router = inject(Router);
+  private readonly conteggiApi = inject(AdminConteggiService);
+  private readonly accountApi = inject(AccountService);
 
   protected readonly user = this.auth.user;
   protected readonly verified = computed(() => this.user()?.verified ?? false);
 
-  // ── Punti BFF ──
-  protected readonly myPoints = signal<MyPoints | null>(null);
-  protected readonly pointsBalance = computed(
-    () => this.myPoints()?.balance ?? this.user()?.points ?? 0,
-  );
-
-  // ── Negozio: buoni e ordini dell'utente (best-effort) ──
-  protected readonly myVouchers = signal<MyVoucher[]>([]);
   /**
-   * Il prospetto dei propri conteggi.
-   *
-   * ⚠️ Best-effort come buoni e ordini: quasi nessun utente ha un accordo di
-   * rakeback, quindi la lista vuota è il caso NORMALE e un errore in rosso
-   * sulla pagina di tutti sarebbe rumore. La sezione non compare affatto
-   * quando non c'è nulla — vedi il template.
+   * Il `?vista=` del deep-link. ⚠️ `isVistaAccount` e non un cast: arriva
+   * dall'URL come stringa qualunque. `withComponentInputBinding()` è già
+   * attivo in `app.config.ts`.
    */
-  protected readonly prospetto = signal<ProspettoMese[]>([]);
-  protected readonly myOrders = signal<ShopOrder[]>([]);
-
-  // ── Affiliazioni (tracciamento poker room) ──
-  // ⚠️ Qui NON si assorbe l'errore in una lista vuota come nelle card qui sopra:
-  // sui buoni "lista vuota" significa "non ne hai", su queste righe significa
-  // "non sei tracciato da nessuna parte" — che con l'API giù è una bugia, e
-  // proprio sul dato per cui l'utente è passato di qui. Segnale d'errore
-  // dedicato e riga d'errore vera. `null` = ancora in caricamento.
-  protected readonly myAffiliations = signal<MyAffiliation[] | null>(null);
-  protected readonly affiliationsError = signal<string | null>(null);
-
-  /** Sale in cui il tracciamento è confermato. */
-  protected readonly affiliationsTracked = computed(() =>
-    (this.myAffiliations() ?? []).filter((a) => a.status === 'APPROVATO'),
-  );
-  /** Pratiche ancora in volo: link ricevuto o dati in verifica. */
-  protected readonly affiliationsInProgress = computed(() =>
-    (this.myAffiliations() ?? []).filter(
-      (a) => a.status === 'RICHIESTO' || a.status === 'IN_VERIFICA',
-    ),
-  );
-
-  // ── Abbonamento (dal ruolo/scadenza già in auth.user) ──
-  protected readonly isAdmin = this.auth.isAdmin;
-  /** Etichetta del piano se l'utente è abbonato, altrimenti null. */
-  protected readonly planLabel = computed(() => {
-    const role = this.user()?.role;
-    if (role === 'SQUALO') return 'Squalo';
-    if (role === 'PESCE_ROSSO') return 'Pesce Rosso';
-    return null;
+  readonly vistaIniziale = input<string | undefined>(undefined, {
+    alias: 'vista',
   });
+  protected readonly vista = signal<VistaAccount>('panoramica');
+  protected readonly titoloScheda = computed(() => ETICHETTE_VISTE[this.vista()]);
+
+  // ── Le quattro letture della shell ─────────────────────────────────────────
+  protected readonly sub = signal<Carico<MySubscription>>(CARICO);
+  protected readonly punti = signal<Carico<MyPoints>>(CARICO);
+  protected readonly prospetto = signal<Carico<ProspettoMese[]>>(CARICO);
+  protected readonly percorso = signal<Carico<Percorso>>(CARICO);
+
   /**
-   * Accesso pieno che non passa da un abbonamento: staking e coach.
-   *
-   * ⚠️ È l'unica superficie rivolta all'UTENTE toccata dai due ruoli nuovi, e
-   * senza questo ramo la pagina direbbe loro «Non hai un abbonamento attivo» +
-   * «Scopri gli abbonamenti» — a due persone che hanno accesso a tutto e a cui
-   * il server rifiuta l'acquisto con un 409. Niente pulsante: non c'è nulla da
-   * comprare e nulla da rinnovare.
+   * La scheda Conteggi esiste solo con un prospetto — o mentre il prospetto è
+   * in carico e il deep-link la chiede: chi arriva dall'email deve atterrare
+   * su uno scheletro, non sulla Panoramica.
    */
-  protected readonly accessoSenzaAbbonamento = computed(() => {
-    const role = this.user()?.role;
-    if (role === 'STAKATO')
-      return 'Hai accesso completo a tutti i contenuti: sei in staking con la scuola.';
-    if (role === 'COACH') return 'Hai accesso completo come coach.';
-    return null;
+  protected readonly haConteggi = computed(() => {
+    const p = this.prospetto();
+    return p.stato === 'ok' && p.dati.length > 0;
   });
-  protected readonly subExpires = computed(
-    () => this.user()?.subscriptionExpiresAt ?? null,
-  );
 
-  // ── Profilo (email + nickname) ──
-  protected readonly profileForm = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
-    nickname: [
-      '',
-      [
-        Validators.required,
-        Validators.minLength(3),
-        Validators.maxLength(24),
-        Validators.pattern(/^[a-zA-Z0-9_.-]+$/),
-      ],
-    ],
+  protected readonly voci = computed<readonly VoceScheda<VistaAccount>[]>(() => {
+    const conteggiVisibile =
+      this.haConteggi() ||
+      (this.prospetto().stato === 'carico' && this.vista() === 'conteggi');
+    const tutte: VistaAccount[] = ['panoramica', 'acquisti', 'conteggi', 'profilo'];
+    return tutte
+      .filter((v) => v !== 'conteggi' || conteggiVisibile)
+      .map((v) => ({ valore: v, etichetta: ETICHETTE_VISTE[v] }));
   });
-  /**
-   * Euro e percentuali: le STESSE funzioni del pannello admin.
-   *
-   * ⚠️ Non si riscrivono qui: l'aritmetica del denaro vive in un punto per
-   * lato (`features/admin/denaro.ts`), e una seconda formattazione produrrebbe
-   * due schermate che scrivono lo stesso importo in due modi — su una pagina
-   * che il giocatore confronta con quella dell'amministrazione.
-   */
-  protected eur(cent: number): string {
-    return formattaCent(cent);
-  }
-
-  protected pct(bp: number): string {
-    return formattaBp(bp);
-  }
-
-  protected readonly profileSaving = signal(false);
-  protected readonly profileError = signal<string | null>(null);
-  protected readonly profileMsg = signal<string | null>(null);
-
-  // ── Preferenze notifiche (opt-out avvisi nuove lezioni) ──
-  protected readonly notifyNewLessons = signal(true);
-  protected readonly notifySaving = signal(false);
-  protected readonly notifyError = signal<string | null>(null);
-  protected readonly notifyMsg = signal<string | null>(null);
-
-  // ── Password ──
-  protected readonly passwordForm = this.fb.nonNullable.group(
-    {
-      currentPassword: ['', [Validators.required]],
-      newPassword: ['', [Validators.required, Validators.minLength(8)]],
-      confirm: ['', [Validators.required]],
-    },
-    { validators: passwordsMatch },
-  );
-  protected readonly pwSaving = signal(false);
-  protected readonly pwError = signal<string | null>(null);
-  protected readonly pwDone = signal(false);
-
-  // ── Export dei dati ──
-  protected readonly exporting = signal(false);
-  protected readonly exportError = signal<string | null>(null);
-
-  // ── Cancellazione account ──
-  protected readonly confirmingDelete = signal(false);
-  protected readonly deleting = signal(false);
-  protected readonly deleteError = signal<string | null>(null);
 
   constructor() {
-    const u = this.auth.user();
-    this.profileForm.patchValue({
-      email: u?.email ?? '',
-      nickname: u?.nickname ?? '',
+    // ⚠️ In un effect e non nel costruttore: gli input sono legati DOPO la
+    // costruzione (idioma di admin-stats). Non riscrive l'URL: un clic sulle
+    // schede cambia `vista`, non l'input, quindi l'effect non rientra.
+    effect(() => {
+      const v = this.vistaIniziale();
+      if (isVistaAccount(v)) untracked(() => this.vista.set(v));
     });
-    this.notifyNewLessons.set(u?.notifyNewLessons ?? true);
-    // saldo + storico punti (best-effort: il saldo cade su auth.user se fallisce)
+
+    this.caricaSub();
+    this.caricaPunti();
+    this.caricaProspetto();
+    this.caricaPercorso();
+
+    // Il deep-link a Conteggi senza un prospetto ricade sulla Panoramica —
+    // dopo la risposta, non prima.
+    effect(() => {
+      const p = this.prospetto();
+      if (this.vista() === 'conteggi' && p.stato !== 'carico' && !this.haConteggi()) {
+        this.vista.set('panoramica');
+      }
+    });
+  }
+
+  protected setVista(v: VistaAccount): void {
+    this.vista.set(v);
+  }
+
+  protected caricaSub(): void {
+    this.sub.set(CARICO);
+    this.subscriptionsApi.mySubscription().subscribe({
+      next: (s) => this.sub.set(ok(s)),
+      error: (err: unknown) =>
+        this.sub.set(errore(apiErrorMessage(err, 'Stato dell’abbonamento non disponibile.'))),
+    });
+  }
+
+  protected caricaPunti(): void {
+    this.punti.set(CARICO);
     this.pointsApi.myPoints().subscribe({
-      next: (p) => this.myPoints.set(p),
-      error: () => undefined,
-    });
-    // buoni e ordini del Negozio (best-effort: in errore restano liste vuote)
-    this.shop.myVouchers().subscribe({
-      next: (v) => this.myVouchers.set(v),
-      error: () => undefined,
-    });
-    this.shop.myOrders().subscribe({
-      next: (o) => this.myOrders.set(o),
-      error: () => undefined,
-    });
-    this.conteggi.mioProspetto().subscribe({
-      next: (p) => this.prospetto.set(p),
-      error: () => undefined,
-    });
-    // affiliazioni: errore MOSTRATO, non assorbito (vedi il commento sui segnali)
-    this.affiliationsApi.mine().subscribe({
-      next: (rows) => this.myAffiliations.set(rows),
-      error: (err: unknown) => {
-        this.myAffiliations.set([]);
-        this.affiliationsError.set(
-          apiErrorMessage(err, 'Caricamento delle affiliazioni non riuscito.'),
-        );
-      },
+      next: (p) => this.punti.set(ok(p)),
+      error: (err: unknown) =>
+        this.punti.set(errore(apiErrorMessage(err, 'Saldo punti non disponibile.'))),
     });
   }
 
-  /**
-   * Modificatore del chip di stato (il testo è `statusLabel`, calcolato dal
-   * server: nessuna mappa stato→etichetta nel client).
-   */
-  protected affiliationChip(a: MyAffiliation): string {
-    if (a.status === 'APPROVATO') return 'account__chip--available';
-    if (a.status === 'IN_VERIFICA') return 'account__chip--reserved';
-    return '';
-  }
-
-  /** Etichetta IT dello stato di un buono. */
-  protected voucherStatusLabel(status: MyVoucher['status']): string {
-    switch (status) {
-      case 'available':
-        return 'Disponibile';
-      case 'reserved':
-        return 'In attesa di approvazione';
-      case 'redeemed':
-        return 'Usato';
-      case 'expired':
-        return 'Scaduto';
-      case 'inactive':
-        return 'Disattivato';
-      default:
-        return 'Non valido';
-    }
-  }
-
-  /** Valore leggibile di un buono (percentuale o importo in euro). */
-  protected voucherValueLabel(v: MyVoucher): string {
-    return v.kind === 'PERCENT' ? `${v.value}%` : `€${v.value}`;
-  }
-
-  /** Importo di un ordine: euro per gli ordini off-site, altrimenti punti spesi. */
-  protected orderAmountLabel(o: ShopOrder): string {
-    return o.amountEur != null
-      ? `€${o.amountEur.toFixed(2)}`
-      : `−${o.pointsSpent} pt`;
-  }
-
-  protected saveProfile(): void {
-    if (this.profileForm.invalid || this.profileSaving()) {
-      this.profileForm.markAllAsTouched();
-      return;
-    }
-    this.profileSaving.set(true);
-    this.profileError.set(null);
-    this.profileMsg.set(null);
-
-    const { email, nickname } = this.profileForm.getRawValue();
-    this.auth.updateProfile({ email, nickname }).subscribe({
-      next: (user) => {
-        this.profileSaving.set(false);
-        this.profileMsg.set(
-          user.verified
-            ? 'Profilo aggiornato.'
-            : 'Profilo aggiornato. Hai cambiato email: controlla la posta per verificarla.',
-        );
-      },
-      error: (err: unknown) => {
-        this.profileSaving.set(false);
-        this.profileError.set(
-          apiErrorMessage(err, 'Aggiornamento non riuscito.'),
-        );
-      },
+  protected caricaProspetto(): void {
+    this.prospetto.set(CARICO);
+    this.conteggiApi.mioProspetto().subscribe({
+      next: (p) => this.prospetto.set(ok(p)),
+      error: (err: unknown) =>
+        this.prospetto.set(errore(apiErrorMessage(err, 'Conteggi non disponibili.'))),
     });
   }
 
-  /** Attiva/disattiva gli avvisi email sulle nuove lezioni (salva subito). */
-  protected setNotifyNewLessons(enabled: boolean): void {
-    if (this.notifySaving()) return;
-    const previous = this.notifyNewLessons();
-    this.notifyNewLessons.set(enabled); // ottimistico
-    this.notifySaving.set(true);
-    this.notifyError.set(null);
-    this.notifyMsg.set(null);
-    this.auth.updateProfile({ notifyNewLessons: enabled }).subscribe({
-      next: (user) => {
-        this.notifySaving.set(false);
-        this.notifyNewLessons.set(user.notifyNewLessons ?? enabled);
-        this.notifyMsg.set('Preferenza salvata.');
-      },
-      error: (err: unknown) => {
-        this.notifySaving.set(false);
-        this.notifyNewLessons.set(previous); // ripristina il valore precedente
-        this.notifyError.set(apiErrorMessage(err, 'Salvataggio non riuscito.'));
-      },
-    });
-  }
-
-  protected changePassword(): void {
-    if (this.passwordForm.invalid || this.pwSaving()) {
-      this.passwordForm.markAllAsTouched();
-      return;
-    }
-    this.pwSaving.set(true);
-    this.pwError.set(null);
-
-    const { currentPassword, newPassword } = this.passwordForm.getRawValue();
-    this.auth.changePassword(currentPassword, newPassword).subscribe({
-      next: () => {
-        // il cambio password revoca tutte le sessioni: disconnetti e invita al re-login
-        this.auth.logout().subscribe();
-        this.pwDone.set(true);
-      },
-      error: (err: unknown) => {
-        this.pwSaving.set(false);
-        this.pwError.set(apiErrorMessage(err, 'Cambio password non riuscito.'));
-      },
-    });
-  }
-
-  protected exportData(): void {
-    if (this.exporting()) return;
-    this.exporting.set(true);
-    this.exportError.set(null);
-
-    this.auth.exportMyData().subscribe({
-      next: (data) => {
-        const blob = new Blob([JSON.stringify(data, null, 2)], {
-          type: 'application/json',
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'best-fish-forever-i-miei-dati.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        this.exporting.set(false);
-      },
-      error: (err: unknown) => {
-        this.exporting.set(false);
-        this.exportError.set(apiErrorMessage(err, 'Export non riuscito.'));
-      },
-    });
-  }
-
-  protected confirmDelete(): void {
-    if (this.deleting()) return;
-    this.deleting.set(true);
-    this.deleteError.set(null);
-
-    this.auth.deleteAccount().subscribe({
-      next: () => void this.router.navigateByUrl('/'),
-      error: (err: unknown) => {
-        this.deleting.set(false);
-        this.deleteError.set(apiErrorMessage(err, 'Cancellazione non riuscita.'));
-      },
+  protected caricaPercorso(): void {
+    this.percorso.set(CARICO);
+    this.accountApi.percorso().subscribe({
+      next: (p) => this.percorso.set(ok(p)),
+      error: (err: unknown) =>
+        this.percorso.set(errore(apiErrorMessage(err, 'Percorso non disponibile.'))),
     });
   }
 }

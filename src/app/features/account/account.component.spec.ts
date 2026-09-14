@@ -1,135 +1,128 @@
-import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
-import { computed, provideZonelessChangeDetection, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { AuthService } from '../../core/services/auth.service';
-import { ProspettoMese } from '../../core/models/api.models';
+import { HttpTestingController } from '@angular/common/http/testing';
 import { AccountComponent } from './account.component';
+import {
+  Ctx,
+  authStub,
+  fallisci,
+  monta,
+  percorsoVuoto,
+  prospettoMadRoxKO,
+  puntiVuoti,
+  rispondi,
+  subVuota,
+  utente,
+} from './account.spec-helper';
 
 /**
- * ⚠️ Fino all'11/09/2026 questa pagina NON aveva alcuna spec, e ci è arrivata
- * sopra la prima superficie dei conteggi rivolta all'utente. Queste prove
- * guardano solo quella sezione: il resto della pagina resta scoperto, e
- * questa riga è qui perché non si legga il file come una copertura.
+ * La SHELL di /account: testata, schede, `?vista=`, e le quattro letture.
+ * Le schede hanno la loro spec ciascuna; qui si prova il contenitore.
  */
-describe('AccountComponent — i miei conteggi', () => {
-  let fixture: ComponentFixture<AccountComponent>;
-  let http: HttpTestingController;
+describe('AccountComponent (shell)', () => {
+  /** Serve le quattro letture della shell + quelle della Panoramica. */
+  function servi(http: HttpTestingController, over: { prospetto?: object } = {}) {
+    rispondi(http, '/subscriptions/me', subVuota);
+    rispondi(http, '/points/me', puntiVuoti);
+    rispondi(http, 'mio-prospetto', over.prospetto ?? []);
+    rispondi(http, '/account/percorso', percorsoVuoto);
+    // la Panoramica carica le affiliazioni da sé
+    for (const r of http.match((r) => r.url.includes('/affiliations/me'))) r.flush([]);
+  }
 
-  const utente = {
-    id: 'u1',
-    email: 'rossana@example.it',
-    nickname: 'MadRoxKO',
-    role: 'USER',
-    points: 0,
-    notifyNewLessons: true,
-  };
-
-  const stabilizza = async () => {
-    fixture.detectChanges();
-    await fixture.whenStable();
-  };
-
-  beforeEach(async () => {
-    const user = signal<unknown>(utente);
-    await TestBed.configureTestingModule({
-      imports: [AccountComponent],
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([]),
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        {
-          provide: AuthService,
-          useValue: {
-            user,
-            ready: signal(true),
-            isAuthenticated: computed(() => user() !== null),
-            // ⚠️ Il componente li LEGGE come proprietà (`= this.auth.isAdmin`)
-            // e il template li chiama: devono essere signal, non funzioni.
-            isAdmin: signal(false),
-            points: signal(0),
-            loadMe: () => undefined,
-          },
-        },
-      ],
-    }).compileComponents();
-    fixture = TestBed.createComponent(AccountComponent);
-    http = TestBed.inject(HttpTestingController);
+  it('la testata dice chi sei: nickname, email, verifica, «iscritto dal»', async () => {
+    const ctx: Ctx<AccountComponent> = await monta(AccountComponent);
+    await ctx.stabilizza();
+    servi(ctx.http);
+    await ctx.stabilizza();
+    const h1 = ctx.el.querySelector('h1')!;
+    expect(h1.textContent).toContain('Ciao, MadRoxKO');
+    expect(ctx.testo()).toContain('rossana@example.it');
+    expect(ctx.testo()).toContain('Email verificata');
+    // LOCALE_ID 'it': «1 giu 2026», non «Jun 1, 2026»
+    expect(ctx.testo()).toMatch(/iscritto dal 1 giu 2026/);
+    expect(ctx.el.querySelectorAll('h1').length).toBe(1);
   });
 
-  afterEach(() => http.verify());
-
-  /**
-   * Serve TUTTE le richieste dell'avvio, tranne il prospetto che ogni prova
-   * decide da sé. ⚠️ Per predicato e non per URL esatta: questa spec guarda
-   * una sezione, e non deve rompersi perché un'altra parte della pagina cambia
-   * indirizzo.
-   */
-  const flushAltre = () => {
-    for (const r of http.match((req) => !req.url.includes('mio-prospetto'))) {
-      r.flush(req_isPunti(r.request.url) ? { balance: 0, ledger: [] } : []);
-    }
-  };
-  const req_isPunti = (url: string) => /points/i.test(url);
-
-  it('NON compare a chi non ha conteggi, che è quasi chiunque', async () => {
-    await stabilizza();
-    flushAltre();
-    http.expectOne((r) => r.url.includes('mio-prospetto')).flush([]);
-    await stabilizza();
-    expect(fixture.nativeElement.textContent).not.toContain('I miei conteggi');
+  it('non verificato: un PULSANTE «Reinvia il link di verifica», non un link dentro la pillola', async () => {
+    const ctx = await monta(AccountComponent, { auth: authStub(utente({ verified: false })) });
+    await ctx.stabilizza();
+    servi(ctx.http);
+    await ctx.stabilizza();
+    const btn = ctx.el.querySelector<HTMLAnchorElement>('a.btn[href="/recupera-verifica"]');
+    expect(btn).withContext('il pulsante di reinvio').not.toBeNull();
+    expect(btn!.textContent).toContain('Reinvia il link di verifica');
+    expect(ctx.testo()).toContain('Email non verificata');
   });
 
-  it('mostra i propri numeri, e dichiara il mese aperto come provvisorio', async () => {
-    await stabilizza();
-    flushAltre();
-    const prospetto: ProspettoMese[] = [
-      {
-        meseId: 'm1',
-        anno: 2026,
-        mese: 9,
-        etichetta: 'settembre 2026',
-        provvisorio: true,
-        rakeback: {
-          username: 'MadRoxKO',
-          backPlayerBp: 5000,
-          scaglioneBaseBp: 4500,
-          scaglionePassoCent: 2250,
-          rakeGeneratoCent: 46_117,
-          erogatoBonusCent: 20_250,
-          spettanteAlPlayerCent: 2809,
-          pagatoAlPlayerCent: 1000,
-          residuoAlPlayerCent: 1809,
-        },
-      },
-    ];
-    http.expectOne((r) => r.url.includes('mio-prospetto')).flush(prospetto);
-    await stabilizza();
-
-    const testo = fixture.nativeElement.textContent as string;
-    expect(testo).toContain('I miei conteggi');
-    expect(testo).toContain('settembre 2026');
-    expect(testo).toContain('461,17');
-    expect(testo).toContain('28,09');
-    expect(testo).toContain('18,09');
-    // ⚠️ Il mese aperto si DICHIARA: i suoi numeri possono ancora cambiare.
-    expect(testo).toContain('provvisorio');
+  it('quattro schede solo con un prospetto; senza, Conteggi non esiste', async () => {
+    const ctx = await monta(AccountComponent);
+    await ctx.stabilizza();
+    servi(ctx.http);
+    await ctx.stabilizza();
+    const schede = [...ctx.el.querySelectorAll('[role="tab"]')].map((b) => b.textContent?.trim());
+    expect(schede).toEqual(['Panoramica', 'Acquisti e punti', 'Profilo e sicurezza']);
+    // un pannello raggiungibile da tastiera, etichettato dalla scheda attiva
+    const pannello = ctx.el.querySelector('[role="tabpanel"]')!;
+    expect(pannello.getAttribute('tabindex')).toBe('0');
+    expect(pannello.getAttribute('aria-labelledby')).toBe(
+      ctx.el.querySelector('[role="tab"][aria-selected="true"]')!.id,
+    );
   });
 
-  it('un errore sul prospetto non rompe la pagina', async () => {
-    // ⚠️ Best-effort come buoni e ordini: quasi nessuno ha un accordo di
-    // rakeback, e un errore in rosso sulla pagina di tutti sarebbe rumore.
-    await stabilizza();
-    flushAltre();
-    http
-      .expectOne((r) => r.url.includes('mio-prospetto'))
-      .flush({ message: 'giù' }, { status: 500, statusText: 'Server Error' });
-    await stabilizza();
-    expect(fixture.nativeElement.textContent).not.toContain('I miei conteggi');
+  it('con un prospetto la scheda Conteggi compare, e `?vista=conteggi` ci atterra', async () => {
+    const ctx = await monta(AccountComponent, { inputs: { vista: 'conteggi' } });
+    await ctx.stabilizza();
+    servi(ctx.http, { prospetto: prospettoMadRoxKO });
+    await ctx.stabilizza();
+    const schede = [...ctx.el.querySelectorAll('[role="tab"]')].map((b) => b.textContent?.trim());
+    expect(schede).toContain('Conteggi');
+    expect(ctx.el.querySelector('[role="tab"][aria-selected="true"]')!.textContent).toContain('Conteggi');
+    expect(ctx.testo()).toContain('I miei conteggi');
+    expect(ctx.testo()).toContain('461,17');
+  });
+
+  it('`?vista=conteggi` SENZA prospetto ricade sulla Panoramica dopo la risposta, e `?vista=tutto` non è una scheda', async () => {
+    const ctx = await monta(AccountComponent, { inputs: { vista: 'conteggi' } });
+    await ctx.stabilizza();
+    // durante il carico la scheda chiesta esiste (scheletro), non si rimbalza a vuoto
+    expect(ctx.el.querySelector('[role="tab"][aria-selected="true"]')!.textContent).toContain('Conteggi');
+    servi(ctx.http);
+    await ctx.stabilizza();
+    expect(ctx.el.querySelector('[role="tab"][aria-selected="true"]')!.textContent).toContain('Panoramica');
+
+    const ctx2 = await monta(AccountComponent, { inputs: { vista: 'tutto' } });
+    await ctx2.stabilizza();
+    expect(ctx2.el.querySelector('[role="tab"][aria-selected="true"]')!.textContent).toContain('Panoramica');
+    servi(ctx2.http);
+  });
+
+  it('un 500 sul prospetto non rompe la pagina e non crea la scheda', async () => {
+    const ctx = await monta(AccountComponent);
+    await ctx.stabilizza();
+    rispondi(ctx.http, '/subscriptions/me', subVuota);
+    rispondi(ctx.http, '/points/me', puntiVuoti);
+    fallisci(ctx.http, 'mio-prospetto');
+    rispondi(ctx.http, '/account/percorso', percorsoVuoto);
+    for (const r of ctx.http.match((r) => r.url.includes('/affiliations/me'))) r.flush([]);
+    await ctx.stabilizza();
+    const schede = [...ctx.el.querySelectorAll('[role="tab"]')].map((b) => b.textContent?.trim());
+    expect(schede).not.toContain('Conteggi');
+    expect(ctx.testo()).toContain('Ciao, MadRoxKO');
+  });
+
+  it('cambiando scheda si monta la scheda Acquisti, che carica buoni e ordini da sé', async () => {
+    const ctx = await monta(AccountComponent);
+    await ctx.stabilizza();
+    servi(ctx.http);
+    await ctx.stabilizza();
+    const tab = [...ctx.el.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((b) =>
+      b.textContent?.includes('Acquisti'),
+    )!;
+    tab.click();
+    await ctx.stabilizza();
+    rispondi(ctx.http, 'my-vouchers', []);
+    rispondi(ctx.http, 'my-orders', []);
+    await ctx.stabilizza();
+    expect(ctx.testo()).toContain('Buoni e ordini');
+    ctx.http.verify();
   });
 });

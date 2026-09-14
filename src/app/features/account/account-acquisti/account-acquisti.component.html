@@ -1,0 +1,228 @@
+<!--
+  ORDINE DEI BLOCCHI = CLS. Il saldo ha altezza nota e sta in cima; buoni e
+  ordini sono liste corte e stanno in mezzo, in UN blocco (il vuoto è una riga
+  nello stesso blocco: nessuna sezione che compare o sparisce); i movimenti —
+  fino a venti righe, altezza ignota finché non arrivano — stanno IN FONDO, così
+  la loro crescita spinge solo il footer, fuori dal viewport. Misurato: con
+  l'elenco in cima la scheda faceva 0,115 di CLS (Slow 4G, 4× CPU).
+-->
+
+<!-- ── Punti BFF: il saldo ─────────────────────────────────────────────── -->
+<section class="card card--pad blocco" aria-labelledby="acq-punti">
+  <h2 id="acq-punti">Punti BFF</h2>
+  @switch (punti().stato) {
+    @case ('carico') {
+      <p class="cifra"><span class="gettone" aria-hidden="true"></span><span class="scheletro acq__skel-cifra"></span></p>
+    }
+    @case ('errore') {
+      <div class="form-feedback is-error" role="alert">
+        Saldo non disponibile.
+        <button type="button" class="btn btn--ghost btn--sm" (click)="riprovaPunti.emit()">Riprova</button>
+      </div>
+    }
+    @default {
+      <p class="cifra">
+        <span class="gettone" aria-hidden="true"></span>
+        <strong>{{ saldo() }}</strong>
+        <span class="text-muted">punti</span>
+      </p>
+    }
+  }
+  <div class="blocco__piede">
+    <a routerLink="/negozio">Spendili nel Negozio <app-icon name="arrow-right" [size]="14" /></a>
+    <a routerLink="/abbonati">Usali sull'abbonamento <app-icon name="arrow-right" [size]="14" /></a>
+  </div>
+</section>
+
+<!-- ── Buoni e ordini: UN blocco, due sottogruppi ──────────────────────── -->
+<section class="card card--pad blocco" aria-labelledby="acq-acquisti">
+  <h2 id="acq-acquisti">Buoni e ordini</h2>
+  @if (senzaAcquisti()) {
+    <!-- Due liste vuote → UNA riga, non due riquadri di «niente» -->
+    <p class="blocco__intro">
+      Compariranno qui dopo il primo acquisto nel
+      <a routerLink="/negozio">Negozio</a>.
+    </p>
+  } @else {
+    <h3 class="eyebrow blocco__sotto">I miei buoni</h3>
+    @switch (buoni().stato) {
+      @case ('carico') {
+        <ul class="lista-righe" role="list" aria-busy="true">
+          <li class="riga"><span class="scheletro scheletro--riga riga__testo"></span></li>
+          <li class="visually-hidden" role="status">Caricamento dei buoni…</li>
+        </ul>
+      }
+      @case ('errore') {
+        <div class="form-feedback is-error" role="alert">
+          Buoni non disponibili.
+          <button type="button" class="btn btn--ghost btn--sm" (click)="caricaBuoni()">Riprova</button>
+        </div>
+      }
+      @default {
+        @if (buoniDati()?.length) {
+          <ul class="lista-righe" role="list">
+            @for (v of buoniDati()!; track v.code) {
+              <li class="riga">
+                <span class="riga__testo">
+                  <strong>{{ valoreBuono(v) }}</strong>
+                  · <span class="codice">{{ v.code }}</span>
+                  @if (v.validUntil) {
+                    <span class="riga__sub">scade il {{ v.validUntil | date: 'd MMM yyyy' }}</span>
+                  }
+                </span>
+                <span class="riga__coda">
+                  <span [class]="'pill-stato pill-stato--' + tonoBuono(v)">{{ statoBuono(v) }}</span>
+                  @if (v.status === 'available') {
+                    <a
+                      routerLink="/abbonati"
+                      class="btn btn--ghost btn--sm"
+                      [attr.aria-label]="'Usa il buono ' + valoreBuono(v) + ' ' + v.code + ' sull\'abbonamento'"
+                    >Sull'abbonamento</a>
+                    @if (v.source === 'shop') {
+                      <!-- i buoni del Negozio valgono anche sui gadget in euro -->
+                      <a
+                        routerLink="/negozio"
+                        class="btn btn--ghost btn--sm"
+                        [attr.aria-label]="'Usa il buono ' + valoreBuono(v) + ' ' + v.code + ' su un gadget'"
+                      >Su un gadget</a>
+                    }
+                  }
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="nota">Non hai buoni sconto.</p>
+        }
+      }
+    }
+
+    <h3 class="eyebrow blocco__sotto">
+      @if (ordiniAlTetto()) {
+        I tuoi ultimi 50 ordini
+      } @else {
+        I miei ordini
+      }
+    </h3>
+    @switch (ordini().stato) {
+      @case ('carico') {
+        <ul class="lista-righe" role="list" aria-busy="true">
+          <li class="riga"><span class="scheletro scheletro--riga riga__testo"></span></li>
+          <li class="visually-hidden" role="status">Caricamento degli ordini…</li>
+        </ul>
+      }
+      @case ('errore') {
+        <div class="form-feedback is-error" role="alert">
+          Ordini non disponibili.
+          <button type="button" class="btn btn--ghost btn--sm" (click)="caricaOrdini()">Riprova</button>
+        </div>
+      }
+      @default {
+        @if (ordiniDati()?.length) {
+          <ul class="lista-righe" role="list">
+            @for (o of ordiniDati()!; track o.id) {
+              <li class="riga">
+                <span class="riga__testo">
+                  <strong>{{ o.itemLabel }}</strong> · {{ o.typeLabel }}
+                  @if (o.createdAt) {
+                    <span class="riga__sub">{{ o.createdAt | date: 'd MMM yyyy' }}</span>
+                  }
+                  <!-- il tracking arriva nella risposta: chi ha perso l'email
+                       lo trova qui, non solo la parola «Spedito» -->
+                  @if (o.status === 'SPEDITO' && o.trackingNote) {
+                    <span class="riga__sub">Spedizione: {{ o.trackingNote }}</span>
+                  }
+                  @if (o.shippingAddress; as ind) {
+                    <details class="acq__indirizzo">
+                      <summary>Indirizzo di consegna</summary>
+                      <span class="riga__sub">
+                        {{ ind.fullName }}, {{ ind.line1 }}@if (ind.line2) {, {{ ind.line2 }}}, {{ ind.zip }} {{ ind.city }} ({{ ind.province }}), {{ ind.country }}
+                      </span>
+                    </details>
+                  }
+                </span>
+                <span class="riga__coda">
+                  <span [class]="'pill-stato pill-stato--' + tonoOrdine(o)">{{ o.statusLabel }}</span>
+                  <strong>{{ importoOrdine(o) }}</strong>
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="nota">Nessun ordine.</p>
+        }
+      }
+    }
+  }
+  <div class="blocco__piede">
+    <a routerLink="/negozio">Vai al Negozio <app-icon name="arrow-right" [size]="14" /></a>
+  </div>
+</section>
+
+<!-- ── Movimenti: in FONDO (vedi il commento in testa) ─────────────────── -->
+<section class="card card--pad blocco" aria-labelledby="acq-movimenti">
+  <h2 id="acq-movimenti">
+    Movimenti
+    @if (totaleMovimenti(); as t) {
+      <span class="acq__conteggio">{{ intero(movimenti().length) }} di {{ intero(t) }}</span>
+    }
+  </h2>
+  @switch (punti().stato) {
+    @case ('carico') {
+      <ul class="lista-righe" role="list" aria-busy="true">
+        <li class="riga"><span class="scheletro scheletro--riga riga__testo"></span></li>
+        <li class="riga"><span class="scheletro scheletro--riga riga__testo"></span></li>
+        <li class="riga"><span class="scheletro scheletro--riga riga__testo"></span></li>
+        <li class="visually-hidden" role="status">Caricamento dei movimenti…</li>
+      </ul>
+    }
+    @case ('errore') {
+      <div class="form-feedback is-error" role="alert">
+        Movimenti non disponibili.
+        <button type="button" class="btn btn--ghost btn--sm" (click)="riprovaPunti.emit()">Riprova</button>
+      </div>
+    }
+    @default {
+      @if (movimenti().length) {
+        <ul class="lista-righe" role="list">
+          @for (e of movimenti(); track e.id) {
+            <li class="riga">
+              <span class="riga__testo">
+                {{ e.reason }}
+                @if (e.createdAt) {
+                  <span class="riga__sub">{{ e.createdAt | date: 'd MMM yyyy' }}</span>
+                }
+              </span>
+              <span class="riga__coda acq__mov">
+                <strong [class.is-piu]="e.delta > 0" [class.is-meno]="e.delta < 0">{{ delta(e) }}</strong>
+                <!-- il saldo DOPO ogni riga: senza, «perché ho X punti» si
+                     ricostruiva solo scaricando il JSON -->
+                <span class="acq__saldo-dopo text-muted" [attr.aria-label]="'saldo dopo: ' + intero(e.balanceAfter)">
+                  → {{ intero(e.balanceAfter) }}
+                </span>
+              </span>
+            </li>
+          }
+        </ul>
+        @if (ciSonoAltri()) {
+          <div class="acq__altri">
+            @if (erroreAltri()) {
+              <span class="field-error" role="alert">{{ erroreAltri() }}</span>
+            }
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="caricaAltri()"
+              [attr.aria-disabled]="caricandoAltri() || null"
+              [attr.aria-busy]="caricandoAltri() || null"
+            >
+              {{ caricandoAltri() ? 'Caricamento…' : 'Carica altri movimenti' }}
+            </button>
+          </div>
+        }
+      } @else {
+        <p class="blocco__intro">Nessun movimento ancora.</p>
+      }
+    }
+  }
+</section>

@@ -1,0 +1,339 @@
+<!-- ── Dati di profilo ──────────────────────────────────────────────────── -->
+<section class="card card--pad blocco" aria-labelledby="pr-profilo">
+  <h2 id="pr-profilo">Dati di profilo</h2>
+  <p class="blocco__intro">Aggiorna la tua email o il tuo nickname.</p>
+
+  <!-- Regione live PERSISTENTE: esiste prima dell'azione, così l'esito che vi
+       compare viene annunciato -->
+  <div class="blocco__live" role="status" aria-live="polite">
+    @if (profileMsg()) {
+      <div class="form-feedback is-success">{{ profileMsg() }}</div>
+    }
+    @if (profileError()) {
+      <div class="form-feedback is-error">{{ profileError() }}</div>
+    }
+  </div>
+
+  @if (!verified()) {
+    <p class="pr__nonverificata">
+      <span class="badge pr__badge-warn">Email non verificata</span>
+      <a routerLink="/recupera-verifica" class="btn btn--ghost btn--sm">Reinvia il link di verifica</a>
+    </p>
+  }
+
+  <form id="form-profilo" [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+    <div class="field">
+      <label for="email">Email</label>
+      <input
+        id="email"
+        type="email"
+        class="input"
+        formControlName="email"
+        autocomplete="email"
+        aria-required="true"
+        aria-describedby="email-avviso"
+        [attr.aria-invalid]="profileForm.controls.email.touched && profileForm.controls.email.invalid ? 'true' : null"
+        [class.is-invalid]="profileForm.controls.email.touched && profileForm.controls.email.invalid"
+      />
+      <!-- La conseguenza PRIMA del gesto, non nel messaggio dopo il salvataggio -->
+      <span id="email-avviso" class="nota">
+        Cambiando email l'account torna non verificato: il prossimo accesso sarà
+        possibile solo dopo aver confermato il nuovo indirizzo.
+      </span>
+      @if (profileForm.controls.email.touched && profileForm.controls.email.invalid) {
+        <span id="email-errore" class="field-error">
+          @if (profileForm.controls.email.hasError('maxlength')) {
+            L'email può avere al massimo 128 caratteri.
+          } @else {
+            Inserisci un'email valida.
+          }
+        </span>
+      }
+    </div>
+
+    <div class="field">
+      <label for="nickname">Nickname</label>
+      <input
+        id="nickname"
+        type="text"
+        class="input"
+        formControlName="nickname"
+        autocomplete="nickname"
+        aria-required="true"
+        [attr.aria-invalid]="profileForm.controls.nickname.touched && profileForm.controls.nickname.invalid ? 'true' : null"
+        [attr.aria-describedby]="profileForm.controls.nickname.touched && profileForm.controls.nickname.invalid ? 'nickname-errore' : null"
+        [class.is-invalid]="profileForm.controls.nickname.touched && profileForm.controls.nickname.invalid"
+      />
+      @if (profileForm.controls.nickname.touched && profileForm.controls.nickname.invalid) {
+        <span id="nickname-errore" class="field-error">
+          3–24 caratteri: lettere, numeri, punto, trattino o underscore.
+        </span>
+      }
+    </div>
+
+    @if (confermaEmail(); as nuova) {
+      <div id="conferma-email" class="conferma conferma--attesa" tabindex="-1" role="group" aria-label="Conferma del nuovo indirizzo email">
+        <p>Confermi <strong>{{ nuova }}</strong> come nuova email?</p>
+        <span class="nota">
+          Riceverai lì il link di verifica, e fino alla conferma non potrai accedere
+          di nuovo. Controlla che sia scritta bene.
+        </span>
+        <div class="row">
+          <button type="submit" class="btn btn--primary" [attr.aria-disabled]="profileSaving() || null">
+            Sì, cambia email
+          </button>
+          <button type="button" class="btn btn--ghost" (click)="annullaCambioEmail()">Annulla</button>
+        </div>
+      </div>
+    } @else {
+      <button
+        type="submit"
+        class="btn btn--primary"
+        [attr.aria-disabled]="profileSaving() || null"
+        [attr.aria-busy]="profileSaving() || null"
+      >
+        {{ profileSaving() ? 'Salvataggio…' : 'Salva modifiche' }}
+      </button>
+    }
+  </form>
+</section>
+
+<!-- ── Notifiche ────────────────────────────────────────────────────────── -->
+<!--
+  UN solo interruttore: è esattamente ciò che l'informativa promette. ⚠️ Non
+  aggiungerne per prospetto, promemoria o Discord: un interruttore che non
+  spegne nulla è peggio di nessun interruttore.
+-->
+<section class="card card--pad blocco" aria-labelledby="pr-notifiche">
+  <h2 id="pr-notifiche">Notifiche</h2>
+  <p class="blocco__intro">
+    Scegli se ricevere un'email quando pubblichiamo una nuova lezione o la
+    registrazione di una live a cui hai accesso.
+  </p>
+  <div class="blocco__live" role="status" aria-live="polite">
+    @if (notifyError()) {
+      <div class="form-feedback is-error">{{ notifyError() }}</div>
+    }
+    @if (notifyMsg()) {
+      <div class="form-feedback is-success">{{ notifyMsg() }}</div>
+    }
+  </div>
+  <label class="check pr__toggle">
+    <input
+      type="checkbox"
+      [checked]="notifyNewLessons()"
+      [attr.aria-busy]="notifySaving() || null"
+      (change)="setNotifyNewLessons($any($event.target).checked)"
+    />
+    <span>Avvisami via email delle nuove lezioni e registrazioni</span>
+  </label>
+  <p class="nota pr__nota-servizio">
+    Le email di servizio (verifica dell'indirizzo, scadenza dell'abbonamento,
+    avviso di inattività, conteggi) arrivano comunque.
+  </p>
+</section>
+
+<!-- ── Password ─────────────────────────────────────────────────────────── -->
+<section class="card card--pad blocco" aria-labelledby="pr-password">
+  <h2 id="pr-password">Password</h2>
+  <p class="blocco__intro">
+    Per cambiarla, inserisci la password attuale e quella nuova. Dopo il cambio
+    verrai disconnesso da tutti i dispositivi.
+  </p>
+  <div class="blocco__live" role="status" aria-live="polite">
+    @if (pwError()) {
+      <div class="form-feedback is-error">{{ pwError() }}</div>
+    }
+  </div>
+
+  <form id="form-password" [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
+    <div class="field">
+      <label for="currentPassword">Password attuale</label>
+      <input
+        id="currentPassword"
+        type="password"
+        class="input"
+        formControlName="currentPassword"
+        autocomplete="current-password"
+        aria-required="true"
+        [attr.aria-invalid]="passwordForm.controls.currentPassword.touched && passwordForm.controls.currentPassword.invalid ? 'true' : null"
+        [attr.aria-describedby]="passwordForm.controls.currentPassword.touched && passwordForm.controls.currentPassword.invalid ? 'current-errore' : null"
+        [class.is-invalid]="passwordForm.controls.currentPassword.touched && passwordForm.controls.currentPassword.invalid"
+      />
+      @if (passwordForm.controls.currentPassword.touched && passwordForm.controls.currentPassword.invalid) {
+        <span id="current-errore" class="field-error">Inserisci la password attuale.</span>
+      }
+    </div>
+
+    <div class="field">
+      <label for="newPassword">Nuova password</label>
+      <input
+        id="newPassword"
+        type="password"
+        class="input"
+        formControlName="newPassword"
+        autocomplete="new-password"
+        placeholder="Minimo 8 caratteri"
+        aria-required="true"
+        [attr.aria-invalid]="passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid ? 'true' : null"
+        [attr.aria-describedby]="passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid ? 'new-errore' : null"
+        [class.is-invalid]="passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid"
+      />
+      @if (passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid) {
+        <span id="new-errore" class="field-error">La password deve avere almeno 8 caratteri.</span>
+      }
+    </div>
+
+    <div class="field">
+      <label for="confirm">Conferma nuova password</label>
+      <input
+        id="confirm"
+        type="password"
+        class="input"
+        formControlName="confirm"
+        autocomplete="new-password"
+        aria-required="true"
+        [attr.aria-invalid]="passwordForm.controls.confirm.touched && (passwordForm.controls.confirm.invalid || passwordForm.hasError('passwordsMismatch')) ? 'true' : null"
+        [attr.aria-describedby]="passwordForm.controls.confirm.touched && (passwordForm.controls.confirm.invalid || passwordForm.hasError('passwordsMismatch')) ? 'confirm-errore' : null"
+        [class.is-invalid]="passwordForm.controls.confirm.touched && (passwordForm.controls.confirm.invalid || passwordForm.hasError('passwordsMismatch'))"
+      />
+      @if (passwordForm.controls.confirm.touched && passwordForm.controls.confirm.invalid) {
+        <span id="confirm-errore" class="field-error">Ripeti la nuova password.</span>
+      } @else if (passwordForm.controls.confirm.touched && passwordForm.hasError('passwordsMismatch')) {
+        <span id="confirm-errore" class="field-error">Le password non coincidono.</span>
+      }
+    </div>
+
+    <button
+      type="submit"
+      class="btn btn--primary"
+      [attr.aria-disabled]="pwSaving() || null"
+      [attr.aria-busy]="pwSaving() || null"
+    >
+      {{ pwSaving() ? 'Aggiornamento…' : 'Cambia password' }}
+    </button>
+  </form>
+</section>
+
+<!-- ── I tuoi dati ──────────────────────────────────────────────────────── -->
+<section class="card card--pad blocco" aria-labelledby="pr-dati">
+  <h2 id="pr-dati">I tuoi dati</h2>
+  <p class="blocco__intro" id="export-descr">
+    Scarica una copia dei dati che trattiamo sul tuo conto, in formato JSON
+    (diritto di accesso e portabilità).
+  </p>
+  <div class="blocco__live" role="status" aria-live="polite">
+    @if (exportError()) {
+      <div class="form-feedback is-error">{{ exportError() }}</div>
+    }
+    @if (exportMsg()) {
+      <div class="form-feedback is-success">{{ exportMsg() }}</div>
+    }
+  </div>
+  <button
+    type="button"
+    class="btn btn--ghost"
+    aria-describedby="export-descr"
+    (click)="exportData()"
+    [attr.aria-disabled]="exporting() || null"
+    [attr.aria-busy]="exporting() || null"
+  >
+    {{ exporting() ? 'Preparazione…' : 'Scarica i miei dati' }}
+  </button>
+
+  <!-- I consensi alla registrazione delle live: la prova dell'art. 7.1, leggibile
+       qui e non solo dentro il JSON (informativa e registro A10, 14/09/2026) -->
+  <h3 class="eyebrow blocco__sotto pr__consensi-titolo">Consensi alla registrazione delle live</h3>
+  @switch (percorso().stato) {
+    @case ('carico') {
+      <ul class="lista-righe" role="list" aria-busy="true">
+        <li class="riga"><span class="scheletro scheletro--riga riga__testo"></span></li>
+        <li class="visually-hidden" role="status">Caricamento dei consensi…</li>
+      </ul>
+    }
+    @case ('errore') {
+      <p class="nota">
+        Consensi non disponibili.
+        <button type="button" class="btn--link" (click)="riprovaPercorso.emit()">Riprova</button>
+      </p>
+    }
+    @default {
+      @if (consensi(); as c) {
+        @if (c.length) {
+          <ul class="lista-righe" role="list">
+            @for (k of c; track k.sessionId + k.version) {
+              <li class="riga">
+                <span class="riga__testo">
+                  {{ k.titolo }}
+                  <span class="riga__sub">{{ k.createdAt | date: 'd MMM yyyy, HH:mm' }} · testo versione {{ k.version }}</span>
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="nota">Non hai ancora prestato consensi alla registrazione di una live.</p>
+        }
+      }
+    }
+  }
+</section>
+
+<!-- ── Elimina account ──────────────────────────────────────────────────── -->
+<section class="card card--pad blocco pr__danger" aria-labelledby="pr-elimina">
+  <h2 id="pr-elimina">Elimina account</h2>
+  <!-- Copy ONESTA: cosa sparisce, e il rimando all'informativa per cosa
+       resta reso anonimo (staking, conteggi, audit) — la vecchia frase
+       «profilo, sessioni e storico di allenamento» descriveva una cancellazione
+       totale che il backend non fa. -->
+  <p class="blocco__intro">
+    Cancella definitivamente il tuo account e tutto ciò che gli è collegato:
+    profilo, abbonamento, punti BFF e buoni, ordini, allenamenti, mani caricate e
+    collegamenti con le sale. L'operazione è <strong>irreversibile</strong>.
+  </p>
+  @if (anonimizzaNonCancella()) {
+    <p class="nota pr__nota-anon">
+      I tuoi conteggi e il registro di staking vengono resi anonimi, non
+      cancellati: gli importi restano, senza più alcun riferimento a te.
+    </p>
+  }
+  <p class="nota pr__nota-anon">
+    Cosa resta e cosa viene reso anonimo lo spiega
+    <a routerLink="/privacy" fragment="conservazione">l'informativa privacy</a>.
+  </p>
+  <div class="blocco__live" role="status" aria-live="polite">
+    @if (deleteError()) {
+      <div class="form-feedback is-error">{{ deleteError() }}</div>
+    }
+  </div>
+  @if (confirmingDelete()) {
+    <!-- role=group etichettato: uno screen reader legge la domanda quando il
+         fuoco entra; Escape annulla; i bottoni restano nell'ordine delle altre
+         sei conferme in linea del sito («Sì» prima di «Annulla») -->
+    <div
+      id="account-conferma-elimina"
+      class="conferma"
+      role="group"
+      aria-label="Conferma eliminazione dell'account"
+      tabindex="-1"
+      (keydown.escape)="chiudiConferma()"
+    >
+      <p>Sei sicuro? Questa azione non può essere annullata.</p>
+      <div class="row">
+        <button
+          type="button"
+          class="btn btn--danger-solid"
+          (click)="confirmDelete()"
+          [attr.aria-disabled]="deleting() || null"
+          [attr.aria-busy]="deleting() || null"
+        >
+          {{ deleting() ? 'Eliminazione…' : 'Sì, elimina tutto' }}
+        </button>
+        <button type="button" class="btn btn--ghost" (click)="chiudiConferma()">Annulla</button>
+      </div>
+    </div>
+  } @else {
+    <button id="account-elimina-apri" type="button" class="btn btn--danger" (click)="apriConferma()">
+      Elimina il mio account
+    </button>
+  }
+</section>

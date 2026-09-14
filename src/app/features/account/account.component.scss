@@ -1,177 +1,41 @@
-.account {
-  max-width: 640px;
+// La shell di /account: testata + schede + pannello. Il resto sta in
+// `account-shared.scss` e nei fogli delle quattro schede.
+
+.account__hero {
+  margin-bottom: 1.6rem;
 }
 
-.account__head {
-  margin-bottom: 1.8rem;
-
-  h1 {
-    margin-top: 0.5rem;
-  }
-}
-
-.account__status {
-  margin-top: 0.8rem;
-  display: flex;
-  flex-wrap: wrap;
+.account__meta {
   align-items: center;
-  gap: 0.6rem;
   color: var(--text-muted);
 }
 
-.account__badge {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  border: 1px solid;
-
-  &--ok {
-    color: var(--felt);
-    border-color: rgba(0, 169, 110, 0.4);
-    background: rgba(0, 169, 110, 0.08);
-  }
-
-  &--warn {
-    color: var(--copper-600);
-    border-color: rgba(255, 106, 31, 0.4);
-    background: rgba(255, 106, 31, 0.08);
-
-    a {
-      color: inherit;
-      text-decoration: underline;
-    }
-  }
-}
-
-.account__card {
-  margin-bottom: 1.4rem;
-
-  h2 {
-    margin-bottom: 0.4rem;
-  }
-
-  > p {
-    margin-bottom: 1.2rem;
-  }
-
-  .form-feedback {
-    margin-bottom: 1.1rem;
-  }
-}
-
-.account__danger {
-  border: 1px solid rgba(217, 68, 47, 0.35);
-
-  h2 {
-    color: var(--danger);
-  }
-}
-
-.account__confirm {
+// Un alias lungo non ha punti di rottura: come figlio di un flex il suo
+// `min-width` è il proprio contenuto, e a 390px sfondava a destra facendo
+// scorrere l'intera pagina in orizzontale.
+.account__email {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-weight: 600;
-  color: var(--danger);
-  margin-bottom: 1rem;
+  color: var(--text);
 }
 
-// Sottotitolo dei gruppi dentro una card (affiliazioni: tracciato / in corso)
-.account__group {
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin: 1.2rem 0 0;
-
-  &:first-of-type {
-    margin-top: 0.4rem;
-  }
+// «Email non verificata»: rame a token (in Tramonto il rame è rosa), non un
+// `rgba(255, 106, 31, …)` scritto a mano.
+.account__badge-warn {
+  color: var(--copper-600);
+  border-color: color-mix(in srgb, var(--copper-500) 40%, transparent);
+  background: color-mix(in srgb, var(--copper-500) 8%, transparent);
 }
 
-// Riga di rimando in fondo a una card
-.account__more {
-  margin-top: 1rem;
+.account__dal {
   font-size: 0.9rem;
 }
 
-// Chip di stato per buoni/ordini del Negozio (stessa cifra di .account__badge)
-.account__chip {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.04em;
-  padding: 0.18rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  color: var(--text-muted);
-  background: var(--surface-1);
-  white-space: nowrap;
-
-  &--available {
-    color: #007a4f;
-    border-color: rgba(0, 169, 110, 0.45);
-    background: rgba(0, 169, 110, 0.08);
-
-    [data-theme='dark'] & {
-      color: #5fe6b4;
-    }
-  }
-
-  &--reserved {
-    color: var(--copper-600);
-    border-color: rgba(255, 106, 31, 0.4);
-    background: rgba(255, 106, 31, 0.08);
-  }
-
-  &--expired,
-  &--inactive {
-    color: var(--text-faint);
-  }
-}
-
-// Il prospetto dei conteggi.
-//
-// ⚠️ `column-gap: 0` e la distanza data dal padding del `dt`, come nel conto
-// economico del pannello: con un gap vero i filetti delle righe di totale si
-// disegnerebbero come due segmenti separati da un buco.
-.account__conteggio {
-  margin-top: 1rem;
-  padding-top: 0.8rem;
-  border-top: 1px solid var(--border);
-
-  &:first-of-type {
-    border-top: 0;
-  }
-}
-
-.account__conteggio-titolo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.4rem;
-  font-size: 1rem;
-}
-
-.account__conteggio-righe {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  column-gap: 0;
-  row-gap: 0.3rem;
-  margin: 0;
-
-  dt {
-    padding-right: 1.5rem;
-    color: var(--text-muted);
-  }
-
-  dd {
-    margin: 0;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-}
-
-.account__nota {
-  display: block;
-  font-size: 0.78rem;
-  color: var(--text-faint);
+// Il pannello delle schede: `outline` solo da tastiera (è raggiungibile con
+// `tabindex="0"` perché una scheda promette un pannello).
+.account__pannello:focus-visible {
+  outline: 2px solid var(--copper-500);
+  outline-offset: 6px;
+  border-radius: var(--radius-sm);
 }

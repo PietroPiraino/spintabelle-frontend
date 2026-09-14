@@ -22,7 +22,13 @@
     border-color var(--t-fast),
     color var(--t-fast);
 
-  &:disabled {
+  // ⚠️ `[aria-disabled='true']` è il GEMELLO di `:disabled` e nasce il
+  // 14/09/2026 per /account: un bottone che diventa `disabled` MENTRE ha il
+  // fuoco (il «Salva» premuto con Invio) fa cadere il fuoco su `body`. Con
+  // `aria-disabled` + la guardia di rientro nel metodo il bottone resta
+  // focalizzabile, annuncia lo stato, e non fa niente al secondo Invio.
+  &:disabled,
+  &[aria-disabled='true'] {
     opacity: 0.45;
     cursor: not-allowed;
     transform: none !important;
@@ -36,12 +42,12 @@
   color: var(--ink-on-copper);
   box-shadow: var(--glow-copper);
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled):not([aria-disabled='true']) {
     transform: translateY(-2px);
     box-shadow: var(--glow-copper-strong);
   }
 
-  &:active:not(:disabled) {
+  &:active:not(:disabled):not([aria-disabled='true']) {
     transform: translateY(0);
   }
 }
@@ -52,7 +58,7 @@
   border-color: var(--line-strong);
   color: var(--text);
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled):not([aria-disabled='true']) {
     border-color: var(--copper-500);
     color: var(--copper-600);
     box-shadow: 0 0 18px rgba(255, 106, 31, 0.2);
@@ -72,7 +78,7 @@
   border-color: rgba(217, 68, 47, 0.4);
   color: var(--danger);
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled):not([aria-disabled='true']) {
     background: rgba(217, 68, 47, 0.08);
     border-color: var(--danger);
   }
@@ -84,7 +90,7 @@
   border-color: var(--danger);
   color: #fff;
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled):not([aria-disabled='true']) {
     transform: translateY(-2px);
     box-shadow: 0 8px 28px rgba(217, 68, 47, 0.35);
   }
@@ -99,7 +105,7 @@
   font-family: var(--font-body);
   font-weight: 600;
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled):not([aria-disabled='true']) {
     color: var(--copper-500);
   }
 }

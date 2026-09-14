@@ -33,8 +33,10 @@ const RADICE = process.cwd();
 const leggi = (p) => readFileSync(resolve(RADICE, p), 'utf8');
 
 /**
- * I DODICI punti in cui il bersaglio di tocco del pannello è dichiarato una
- * volta sola — e da cui ogni sezione lo eredita invece di riscriverselo.
+ * I QUINDICI punti in cui il bersaglio di tocco è dichiarato una volta sola —
+ * e da cui ogni sezione lo eredita invece di riscriverselo. Dodici sono del
+ * pannello admin; dal 14/09/2026 tre vengono dall'area personale (/account) e
+ * dal primitivo `.riga` che quella pagina ha promosso in `_utilities.scss`.
  *
  * `dentro` è il selettore che deve esistere; `regola` è la dichiarazione che
  * deve stargli dentro. Si cerca il blocco a partire dal selettore, non con un
@@ -136,7 +138,8 @@ const PUNTI = [
       'l\'intestazione del collassabile FUORI dalle modali (i limiti dei numeri in Statistiche): gemella di .admin-modale__sum, che là non arriva',
   },
   {
-    // ⚠️ L'unico punto fuori da `features/admin/`: il grafico vive in
+    // ⚠️ Il primo punto fuori da `features/admin/` (gli altri sono quelli di
+    // /account, in coda): il grafico vive in
     // `shared/ui/`, ma il suo solo stop di Tab è la superficie che il dito
     // tocca su ogni cruscotto del pannello.
     file: 'src/app/shared/ui/grafico/grafico-colonne.component.scss',
@@ -144,6 +147,37 @@ const PUNTI = [
     attese: ['min-height: 44px'],
     perche:
       'la lente del grafico: un bottone con `inset: 0` sopra l\'area, e il minimo tiene anche un grafico basso (i video a 120px)',
+  },
+  {
+    // La riga degli elenchi applicativi (buoni, ordini, movimenti, pratiche):
+    // promossa in _utilities il 14/09/2026 con /account. Prima quelle righe
+    // erano `.spread` senza altezza né filetto.
+    file: 'src/styles/_utilities.scss',
+    selettore: '\n.riga {',
+    attese: ['min-height: 44px'],
+    perche:
+      'la riga di un elenco applicativo: il comando che porta (Usa, Completa i dati) vive dentro, e la riga è il suo bersaglio minimo',
+  },
+  {
+    // I `.btn--sm` nudi stanno a 38px: su /account ce n'è uno per riga (Usa,
+    // Riprendi, Completa i dati) più «Reinvia il link di verifica» nella
+    // testata. ⚠️ Il selettore è NUDO di proposito: il foglio è importato come
+    // stile di componente da cinque componenti, e `.account .btn--sm` — la
+    // prima stesura — non raggiungeva i bottoni delle schede (incapsulamento).
+    file: 'src/app/features/account/account-shared.scss',
+    selettore: '\n.btn--sm {',
+    attese: ['min-height: 44px'],
+    perche:
+      'i comandi di riga dell\'area personale e il pulsante che sblocca un account non verificato',
+  },
+  {
+    // La spunta delle notifiche: fino al 14/09/2026 non aveva UNA regola
+    // (~13px col colore di sistema).
+    file: 'src/app/features/account/account-profilo/account-profilo.component.scss',
+    selettore: '.pr__toggle {',
+    attese: ['min-height: 44px', 'accent-color: var(--copper-500)'],
+    perche:
+      'l\'unico interruttore di preferenza del sito: la riga intera è il bersaglio, e il colore della casella è a token',
   },
 ];
 

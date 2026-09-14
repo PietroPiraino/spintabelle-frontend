@@ -1,0 +1,36 @@
+// La Panoramica: quattro tessere su `.tessere` (account-shared).
+
+// La richiesta in attesa / rifiutata sotto la riga del ruolo: un filetto la
+// stacca, così un rinnovo pendente su un tier attivo si legge come una
+// seconda riga e non come la continuazione della prima.
+.accesso__pending,
+.accesso__rifiutata {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+
+  p {
+    margin-bottom: 0.7rem;
+  }
+}
+
+.accesso__errore {
+  margin-top: 0.6rem;
+}
+
+// La striscia di sintesi delle affiliazioni: una riga, mono, muta.
+.aff-striscia {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+
+// `.btn--link` nel progetto ha padding 0: dentro un blocco di testo va bene
+// così (è un link in mezzo a una frase), e qui sta sempre accanto a un testo.
+.btn--link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}

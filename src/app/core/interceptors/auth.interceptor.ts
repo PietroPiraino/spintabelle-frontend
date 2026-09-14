@@ -25,7 +25,9 @@ function withAuth(req: HttpRequest<unknown>, token: string | null) {
 
 /**
  * Allega il Bearer token alle chiamate verso l'API; su 401 tenta un singolo
- * refresh e ripete la richiesta. Se anche il refresh fallisce → /login.
+ * refresh e ripete la richiesta. Se il REFRESH fallisce → /login; se fallisce
+ * la richiesta ripetuta, l'errore torna al chiamante (non è un problema di
+ * sessione: è la risposta a quella chiamata).
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith(API)) return next(req);
@@ -41,13 +43,19 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         !req.context.get(SKIP_REFRESH);
       if (!is401) return throwError(() => err);
 
+      // ⚠️ `catchError` PRIMA dello `switchMap`, e l'ordine è tutto: fino al
+      // 14/09/2026 stava dopo, quindi catturava anche un 401 della richiesta
+      // RIPETUTA — e «password attuale errata» (che il backend rispondeva 401)
+      // diventava un logout forzato. Il refresh fallito è l'unico caso che
+      // significa «sessione morta»; l'errore del retry va al chiamante così
+      // com'è, che lo mostri.
       return auth.refresh().pipe(
-        switchMap((token) => next(withAuth(req, token))),
         catchError((refreshErr: unknown) => {
           auth.clearSession();
           void router.navigate(['/login']);
           return throwError(() => refreshErr);
         }),
+        switchMap((token) => next(withAuth(req, token))),
       );
     }),
   );

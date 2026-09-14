@@ -1,0 +1,412 @@
+<div class="tessere">
+  <!-- ── Il tuo accesso ─────────────────────────────────────────────────── -->
+  <section class="card card--pad blocco" aria-labelledby="acc-accesso">
+    <h2 id="acc-accesso">Il tuo accesso</h2>
+
+    @switch (ruoloAccesso()) {
+      @case ('admin') {
+        <p class="blocco__intro">Hai accesso completo come amministratore.</p>
+      }
+      @case ('coach') {
+        <p class="blocco__intro">Hai accesso completo come coach.</p>
+      }
+      @case ('stakato') {
+        <p class="blocco__intro">
+          Hai accesso completo a tutti i contenuti: sei in staking con la scuola.
+        </p>
+        @if (haConteggi()) {
+          <p>
+            <button type="button" class="btn--link" (click)="vaiA.emit('conteggi')">
+              Il tuo prospetto mensile è nella scheda Conteggi
+              <app-icon name="arrow-right" [size]="14" />
+            </button>
+          </p>
+        }
+      }
+      @case ('tier') {
+        @if (piano(); as p) {
+          @switch (p.stato) {
+            @case ('scaduta') {
+              <p>
+                <span class="pill-stato pill-stato--ko">scaduto</span>
+                Piano <strong>{{ p.etichetta }}</strong> scaduto il
+                <strong>{{ p.scadenza | date: 'd MMM yyyy' }}</strong>: l'accesso ai
+                contenuti a pagamento si chiude entro poche ore.
+              </p>
+              <a routerLink="/abbonati" class="btn btn--primary">Rinnova</a>
+            }
+            @case ('vicina') {
+              <p>
+                <span class="pill-stato pill-stato--wait">
+                  @if (p.giorni === 0) {
+                    scade oggi
+                  } @else if (p.giorni === 1) {
+                    scade domani
+                  } @else {
+                    scade fra {{ p.giorni }} giorni
+                  }
+                </span>
+                Piano <strong>{{ p.etichetta }}</strong>, valido fino al
+                <strong>{{ p.scadenza | date: 'd MMM yyyy' }}</strong>.
+              </p>
+              <a routerLink="/abbonati" class="btn btn--primary">Rinnova ora</a>
+            }
+            @default {
+              <p>
+                Piano <strong>{{ p.etichetta }}</strong>
+                @if (p.scadenza) {
+                  , valido fino al <strong>{{ p.scadenza | date: 'd MMM yyyy' }}</strong>
+                  @if (p.giorni !== null) {
+                    ({{ p.giorni }} giorni)
+                  }
+                }
+              </p>
+              <a routerLink="/abbonati" class="btn btn--ghost">Gestisci o rinnova</a>
+            }
+          }
+        }
+      }
+      @default {
+        @if (!pending() && !rifiutata()) {
+          <p class="blocco__intro">Nessun abbonamento attivo.</p>
+          <a routerLink="/abbonati" class="btn btn--primary">Scopri gli abbonamenti</a>
+        }
+      }
+    }
+
+    <!-- La richiesta in attesa: PRIMA la card diceva «Nessun abbonamento» a chi
+         aveva già pagato. Il ritiro resta su /abbonati (un flusso in un posto
+         solo): qui la riga vera e un rimando che dice cosa trova. -->
+    @if (pending(); as r) {
+      <div class="accesso__pending">
+        <p>
+          <span class="pill-stato pill-stato--wait">in attesa</span>
+          Richiesta di abbonamento <strong>{{ r.tierLabel }}</strong>
+          @if (r.createdAt) {
+            del {{ r.createdAt | date: 'd MMM yyyy' }}
+          }
+          in attesa di approvazione
+          <span class="nota">
+            {{ metodo(r) }}
+            @if (dovuto(r); as d) {
+              · {{ d }}
+            }
+            @if (r.pointsSpent > 0) {
+              · {{ intero(r.pointsSpent) }} punti usati
+            }
+          </span>
+        </p>
+        <a routerLink="/abbonati" class="btn btn--ghost btn--sm">
+          Vedi o ritira la richiesta
+          <app-icon name="arrow-right" [size]="14" />
+        </a>
+      </div>
+    }
+
+    <!-- L'ultima richiesta rifiutata: l'unico caso in cui il sito TACEVA — il
+         motivo stava nella sola email. -->
+    @if (rifiutata(); as r) {
+      <div class="accesso__rifiutata">
+        <p>
+          <span class="pill-stato pill-stato--ko">non approvata</span>
+          La tua richiesta <strong>{{ r.tierLabel }}</strong>
+          @if (r.createdAt) {
+            del {{ r.createdAt | date: 'd MMM yyyy' }}
+          }
+          non è stata approvata.
+          @if (r.decisionNote) {
+            <span class="nota">{{ r.decisionNote }}</span>
+          }
+        </p>
+        <a routerLink="/abbonati" class="btn btn--primary">Scopri gli abbonamenti</a>
+      </div>
+    }
+
+    @if (sub().stato === 'errore') {
+      <p class="nota accesso__errore">
+        Stato della richiesta non disponibile.
+        <button type="button" class="btn--link" (click)="riprovaSub.emit()">Riprova</button>
+      </p>
+    }
+  </section>
+
+  <!-- ── Punti BFF ──────────────────────────────────────────────────────── -->
+  <!--
+    ⚠️ Nessuna frase sull'origine dei punti, nessun tasso, nessun rimando a
+    /affiliazioni formulato come «guadagna»: si dice dove SPENDERLI. Il
+    blocco resta separato dai conteggi (valutazione §D/§H).
+  -->
+  <section class="card card--pad blocco" aria-labelledby="acc-punti">
+    <h2 id="acc-punti">Punti BFF</h2>
+    <p class="cifra">
+      <span class="gettone" aria-hidden="true"></span>
+      <strong>{{ saldo() }}</strong>
+      <span class="text-muted">punti</span>
+    </p>
+    @if (punti().stato === 'errore') {
+      <p class="nota">
+        Movimenti non disponibili.
+        <button type="button" class="btn--link" (click)="riprovaPunti.emit()">Riprova</button>
+      </p>
+    }
+    <div class="blocco__piede">
+      <a routerLink="/negozio">Spendili nel Negozio <app-icon name="arrow-right" [size]="14" /></a>
+      <a routerLink="/abbonati">Usali sull'abbonamento <app-icon name="arrow-right" [size]="14" /></a>
+      <button type="button" class="btn--link" (click)="vaiA.emit('acquisti')">
+        Vedi i movimenti <app-icon name="arrow-right" [size]="14" />
+      </button>
+    </div>
+  </section>
+
+  <!-- ── Il mio percorso ────────────────────────────────────────────────── -->
+  <!--
+    Contatori che sono PORTE verso le pagine che esistono. ⚠️ Nessuna
+    percentuale complessiva, nessun badge, nessun «continua così» (A12): la
+    percentuale di una lezione è una stima per difetto e si dice «circa».
+  -->
+  <section class="card card--pad blocco" aria-labelledby="acc-percorso">
+    <h2 id="acc-percorso">Il mio percorso</h2>
+    @switch (percorso().stato) {
+      @case ('carico') {
+        <ul class="lista-righe" role="list" aria-busy="true">
+          <li class="riga"><span class="scheletro scheletro--riga riga__testo"></span></li>
+          <li class="riga"><span class="scheletro scheletro--riga riga__testo"></span></li>
+          <li class="riga"><span class="scheletro scheletro--riga riga__testo"></span></li>
+          <li class="visually-hidden" role="status">Caricamento del percorso…</li>
+        </ul>
+      }
+      @case ('errore') {
+        <div class="form-feedback is-error" role="alert">
+          Percorso non disponibile.
+          <button type="button" class="btn btn--ghost btn--sm" (click)="riprovaPercorso.emit()">
+            Riprova
+          </button>
+        </div>
+      }
+      @default {
+        @if (percorsoDati(); as d) {
+          @if (percorsoVuoto()) {
+            <p class="blocco__intro">
+              Il tuo percorso comincia dalle
+              <a routerLink="/lezioni">lezioni</a> e dall'<a routerLink="/allenamento">allenamento</a>.
+            </p>
+          } @else {
+            <ul class="lista-righe" role="list">
+              @if (d.lezioni; as lez) {
+                @for (r of lez.riprendi; track r.lessonId) {
+                  <li class="riga">
+                    <span class="riga__testo">
+                      Riprendi: <strong>{{ r.titolo }}</strong>
+                      <span class="riga__sub">visto fino a {{ circa(r.percentualeMax) }} · {{ r.ultimaAperturaAt | date: 'd MMM' }}</span>
+                    </span>
+                    <span class="riga__coda">
+                      <a routerLink="/lezioni" class="btn btn--ghost btn--sm" [attr.aria-label]="'Riprendi la lezione ' + r.titolo">
+                        Riprendi <app-icon name="arrow-right" [size]="14" />
+                      </a>
+                    </span>
+                  </li>
+                }
+                @if (lez.viste > 0) {
+                  <li class="riga">
+                    <span class="riga__testo">
+                      <strong>{{ intero(lez.viste) }}</strong>
+                      {{ lez.viste === 1 ? 'lezione aperta' : 'lezioni aperte' }}
+                    </span>
+                    <span class="riga__coda">
+                      <a routerLink="/lezioni" class="btn btn--ghost btn--sm" aria-label="Vai alle lezioni">
+                        Lezioni <app-icon name="arrow-right" [size]="14" />
+                      </a>
+                    </span>
+                  </li>
+                }
+              }
+              @if (d.allenamento; as al) {
+                @if (al.sessioni > 0) {
+                  <li class="riga">
+                    <span class="riga__testo">
+                      <strong>{{ intero(al.sessioni) }}</strong>
+                      {{ al.sessioni === 1 ? 'sessione di allenamento' : 'sessioni di allenamento' }}
+                      <span class="riga__sub">
+                        {{ intero(al.risposte) }} mani
+                        @if (al.precisione !== null) {
+                          · precisione {{ frazione(al.precisione) }}
+                        }
+                      </span>
+                    </span>
+                    <span class="riga__coda">
+                      <a routerLink="/allenamento/risultati" class="btn btn--ghost btn--sm" aria-label="Vai ai risultati dell'allenamento">
+                        Risultati <app-icon name="arrow-right" [size]="14" />
+                      </a>
+                    </span>
+                  </li>
+                }
+              }
+              @if (d.preset; as n) {
+                <li class="riga">
+                  <span class="riga__testo">
+                    <strong>{{ intero(n) }}</strong>
+                    {{ n === 1 ? 'configurazione di allenamento salvata' : 'configurazioni di allenamento salvate' }}
+                  </span>
+                  <span class="riga__coda">
+                    <a routerLink="/allenamento" class="btn btn--ghost btn--sm" aria-label="Vai all'allenamento">
+                      Allenamento <app-icon name="arrow-right" [size]="14" />
+                    </a>
+                  </span>
+                </li>
+              }
+              @if (d.mani && d.mani.usate > 0) {
+                <li class="riga">
+                  <span class="riga__testo">
+                    <strong>{{ intero(d.mani.usate) }}</strong>
+                    @if (d.mani.tetto > 0) {
+                      di {{ intero(d.mani.tetto) }}
+                    }
+                    {{ d.mani.usate === 1 ? 'mano caricata' : 'mani caricate' }}
+                  </span>
+                  <span class="riga__coda">
+                    <a routerLink="/mie-mani" class="btn btn--ghost btn--sm" aria-label="Vai alle tue mani">
+                      Le mie mani <app-icon name="arrow-right" [size]="14" />
+                    </a>
+                  </span>
+                </li>
+              }
+              @if (d.live && d.live.seguite > 0) {
+                <li class="riga">
+                  <span class="riga__testo">
+                    <strong>{{ intero(d.live.seguite) }}</strong>
+                    {{ d.live.seguite === 1 ? 'live seguita' : 'live seguite' }}
+                    @for (l of d.live.ultime; track l.sessionId) {
+                      <span class="riga__sub">
+                        {{ l.titolo }} · {{ l.primoIngresso | date: 'd MMM yyyy' }} ·
+                        {{ l.minuti }} min
+                        @if (l.stimata) {
+                          (durata stimata)
+                        }
+                      </span>
+                    }
+                  </span>
+                  <span class="riga__coda">
+                    <a routerLink="/live" class="btn btn--ghost btn--sm" aria-label="Vai alle live">
+                      Live <app-icon name="arrow-right" [size]="14" />
+                    </a>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        }
+      }
+    }
+  </section>
+
+  <!-- ── Le mie affiliazioni ────────────────────────────────────────────── -->
+  <!--
+    ⚠️ Errore MOSTRATO, mai una lista vuota: «non risulti tracciato» con l'API
+    giù è una bugia sul dato per cui l'utente è passato di qui. E il nome di
+    una sala compare SOLO qui dentro.
+  -->
+  <section class="card card--pad blocco" aria-labelledby="acc-aff">
+    <h2 id="acc-aff">Le mie affiliazioni</h2>
+    @switch (affiliazioni().stato) {
+      @case ('carico') {
+        <ul class="lista-righe" role="list" aria-busy="true">
+          <li class="riga"><span class="scheletro scheletro--riga riga__testo"></span></li>
+          <li class="visually-hidden" role="status">Caricamento delle affiliazioni…</li>
+        </ul>
+      }
+      @case ('errore') {
+        <div class="form-feedback is-error" role="alert">
+          {{ affiliazioniErrore() }}
+          <button type="button" class="btn btn--ghost btn--sm" (click)="caricaAffiliazioni()">Riprova</button>
+        </div>
+      }
+      @default {
+        @if (nessunaAffiliazione()) {
+          <p class="blocco__intro">Non risulti tracciato su nessuna sala.</p>
+        } @else {
+          @if (striscia().length) {
+            <p class="aff-striscia">{{ striscia().join(' · ') }}</p>
+          }
+
+          @if (tracciate().length) {
+            <h3 class="eyebrow blocco__sotto">Dove sei tracciato</h3>
+            <ul class="lista-righe" role="list">
+              @for (a of tracciate(); track a.id) {
+                <li class="riga">
+                  <span class="riga__testo">
+                    <strong>{{ a.roomName }}</strong>
+                    @if (a.decidedAt) {
+                      <span class="riga__sub">dal {{ a.decidedAt | date: 'd MMM yyyy' }}</span>
+                    }
+                  </span>
+                  <span class="riga__coda">
+                    <span [class]="'pill-stato pill-stato--' + tono(a)">{{ a.statusLabel }}</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (inCorso().length) {
+            <h3 class="eyebrow blocco__sotto">In corso</h3>
+            <ul class="lista-righe" role="list">
+              @for (a of inCorso(); track a.id) {
+                <li class="riga">
+                  <span class="riga__testo">
+                    <strong>{{ a.roomName }}</strong>
+                    @if (a.richiestoAt) {
+                      <span class="riga__sub">richiesta del {{ a.richiestoAt | date: 'd MMM yyyy' }}</span>
+                    }
+                  </span>
+                  <span class="riga__coda">
+                    <span [class]="'pill-stato pill-stato--' + tono(a)">{{ a.statusLabel }}</span>
+                    @if (a.status === 'RICHIESTO' && a.roomSlug) {
+                      <!-- un solo parametro, ed è lo slug: la stessa chiave del
+                           deep-link spedito per email -->
+                      <a
+                        class="btn btn--ghost btn--sm"
+                        routerLink="/affiliazioni"
+                        [queryParams]="{ completa: a.roomSlug }"
+                        [attr.aria-label]="'Completa i dati per ' + a.roomName"
+                      >Completa i dati <app-icon name="arrow-right" [size]="14" /></a>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (daRiprendere().length) {
+            <h3 class="eyebrow blocco__sotto">Da riprendere</h3>
+            <ul class="lista-righe" role="list">
+              @for (a of daRiprendere(); track a.id) {
+                <li class="riga">
+                  <span class="riga__testo">
+                    <strong>{{ a.roomName }}</strong>
+                    @if (a.decisionNote) {
+                      <span class="riga__sub">{{ a.decisionNote }}</span>
+                    }
+                  </span>
+                  <span class="riga__coda">
+                    <span [class]="'pill-stato pill-stato--' + tono(a)">{{ a.statusLabel }}</span>
+                    @if (a.roomSlug) {
+                      <a
+                        class="btn btn--ghost btn--sm"
+                        routerLink="/affiliazioni"
+                        [queryParams]="{ completa: a.roomSlug }"
+                        [attr.aria-label]="'Riprova con ' + a.roomName"
+                      >Riprova <app-icon name="arrow-right" [size]="14" /></a>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        }
+      }
+    }
+    <div class="blocco__piede">
+      <a routerLink="/affiliazioni">Vai alle affiliazioni <app-icon name="arrow-right" [size]="14" /></a>
+    </div>
+  </section>
+</div>

@@ -252,12 +252,12 @@
                     <div class="aff-row__badges">
                       @if (c.aff; as a) {
                         <span
-                          class="aff-chip"
-                          [class.aff-chip--ok]="chipOk(a.status)"
-                          [class.aff-chip--wait]="chipWait(a.status)"
-                          [class.aff-chip--ko]="chipKo(a.status)"
-                          [class.aff-chip--todo]="chipTodo(a.status)"
-                          [class.aff-chip--off]="chipOff(a.status)"
+                          class="pill-stato"
+                          [class.pill-stato--ok]="chipOk(a.status)"
+                          [class.pill-stato--wait]="chipWait(a.status)"
+                          [class.pill-stato--ko]="chipKo(a.status)"
+                          [class.pill-stato--todo]="chipTodo(a.status)"
+                          [class.pill-stato--off]="chipOff(a.status)"
                           >{{ a.statusLabel }}</span
                         >
                         @if (a.status === 'IN_VERIFICA') {
@@ -272,7 +272,7 @@
                           </span>
                         }
                       } @else {
-                        <span class="aff-chip aff-chip--none"
+                        <span class="pill-stato pill-stato--none"
                           >Non richiesto</span
                         >
                       }

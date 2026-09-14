@@ -307,10 +307,10 @@ describe('AffiliationsComponent', () => {
       [affOf({ status: 'IN_VERIFICA', statusLabel: 'In verifica' })],
     );
 
-    const chip = el(ctx.fixture).querySelector('.aff-chip');
+    const chip = el(ctx.fixture).querySelector('.pill-stato');
     expect(label(chip)).toBe('In verifica');
-    expect(chip!.classList).toContain('aff-chip--wait');
-    expect(chip!.classList).not.toContain('aff-chip--ok');
+    expect(chip!.classList).toContain('pill-stato--wait');
+    expect(chip!.classList).not.toContain('pill-stato--ok');
     expect(text(ctx.fixture)).toContain('di solito entro 48 ore');
 
     // Una richiesta è già in corso: né "Richiedi il collegamento" né "Richiedi
@@ -347,7 +347,7 @@ describe('AffiliationsComponent', () => {
     await ctx.fixture.whenStable();
     ctx.fixture.detectChanges();
 
-    expect(label(el(ctx.fixture).querySelector('.aff-chip'))).toBe('Annullato');
+    expect(label(el(ctx.fixture).querySelector('.pill-stato'))).toBe('Annullato');
     // Uno stato terminale ha sempre una via di ritorno.
     expect(button(ctx.fixture, 'Richiedi di nuovo')).toBeDefined();
   });
@@ -393,7 +393,7 @@ describe('AffiliationsComponent', () => {
     // Ciò che la riga chiusa DEVE tenere: offerta, stato + data, una sola
     // azione, e il gettone "tocca a te" — che è il punto del ridisegno.
     expect(text(ctx.fixture)).toContain('Rakeback 45%, ogni mese.');
-    expect(page.querySelectorAll('.aff-chip').length).toBe(2);
+    expect(page.querySelectorAll('.pill-stato').length).toBe(2);
     expect(text(ctx.fixture)).toContain('richiesta del 20/07/2026');
     expect(page.querySelectorAll('.aff-turn').length).toBe(2);
     expect(page.querySelectorAll('.aff-coin').length).toBe(2);

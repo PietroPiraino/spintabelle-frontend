@@ -194,3 +194,71 @@ button.badge--tag {
 .suit-divider__caldo {
   color: var(--copper-600);
 }
+
+// ── La pillola di STATO delle pagine pubbliche: `.pill-stato` ────────────────
+//
+// Pallino + parola, in mono: «tracciato», «in attesa», «usato». È la ricetta
+// che /affiliazioni aveva in casa come `.aff-chip`, promossa qui il
+// 14/09/2026 alla terza copia (`.account__chip` e `.account__badge` erano le
+// altre due, con rgba ed esadecimali scritti a mano — fuori palette in
+// Tramonto). I colori vengono dal tavolo: felt = va bene · oro = in attesa ·
+// rame = tocca a te · danger = rifiutato · muto = spento.
+//
+// ⚠️ REGOLA DI CONFINE, la stessa del pannello: lo STATO è una `.pill-stato`
+// (cambia da solo nel tempo), il FATTO è un `.badge` («Gratis», «Email
+// verificata»). E i toni qui NON sono quelli di `.admin-stato`: là `ok` vale
+// oro e `attesa` vale ember, qui `--ok` vale felt — due vocabolari, due
+// contesti, e una parola che vale due colori è il difetto che si evita non
+// chiamandoli allo stesso modo.
+//
+// ⚠️ `--off` è `--text-muted` (≥4,6:1) e non `--text-faint` (~2,4:1): un
+// buono «scaduto» va comunque letto. È una correzione rispetto ad `.aff-chip`,
+// che per «non richiesto» usava il faint.
+.pill-stato {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+
+.pill-stato--ok {
+  color: var(--felt);
+}
+
+.pill-stato--wait {
+  color: var(--gold-text);
+}
+
+// Rame da testo per la parola, rame pieno per il pallino: è lo stesso accento
+// dei bottoni primari.
+.pill-stato--todo {
+  color: var(--copper-600);
+
+  &::before {
+    background: var(--copper-400);
+  }
+}
+
+.pill-stato--ko {
+  color: var(--danger);
+}
+
+.pill-stato--off,
+.pill-stato--none {
+  color: var(--text-muted);
+}

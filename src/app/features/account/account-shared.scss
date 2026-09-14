@@ -1,0 +1,173 @@
+// Il vocabolario comune delle quattro schede di /account. Importato da ogni
+// componente della cartella (idioma di `admin-shared.scss`): una regola qui
+// raggiunge i quattro template, e a differenza dei fogli globali resta
+// dentro il perimetro della pagina.
+
+// ── Il blocco ────────────────────────────────────────────────────────────────
+//
+// Una card per argomento. ⚠️ Il titolo è alla scala CONDIVISA dei titoli di
+// blocco (`.legal h2, .seo-block h2, .faq h2` in `_utilities.scss`): senza
+// questa riga i titoli delle card ereditavano l'`h2` globale e uscivano a
+// 41,6px — undici titoli più grandi dell'`h1` della pagina. La clamp è la
+// STESSA di là: se cambia là, cambia qui.
+.blocco {
+  margin-bottom: 1.4rem;
+
+  h2 {
+    font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+    margin-bottom: 0.4rem;
+  }
+
+  > p {
+    margin-bottom: 1rem;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.blocco__intro {
+  color: var(--text-muted);
+}
+
+// I sottogruppi dentro un blocco (affiliazioni: tracciato / in corso / da
+// riprendere) usano `.eyebrow`: era una quarta etichetta mono-uppercase
+// scritta a mano (`.account__group`).
+.blocco__sotto {
+  // `.eyebrow` è inline: come titolo di sottogruppo deve stare su una riga
+  // sua (nello screenshot finiva accanto al pulsante «Scarica i miei dati»).
+  display: flex;
+  margin: 1.1rem 0 0.4rem;
+
+  &:first-of-type {
+    margin-top: 0.2rem;
+  }
+}
+
+// Riga di rimando in fondo a un blocco («Vai al Negozio →»).
+.blocco__piede {
+  margin-top: 0.9rem;
+  font-size: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+}
+
+// La regione live PERSISTENTE di ogni blocco che muta dopo un gesto
+// (idioma `.aff__live`): esiste nel DOM prima dell'azione, così il testo che
+// vi compare viene annunciato. ⚠️ `&:empty { margin: 0 }`, o un `<div>` vuoto
+// aggiunge margine a riposo.
+.blocco__live {
+  margin: 0 0 1rem;
+
+  &:empty {
+    margin: 0;
+  }
+
+  .form-feedback {
+    margin: 0;
+  }
+}
+
+// Nota sotto una cifra o un'etichetta. ⚠️ `--text-muted` e non `--text-faint`:
+// la nota che spiega il calcolo del rakeback stava a 2,3:1.
+.nota {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+// ── Le tessere della Panoramica ──────────────────────────────────────────────
+//
+// ⚠️ DUE colonne al massimo (420px di minimo su un contenitore da 1180): a tre
+// colonne le card scendevano a ~370px, e una riga con pillola + comando a
+// destra lasciava al testo ~90px — «Lottomat-ica» spezzato a metà parola,
+// visto nello screenshot a 1440. A due colonne quattro tessere fanno due
+// righe piene, invece di tre più una orfana.
+.tessere {
+  display: grid;
+  gap: 1.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+  align-items: start;
+}
+
+// Ogni blocco è un CONTAINER: le righe `.riga` al suo interno si incolonnano
+// quando è LUI a essere stretto, non quando lo è la finestra — una tessera in
+// una griglia a due colonne è stretta anche a 1440px. (`@container` e non una
+// `@media`: la larghezza che conta è quella della card.)
+.blocco {
+  container-type: inline-size;
+}
+
+@container (max-width: 520px) {
+  .riga {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .riga__coda {
+    justify-self: start;
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+}
+
+// Una cifra grande con la sua etichetta (saldo punti).
+.cifra {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0.2rem 0 0.8rem;
+
+  strong {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// I bersagli piccoli della pagina: `.btn--sm` nudo sta a 38px.
+//
+// ⚠️ Il selettore è `.btn--sm` NUDO, e non `.account .btn--sm`: questo foglio
+// è importato come stile di COMPONENTE da cinque componenti, e l'incapsulamento
+// lega ogni parte del selettore all'attributo del componente che lo compila —
+// `.account` sta nel template della shell, i bottoni in quelli delle schede,
+// quindi `.account[_x] .btn--sm[_x]` non combaciava MAI per le schede. Misurato
+// dalla sonda: 5/5 bottoni a 38px a 390px, con la regola «scritta». Nudo, ogni
+// copia compilata prende i propri `.btn--sm` e nessun altro.
+.btn--sm {
+  min-height: 44px;
+}
+
+// Il codice di un buono: `--font-mono` e `user-select: all` (ricetta di
+// `.aff-code__value`), non un `<code>` nudo nel Courier di sistema.
+.codice {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  user-select: all;
+}
+
+// La conferma in linea di un'azione irreversibile: riceve il fuoco (tabindex
+// -1) e l'anello ciano di `:focus-visible` non deve disegnarsi su un testo che
+// l'utente non ha «toccato» (idioma `subscribe.component.scss`).
+.conferma {
+  margin: 0.6rem 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
+
+  &:focus {
+    outline: none;
+  }
+
+  p {
+    font-weight: 600;
+    color: var(--danger);
+    margin-bottom: 0.8rem;
+  }
+}

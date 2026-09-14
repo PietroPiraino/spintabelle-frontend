@@ -1,0 +1,127 @@
+// La scheda Conteggi: un <details> per mese.
+
+.cnt__mese {
+  border-top: 1px solid var(--line);
+
+  &:first-of-type {
+    border-top: 0;
+  }
+}
+
+// Il summary è il bersaglio: 44px dichiarati, la cifra chiave a destra.
+.cnt__sum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  flex-wrap: wrap;
+  min-height: 44px;
+  padding: 0.6rem 0;
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::before {
+    content: '▸';
+    color: var(--text-muted);
+    margin-right: 0.4rem;
+    transition: transform var(--t-fast);
+  }
+}
+
+.cnt__mese[open] > .cnt__sum::before {
+  transform: rotate(90deg);
+}
+
+.cnt__sum-mese {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  flex: 1 1 auto;
+}
+
+.cnt__sum-cifre {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.2rem;
+  justify-content: flex-end;
+}
+
+.cnt__sotto {
+  display: flex;
+  margin: 0.2rem 0 0.5rem;
+}
+
+.cnt__sum-cifra {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-variant-numeric: tabular-nums;
+
+  .nota {
+    display: inline;
+  }
+}
+
+// Le righe del conteggio.
+//
+// ⚠️ `align-items: baseline`: a 390px un'etichetta va su due o tre righe, e
+// con `stretch` la cifra restava appoggiata alla PRIMA riga — non si capiva
+// più quale numero appartenesse a quale voce. Le spiegazioni escono dalle
+// etichette e stanno in `.nota`, sotto.
+//
+// ⚠️ `column-gap: 0` e la distanza data dal `padding-right` del `dt` (come nel
+// conto economico del pannello), così i filetti delle righe di totale — che
+// stanno su due celle — si disegnano come UNA riga e non come due segmenti.
+.cnt__righe {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0;
+  row-gap: 0.35rem;
+  margin: 0 0 1rem;
+  align-items: baseline;
+
+  dt {
+    padding-right: 1.5rem;
+    color: var(--text-muted);
+  }
+
+  dd {
+    margin: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  // Le righe di totale: un filetto VERO sopra (il commento della vecchia
+  // pagina lo prometteva, il foglio non lo disegnava).
+  .is-totale {
+    border-top: 1px solid var(--line);
+    padding-top: 0.45rem;
+    margin-top: 0.15rem;
+    color: var(--text);
+  }
+}
+
+@media (max-width: 560px) {
+  .cnt__righe {
+    dt {
+      padding-right: 0.75rem;
+    }
+
+    dd {
+      font-size: 0.95rem;
+    }
+  }
+}
+
+.cnt__contatti {
+  margin-top: 1.2rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}

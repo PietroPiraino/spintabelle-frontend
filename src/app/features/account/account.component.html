@@ -1,491 +1,87 @@
 <section class="section">
   <div class="container account">
-    <header class="account__head">
+    <!--
+      Testata su `.page-hero` NUDO («resta per le aree operative», _utilities).
+      ⚠️ Nessun ruolo qui: il ruolo vive in «Il tuo accesso», dove ha un'azione
+      accanto. E nessun «ultima attività»: direbbe sempre «adesso».
+    -->
+    <header class="page-hero account__hero">
       <span class="eyebrow">Area personale</span>
-      <h1>Il mio account</h1>
       @if (user(); as u) {
-        <p class="account__status">
-          <strong>{{ u.email }}</strong>
-          @if (verified()) {
-            <span class="account__badge account__badge--ok">Email verificata</span>
+        <h1>
+          @if (u.nickname) {
+            Ciao, {{ u.nickname }}
           } @else {
-            <span class="account__badge account__badge--warn">
-              Email non verificata · <a routerLink="/recupera-verifica">reinvia il link</a>
+            Il mio account
+          }
+        </h1>
+        <div class="page-hero__meta account__meta">
+          <!-- `overflow-wrap: anywhere`: un alias lungo non deve far scorrere
+               la pagina in orizzontale a 390px -->
+          <span class="account__email">{{ u.email }}</span>
+          @if (verified()) {
+            <span class="badge badge--free">Email verificata</span>
+          } @else {
+            <!-- Non più un link da 18px dentro una pillola: il bersaglio che
+                 sblocca l'account è un pulsante a sé, a 44px -->
+            <span class="badge account__badge-warn">Email non verificata</span>
+            <a routerLink="/recupera-verifica" class="btn btn--ghost btn--sm">
+              Reinvia il link di verifica
+            </a>
+          }
+          @if (u.createdAt) {
+            <span class="account__dal text-muted">
+              iscritto dal {{ u.createdAt | date: 'd MMM yyyy' }}
             </span>
           }
-        </p>
+        </div>
       }
     </header>
 
-    <!-- Abbonamento -->
-    <div class="card card--pad account__card">
-      <h2>Abbonamento</h2>
-      @if (isAdmin()) {
-        <p class="text-muted">Hai accesso completo come amministratore.</p>
-      } @else if (accessoSenzaAbbonamento(); as motivo) {
-        <p class="text-muted">{{ motivo }}</p>
-      } @else if (planLabel(); as plan) {
-        <p>
-          Piano attivo: <strong>{{ plan }}</strong>
-          @if (subExpires()) {
-            — valido fino al <strong>{{ subExpires() | date: 'dd MMM yyyy' }}</strong>
-          }
-        </p>
-        <a routerLink="/abbonati" class="btn btn--ghost">Gestisci o rinnova</a>
-      } @else {
-        <p class="text-muted">Non hai un abbonamento attivo.</p>
-        <a routerLink="/abbonati" class="btn btn--primary">Scopri gli abbonamenti</a>
-      }
-    </div>
+    <app-schede
+      #sch
+      etichetta="Sezioni dell'account"
+      [voci]="voci()"
+      [scelto]="vista()"
+      [primarie]="true"
+      (scegli)="setVista($event)"
+    />
 
-    <!-- Punti BFF -->
-    <div class="card card--pad account__card">
-      <h2>Punti BFF</h2>
-      <p>Saldo: <strong>{{ pointsBalance() }}</strong> punti</p>
-      @if (myPoints()?.history?.length) {
-        <ul style="list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.4rem">
-          @for (e of myPoints()!.history; track e.id) {
-            <li class="spread" style="gap: 1rem">
-              <span class="text-muted">
-                @if (e.createdAt) { {{ e.createdAt | date: 'dd MMM yyyy' }} · }
-                {{ e.reason }}
-              </span>
-              <strong>{{ e.delta > 0 ? '+' : '' }}{{ e.delta }}</strong>
-            </li>
-          }
-        </ul>
-      } @else {
-        <p class="text-muted">Nessun movimento ancora.</p>
-      }
-    </div>
-
-    <!--
-      Il prospetto dei propri conteggi.
-
-      ⚠️⚠️ PRIMA superficie di questo modulo rivolta all'utente: fino
-      all'11/09/2026 il registro (A17 e A18) dichiarava che nessun dato di
-      questa contabilità compariva in alcuna schermata rivolta all'utente, e che
-      mostrarla «sarebbe una superficie nuova, da valutare prima». La
-      valutazione è `gdpr/valutazione-prospetto-e-punti.md`, adottata prima di
-      questo markup; l'informativa è stata pubblicata prima del codice.
-
-      ⚠️ La sezione NON compare a chi non ha conteggi — che è quasi chiunque.
-      Una card «non hai conteggi» sulla pagina di tutti gli iscritti sarebbe
-      rumore per il 99% e non direbbe niente all'1%.
-
-      ⚠️ Ciascuno vede SOLO i propri numeri: qui non c'è una sola cifra della
-      scuola (né quanto incassa dall'agente, né i margini, né la ripartizione
-      fra i soci). È la prima delle cinque misure del §G.1.
-    -->
-    @if (prospetto().length) {
-      <div class="card card--pad account__card">
-        <h2>I miei conteggi</h2>
-        <p class="text-muted">
-          Il dettaglio di come si arriva alle cifre del tuo accordo, mese per
-          mese. Se qualcosa non ti torna, scrivici.
-        </p>
-
-        @for (m of prospetto(); track m.meseId) {
-          <div class="account__conteggio">
-            <h3 class="account__conteggio-titolo">
-              {{ m.etichetta }}
-              @if (m.provvisorio) {
-                <!-- ⚠️ Il mese aperto si mostra, ma DICHIARATO: i suoi numeri
-                     possono ancora cambiare, e chi legge deve saperlo. -->
-                <span class="account__chip">provvisorio</span>
-              }
-            </h3>
-
-            @if (m.rakeback; as r) {
-              <dl class="account__conteggio-righe">
-                <dt>Rake generato</dt>
-                <dd>{{ eur(r.rakeGeneratoCent) }}</dd>
-                <dt>La tua percentuale</dt>
-                <dd>{{ pct(r.backPlayerBp) }}</dd>
-                <dt>
-                  Già accreditato dalla sala
-                  <span class="account__nota">
-                    a blocchi da {{ eur(r.scaglionePassoCent) }} sul
-                    {{ pct(r.scaglioneBaseBp) }}
-                  </span>
-                </dt>
-                <dd>{{ eur(r.erogatoBonusCent) }}</dd>
-                @if (r.ticketDallAgente) {
-                  <dt>
-                    Ti spetta
-                    <span class="account__nota">
-                      te lo accredita direttamente l'agente
-                    </span>
-                  </dt>
-                  <dd><strong>{{ eur(r.spettanteAlPlayerCent) }}</strong></dd>
-                } @else {
-                  <dt>Ti spetta da noi</dt>
-                  <dd><strong>{{ eur(r.spettanteAlPlayerCent) }}</strong></dd>
-                  <dt>Hai ricevuto</dt>
-                  <dd>{{ eur(r.pagatoAlPlayerCent) }}</dd>
-                  <dt>Resta da darti (di questo mese)</dt>
-                  <dd><strong>{{ eur(r.residuoAlPlayerCent) }}</strong></dd>
-                }
-              </dl>
-            }
-
-            @if (m.stakato; as st) {
-              <dl class="account__conteggio-righe">
-                <dt>Back maturata</dt>
-                <dd>{{ eur(st.backCent) }}</dd>
-                <dt>Risultato EV del pool</dt>
-                <dd>{{ eur(st.poolEvCent) }}</dd>
-                <dt>Diff</dt>
-                <dd>{{ eur(st.diffCent) }}</dd>
-                <dt>Fee</dt>
-                <dd>{{ eur(st.feeCent) }}</dd>
-                <dt>Altro</dt>
-                <dd>{{ eur(st.altroCent) }}</dd>
-                <dt>Totale del mese</dt>
-                <dd><strong>{{ eur(st.totaleCent) }}</strong></dd>
-                @if (st.totaleCent >= 0) {
-                  <dt>Quota della scuola ({{ pct(st.dealScuolaBp) }})</dt>
-                  <dd>{{ eur(st.quotaScuolaCent) }}</dd>
-                  <dt>
-                    Meno quanto tratteniamo
-                    <span class="account__nota">
-                      la parte di back che non ti accreditiamo in ticket
-                    </span>
-                  </dt>
-                  <dd>− {{ eur(st.trattenutoCent) }}</dd>
-                }
-                @if (st.aRecuperoCent !== 0) {
-                  <dt>
-                    @if (st.totaleCent < 0) {
-                      Perdita del mese, sul registro EV (make-up)
-                    } @else if (st.risultatoCent < 0) {
-                      A compensazione, scalato dal tuo debito EV
-                    } @else {
-                      A recupero dello scarto EV
-                    }
-                  </dt>
-                  <dd>{{ eur(st.aRecuperoCent) }}</dd>
-                }
-                <!-- ⚠️ Negativa = è la scuola a rimborsare: si dice con le
-                     parole, non col meno davanti a «da bonificare». -->
-                @if (st.daRegolareCent < 0) {
-                  <dt>Ti rimborsiamo con bonifico</dt>
-                  <dd><strong>{{ eur(-st.daRegolareCent) }}</strong></dd>
-                } @else {
-                  <dt>Da bonificare</dt>
-                  <dd><strong>{{ eur(st.daRegolareCent) }}</strong></dd>
-                }
-              </dl>
-            }
-          </div>
+    <!-- Il pannello è UNO e cambia contenuto: `tabindex="0"` perché una scheda
+         promette un pannello raggiungibile da tastiera -->
+    <div
+      class="account__pannello"
+      role="tabpanel"
+      tabindex="0"
+      [id]="sch.idPannello()"
+      [attr.aria-labelledby]="sch.idSchedaAttiva()"
+    >
+      @switch (vista()) {
+        @case ('acquisti') {
+          <app-account-acquisti [punti]="punti()" (riprovaPunti)="caricaPunti()" />
         }
-      </div>
-    }
-
-    <!-- I miei buoni (Negozio) -->
-    <div class="card card--pad account__card">
-      <h2>I miei buoni</h2>
-      @if (myVouchers().length) {
-        <ul style="list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.6rem">
-          @for (v of myVouchers(); track v.code) {
-            <li class="spread" style="gap: 1rem">
-              <span class="text-muted">
-                <strong>{{ voucherValueLabel(v) }}</strong>
-                · <code>{{ v.code }}</code>
-                @if (v.validUntil) {
-                  · scade il {{ v.validUntil | date: 'dd MMM yyyy' }}
-                }
-              </span>
-              <span class="row" style="gap: 0.5rem">
-                <span class="account__chip" [class]="'account__chip--' + v.status">
-                  {{ voucherStatusLabel(v.status) }}
-                </span>
-                @if (v.status === 'available') {
-                  <a routerLink="/abbonati" class="btn btn--ghost btn--sm">Usa</a>
-                }
-              </span>
-            </li>
-          }
-        </ul>
-      } @else {
-        <p class="text-muted">Non hai ancora buoni sconto.</p>
-      }
-    </div>
-
-    <!-- I miei ordini (Negozio) -->
-    <div class="card card--pad account__card">
-      <h2>I miei ordini</h2>
-      @if (myOrders().length) {
-        <ul style="list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.6rem">
-          @for (o of myOrders(); track o.id) {
-            <li class="spread" style="gap: 1rem">
-              <span class="text-muted">
-                <strong>{{ o.itemLabel }}</strong>
-                · {{ o.typeLabel }}
-                @if (o.createdAt) {
-                  · {{ o.createdAt | date: 'dd MMM yyyy' }}
-                }
-              </span>
-              <span class="row" style="gap: 0.5rem">
-                <span class="account__chip">{{ o.statusLabel }}</span>
-                <strong>{{ orderAmountLabel(o) }}</strong>
-              </span>
-            </li>
-          }
-        </ul>
-      } @else {
-        <p class="text-muted">Nessun ordine.</p>
-      }
-    </div>
-
-    <!-- Le mie affiliazioni (tracciamento poker room) -->
-    <div class="card card--pad account__card">
-      <h2>Le mie affiliazioni</h2>
-      @if (affiliationsError()) {
-        <!-- ⚠️ mai una lista vuota al posto di un errore: direbbe "non sei
-             tracciato da nessuna parte" mentre l'API è irraggiungibile -->
-        <div class="form-feedback is-error" role="alert">{{ affiliationsError() }}</div>
-      } @else if (myAffiliations() === null) {
-        <div class="spinner" role="status" aria-label="Caricamento affiliazioni"></div>
-      } @else if (affiliationsTracked().length === 0 && affiliationsInProgress().length === 0) {
-        <p class="text-muted">Non risulti tracciato su nessuna sala.</p>
-      } @else {
-        @if (affiliationsTracked().length) {
-          <h3 class="account__group">Dove sei tracciato</h3>
-          <ul style="list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.6rem">
-            @for (a of affiliationsTracked(); track a.id) {
-              <li class="spread" style="gap: 1rem">
-                <span class="text-muted">
-                  <strong>{{ a.roomName }}</strong>
-                  @if (a.decidedAt) {
-                    · dal {{ a.decidedAt | date: 'dd MMM yyyy' }}
-                  }
-                </span>
-                <span class="account__chip" [class]="affiliationChip(a)">
-                  {{ a.statusLabel }}
-                </span>
-              </li>
-            }
-          </ul>
+        @case ('conteggi') {
+          <app-account-conteggi [prospetto]="prospetto()" (riprova)="caricaProspetto()" />
         }
-
-        @if (affiliationsInProgress().length) {
-          <h3 class="account__group">In corso</h3>
-          <ul style="list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.6rem">
-            @for (a of affiliationsInProgress(); track a.id) {
-              <li class="spread" style="gap: 1rem">
-                <span class="text-muted">
-                  <strong>{{ a.roomName }}</strong>
-                  @if (a.richiestoAt) {
-                    · richiesta del {{ a.richiestoAt | date: 'dd MMM yyyy' }}
-                  }
-                </span>
-                <span class="row" style="gap: 0.5rem">
-                  <span class="account__chip" [class]="affiliationChip(a)">
-                    {{ a.statusLabel }}
-                  </span>
-                  @if (a.status === 'RICHIESTO' && a.roomSlug) {
-                    <!-- ⚠️ un solo parametro, ed è lo slug: è la stessa chiave
-                         del deep-link spedito per email -->
-                    <a
-                      class="btn btn--ghost btn--sm"
-                      routerLink="/affiliazioni"
-                      [queryParams]="{ completa: a.roomSlug }"
-                    >Completa i dati →</a>
-                  }
-                </span>
-              </li>
-            }
-          </ul>
-        }
-      }
-      <p class="account__more">
-        <a routerLink="/affiliazioni">Vai alle affiliazioni →</a>
-      </p>
-    </div>
-
-    <!-- Dati di profilo (rettifica) -->
-    <div class="card card--pad account__card">
-      <h2>Dati di profilo</h2>
-      <p class="text-muted">Aggiorna la tua email o il tuo nickname.</p>
-
-      @if (profileMsg()) {
-        <div class="form-feedback is-success" role="status">{{ profileMsg() }}</div>
-      }
-      @if (profileError()) {
-        <div class="form-feedback is-error" role="alert">{{ profileError() }}</div>
-      }
-
-      <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
-        <div class="field">
-          <label for="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            class="input"
-            formControlName="email"
-            autocomplete="email"
-            [class.is-invalid]="profileForm.controls.email.touched && profileForm.controls.email.invalid"
+        @case ('profilo') {
+          <app-account-profilo
+            [percorso]="percorso()"
+            [haConteggi]="haConteggi()"
+            (riprovaPercorso)="caricaPercorso()"
           />
-          @if (profileForm.controls.email.touched && profileForm.controls.email.invalid) {
-            <span class="field-error">Inserisci un'email valida.</span>
-          }
-        </div>
-
-        <div class="field">
-          <label for="nickname">Nickname</label>
-          <input
-            id="nickname"
-            type="text"
-            class="input"
-            formControlName="nickname"
-            autocomplete="username"
-            [class.is-invalid]="profileForm.controls.nickname.touched && profileForm.controls.nickname.invalid"
-          />
-          @if (profileForm.controls.nickname.touched && profileForm.controls.nickname.invalid) {
-            <span class="field-error">
-              3–24 caratteri: lettere, numeri, punto, trattino o underscore.
-            </span>
-          }
-        </div>
-
-        <button type="submit" class="btn btn--primary" [disabled]="profileSaving()">
-          {{ profileSaving() ? 'Salvataggio…' : 'Salva modifiche' }}
-        </button>
-      </form>
-    </div>
-
-    <!-- Notifiche -->
-    <div class="card card--pad account__card">
-      <h2>Notifiche</h2>
-      <p class="text-muted">
-        Scegli se ricevere un'email quando pubblichiamo una nuova lezione o la
-        registrazione di una live a cui hai accesso.
-      </p>
-      @if (notifyError()) {
-        <div class="form-feedback is-error" role="alert">{{ notifyError() }}</div>
-      }
-      @if (notifyMsg()) {
-        <div class="form-feedback is-success" role="status">{{ notifyMsg() }}</div>
-      }
-      <label class="account__toggle">
-        <input
-          type="checkbox"
-          [checked]="notifyNewLessons()"
-          [disabled]="notifySaving()"
-          (change)="setNotifyNewLessons($any($event.target).checked)"
-        />
-        Avvisami via email delle nuove lezioni e registrazioni
-      </label>
-    </div>
-
-    <!-- Password -->
-    <div class="card card--pad account__card">
-      <h2>Password</h2>
-      @if (pwDone()) {
-        <div class="form-feedback is-success" role="status">
-          Password aggiornata. Per sicurezza sei stato disconnesso:
-          <a routerLink="/login">accedi con la nuova password</a>.
-        </div>
-      } @else {
-        <p class="text-muted">
-          Per cambiarla, inserisci la password attuale e quella nuova.
-        </p>
-
-        @if (pwError()) {
-          <div class="form-feedback is-error" role="alert">{{ pwError() }}</div>
         }
-
-        <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
-          <div class="field">
-            <label for="currentPassword">Password attuale</label>
-            <input
-              id="currentPassword"
-              type="password"
-              class="input"
-              formControlName="currentPassword"
-              autocomplete="current-password"
-              [class.is-invalid]="passwordForm.controls.currentPassword.touched && passwordForm.controls.currentPassword.invalid"
-            />
-          </div>
-
-          <div class="field">
-            <label for="newPassword">Nuova password</label>
-            <input
-              id="newPassword"
-              type="password"
-              class="input"
-              formControlName="newPassword"
-              autocomplete="new-password"
-              placeholder="Minimo 8 caratteri"
-              [class.is-invalid]="passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid"
-            />
-            @if (passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid) {
-              <span class="field-error">La password deve avere almeno 8 caratteri.</span>
-            }
-          </div>
-
-          <div class="field">
-            <label for="confirm">Conferma nuova password</label>
-            <input
-              id="confirm"
-              type="password"
-              class="input"
-              formControlName="confirm"
-              autocomplete="new-password"
-              [class.is-invalid]="passwordForm.controls.confirm.touched && (passwordForm.controls.confirm.invalid || passwordForm.hasError('passwordsMismatch'))"
-            />
-            @if (passwordForm.controls.confirm.touched && passwordForm.hasError('passwordsMismatch')) {
-              <span class="field-error">Le password non coincidono.</span>
-            }
-          </div>
-
-          <button type="submit" class="btn btn--primary" [disabled]="pwSaving()">
-            {{ pwSaving() ? 'Aggiornamento…' : 'Cambia password' }}
-          </button>
-        </form>
-      }
-    </div>
-
-    <!-- Export dei dati -->
-    <div class="card card--pad account__card">
-      <h2>I tuoi dati</h2>
-      <p class="text-muted">
-        Scarica una copia di tutti i dati che trattiamo sul tuo conto, in formato
-        JSON (diritto di accesso e portabilità).
-      </p>
-      @if (exportError()) {
-        <div class="form-feedback is-error" role="alert">{{ exportError() }}</div>
-      }
-      <button type="button" class="btn btn--ghost" (click)="exportData()" [disabled]="exporting()">
-        {{ exporting() ? 'Preparazione…' : 'Scarica i miei dati' }}
-      </button>
-    </div>
-
-    <!-- Cancellazione account -->
-    <div class="card card--pad account__card account__danger">
-      <h2>Elimina account</h2>
-      <p class="text-muted">
-        Cancella definitivamente il tuo account e tutti i dati collegati (profilo,
-        sessioni e storico di allenamento). L'operazione è <strong>irreversibile</strong>.
-      </p>
-      @if (deleteError()) {
-        <div class="form-feedback is-error" role="alert">{{ deleteError() }}</div>
-      }
-      @if (confirmingDelete()) {
-        <p class="account__confirm">Sei sicuro? Questa azione non può essere annullata.</p>
-        <div class="row">
-          <button type="button" class="btn btn--danger-solid" (click)="confirmDelete()" [disabled]="deleting()">
-            {{ deleting() ? 'Eliminazione…' : 'Sì, elimina tutto' }}
-          </button>
-          <button type="button" class="btn btn--ghost" (click)="confirmingDelete.set(false)" [disabled]="deleting()">
-            Annulla
-          </button>
-        </div>
-      } @else {
-        <button type="button" class="btn btn--danger" (click)="confirmingDelete.set(true)">
-          Elimina il mio account
-        </button>
+        @default {
+          <app-account-panoramica
+            [sub]="sub()"
+            [punti]="punti()"
+            [percorso]="percorso()"
+            [haConteggi]="haConteggi()"
+            (riprovaSub)="caricaSub()"
+            (riprovaPunti)="caricaPunti()"
+            (riprovaPercorso)="caricaPercorso()"
+            (vaiA)="setVista($event)"
+          />
+        }
       }
     </div>
   </div>

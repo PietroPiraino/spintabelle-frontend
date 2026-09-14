@@ -197,7 +197,7 @@
 }
 
 // Striscia di sintesi: una riga, il conteggio in evidenza e l'etichetta muta.
-// Il colore è lo stesso linguaggio degli stati (vedi `.aff-chip`).
+// Il colore è lo stesso linguaggio degli stati (vedi `.pill-stato` in _cards.scss).
 .aff__summary {
   display: flex;
   flex-wrap: wrap;
@@ -426,57 +426,13 @@
   color: var(--text-faint);
 }
 
-// ── Stato: i colori vengono dal tavolo ────────────────────────────────────────
-// felt = tracciato · oro = in verifica · rame = tocca a te · faint = non
-// richiesto/annullato · danger = non approvato.
+// ── Stato ────────────────────────────────────────────────────────────────────
+// La pillola di stato è `.pill-stato` in `styles/_cards.scss`, promossa da qui
+// il 14/09/2026 alla terza copia (le altre due erano su /account): felt =
+// tracciato · oro = in verifica · rame = tocca a te · danger = non approvato ·
+// muto = non richiesto/annullato. La striscia di sintesi qui sotto ne usa gli
+// stessi toni.
 
-.aff-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-
-  &::before {
-    content: '';
-    width: 8px;
-    height: 8px;
-    flex: 0 0 auto;
-    border-radius: 50%;
-    background: currentColor;
-  }
-}
-
-.aff-chip--ok {
-  color: var(--felt);
-}
-
-.aff-chip--wait {
-  color: var(--gold-text);
-}
-
-// Rame da testo per la parola, rame pieno per il pallino: è lo stesso accento
-// dei bottoni primari, l'unico della pagina.
-.aff-chip--todo {
-  color: var(--copper-600);
-
-  &::before {
-    background: var(--copper-400);
-  }
-}
-
-.aff-chip--ko {
-  color: var(--danger);
-}
-
-.aff-chip--off,
-.aff-chip--none {
-  color: var(--text-faint);
-}
 
 // ── Il gettone dell'azione ────────────────────────────────────────────────────
 // Nel poker conta di chi è l'azione. Questo è l'UNICO ornamento della pagina:

@@ -1,0 +1,149 @@
+<!--
+  Il prospetto dei propri conteggi (vincoli nel .ts: §G.1, §D/§H della
+  valutazione). ⚠️ Nessun punto BFF in questa scheda, nessun confronto fra
+  mesi, nessuna cifra della scuola. Le tre percentuali pattuite (`pct`) sono
+  i termini dell'accordo e DEVONO restare.
+-->
+<section class="card card--pad blocco" aria-labelledby="cnt-titolo">
+  <h2 id="cnt-titolo">I miei conteggi</h2>
+  <p class="blocco__intro">
+    Il dettaglio di come si arriva alle cifre del tuo accordo, mese per mese.
+  </p>
+
+  @switch (prospetto().stato) {
+    @case ('carico') {
+      <div aria-busy="true">
+        <span class="scheletro scheletro--blocco"></span>
+        <span class="visually-hidden" role="status">Caricamento dei conteggi…</span>
+      </div>
+    }
+    @case ('errore') {
+      <div class="form-feedback is-error" role="alert">
+        Conteggi non disponibili.
+        <button type="button" class="btn btn--ghost btn--sm" (click)="riprova.emit()">Riprova</button>
+      </div>
+    }
+    @default {
+      @for (m of mesi(); track m.meseId; let primo = $first) {
+        <!-- Un <details> per mese, il PRIMO aperto: nel summary il mese,
+             «provvisorio» e l'unica cifra che conta. -->
+        <details class="cnt__mese" [open]="primo">
+          <summary class="cnt__sum">
+            <span class="cnt__sum-mese">
+              {{ m.etichetta }}
+              @if (m.provvisorio) {
+                <!-- ⚠️ Il mese aperto si DICHIARA: i suoi numeri possono ancora cambiare -->
+                <span class="pill-stato pill-stato--wait">provvisorio</span>
+              }
+            </span>
+            <span class="cnt__sum-cifre">
+              @for (c of cifreChiave(m); track c.etichetta) {
+                <span class="cnt__sum-cifra">
+                  <span class="nota">{{ c.etichetta }}</span>
+                  <strong>{{ c.valore }}</strong>
+                </span>
+              }
+            </span>
+          </summary>
+
+          @if (m.rakeback; as r) {
+            <!-- Un sottotitolo per accordo, così le due dl di chi ha conto E
+                 staking nello stesso mese non si leggono come una lista sola -->
+            <h4 class="eyebrow cnt__sotto">Conto rakeback · {{ r.username }}</h4>
+            <dl class="cnt__righe">
+              <dt>Rake generato</dt>
+              <dd>{{ eur(r.rakeGeneratoCent) }}</dd>
+              <dt>La tua percentuale</dt>
+              <dd>{{ pct(r.backPlayerBp) }}</dd>
+              <dt>
+                Già accreditato dalla sala
+                <span class="nota">a blocchi da {{ eur(r.scaglionePassoCent) }} sul {{ pct(r.scaglioneBaseBp) }}</span>
+              </dt>
+              <dd>{{ eur(r.erogatoBonusCent) }}</dd>
+              @if (r.ticketDallAgente) {
+                <dt class="is-totale">
+                  Ti spetta
+                  <span class="nota">te lo accredita direttamente l'agente</span>
+                </dt>
+                <dd class="is-totale"><strong>{{ eur(r.spettanteAlPlayerCent) }}</strong></dd>
+              } @else {
+                <dt>Ti spetta da noi</dt>
+                <dd><strong>{{ eur(r.spettanteAlPlayerCent) }}</strong></dd>
+                <dt>Hai ricevuto</dt>
+                <dd>{{ eur(r.pagatoAlPlayerCent) }}</dd>
+                <dt class="is-totale">
+                  Resta da darti
+                  <span class="nota">di questo mese: il residuo non si riporta al mese dopo</span>
+                </dt>
+                <dd class="is-totale"><strong>{{ eur(r.residuoAlPlayerCent) }}</strong></dd>
+              }
+            </dl>
+          }
+
+          @if (m.stakato; as st) {
+            <h4 class="eyebrow cnt__sotto">Staking · {{ st.nome }}</h4>
+            <dl class="cnt__righe">
+              <dt>Back maturata</dt>
+              <dd>{{ eur(st.backCent) }}</dd>
+              <dt>Risultato EV del pool</dt>
+              <dd>{{ eur(st.poolEvCent) }}</dd>
+              <dt>Diff</dt>
+              <dd>{{ eur(st.diffCent) }}</dd>
+              <dt>Fee</dt>
+              <dd>{{ eur(st.feeCent) }}</dd>
+              <dt>Altro</dt>
+              <dd>{{ eur(st.altroCent) }}</dd>
+              <dt class="is-totale">Totale del mese</dt>
+              <dd class="is-totale"><strong>{{ eur(st.totaleCent) }}</strong></dd>
+              @if (st.totaleCent >= 0) {
+                <dt>
+                  Quota della scuola
+                  <span class="nota">{{ pct(st.dealScuolaBp) }}</span>
+                </dt>
+                <dd>{{ eur(st.quotaScuolaCent) }}</dd>
+                <dt>
+                  Meno quanto tratteniamo
+                  <span class="nota">la parte di back che non ti accreditiamo in ticket</span>
+                </dt>
+                <dd>− {{ eur(st.trattenutoCent) }}</dd>
+              }
+              @if (st.aRecuperoCent !== 0) {
+                <dt>
+                  @if (st.totaleCent < 0) {
+                    Perdita del mese
+                    <span class="nota">sul registro EV (make-up)</span>
+                  } @else if (st.risultatoCent < 0) {
+                    A compensazione
+                    <span class="nota">scalato dal tuo debito EV</span>
+                  } @else {
+                    A recupero dello scarto EV
+                  }
+                </dt>
+                <dd>{{ eur(st.aRecuperoCent) }}</dd>
+              }
+              <!-- ⚠️ Negativa = è la scuola a rimborsare: si dice con le
+                   parole, non col meno davanti a «da bonificare». -->
+              @if (st.daRegolareCent < 0) {
+                <dt class="is-totale">Ti rimborsiamo con bonifico</dt>
+                <dd class="is-totale"><strong>{{ eur(-st.daRegolareCent) }}</strong></dd>
+              } @else {
+                <dt class="is-totale">Da bonificare</dt>
+                <dd class="is-totale"><strong>{{ eur(st.daRegolareCent) }}</strong></dd>
+              }
+            </dl>
+          }
+        </details>
+      }
+
+      <!-- I due canali già fissati (valutazione affiliazioni §12): la
+           rettifica di un conteggio è un atto dell'amministrazione, e chi legge
+           un residuo che non gli torna deve sapere a chi scrivere. -->
+      <p class="cnt__contatti">
+        Se qualcosa non ti torna, scrivi a
+        <a [href]="'mailto:' + EMAIL_TITOLARE">{{ EMAIL_TITOLARE }}</a>
+        o sul nostro <a [href]="discord" target="_blank" rel="noopener">Discord</a>,
+        indicando il mese.
+      </p>
+    }
+  }
+</section>
