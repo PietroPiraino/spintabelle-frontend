@@ -1764,7 +1764,7 @@ export interface RigaTraffico {
   chiave: string;
   visite: number;
   pagineViste: number;
-  /** Frazione 0..1 sul totale visite della finestra. */
+  /** Frazione 0..1 sul totale della CLASSIFICA (non sui totali per giorno: col campionamento sono stime separate). */
   quota: number;
 }
 

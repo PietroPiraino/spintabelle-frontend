@@ -1872,9 +1872,14 @@
                 <h3 class="admin-blocco__titolo">Paesi, dispositivi e browser</h3>
               </div>
               <p class="admin-nota">
-                Quote sul totale delle visite della finestra. Sono le dimensioni mostrate
-                qui perché dichiarate in cookie policy; il sistema operativo non lo è e
-                resta fuori (vedi «Cosa i numeri del traffico non dicono»).
+                Quote sul totale di ciascun elenco, non sulle visite dei giorni: col
+                campionamento di Cloudflare ogni raggruppamento è una stima a sé, e i
+                totali non tornano fra loro al centesimo. Sono le dimensioni mostrate qui
+                perché dichiarate in cookie policy; il sistema operativo non lo è e resta
+                fuori (vedi «Cosa i numeri del traffico non dicono»).
+              </p>
+              <p class="admin-nota admin-table__nota-mobile">
+                Su schermi stretti «Pagine viste» è nascosta.
               </p>
               <div class="admin-table__scroll">
                 <table class="admin-table admin-table--etichettata">
@@ -1883,6 +1888,7 @@
                     <tr>
                       <th scope="col" class="admin-table__c-primo">Paese</th>
                       <th scope="col" class="is-num">Visite</th>
+                      <th scope="col" class="is-num admin-table__solo-largo">Pagine viste</th>
                       <th scope="col" class="is-num">Quota</th>
                     </tr>
                   </thead>
@@ -1895,13 +1901,16 @@
                         <td class="is-num" data-etichetta="Visite">
                           {{ formattaIntero(r.visite) }}
                         </td>
+                        <td class="is-num admin-table__solo-largo" data-etichetta="Pagine viste">
+                          {{ formattaIntero(r.pagineViste) }}
+                        </td>
                         <td class="is-num" data-etichetta="Quota">
                           {{ formattaFrazione(r.quota) }}
                         </td>
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="3" class="admin-table__vuota">
+                        <td colspan="4" class="admin-table__vuota">
                           Nessun Paese nella finestra.
                         </td>
                       </tr>
@@ -1923,6 +1932,7 @@
                         <tr>
                           <th scope="col" class="admin-table__c-primo">Dispositivo</th>
                           <th scope="col" class="is-num">Visite</th>
+                          <th scope="col" class="is-num admin-table__solo-largo">Pagine viste</th>
                           <th scope="col" class="is-num">Quota</th>
                         </tr>
                       </thead>
@@ -1935,13 +1945,16 @@
                             <td class="is-num" data-etichetta="Visite">
                               {{ formattaIntero(r.visite) }}
                             </td>
+                            <td class="is-num admin-table__solo-largo" data-etichetta="Pagine viste">
+                              {{ formattaIntero(r.pagineViste) }}
+                            </td>
                             <td class="is-num" data-etichetta="Quota">
                               {{ formattaFrazione(r.quota) }}
                             </td>
                           </tr>
                         } @empty {
                           <tr>
-                            <td colspan="3" class="admin-table__vuota">
+                            <td colspan="4" class="admin-table__vuota">
                               Nessun dispositivo nella finestra.
                             </td>
                           </tr>
@@ -1965,6 +1978,7 @@
                         <tr>
                           <th scope="col" class="admin-table__c-primo">Browser</th>
                           <th scope="col" class="is-num">Visite</th>
+                          <th scope="col" class="is-num admin-table__solo-largo">Pagine viste</th>
                           <th scope="col" class="is-num">Quota</th>
                         </tr>
                       </thead>
@@ -1975,13 +1989,16 @@
                             <td class="is-num" data-etichetta="Visite">
                               {{ formattaIntero(r.visite) }}
                             </td>
+                            <td class="is-num admin-table__solo-largo" data-etichetta="Pagine viste">
+                              {{ formattaIntero(r.pagineViste) }}
+                            </td>
                             <td class="is-num" data-etichetta="Quota">
                               {{ formattaFrazione(r.quota) }}
                             </td>
                           </tr>
                         } @empty {
                           <tr>
-                            <td colspan="3" class="admin-table__vuota">
+                            <td colspan="4" class="admin-table__vuota">
                               Nessun browser nella finestra.
                             </td>
                           </tr>
