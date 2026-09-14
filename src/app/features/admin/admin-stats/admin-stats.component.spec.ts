@@ -2051,7 +2051,7 @@ describe('AdminStatsComponent', () => {
     await flushSito();
     expect(text()).toContain('2 clic non sono attribuiti a nessuna parola');
     // Un giorno solo: singolare, in ENTRAMBE le frasi (sotto le tessere e nel blocco qualità).
-    expect(text()).toContain('1 giorno su 2 è una stima: Cloudflare tiene i dati esatti');
+    expect(text()).toContain('1 giorno su 2 è una stima: Cloudflare tiene un campione delle pagine viste');
     expect(text()).toContain('1 giorno è una stima: Cloudflare ha tenuto circa una pagina su 10');
     expect(text()).not.toContain('1 giorni');
     // Nessuna tranche fallita: la tessera Visite parla dei giorni chiesti.

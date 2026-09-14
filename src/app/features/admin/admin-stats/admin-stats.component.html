@@ -1629,11 +1629,11 @@
                 <p class="admin-nota">
                   @if (t.qualitaDati.giorniStimati === 1) {
                     1 giorno su {{ t.andamento?.serie?.length ?? t.periodo.giorni }} è una
-                    stima: Cloudflare tiene i dati esatti solo sette giorni.
+                    stima: Cloudflare tiene un campione delle pagine viste e moltiplica.
                   } @else {
                     {{ formattaIntero(t.qualitaDati.giorniStimati) }} giorni su
                     {{ t.andamento?.serie?.length ?? t.periodo.giorni }} sono stime: Cloudflare
-                    tiene i dati esatti solo sette giorni.
+                    tiene un campione delle pagine viste e moltiplica.
                   }
                 </p>
               }
@@ -2013,11 +2013,11 @@
                       <strong>{{ formattaIntero(t.qualitaDati.giorniStimati) }}</strong>
                       @if (t.qualitaDati.giorniStimati === 1) {
                         giorno è una stima: Cloudflare ha tenuto circa una pagina su
-                        {{ formattaIntero(t.qualitaDati.campioneMassimo) }} e moltiplicato. In
+                        {{ unDecimale(t.qualitaDati.campioneMassimo) }} e moltiplicato. In
                         tabella è segnato «stima».
                       } @else {
-                        giorni sono stime: Cloudflare ha tenuto circa una pagina su
-                        {{ formattaIntero(t.qualitaDati.campioneMassimo) }} e moltiplicato. In
+                        giorni sono stime: Cloudflare ha tenuto fino a una pagina su
+                        {{ unDecimale(t.qualitaDati.campioneMassimo) }} e moltiplicato. In
                         tabella sono segnati «stima».
                       }
                     </li>

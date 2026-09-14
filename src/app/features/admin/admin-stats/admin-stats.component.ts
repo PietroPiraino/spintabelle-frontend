@@ -1310,9 +1310,7 @@ export class AdminStatsComponent {
       testi: [formattaIntero(p.visite), formattaIntero(p.pagineViste)],
       dettaglio:
         p.campione > 1
-          ? `Stima: Cloudflare ha tenuto circa una pagina su ${formattaIntero(
-              Math.round(p.campione),
-            )}`
+          ? `Stima: Cloudflare ha tenuto circa una pagina su ${this.unDecimale(p.campione)}`
           : 'Dati esatti',
     })),
   );

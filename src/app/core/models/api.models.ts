@@ -1756,7 +1756,7 @@ export interface GiornoTraffico {
   giorno: string;
   visite: number;
   pagineViste: number;
-  /** Intervallo di campionamento (1 = esatto, 10 = circa 1 su 10). */
+  /** Intervallo di campionamento di Cloudflare, a un decimale (1 = esatto, 1,6 = circa una pagina su 1,6, 10 = circa una su dieci). */
   campione: number;
 }
 
