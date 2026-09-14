@@ -19,11 +19,12 @@ import {
  */
 describe('AccountComponent (shell)', () => {
   /** Serve le quattro letture della shell + quelle della Panoramica. */
-  function servi(http: HttpTestingController, over: { prospetto?: object } = {}) {
+  function servi(http: HttpTestingController, over: { prospetto?: object; staking?: object | null } = {}) {
     rispondi(http, '/subscriptions/me', subVuota);
     rispondi(http, '/points/me', puntiVuoti);
     rispondi(http, 'mio-prospetto', over.prospetto ?? []);
     rispondi(http, '/account/percorso', percorsoVuoto);
+    rispondi(http, '/stakings/mio', over.staking ?? null);
     // la Panoramica carica le affiliazioni da sé
     for (const r of http.match((r) => r.url.includes('/affiliations/me'))) r.flush([]);
   }
@@ -95,6 +96,28 @@ describe('AccountComponent (shell)', () => {
     servi(ctx2.http);
   });
 
+  it('con un accordo di staking e NESSUN prospetto la scheda Conteggi esiste lo stesso, col registro', async () => {
+    const ctx = await monta(AccountComponent, { inputs: { vista: 'conteggi' } });
+    await ctx.stabilizza();
+    servi(ctx.http, {
+      staking: {
+        stato: 'APERTO',
+        saldoFondiCent: 50_000,
+        saldoEvCent: -34_000,
+        apertoAt: '2026-09-01T10:00:00Z',
+        chiusoAt: null,
+        movimenti: [{ id: 'm1', tipo: 'FONDI', importoCent: 50_000, causale: 'roll iniziale', createdAt: '2026-09-01T10:00:00Z' }],
+      },
+    });
+    await ctx.stabilizza();
+    const schede = [...ctx.el.querySelectorAll('[role="tab"]')].map((b) => b.textContent?.trim());
+    expect(schede).toContain('Conteggi');
+    expect(ctx.testo()).toContain('Il tuo accordo di staking');
+    expect(ctx.testo()).toContain('roll iniziale');
+    // senza mesi la card «I miei conteggi» non compare
+    expect(ctx.testo()).not.toContain('I miei conteggi');
+  });
+
   it('un 500 sul prospetto non rompe la pagina e non crea la scheda', async () => {
     const ctx = await monta(AccountComponent);
     await ctx.stabilizza();
@@ -102,6 +125,7 @@ describe('AccountComponent (shell)', () => {
     rispondi(ctx.http, '/points/me', puntiVuoti);
     fallisci(ctx.http, 'mio-prospetto');
     rispondi(ctx.http, '/account/percorso', percorsoVuoto);
+    rispondi(ctx.http, '/stakings/mio', null);
     for (const r of ctx.http.match((r) => r.url.includes('/affiliations/me'))) r.flush([]);
     await ctx.stabilizza();
     const schede = [...ctx.el.querySelectorAll('[role="tab"]')].map((b) => b.textContent?.trim());

@@ -1,13 +1,26 @@
-import { ProspettoMese } from '../../../core/models/api.models';
+import { ProspettoMese, StakingMio } from '../../../core/models/api.models';
 import { CARICO, errore, ok } from '../account.types';
 import { Ctx, monta, prospettoMadRoxKO } from '../account.spec-helper';
 import { AccountConteggiComponent } from './account-conteggi.component';
 
-async function apri(prospetto: unknown): Promise<Ctx<AccountConteggiComponent>> {
-  const ctx = await monta(AccountConteggiComponent, { inputs: { prospetto } });
+async function apri(prospetto: unknown, staking: unknown = ok(null)): Promise<Ctx<AccountConteggiComponent>> {
+  const ctx = await monta(AccountConteggiComponent, { inputs: { prospetto, staking } });
   await ctx.stabilizza();
   return ctx;
 }
+
+const registro: StakingMio = {
+  stato: 'APERTO',
+  saldoFondiCent: 50_000,
+  saldoEvCent: -34_000,
+  apertoAt: '2026-09-01T10:00:00Z',
+  chiusoAt: null,
+  movimenti: [
+    { id: 'm1', tipo: 'FONDI', importoCent: 50_000, causale: 'roll iniziale', createdAt: '2026-09-01T10:00:00Z' },
+    { id: 'm2', tipo: 'EV', importoCent: -34_000, causale: 'scarto di settembre', createdAt: '2026-09-10T10:00:00Z' },
+    { id: 'm3', tipo: 'EV', importoCent: 7_000, causale: 'recupero parziale', createdAt: '2026-09-12T10:00:00Z' },
+  ],
+};
 
 /**
  * Il prospetto dei propri conteggi: la prima superficie del modulo rivolta
@@ -62,6 +75,46 @@ describe('AccountConteggiComponent', () => {
     const ctx = await apri(ok(prospettoMadRoxKO));
     expect(ctx.el.querySelector('a[href^="mailto:"]')).not.toBeNull();
     expect(ctx.el.querySelector('a[href*="discord"]')).not.toBeNull();
+  });
+
+  /**
+   * Il registro dello staking (14/09/2026): fondi, scarto EV, movimenti col
+   * segno. ⚠️ Nessuna percentuale di recupero e nessun punto BFF (le misure 5
+   * e 4 della valutazione), e «in pari» quando lo scarto è zero.
+   */
+  it('il registro di staking: saldi, movimenti col segno, nessuna percentuale', async () => {
+    const ctx = await apri(ok([]), ok(registro));
+    const t = ctx.testo();
+    expect(t).toContain('Il tuo accordo di staking');
+    expect(t).toContain('in corso');
+    expect(t).toMatch(/500,00\s€/);
+    expect(t).toMatch(/340,00\s€/);
+    expect(t).toContain('roll iniziale');
+    expect(t).toMatch(/\+500,00\s€/);
+    expect(t).toMatch(/−340,00\s€/);
+    expect(t).toMatch(/\+70,00\s€/);
+    expect(t).toContain('EV da recuperare');
+    // nessuna percentuale, nessun punto, nessun incoraggiamento
+    const blocco = ctx.el.querySelector('[aria-labelledby="stk-titolo"]')!.textContent ?? '';
+    expect(blocco).not.toMatch(/\d\s?%/);
+    expect(blocco).not.toMatch(/\bpunti\b|\bpt\b|continua|obiettiv/i);
+    // senza mesi, niente card «I miei conteggi»
+    expect(t).not.toContain('I miei conteggi');
+  });
+
+  it('scarto a zero → «in pari»; accordo chiuso → pillola «chiuso»', async () => {
+    const ctx = await apri(ok([]), ok({ ...registro, stato: 'CHIUSO', saldoEvCent: 0, chiusoAt: '2026-09-13T10:00:00Z' }));
+    expect(ctx.testo()).toContain('in pari');
+    expect(ctx.el.querySelector('.pill-stato--off')!.textContent).toContain('chiuso');
+  });
+
+  it('registro in carico → NIENTE (nessuno scheletro che sparisca per chi non ha un accordo); in errore → «Riprova»; senza accordo → niente blocco', async () => {
+    const ctx = await apri(ok(prospettoMadRoxKO), CARICO);
+    expect(ctx.el.querySelector('[aria-labelledby="stk-titolo"]')).toBeNull();
+    const ctx2 = await apri(ok(prospettoMadRoxKO), errore('giù'));
+    expect(ctx2.el.querySelector('[aria-labelledby="stk-titolo"] [role="alert"]')!.textContent).toContain('Riprova');
+    const ctx3 = await apri(ok(prospettoMadRoxKO));
+    expect(ctx3.el.querySelector('[aria-labelledby="stk-titolo"]')).toBeNull();
   });
 
   it('in carico uno scheletro; in errore «Riprova»', async () => {

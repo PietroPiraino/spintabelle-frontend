@@ -14,12 +14,14 @@ import { AccountService } from '../../core/services/account.service';
 import { AdminConteggiService } from '../../core/services/admin-conteggi.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PointsService } from '../../core/services/points.service';
+import { StakingsService } from '../../core/services/stakings.service';
 import { SubscriptionsService } from '../../core/services/subscriptions.service';
 import {
   MyPoints,
   MySubscription,
   Percorso,
   ProspettoMese,
+  StakingMio,
 } from '../../core/models/api.models';
 import { apiErrorMessage } from '../../core/utils/http-error';
 import { SchedeComponent, VoceScheda } from '../../shared/ui/schede/schede.component';
@@ -80,6 +82,7 @@ export class AccountComponent {
   private readonly pointsApi = inject(PointsService);
   private readonly conteggiApi = inject(AdminConteggiService);
   private readonly accountApi = inject(AccountService);
+  private readonly stakingsApi = inject(StakingsService);
 
   protected readonly user = this.auth.user;
   protected readonly verified = computed(() => this.user()?.verified ?? false);
@@ -100,21 +103,28 @@ export class AccountComponent {
   protected readonly punti = signal<Carico<MyPoints>>(CARICO);
   protected readonly prospetto = signal<Carico<ProspettoMese[]>>(CARICO);
   protected readonly percorso = signal<Carico<Percorso>>(CARICO);
+  /** Il registro di staking del giocatore (dal 14/09/2026): `null` = nessun accordo. */
+  protected readonly staking = signal<Carico<StakingMio | null>>(CARICO);
 
   /**
-   * La scheda Conteggi esiste solo con un prospetto — o mentre il prospetto è
-   * in carico e il deep-link la chiede: chi arriva dall'email deve atterrare
-   * su uno scheletro, non sulla Panoramica.
+   * La scheda Conteggi esiste solo con un prospetto O un accordo di staking —
+   * o mentre uno dei due è in carico e il deep-link la chiede: chi arriva
+   * dall'email deve atterrare su uno scheletro, non sulla Panoramica.
    */
   protected readonly haConteggi = computed(() => {
     const p = this.prospetto();
-    return p.stato === 'ok' && p.dati.length > 0;
+    const st = this.staking();
+    return (p.stato === 'ok' && p.dati.length > 0) || (st.stato === 'ok' && st.dati !== null);
   });
+
+  /** Finché una delle due letture è in volo la scheda potrebbe ancora nascere. */
+  private readonly conteggiInCarico = computed(
+    () => this.prospetto().stato === 'carico' || this.staking().stato === 'carico',
+  );
 
   protected readonly voci = computed<readonly VoceScheda<VistaAccount>[]>(() => {
     const conteggiVisibile =
-      this.haConteggi() ||
-      (this.prospetto().stato === 'carico' && this.vista() === 'conteggi');
+      this.haConteggi() || (this.conteggiInCarico() && this.vista() === 'conteggi');
     const tutte: VistaAccount[] = ['panoramica', 'acquisti', 'conteggi', 'profilo'];
     return tutte
       .filter((v) => v !== 'conteggi' || conteggiVisibile)
@@ -134,12 +144,12 @@ export class AccountComponent {
     this.caricaPunti();
     this.caricaProspetto();
     this.caricaPercorso();
+    this.caricaStaking();
 
-    // Il deep-link a Conteggi senza un prospetto ricade sulla Panoramica —
-    // dopo la risposta, non prima.
+    // Il deep-link a Conteggi senza prospetto né accordo ricade sulla
+    // Panoramica — dopo le risposte, non prima.
     effect(() => {
-      const p = this.prospetto();
-      if (this.vista() === 'conteggi' && p.stato !== 'carico' && !this.haConteggi()) {
+      if (this.vista() === 'conteggi' && !this.conteggiInCarico() && !this.haConteggi()) {
         this.vista.set('panoramica');
       }
     });
@@ -173,6 +183,15 @@ export class AccountComponent {
       next: (p) => this.prospetto.set(ok(p)),
       error: (err: unknown) =>
         this.prospetto.set(errore(apiErrorMessage(err, 'Conteggi non disponibili.'))),
+    });
+  }
+
+  protected caricaStaking(): void {
+    this.staking.set(CARICO);
+    this.stakingsApi.mio().subscribe({
+      next: (st) => this.staking.set(ok(st)),
+      error: (err: unknown) =>
+        this.staking.set(errore(apiErrorMessage(err, 'Registro di staking non disponibile.'))),
     });
   }
 

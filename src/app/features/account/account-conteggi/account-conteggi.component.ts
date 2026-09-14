@@ -5,10 +5,11 @@ import {
   input,
   output,
 } from '@angular/core';
-import { ProspettoMese } from '../../../core/models/api.models';
+import { ProspettoMese, StakingMio, StakingMioMovimento } from '../../../core/models/api.models';
+import { DatePipe } from '@angular/common';
 import { SOCIAL_LINKS } from '../../../core/social-links';
 import { formattaBp, formattaCent } from '../../admin/denaro';
-import { Carico } from '../account.types';
+import { Carico, etichettaTipoStaking } from '../account.types';
 
 /** L'indirizzo del Titolare, lo stesso dell'informativa (sezione 1). */
 export const EMAIL_TITOLARE = 'pietropiraino91@gmail.com';
@@ -31,7 +32,7 @@ export const EMAIL_TITOLARE = 'pietropiraino91@gmail.com';
  */
 @Component({
   selector: 'app-account-conteggi',
-  imports: [],
+  imports: [DatePipe],
   templateUrl: './account-conteggi.component.html',
   styleUrls: ['../account-shared.scss', './account-conteggi.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,9 +40,37 @@ export const EMAIL_TITOLARE = 'pietropiraino91@gmail.com';
 export class AccountConteggiComponent {
   readonly prospetto = input.required<Carico<ProspettoMese[]>>();
   readonly riprova = output<void>();
+  /**
+   * Il registro del proprio accordo di staking (dal 14/09/2026,
+   * `valutazione-registro-staking-al-giocatore.md`): `null` = nessun accordo.
+   * ⚠️ Lettura, mai scrittura; nessuna percentuale di recupero (sarebbe una
+   * barra di «progresso» su un debito); nessun incrocio con altro.
+   */
+  readonly staking = input.required<Carico<StakingMio | null>>();
+  readonly riprovaStaking = output<void>();
 
   protected readonly EMAIL_TITOLARE = EMAIL_TITOLARE;
   protected readonly discord = SOCIAL_LINKS.discord;
+
+  protected readonly registro = computed<StakingMio | null>(() => {
+    const st = this.staking();
+    return st.stato === 'ok' ? st.dati : null;
+  });
+
+  protected tipoMovimento(m: StakingMioMovimento): string {
+    return etichettaTipoStaking(m.tipo);
+  }
+
+  /** Importo col segno: il verso di un movimento È l'informazione. */
+  protected importo(cent: number): string {
+    const v = formattaCent(Math.abs(cent));
+    return cent < 0 ? `−${v}` : cent > 0 ? `+${v}` : v;
+  }
+
+  protected readonly haMesi = computed(() => {
+    const p = this.prospetto();
+    return p.stato === 'ok' && p.dati.length > 0;
+  });
 
   protected readonly mesi = computed<ProspettoMese[]>(() => {
     const p = this.prospetto();

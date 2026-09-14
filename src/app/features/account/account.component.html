@@ -61,7 +61,12 @@
           <app-account-acquisti [punti]="punti()" (riprovaPunti)="caricaPunti()" />
         }
         @case ('conteggi') {
-          <app-account-conteggi [prospetto]="prospetto()" (riprova)="caricaProspetto()" />
+          <app-account-conteggi
+            [prospetto]="prospetto()"
+            [staking]="staking()"
+            (riprova)="caricaProspetto()"
+            (riprovaStaking)="caricaStaking()"
+          />
         }
         @case ('profilo') {
           <app-account-profilo

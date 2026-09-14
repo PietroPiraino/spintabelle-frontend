@@ -37,6 +37,31 @@ export interface User {
   createdAt?: string | null;
 }
 
+// ----- Area personale: il registro di staking del giocatore (GET /stakings/mio) -----
+// Ricalcato su backend/src/stakings/stakings.service.ts (StakingMioView).
+// ⚠️ Vista dedicata che ELENCA i campi: niente portafoglio dei soci, niente
+// amministratore, niente nota interna (valutazione-registro-staking-al-giocatore.md).
+// (`StakingTipo` è dichiarato più sotto, con le viste del pannello.)
+
+export interface StakingMioMovimento {
+  id: string;
+  tipo: StakingTipo;
+  /** Centesimi interi, col segno. */
+  importoCent: number;
+  causale: string;
+  createdAt: string | null;
+}
+
+export interface StakingMio {
+  stato: 'APERTO' | 'CHIUSO';
+  saldoFondiCent: number;
+  /** Sempre ≤ 0: 0 = in pari. */
+  saldoEvCent: number;
+  apertoAt: string | null;
+  chiusoAt: string | null;
+  movimenti: StakingMioMovimento[];
+}
+
 // ----- Area personale: «Il mio percorso» (GET /account/percorso) -----
 // Ricalcato su backend/src/account/account.service.ts (PercorsoView).
 // Ogni blocco è `null` sul PROPRIO errore lato server: un modulo giù spegne

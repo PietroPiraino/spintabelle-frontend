@@ -2,6 +2,7 @@ import {
   MyAffiliation,
   MyVoucher,
   ShopOrderStatus,
+  StakingTipo,
 } from '../../core/models/api.models';
 
 // ── Le schede ─────────────────────────────────────────────────────────────────
@@ -195,4 +196,22 @@ export function giorniResidui(iso: string | null | undefined, ora: Date): number
   const t = new Date(iso).getTime();
   if (Number.isNaN(t)) return null;
   return Math.ceil((t - ora.getTime()) / GIORNO_MS);
+}
+
+// ── Il registro di staking, come lo legge il giocatore ──────────────────────
+
+/** Le stesse etichette di `stakingTipoLabel` del backend. */
+export function etichettaTipoStaking(tipo: StakingTipo): string {
+  switch (tipo) {
+    case 'FONDI':
+      return 'Fondi';
+    case 'EV':
+      return 'EV da recuperare';
+    case 'PERDITA':
+      return 'Capitale perso';
+    default: {
+      const _mai: never = tipo;
+      return _mai;
+    }
+  }
 }

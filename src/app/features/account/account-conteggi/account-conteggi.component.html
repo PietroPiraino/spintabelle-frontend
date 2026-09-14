@@ -4,6 +4,7 @@
   mesi, nessuna cifra della scuola. Le tre percentuali pattuite (`pct`) sono
   i termini dell'accordo e DEVONO restare.
 -->
+@if (prospetto().stato !== 'ok' || haMesi()) {
 <section class="card card--pad blocco" aria-labelledby="cnt-titolo">
   <h2 id="cnt-titolo">I miei conteggi</h2>
   <p class="blocco__intro">
@@ -147,3 +148,96 @@
     }
   }
 </section>
+}
+
+<!--
+  Il registro del proprio accordo di staking (dal 14/09/2026). Vincoli nel
+  .ts e in valutazione-registro-staking-al-giocatore.md: SOLO i propri numeri,
+  nessun portafoglio, nessun amministratore, nessuna percentuale di recupero,
+  nessun punto BFF in questa scheda. Sta DOPO i mesi per il CLS (vedi sotto).
+-->
+@switch (staking().stato) {
+  @case ('carico') {
+    <!-- Nessuno scheletro: quasi nessuno ha un accordo, e uno scheletro che
+         sparisce sarebbe uno spostamento per tutti gli altri. Il blocco sta
+         SOTTO i mesi: arrivando spinge solo la riga dei contatti e il footer. -->
+  }
+  @case ('errore') {
+    <section class="card card--pad blocco" aria-labelledby="stk-titolo">
+      <h2 id="stk-titolo">Il tuo accordo di staking</h2>
+      <div class="form-feedback is-error" role="alert">
+        Registro non disponibile.
+        <button type="button" class="btn btn--ghost btn--sm" (click)="riprovaStaking.emit()">Riprova</button>
+      </div>
+    </section>
+  }
+  @default {
+    @if (registro(); as r) {
+      <section class="card card--pad blocco" aria-labelledby="stk-titolo">
+        <h2 id="stk-titolo">
+          Il tuo accordo di staking
+          @if (r.stato === 'APERTO') {
+            <span class="pill-stato pill-stato--ok">in corso</span>
+          } @else {
+            <span class="pill-stato pill-stato--off">chiuso</span>
+          }
+        </h2>
+        <p class="blocco__intro">
+          @if (r.apertoAt) {
+            Aperto il {{ r.apertoAt | date: 'd MMM yyyy' }}
+          }
+          @if (r.chiusoAt) {
+            · chiuso il {{ r.chiusoAt | date: 'd MMM yyyy' }}
+          }
+        </p>
+
+        <dl class="cnt__righe stk__saldi">
+          <dt>
+            Fondi a tua disposizione
+            <span class="nota">il roll anticipato dalla scuola, al netto di quanto è rientrato</span>
+          </dt>
+          <dd><strong>{{ eur(r.saldoFondiCent) }}</strong></dd>
+          <dt>
+            Scarto EV da recuperare
+            <span class="nota">la differenza fra risultato e valore atteso ancora da compensare</span>
+          </dt>
+          <dd>
+            @if (r.saldoEvCent === 0) {
+              <strong>in pari</strong>
+            } @else {
+              <strong>{{ eur(-r.saldoEvCent) }}</strong>
+            }
+          </dd>
+        </dl>
+
+        <h3 class="eyebrow cnt__sotto">Movimenti</h3>
+        @if (r.movimenti.length) {
+          <ul class="lista-righe" role="list">
+            @for (m of r.movimenti; track m.id) {
+              <li class="riga">
+                <span class="riga__testo">
+                  {{ m.causale }}
+                  <span class="riga__sub">
+                    {{ tipoMovimento(m) }}
+                    @if (m.createdAt) {
+                      · {{ m.createdAt | date: 'd MMM yyyy' }}
+                    }
+                  </span>
+                </span>
+                <span class="riga__coda stk__importo">
+                  <strong>{{ importo(m.importoCent) }}</strong>
+                </span>
+              </li>
+            }
+          </ul>
+          <p class="nota stk__legenda">
+            Nei fondi, un importo positivo è denaro anticipato e uno negativo denaro rientrato;
+            nell'EV, un importo positivo avvicina lo scarto a zero e uno negativo lo aumenta.
+          </p>
+        } @else {
+          <p class="nota">Nessun movimento ancora.</p>
+        }
+      </section>
+    }
+  }
+}

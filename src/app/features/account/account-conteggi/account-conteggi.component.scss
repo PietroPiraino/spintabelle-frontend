@@ -125,3 +125,20 @@
   font-size: 0.9rem;
   color: var(--text-muted);
 }
+
+// ── Il registro di staking ───────────────────────────────────────────────────
+.stk__saldi {
+  margin-bottom: 0.4rem;
+
+  dd strong {
+    font-size: 1.15rem;
+  }
+}
+
+.stk__importo {
+  font-variant-numeric: tabular-nums;
+}
+
+.stk__legenda {
+  margin-top: 0.8rem;
+}

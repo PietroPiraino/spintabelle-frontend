@@ -267,7 +267,16 @@
                   formControlName="causale"
                   maxlength="300"
                   placeholder="es. anticipo di maggio"
+                  aria-describedby="stk-causale-aiuto"
                 />
+                <!-- ⚠️ Dal 14/09/2026 la causale raggiunge lo schermo del
+                     giocatore (registro nella sua area personale): un «roll per
+                     i tornei di sabato su X» porterebbe nome di sala e gioco
+                     accanto a una cifra (art. 9 DL 87/2018). È la misura 3 di
+                     valutazione-registro-staking-al-giocatore.md. -->
+                <span id="stk-causale-aiuto" class="admin-nota">
+                  La legge il giocatore nel suo account: descrivi il movimento, non il gioco.
+                </span>
               </div>
             </div>
 
