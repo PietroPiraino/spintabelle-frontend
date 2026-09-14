@@ -63,6 +63,17 @@
             (scegli)="setGiorniDaFiltro($event)"
           />
         }
+        @case ('sito') {
+          <!-- UNA finestra per le due metà: cambiarla rifà Cloudflare e Google. -->
+          <app-filtro
+            class="st__finestra"
+            etichetta="Finestra del traffico e della ricerca"
+            [voci]="vociGiorni"
+            [scelto]="giorniSitoScelto()"
+            [inerte]="trafficoLoading() || ricercaLoading()"
+            (scegli)="setGiorniSitoDaFiltro($event)"
+          />
+        }
         @default {
           <app-filtro
             class="st__finestra"
@@ -112,6 +123,14 @@
             Bunny e non sono in tempo reale.
           </p>
         }
+      }
+      @case ('sito') {
+        <!--
+          Due fonti, due orologi (15 e 60 minuti) e due ritardi: ogni metà
+          stampa la propria età dentro il suo blocco. Qui, di proposito, niente
+          — e il `@case` serve proprio a NON cadere nel `@default`, che
+          stamperebbe l'età di /admin/stats sopra numeri che non sono suoi.
+        -->
       }
       @default {
         @if (stats(); as s) {
@@ -1499,6 +1518,1149 @@
           }
         }
       }
+      <!-- ══ Sito ═══════════════════════════════════════════════════════════ -->
+      <!--
+        DUE metà indipendenti e fratelle: Cloudflare (traffico e Core Web
+        Vitals) e Google Search Console (ricerca e copertura dell'indice).
+        Ognuna ha il proprio scheletro, la propria banda d'errore col «Riprova»
+        che rifà SOLO la sua rotta, e il proprio avviso «non disponibile»:
+        un 403 di Google non deve coprire il traffico, né viceversa. Per questo
+        la banda unica in cima al pannello (`erroreScheda`) qui è vuota.
+
+        ⚠️ `disponibile: false` → avviso con la pastiglia, e NESSUNA tessera:
+        uno zero si leggerebbe «nessuno visita il sito». La pastiglia distingue
+        `causa`: `spento` = mancano le env su Render (da configurare),
+        `allarme` = il fornitore non ha risposto (si riprova con «Ricarica»).
+        ⚠️ Nessun bottone dentro l'avviso: un `.btn--sm` lì starebbe a ~38px, e
+        i fallimenti dei fornitori non si cachano — «Ricarica» basta.
+      -->
+      @case ('sito') {
+        <!-- ══ Sito · Traffico (Cloudflare Web Analytics) ═══════════════════ -->
+        @if (!traffico() && trafficoLoading()) {
+          <ng-container [ngTemplateOutlet]="scheletro" />
+        }
+
+        @if (trafficoError(); as e) {
+          <div class="form-feedback is-error st__errore" role="alert">
+            <span>{{ e }}</span>
+            <button type="button" class="btn btn--ghost btn--sm" (click)="loadTraffico()">
+              <app-icon name="refresh" [size]="15" />
+              Riprova
+            </button>
+          </div>
+        }
+
+        @if (traffico(); as t) {
+          @if (!t.disponibile) {
+            <p class="admin-avviso admin-avviso--attenzione">
+              <app-icon name="alert-triangle" [size]="16" />
+              <span>
+                <span
+                  class="admin-stato"
+                  [attr.data-tono]="t.causa === 'configurazione' ? 'spento' : 'allarme'"
+                  >{{
+                    t.causa === 'configurazione'
+                      ? 'Traffico non configurato'
+                      : 'Cloudflare non ha risposto'
+                  }}</span
+                >
+                {{ t.motivo }} La sezione «Ricerca su Google» qui sotto non passa da
+                Cloudflare e resta valida.
+              </span>
+            </p>
+          } @else {
+            <!-- BLOCCO 1: Traffico — 4 tessere + grafico da 120 = `SCHELETRI.sito`. -->
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Traffico</h3>
+              </div>
+              <p class="admin-nota">
+                Letto da Cloudflare il {{ t.generatoIl | date: 'dd MMM yyyy' }} alle
+                {{ t.generatoIl | date: 'HH:mm' }} · si aggiorna ogni
+                {{ t.aggiornatoOgniMinuti }}
+                {{ t.aggiornatoOgniMinuti === 1 ? 'minuto' : 'minuti' }} · dal
+                {{ giornoLabel(t.periodo.dal) }} al {{ giornoLabel(t.periodo.al) }}, bot
+                esclusi. Non è in tempo reale.
+              </p>
+
+              <div class="admin-kpi-griglia">
+                @if (t.totali; as tot) {
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">Visite</span>
+                    <strong class="admin-kpi__valore">{{ formattaIntero(tot.visite) }}</strong>
+                    <!--
+                      Con una tranche fallita `periodo.dal` è più recente di
+                      «giorni fa» e il totale copre MENO giorni di quelli chiesti:
+                      «negli ultimi 30 giorni» sopra un conteggio di 20 sarebbe un
+                      calo inventato. Si nomina la finestra effettiva, la stessa
+                      su cui è calcolata la media «Visite al giorno».
+                    -->
+                    @if (t.qualitaDati.finestreFallite > 0) {
+                      <span class="admin-kpi__nota"
+                        >Dal {{ giornoLabel(t.periodo.dal) }}, finestra accorciata</span
+                      >
+                    } @else {
+                      <span class="admin-kpi__nota">Negli ultimi {{ t.periodo.giorni }} giorni</span>
+                    }
+                  </div>
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">Pagine viste</span>
+                    <strong class="admin-kpi__valore">{{
+                      formattaIntero(tot.pagineViste)
+                    }}</strong>
+                  </div>
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">Pagine per visita</span>
+                    <strong class="admin-kpi__valore">{{
+                      unDecimale(tot.paginePerVisita)
+                    }}</strong>
+                  </div>
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">Visite al giorno</span>
+                    <strong class="admin-kpi__valore">{{
+                      unDecimale(tot.visiteAlGiorno)
+                    }}</strong>
+                    <span class="admin-kpi__nota">Media sulla finestra</span>
+                  </div>
+                }
+              </div>
+
+              @if (t.qualitaDati.giorniStimati > 0) {
+                <p class="admin-nota">
+                  @if (t.qualitaDati.giorniStimati === 1) {
+                    1 giorno su {{ t.andamento?.serie?.length ?? t.periodo.giorni }} è una
+                    stima: Cloudflare tiene i dati esatti solo sette giorni.
+                  } @else {
+                    {{ formattaIntero(t.qualitaDati.giorniStimati) }} giorni su
+                    {{ t.andamento?.serie?.length ?? t.periodo.giorni }} sono stime: Cloudflare
+                    tiene i dati esatti solo sette giorni.
+                  }
+                </p>
+              }
+
+              @if (t.andamento) {
+                <app-grafico-colonne
+                  titolo="Visite e pagine viste al giorno"
+                  [colonne]="colonneTraffico()"
+                  [serie]="SERIE_TRAFFICO"
+                  modo="affiancate"
+                  [altezza]="120"
+                  [formattaAsse]="formattaIntero"
+                  nota="Affiancate, non sommate: una pagina vista appartiene a una visita. Il tooltip dice se il giorno è esatto o una stima; i numeri esatti sono nel collassabile qui sotto."
+                />
+
+                <details class="admin-piega">
+                  <summary class="admin-piega__sum">
+                    Traffico giorno per giorno
+                    <span class="admin-item__meta"
+                      >{{ trafficoGiorniRows().length }}
+                      {{ trafficoGiorniRows().length === 1 ? 'giorno' : 'giorni' }}</span
+                    >
+                  </summary>
+                  <div class="admin-piega__corpo">
+                    <div class="admin-table__scroll">
+                      <table class="admin-table admin-table--etichettata">
+                        <caption class="visually-hidden">
+                          Visite e pagine viste per giorno
+                        </caption>
+                        <thead>
+                          <tr>
+                            <th scope="col" class="admin-table__c-primo">Giorno</th>
+                            <th scope="col" class="is-num">Visite</th>
+                            <th scope="col" class="is-num">Pagine viste</th>
+                            <th scope="col">Dati</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (p of trafficoGiorniRows(); track p.giorno) {
+                            <tr>
+                              <th scope="row" class="admin-table__c-primo">
+                                {{ giornoLabel(p.giorno) }}
+                              </th>
+                              <td class="is-num" data-etichetta="Visite">
+                                {{ formattaIntero(p.visite) }}
+                              </td>
+                              <td class="is-num" data-etichetta="Pagine viste">
+                                {{ formattaIntero(p.pagineViste) }}
+                              </td>
+                              <!--
+                                ⚠️ `.admin-stato` e non `.badge`: un giorno
+                                esatto DIVENTA stimato dopo sette giorni — è
+                                uno stato che cambia da sé, come
+                                Provvisorio/Chiuso.
+                              -->
+                              <td data-etichetta="Dati">
+                                <span
+                                  class="admin-stato"
+                                  [attr.data-tono]="p.campione > 1 ? 'attesa' : 'ok'"
+                                  >{{ p.campione > 1 ? 'stima' : 'esatti' }}</span
+                                >
+                              </td>
+                            </tr>
+                          } @empty {
+                            <tr>
+                              <td colspan="4" class="admin-table__vuota">
+                                Nessun giorno nella finestra.
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </details>
+              }
+            </section>
+
+            <!-- BLOCCO 2: Core Web Vitals, sempre sugli ultimi 7 giorni. -->
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Core Web Vitals (ultimi 7 giorni)</h3>
+              </div>
+              @if (t.vitali; as v) {
+                <p class="admin-nota">
+                  Dal {{ giornoLabel(v.dal) }} al {{ giornoLabel(v.al) }},
+                  {{ formattaIntero(v.eventi) }} aperture di pagina misurate nei browser
+                  dei visitatori. Il valore è quello sotto cui stanno tre aperture su
+                  quattro; le soglie sono quelle di Google.
+                </p>
+                <div class="admin-kpi-griglia">
+                  @for (x of vitaliTessere(); track x.chiave) {
+                    <div class="card admin-kpi">
+                      <span class="admin-kpi__etichetta">{{ x.etichetta }} · {{ x.spiega }}</span>
+                      @if (x.valore !== null && x.v.giudizio !== null) {
+                        <strong class="admin-kpi__valore">{{ x.valore }}</strong>
+                        <span class="admin-kpi__nota">
+                          <span class="admin-stato" [attr.data-tono]="giudizio(x.v.giudizio).tono">{{
+                            giudizio(x.v.giudizio).testo
+                          }}</span>
+                          @if (x.v.distribuzione; as d) {
+                            · buono {{ formattaIntero(d.buono) }} · da migliorare
+                            {{ formattaIntero(d.daMigliorare) }} · scarso
+                            {{ formattaIntero(d.scarso) }}
+                          }
+                        </span>
+                      } @else {
+                        <!-- Mai uno zero: per un CWV sarebbe un voto perfetto inventato. -->
+                        <strong class="admin-kpi__valore is-muto">Nessun dato</strong>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="admin-avviso admin-avviso--attenzione">
+                  <app-icon name="alert-triangle" [size]="16" />
+                  <!--
+                    SOLO il motivo del backend: comincia con «Cloudflare …» e
+                    finisce già con «Il traffico qui sopra non ne risente», quindi
+                    una coda scritta qui lo diceva due volte di fila.
+                  -->
+                  <span>
+                    <strong>Core Web Vitals non disponibili.</strong>
+                    {{ t.vitaliMotivo }}
+                  </span>
+                </p>
+              }
+            </section>
+
+            <!-- BLOCCO 3: Pagine e provenienza. -->
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Pagine più viste e provenienza</h3>
+              </div>
+              <p class="admin-nota admin-table__nota-mobile">
+                Su schermi stretti «Pagine viste» e «Quota» sono nascoste.
+              </p>
+              <div class="admin-table__scroll">
+                <table class="admin-table admin-table--etichettata st__sito">
+                  <caption class="visually-hidden">Pagine più viste</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-table__c-primo">Pagina</th>
+                      <th scope="col" class="is-num">Visite</th>
+                      <th scope="col" class="is-num admin-table__solo-largo">Pagine viste</th>
+                      <th scope="col" class="is-num admin-table__solo-largo">Quota</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of t.pagine; track r.chiave) {
+                      <tr>
+                        <th scope="row" class="admin-table__c-primo">
+                          <span class="admin-table__ident">
+                            <span class="admin-table__ident-riga">
+                              <strong [title]="r.chiave">{{ r.chiave }}</strong>
+                            </span>
+                          </span>
+                        </th>
+                        <td class="is-num" data-etichetta="Visite">
+                          {{ formattaIntero(r.visite) }}
+                        </td>
+                        <td class="is-num admin-table__solo-largo" data-etichetta="Pagine viste">
+                          {{ formattaIntero(r.pagineViste) }}
+                        </td>
+                        <td class="is-num admin-table__solo-largo" data-etichetta="Quota">
+                          {{ formattaFrazione(r.quota) }}
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="4" class="admin-table__vuota">
+                          Nessuna pagina nella finestra.
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <details class="admin-piega">
+                <summary class="admin-piega__sum">
+                  Da dove arrivano
+                  <span class="admin-item__meta">{{ t.provenienze.length }}</span>
+                </summary>
+                <div class="admin-piega__corpo">
+                  <div class="admin-table__scroll">
+                    <table class="admin-table admin-table--etichettata st__sito">
+                      <caption class="visually-hidden">Provenienza delle visite</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col" class="admin-table__c-primo">Provenienza</th>
+                          <th scope="col" class="is-num">Visite</th>
+                          <th scope="col" class="is-num admin-table__solo-largo">Pagine viste</th>
+                          <th scope="col" class="is-num admin-table__solo-largo">Quota</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (r of t.provenienze; track r.chiave) {
+                          <tr>
+                            <th scope="row" class="admin-table__c-primo">
+                              <span class="admin-table__ident">
+                                <span class="admin-table__ident-riga">
+                                  <strong [title]="provenienzaLabel(r.chiave)">{{
+                                    provenienzaLabel(r.chiave)
+                                  }}</strong>
+                                </span>
+                              </span>
+                            </th>
+                            <td class="is-num" data-etichetta="Visite">
+                              {{ formattaIntero(r.visite) }}
+                            </td>
+                            <td class="is-num admin-table__solo-largo" data-etichetta="Pagine viste">
+                              {{ formattaIntero(r.pagineViste) }}
+                            </td>
+                            <td class="is-num admin-table__solo-largo" data-etichetta="Quota">
+                              {{ formattaFrazione(r.quota) }}
+                            </td>
+                          </tr>
+                        } @empty {
+                          <tr>
+                            <td colspan="4" class="admin-table__vuota">
+                              Nessuna provenienza nella finestra.
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </details>
+            </section>
+
+            <!-- BLOCCO 4: Paesi, dispositivi e browser — le dimensioni in cookie policy. -->
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Paesi, dispositivi e browser</h3>
+              </div>
+              <p class="admin-nota">
+                Quote sul totale delle visite della finestra. Sono le dimensioni mostrate
+                qui perché dichiarate in cookie policy; il sistema operativo non lo è e
+                resta fuori (vedi «Cosa i numeri del traffico non dicono»).
+              </p>
+              <div class="admin-table__scroll">
+                <table class="admin-table admin-table--etichettata">
+                  <caption class="visually-hidden">Visite per Paese</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-table__c-primo">Paese</th>
+                      <th scope="col" class="is-num">Visite</th>
+                      <th scope="col" class="is-num">Quota</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of t.paesi; track r.chiave) {
+                      <tr>
+                        <th scope="row" class="admin-table__c-primo" [title]="r.chiave">
+                          {{ nomePaese(r.chiave) }}
+                        </th>
+                        <td class="is-num" data-etichetta="Visite">
+                          {{ formattaIntero(r.visite) }}
+                        </td>
+                        <td class="is-num" data-etichetta="Quota">
+                          {{ formattaFrazione(r.quota) }}
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="3" class="admin-table__vuota">
+                          Nessun Paese nella finestra.
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <details class="admin-piega">
+                <summary class="admin-piega__sum">
+                  Dispositivi
+                  <span class="admin-item__meta">{{ t.dispositivi.length }}</span>
+                </summary>
+                <div class="admin-piega__corpo">
+                  <div class="admin-table__scroll">
+                    <table class="admin-table admin-table--etichettata">
+                      <caption class="visually-hidden">Visite per dispositivo</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col" class="admin-table__c-primo">Dispositivo</th>
+                          <th scope="col" class="is-num">Visite</th>
+                          <th scope="col" class="is-num">Quota</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (r of t.dispositivi; track r.chiave) {
+                          <tr>
+                            <th scope="row" class="admin-table__c-primo" [title]="r.chiave">
+                              {{ dispositivoLabel(r.chiave) }}
+                            </th>
+                            <td class="is-num" data-etichetta="Visite">
+                              {{ formattaIntero(r.visite) }}
+                            </td>
+                            <td class="is-num" data-etichetta="Quota">
+                              {{ formattaFrazione(r.quota) }}
+                            </td>
+                          </tr>
+                        } @empty {
+                          <tr>
+                            <td colspan="3" class="admin-table__vuota">
+                              Nessun dispositivo nella finestra.
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </details>
+
+              <details class="admin-piega">
+                <summary class="admin-piega__sum">
+                  Browser
+                  <span class="admin-item__meta">{{ t.browser.length }}</span>
+                </summary>
+                <div class="admin-piega__corpo">
+                  <div class="admin-table__scroll">
+                    <table class="admin-table admin-table--etichettata">
+                      <caption class="visually-hidden">Visite per browser</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col" class="admin-table__c-primo">Browser</th>
+                          <th scope="col" class="is-num">Visite</th>
+                          <th scope="col" class="is-num">Quota</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (r of t.browser; track r.chiave) {
+                          <tr>
+                            <th scope="row" class="admin-table__c-primo">{{ r.chiave }}</th>
+                            <td class="is-num" data-etichetta="Visite">
+                              {{ formattaIntero(r.visite) }}
+                            </td>
+                            <td class="is-num" data-etichetta="Quota">
+                              {{ formattaFrazione(r.quota) }}
+                            </td>
+                          </tr>
+                        } @empty {
+                          <tr>
+                            <td colspan="3" class="admin-table__vuota">
+                              Nessun browser nella finestra.
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </details>
+            </section>
+
+            <!-- BLOCCO 5: qualità dei dati + limiti del traffico. -->
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Quanto fidarsi del traffico</h3>
+              </div>
+              @if (trafficoQualitaPulita()) {
+                <p class="admin-avviso admin-avviso--ok">
+                  <app-icon name="check" [size]="16" />
+                  <span
+                    >Tutti i giorni della finestra sono conteggi esatti ed elenchi
+                    completi.</span
+                  >
+                </p>
+              } @else {
+                <ul class="admin-avviso-elenco">
+                  @if (t.qualitaDati.giorniStimati > 0) {
+                    <li>
+                      <strong>{{ formattaIntero(t.qualitaDati.giorniStimati) }}</strong>
+                      @if (t.qualitaDati.giorniStimati === 1) {
+                        giorno è una stima: Cloudflare ha tenuto circa una pagina su
+                        {{ formattaIntero(t.qualitaDati.campioneMassimo) }} e moltiplicato. In
+                        tabella è segnato «stima».
+                      } @else {
+                        giorni sono stime: Cloudflare ha tenuto circa una pagina su
+                        {{ formattaIntero(t.qualitaDati.campioneMassimo) }} e moltiplicato. In
+                        tabella sono segnati «stima».
+                      }
+                    </li>
+                  }
+                  @if (t.qualitaDati.elencoTroncato) {
+                    <li>
+                      Una classifica ha più voci del massimo letto in una volta:
+                      <strong>l'elenco è incompleto</strong>.
+                    </li>
+                  }
+                  @if (t.qualitaDati.finestreFallite > 0) {
+                    <li>
+                      Cloudflare non ha risposto per la parte più vecchia della finestra:
+                      <strong>i numeri partono dal {{ giornoLabel(t.periodo.dal) }}</strong>,
+                      non da {{ t.periodo.giorni }} giorni fa.
+                    </li>
+                  }
+                </ul>
+              }
+              <details class="admin-piega st__limiti">
+                <summary class="admin-piega__sum">
+                  Cosa i numeri del traffico non dicono
+                  <span class="admin-item__meta"
+                    >{{ t.limiti.length }} {{ t.limiti.length === 1 ? 'nota' : 'note' }}</span
+                  >
+                </summary>
+                <div class="admin-piega__corpo">
+                  <ul class="admin-piega__elenco">
+                    @for (l of t.limiti; track l) {
+                      <li>{{ l }}</li>
+                    }
+                  </ul>
+                </div>
+              </details>
+            </section>
+          }
+        }
+
+        <!-- ══ Sito · Ricerca (Google Search Console) ═══════════════════════ -->
+        @if (!ricerca() && ricercaLoading()) {
+          <ng-container [ngTemplateOutlet]="scheletro" />
+        }
+
+        @if (ricercaError(); as e) {
+          <div class="form-feedback is-error st__errore" role="alert">
+            <span>{{ e }}</span>
+            <button type="button" class="btn btn--ghost btn--sm" (click)="loadRicerca()">
+              <app-icon name="refresh" [size]="15" />
+              Riprova
+            </button>
+          </div>
+        }
+
+        @if (ricerca(); as r) {
+          @if (!r.disponibile) {
+            <p class="admin-avviso admin-avviso--attenzione">
+              <app-icon name="alert-triangle" [size]="16" />
+              <span>
+                <span
+                  class="admin-stato"
+                  [attr.data-tono]="r.causa === 'configurazione' ? 'spento' : 'allarme'"
+                  >{{
+                    r.causa === 'configurazione'
+                      ? 'Ricerca Google non configurata'
+                      : 'Google non ha risposto'
+                  }}</span
+                >
+                {{ r.motivo }} Il traffico qui sopra non passa da Google e resta valido.
+              </span>
+            </p>
+          } @else {
+            <!-- BLOCCO 6: Ricerca su Google — 4 tessere + grafico da 120. -->
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Ricerca su Google</h3>
+              </div>
+              @let ultimoGiorno = r.qualitaDati.ultimoGiornoConDati;
+              @let giorniSenzaDati = r.qualitaDati.giorniSenzaDati;
+              <p class="admin-nota">
+                Letto da Google Search Console il {{ r.generatoIl | date: 'dd MMM yyyy' }}
+                alle {{ r.generatoIl | date: 'HH:mm' }} · si aggiorna ogni
+                {{ r.aggiornatoOgniMinuti }}
+                {{ r.aggiornatoOgniMinuti === 1 ? 'minuto' : 'minuti' }} · finestra dal
+                {{ giornoLabel(r.periodo.dal) }} al {{ giornoLabel(r.periodo.al) }} ·
+                <!--
+                  Tre rami, e non uno con un ripiego dentro la frase: senza
+                  righe da Google `ultimoGiornoConDati` è null e la stesura a
+                  ripiego stampava «fino al nessun giorno», sopra tessere
+                  «Clic 0» che la frase stessa dichiarava non essere zeri.
+                  Stesso difetto, in piccolo, a ritardo zero («gli ultimi 0
+                  giorni mancano»).
+                -->
+                @if (ultimoGiorno === null) {
+                  Google non ha ancora pubblicato nessun giorno di questa finestra: i totali
+                  non sono zeri, sono in attesa del suo ritardo.
+                } @else if (giorniSenzaDati > 0) {
+                  Google ha pubblicato fino al {{ giornoLabel(ultimoGiorno) }}:
+                  @if (giorniSenzaDati === 1) {
+                    l'ultimo giorno manca
+                  } @else {
+                    gli ultimi {{ giorniSenzaDati }} giorni mancano
+                  }
+                  per il suo ritardo, non sono zeri.
+                } @else {
+                  Google ha pubblicato tutti i giorni della finestra.
+                }
+              </p>
+
+              <div class="admin-kpi-griglia">
+                @if (r.totali; as tot) {
+                  <!--
+                    Senza un giorno pubblicato i due conteggi non sono «0»: Google
+                    non ha ancora detto niente. Un trattino muto, come le tessere
+                    di CTR e posizione sui null — la stessa regola del backend
+                    (`disponibile:false` → mai zeri), applicata al caso in cui la
+                    risposta c'è ed è vuota.
+                  -->
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">Clic</span>
+                    @if (ultimoGiorno !== null) {
+                      <strong class="admin-kpi__valore">{{ formattaIntero(tot.clic) }}</strong>
+                      <span class="admin-kpi__nota">Dai risultati di Google alle pagine del sito</span>
+                    } @else {
+                      <strong class="admin-kpi__valore is-muto">—</strong>
+                      <span class="admin-kpi__nota">Non ancora pubblicato</span>
+                    }
+                  </div>
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">Impressioni</span>
+                    @if (ultimoGiorno !== null) {
+                      <strong class="admin-kpi__valore">{{
+                        formattaIntero(tot.impressioni)
+                      }}</strong>
+                      <span class="admin-kpi__nota">Quante volte una pagina è comparsa nei risultati</span>
+                    } @else {
+                      <strong class="admin-kpi__valore is-muto">—</strong>
+                      <span class="admin-kpi__nota">Non ancora pubblicato</span>
+                    }
+                  </div>
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">CTR</span>
+                    @if (tot.ctr !== null) {
+                      <strong class="admin-kpi__valore">{{ formattaFrazione(tot.ctr) }}</strong>
+                      <span class="admin-kpi__nota">Clic su impressioni</span>
+                    } @else {
+                      <strong class="admin-kpi__valore is-muto">—</strong>
+                      <span class="admin-kpi__nota">Nessuna impressione</span>
+                    }
+                  </div>
+                  <div class="card admin-kpi">
+                    <span class="admin-kpi__etichetta">Posizione media</span>
+                    @if (tot.posizioneMedia !== null) {
+                      <strong class="admin-kpi__valore">{{
+                        unDecimale(tot.posizioneMedia)
+                      }}</strong>
+                    } @else {
+                      <strong class="admin-kpi__valore is-muto">—</strong>
+                    }
+                    <span class="admin-kpi__nota">1 è il primo risultato</span>
+                  </div>
+                }
+              </div>
+
+              @if (r.andamento) {
+                <app-grafico-colonne
+                  titolo="Clic al giorno"
+                  [colonne]="colonneRicerca()"
+                  [serie]="SERIE_RICERCA"
+                  modo="affiancate"
+                  [altezza]="120"
+                  [formattaAsse]="formattaIntero"
+                  nota="Clic giorno per giorno fino all'ultimo giorno che Google ha pubblicato. Impressioni, CTR e posizione sono nel tooltip e nella tabella qui sotto."
+                />
+
+                <details class="admin-piega">
+                  <summary class="admin-piega__sum">
+                    Ricerca giorno per giorno
+                    <span class="admin-item__meta"
+                      >{{ ricercaGiorniRows().length }}
+                      {{ ricercaGiorniRows().length === 1 ? 'giorno' : 'giorni' }}</span
+                    >
+                  </summary>
+                  <div class="admin-piega__corpo">
+                    <p class="admin-nota admin-table__nota-mobile">
+                      Su schermi stretti «CTR» e «Posizione» sono nascosti.
+                    </p>
+                    <div class="admin-table__scroll">
+                      <table class="admin-table admin-table--etichettata">
+                        <caption class="visually-hidden">
+                          Clic, impressioni, CTR e posizione per giorno
+                        </caption>
+                        <thead>
+                          <tr>
+                            <th scope="col" class="admin-table__c-primo">Giorno</th>
+                            <th scope="col" class="is-num">Clic</th>
+                            <th scope="col" class="is-num">Impressioni</th>
+                            <th scope="col" class="is-num admin-table__solo-largo">CTR</th>
+                            <th scope="col" class="is-num admin-table__solo-largo">Posizione</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (p of ricercaGiorniRows(); track p.giorno) {
+                            <tr>
+                              <th scope="row" class="admin-table__c-primo">
+                                {{ giornoLabel(p.giorno) }}
+                              </th>
+                              <td class="is-num" data-etichetta="Clic">
+                                {{ formattaIntero(p.clic) }}
+                              </td>
+                              <td class="is-num" data-etichetta="Impressioni">
+                                {{ formattaIntero(p.impressioni) }}
+                              </td>
+                              <td class="is-num admin-table__solo-largo" data-etichetta="CTR">
+                                @if (p.ctr !== null) {
+                                  {{ formattaFrazione(p.ctr) }}
+                                } @else {
+                                  <span class="is-vuota">—</span>
+                                }
+                              </td>
+                              <td class="is-num admin-table__solo-largo" data-etichetta="Posizione">
+                                @if (p.posizioneMedia !== null) {
+                                  {{ unDecimale(p.posizioneMedia) }}
+                                } @else {
+                                  <span class="is-vuota">—</span>
+                                }
+                              </td>
+                            </tr>
+                          } @empty {
+                            <tr>
+                              <td colspan="5" class="admin-table__vuota">
+                                Google non ha ancora pubblicato giorni in questa finestra.
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </details>
+              }
+            </section>
+
+            <!-- BLOCCO 7: Parole cercate e pagine trovate. Le query restano in memoria. -->
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Parole cercate e pagine trovate</h3>
+              </div>
+              <p class="admin-nota">
+                Le ricerche rare Google le nasconde. Possono contenere nomi di persone: si
+                guardano e basta, non si conservano.
+              </p>
+              <p class="admin-nota admin-table__nota-mobile">
+                Su schermi stretti «Impressioni» e «Posizione» sono nascoste.
+              </p>
+              <div class="admin-table__scroll">
+                <table class="admin-table admin-table--etichettata st__sito">
+                  <caption class="visually-hidden">Parole cercate su Google</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-table__c-primo">Parola cercata</th>
+                      <th scope="col" class="is-num">Clic</th>
+                      <th scope="col" class="is-num admin-table__solo-largo">Impressioni</th>
+                      <th scope="col" class="is-num">CTR</th>
+                      <th scope="col" class="is-num admin-table__solo-largo">Posizione</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (q of r.query; track q.chiave) {
+                      <tr>
+                        <th scope="row" class="admin-table__c-primo">
+                          <span class="admin-table__ident">
+                            <span class="admin-table__ident-riga">
+                              <strong [title]="q.chiave">{{ q.chiave }}</strong>
+                            </span>
+                          </span>
+                        </th>
+                        <td class="is-num" data-etichetta="Clic">{{ formattaIntero(q.clic) }}</td>
+                        <td class="is-num admin-table__solo-largo" data-etichetta="Impressioni">
+                          {{ formattaIntero(q.impressioni) }}
+                        </td>
+                        <td class="is-num" data-etichetta="CTR">
+                          @if (q.ctr !== null) {
+                            {{ formattaFrazione(q.ctr) }}
+                          } @else {
+                            <span class="is-vuota">—</span>
+                          }
+                        </td>
+                        <td class="is-num admin-table__solo-largo" data-etichetta="Posizione">
+                          @if (q.posizioneMedia !== null) {
+                            {{ unDecimale(q.posizioneMedia) }}
+                          } @else {
+                            <span class="is-vuota">—</span>
+                          }
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="5" class="admin-table__vuota">
+                          Nessuna parola pubblicata da Google nella finestra.
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <details class="admin-piega">
+                <summary class="admin-piega__sum">
+                  Pagine trovate su Google
+                  <span class="admin-item__meta">{{ r.pagine.length }}</span>
+                </summary>
+                <div class="admin-piega__corpo">
+                  <div class="admin-table__scroll">
+                    <table class="admin-table admin-table--etichettata st__sito">
+                      <caption class="visually-hidden">Pagine trovate su Google</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col" class="admin-table__c-primo">Pagina</th>
+                          <th scope="col" class="is-num">Clic</th>
+                          <th scope="col" class="is-num admin-table__solo-largo">Impressioni</th>
+                          <th scope="col" class="is-num">CTR</th>
+                          <th scope="col" class="is-num admin-table__solo-largo">Posizione</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (p of r.pagine; track p.chiave) {
+                          <tr>
+                            <th scope="row" class="admin-table__c-primo">
+                              <span class="admin-table__ident">
+                                <span class="admin-table__ident-riga">
+                                  <strong [title]="p.chiave">{{ percorsoDi(p.chiave) }}</strong>
+                                </span>
+                              </span>
+                            </th>
+                            <td class="is-num" data-etichetta="Clic">{{ formattaIntero(p.clic) }}</td>
+                            <td class="is-num admin-table__solo-largo" data-etichetta="Impressioni">
+                              {{ formattaIntero(p.impressioni) }}
+                            </td>
+                            <td class="is-num" data-etichetta="CTR">
+                              @if (p.ctr !== null) {
+                                {{ formattaFrazione(p.ctr) }}
+                              } @else {
+                                <span class="is-vuota">—</span>
+                              }
+                            </td>
+                            <td class="is-num admin-table__solo-largo" data-etichetta="Posizione">
+                              @if (p.posizioneMedia !== null) {
+                                {{ unDecimale(p.posizioneMedia) }}
+                              } @else {
+                                <span class="is-vuota">—</span>
+                              }
+                            </td>
+                          </tr>
+                        } @empty {
+                          <tr>
+                            <td colspan="5" class="admin-table__vuota">
+                              Nessuna pagina pubblicata da Google nella finestra.
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </details>
+            </section>
+
+            <!-- BLOCCO 8: Copertura dell'indice — sitemap e sei pagine chiave. -->
+            @if (r.copertura; as c) {
+              <section class="card card--pad admin-blocco">
+                <div class="admin-blocco__testa">
+                  <h3 class="admin-blocco__titolo">Copertura dell'indice</h3>
+                </div>
+                <p class="admin-nota">
+                  Sitemap che Google conosce per la proprietà e sei pagine fisse ispezionate
+                  al massimo una volta al giorno.
+                </p>
+                @if (c.sitemapMotivo) {
+                  <p class="admin-avviso admin-avviso--attenzione">
+                    <app-icon name="alert-triangle" [size]="16" />
+                    <span><strong>Sitemap non lette.</strong> {{ c.sitemapMotivo }}</span>
+                  </p>
+                }
+                <!--
+                  Una nota PER TABELLA: le due nascondono colonne diverse, e una
+                  frase sola che parla di «inviati» sopra la tabella delle pagine
+                  chiave — che quella colonna non ce l'ha — descrive un'altra tabella.
+                -->
+                <p class="admin-nota admin-table__nota-mobile">
+                  Su schermi stretti restano solo il nome, lo stato e gli inviati.
+                </p>
+                <div class="admin-table__scroll">
+                  <table class="admin-table admin-table--etichettata st__sito">
+                    <caption class="visually-hidden">Sitemap conosciute da Google</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col" class="admin-table__c-primo">Sitemap</th>
+                        <th scope="col">Stato</th>
+                        <th scope="col" class="admin-table__solo-largo">Ultima lettura</th>
+                        <th scope="col" class="is-num">Inviati</th>
+                        <th scope="col" class="is-num admin-table__solo-largo">Errori / avvisi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (s of c.sitemap; track s.url) {
+                        <tr>
+                          <th scope="row" class="admin-table__c-primo">
+                            <span class="admin-table__ident">
+                              <span class="admin-table__ident-riga">
+                                <strong [title]="s.url">{{ percorsoDi(s.url) }}</strong>
+                              </span>
+                            </span>
+                          </th>
+                          <td data-etichetta="Stato">
+                            <span class="admin-stato" [attr.data-tono]="statoSitemap(s.stato).tono">{{
+                              statoSitemap(s.stato).testo
+                            }}</span>
+                          </td>
+                          <td class="admin-table__solo-largo" data-etichetta="Ultima lettura">
+                            @if (s.ultimaLettura) {
+                              {{ s.ultimaLettura | date: 'dd/MM/yyyy' }}
+                            } @else {
+                              <span class="is-vuota">—</span>
+                            }
+                          </td>
+                          <td class="is-num" data-etichetta="Inviati">
+                            @if (s.urlInviati !== null) {
+                              {{ formattaIntero(s.urlInviati) }}
+                            } @else {
+                              <span class="is-vuota">—</span>
+                            }
+                          </td>
+                          <td
+                            class="is-num admin-table__solo-largo"
+                            [class.st__anomalia]="s.errori > 0"
+                            data-etichetta="Errori / avvisi"
+                          >
+                            {{ formattaIntero(s.errori) }} / {{ formattaIntero(s.avvisi) }}
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="5" class="admin-table__vuota">
+                            Nessuna sitemap inviata a Google.
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+
+                <p class="admin-nota admin-table__nota-mobile">
+                  Su schermi stretti restano solo la pagina e l'esito.
+                </p>
+                <div class="admin-table__scroll">
+                  <table class="admin-table admin-table--etichettata st__sito">
+                    <caption class="visually-hidden">Pagine chiave ispezionate</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col" class="admin-table__c-primo">Pagina</th>
+                        <th scope="col">Esito</th>
+                        <th scope="col" class="admin-table__solo-largo">Ultima scansione</th>
+                        <th scope="col" class="admin-table__solo-largo">Indicizzabile</th>
+                        <th scope="col" class="admin-table__solo-largo">Canonica</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (u of c.urlChiave; track u.url) {
+                        <tr>
+                          <th scope="row" class="admin-table__c-primo">
+                            <span class="admin-table__ident">
+                              <span class="admin-table__ident-riga">
+                                <strong [title]="u.url">{{ percorsoDi(u.url) }}</strong>
+                              </span>
+                              <!-- `coverageState` di Google, testo libero: si stampa, mai si ramifica. -->
+                              @if (u.copertura ?? u.errore; as sub) {
+                                <span class="admin-table__sub" [title]="sub">{{ sub }}</span>
+                              }
+                            </span>
+                          </th>
+                          <td data-etichetta="Esito">
+                            <!--
+                              L'ora nel `title`: le righe hanno orologi diversi (una
+                              riuscita vale 24 ore, una fallita si riprova dopo una),
+                              e la nota sotto la tabella può solo dare l'intervallo.
+                            -->
+                            <span
+                              class="admin-stato"
+                              [attr.data-tono]="esitoUrl(u.esito).tono"
+                              [title]="'Ispezionata il ' + (u.ispezionatoIl | date: 'dd/MM/yyyy HH:mm')"
+                              >{{ esitoUrl(u.esito).testo }}</span
+                            >
+                          </td>
+                          <td class="admin-table__solo-largo" data-etichetta="Ultima scansione">
+                            @if (u.ultimaScansione) {
+                              {{ u.ultimaScansione | date: 'dd/MM/yyyy' }}
+                            } @else {
+                              <span class="is-vuota">—</span>
+                            }
+                          </td>
+                          <td class="admin-table__solo-largo" data-etichetta="Indicizzabile">
+                            @if (u.indicizzabile === null) {
+                              <span class="is-vuota">—</span>
+                            } @else {
+                              {{ u.indicizzabile ? 'Sì' : 'No' }}
+                            }
+                          </td>
+                          <td class="admin-table__solo-largo" data-etichetta="Canonica">
+                            @if (u.canonicaCoincide === null) {
+                              <span class="is-vuota">—</span>
+                            } @else {
+                              {{ u.canonicaCoincide ? 'coincide' : 'diversa' }}
+                            }
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="5" class="admin-table__vuota">
+                            Nessuna pagina chiave ispezionata.
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                @if (ispezioniIntervallo(); as iv) {
+                  <p class="admin-nota">
+                    <!--
+                      Min e max, non la prima riga: una riga fallita si riprova dopo
+                      un'ora mentre le riuscite valgono un giorno, quindi «ispezionate
+                      il … alle …» letto dalla prima riga era falso per le altre.
+                    -->
+                    @if (iv.dal === iv.al) {
+                      Ispezionate il {{ iv.dal | date: 'dd MMM yyyy' }} alle
+                      {{ iv.dal | date: 'HH:mm' }}.
+                    } @else {
+                      Ispezionate fra il {{ iv.dal | date: 'dd MMM yyyy' }} alle
+                      {{ iv.dal | date: 'HH:mm' }} e il {{ iv.al | date: 'dd MMM yyyy' }} alle
+                      {{ iv.al | date: 'HH:mm' }}.
+                    }
+                    <!--
+                      Il motivo è per riga (`errore`, nel sotto-testo): attribuirlo a
+                      tutte dalla nota dava la causa dei permessi anche a un timeout.
+                    -->
+                    @if (r.qualitaDati.ispezioniFallite === 1) {
+                      1 controllo non riuscito: il motivo è sotto il nome della pagina (di
+                      solito l'account di servizio senza permessi sulla proprietà); si
+                      riprova fra un'ora.
+                    } @else if (r.qualitaDati.ispezioniFallite > 1) {
+                      {{ formattaIntero(r.qualitaDati.ispezioniFallite) }} controlli non
+                      riusciti: il motivo è sotto il nome della pagina (di solito l'account di
+                      servizio senza permessi sulla proprietà); si riprovano fra un'ora.
+                    }
+                  </p>
+                }
+              </section>
+            }
+
+            <!-- BLOCCO 9: qualità dei dati + limiti della ricerca. -->
+            <section class="card card--pad admin-blocco">
+              <div class="admin-blocco__testa">
+                <h3 class="admin-blocco__titolo">Quanto fidarsi dei dati di ricerca</h3>
+              </div>
+              @if (ricercaQualitaPulita()) {
+                <p class="admin-avviso admin-avviso--ok">
+                  <app-icon name="check" [size]="16" />
+                  <span
+                    >Tutti i clic sono attribuiti a una parola, elenchi completi, sitemap
+                    lette, ispezioni riuscite e pagine chiave nell'indice.</span
+                  >
+                </p>
+              } @else {
+                <ul class="admin-avviso-elenco">
+                  @if (r.qualitaDati.clicSenzaQuery > 0) {
+                    <li>
+                      <strong>{{ formattaIntero(r.qualitaDati.clicSenzaQuery) }}</strong>
+                      @if (r.qualitaDati.clicSenzaQuery === 1) {
+                        clic non è attribuito a nessuna parola: Google nasconde le ricerche
+                        rare.
+                      } @else {
+                        clic non sono attribuiti a nessuna parola: Google nasconde le ricerche
+                        rare.
+                      }
+                    </li>
+                  }
+                  @if (r.qualitaDati.righeTroncate) {
+                    <li>
+                      Una classifica ha più righe del massimo letto in una volta:
+                      <strong>l'elenco è incompleto</strong>.
+                    </li>
+                  }
+                  @if (r.qualitaDati.ispezioniFallite > 0) {
+                    <li>
+                      <strong>{{ formattaIntero(r.qualitaDati.ispezioniFallite) }}</strong>
+                      @if (r.qualitaDati.ispezioniFallite === 1) {
+                        ispezione non riuscita: quella pagina risulta «Non verificata», non
+                        esclusa dall'indice.
+                      } @else {
+                        ispezioni non riuscite: quelle pagine risultano «Non verificata», non
+                        escluse dall'indice.
+                      }
+                    </li>
+                  }
+                  <!--
+                    Le due righe sotto vengono dalla copertura, non da `qualitaDati`:
+                    sono comunque motivi per non fidarsi, e un elenco «pulito» con le
+                    sitemap mai lette o una pagina chiave fuori dall'indice mentirebbe.
+                  -->
+                  @if (r.copertura?.sitemapMotivo; as motivo) {
+                    <li>Le sitemap non sono state lette: {{ motivo }}</li>
+                  }
+                  @if (pagineChiaveFuoriIndice() > 0) {
+                    <li>
+                      <strong>{{ formattaIntero(pagineChiaveFuoriIndice()) }}</strong>
+                      @if (pagineChiaveFuoriIndice() === 1) {
+                        pagina chiave non risulta nell'indice di Google:
+                      } @else {
+                        pagine chiave non risultano nell'indice di Google:
+                      }
+                      l'esito e il motivo sono nella tabella qui sopra.
+                    </li>
+                  }
+                </ul>
+              }
+              <details class="admin-piega st__limiti">
+                <summary class="admin-piega__sum">
+                  Cosa i numeri di ricerca non dicono
+                  <span class="admin-item__meta"
+                    >{{ r.limiti.length }} {{ r.limiti.length === 1 ? 'nota' : 'note' }}</span
+                  >
+                </summary>
+                <div class="admin-piega__corpo">
+                  <ul class="admin-piega__elenco">
+                    @for (l of r.limiti; track l) {
+                      <li>{{ l }}</li>
+                    }
+                  </ul>
+                </div>
+              </details>
+            </section>
+          }
+        }
+      }
     }
   </div>
 </div>
@@ -1519,11 +2681,13 @@
 
   ⚠️ PER SCHEDA, e dentro lo stesso `section.card.card--pad.admin-blocco` del
   primo blocco vero: uno scheletro a sei tessere in un `<div>` nudo non aveva
-  la forma di nessuna delle quattro schede — tessere in più, nessun bordo di
+  la forma di nessuna delle cinque schede — tessere in più, nessun bordo di
   card, nessun titolo — e riservava lo spazio sbagliato, cioè il salto che
   esiste per evitare. Le tessere sono quelle del PRIMO blocco della scheda, il
-  grafico è alto quanto il suo primo grafico (120 su Video, 180 altrove), e
-  al posto del titolo c'è una barra: gli offset coincidono.
+  grafico è alto quanto il suo primo grafico (120 su Video e Sito, 180
+  altrove), e al posto del titolo c'è una barra: gli offset coincidono. Su Sito
+  si rende DUE volte, una per metà in volo: i due primi blocchi hanno la stessa
+  forma.
 -->
 <ng-template #scheletro>
   @let sk = scheletroScheda();

@@ -11,15 +11,21 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
+  AdminSitoRicercaView,
+  AdminSitoTrafficoView,
   AdminStatsView,
   AdminVideoStatsView,
   AndamentoConteggi,
+  EsitoUrl,
+  GiudizioVitale,
   RigaAndamento,
   RigaVideoLezione,
+  StatoSitemap,
   StatsMeseAcquisizione,
   StatsMeseCoorte,
   StatsMeseIncasso,
   StatsMeseSenzaCassa,
+  VitaleSito,
 } from '../../../core/models/api.models';
 import { AdminConteggiService } from '../../../core/services/admin-conteggi.service';
 import { AdminStatsService } from '../../../core/services/admin-stats.service';
@@ -53,13 +59,13 @@ import { metodoLabelDaSlug } from '../metodo-pagamento';
 import { roleLabel } from '../role-labels';
 
 /**
- * Le quattro schede, tupla CHIUSA (idioma `ICON_NAMES` e `VISTE` dei
+ * Le cinque schede, tupla CHIUSA (idioma `ICON_NAMES` e `VISTE` dei
  * Conteggi): `Vista` si deriva da qui e `isVista()` è la guardia sul valore di
  * `?vista=`, che arriva dall'URL come stringa qualunque. Con una `type` a mano
  * e un `as Vista` sul parametro, `?vista=tutto` diventerebbe una scheda che
  * nessun `@case` rende: pannello vuoto, nessun errore.
  */
-const VISTE = ['abbonati', 'incassi', 'andamento', 'video'] as const;
+const VISTE = ['abbonati', 'incassi', 'andamento', 'video', 'sito'] as const;
 type Vista = (typeof VISTE)[number];
 const isVista = (v: string | undefined): v is Vista =>
   v !== undefined && (VISTE as readonly string[]).includes(v);
@@ -69,6 +75,7 @@ const SCHEDE: readonly VoceScheda<Vista>[] = [
   { valore: 'incassi', etichetta: 'Incassi' },
   { valore: 'andamento', etichetta: 'Andamento' },
   { valore: 'video', etichetta: 'Video' },
+  { valore: 'sito', etichetta: 'Sito' },
 ];
 
 /**
@@ -80,6 +87,7 @@ const TITOLI: Record<Vista, string> = {
   incassi: 'Incassi degli abbonamenti',
   andamento: 'Andamento dei conteggi',
   video: 'Video',
+  sito: 'Sito: traffico e ricerca',
 };
 
 /** Profondità della serie mensile (il DTO backend accetta 1..24). */
@@ -90,10 +98,14 @@ const GIORNI_RANGES = [7, 30, 90] as const;
 /**
  * Lo scheletro di OGNI scheda: le tessere del suo PRIMO blocco e l'altezza del
  * suo primo grafico. ⚠️ Era uno solo, a sei tessere: non aveva la forma di
- * nessuna delle quattro schede, quindi riservava lo spazio sbagliato e il
+ * nessuna delle cinque schede, quindi riservava lo spazio sbagliato e il
  * dato atterrava spostando tutto — cioè il salto di layout che uno scheletro
  * esiste per evitare. Le tessere sono indici perché il `@for` vuole un
  * elenco; il grafico è in px, la stessa unità di `altezza` sul primitivo.
+ *
+ * ⚠️ `sito` vale per ENTRAMBE le metà della scheda (traffico e ricerca): i
+ * loro primi blocchi hanno tutti e due quattro tessere e un grafico da 120,
+ * quindi lo stesso `#scheletro` si rende due volte, uno per richiesta in volo.
  */
 const tessere = (n: number): readonly number[] =>
   Array.from({ length: n }, (_, i) => i);
@@ -102,6 +114,7 @@ const SCHELETRI: Record<Vista, { tessere: readonly number[]; graficoH: number }>
   incassi: { tessere: tessere(4), graficoH: 180 },
   andamento: { tessere: tessere(2), graficoH: 180 },
   video: { tessere: tessere(4), graficoH: 120 },
+  sito: { tessere: tessere(4), graficoH: 120 },
 };
 
 // ── Le serie dei grafici ─────────────────────────────────────────────────────
@@ -138,6 +151,22 @@ const SERIE_ANDAMENTO: readonly SerieGrafico[] = [
 const SERIE_VIDEO: readonly SerieGrafico[] = [
   { nome: 'Riproduzioni', tono: 'uno' },
 ];
+/**
+ * ⚠️ AFFIANCATE: una pagina vista appartiene a una visita, quindi «pagine
+ * viste» CONTIENE le visite e una pila sarebbe una somma senza senso. Il
+ * rapporto fra le due (~2-3×) si legge lo stesso, e sta anche nella tessera
+ * «Pagine per visita».
+ */
+const SERIE_TRAFFICO: readonly SerieGrafico[] = [
+  { nome: 'Visite', tono: 'uno' },
+  { nome: 'Pagine viste', tono: 'due' },
+];
+/**
+ * ⚠️ UNA serie sola: le impressioni sono ~×30 dei clic, e sullo stesso asse i
+ * clic sparirebbero. Impressioni, CTR e posizione stanno nel `dettaglio` del
+ * tooltip e nella tabella giorno per giorno.
+ */
+const SERIE_RICERCA: readonly SerieGrafico[] = [{ nome: 'Clic', tono: 'uno' }];
 
 /** `visibility` arriva come stringa libera dal backend: fallback sul grezzo. */
 const VISIBILITY_LABELS: Record<string, string> = {
@@ -152,6 +181,74 @@ const VISIBILITY_LABELS: Record<string, string> = {
  * né un conteggio, né una frazione, né un importo.
  */
 const ORE = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 1 });
+
+// ── I formattatori della scheda Sito, LOCALI come `ORE` ──────────────────────
+// Nessuno di questi è denaro, un conteggio o una frazione: pagine per visita,
+// secondi di LCP, posizione media su Google. Restano qui e non in `denaro.ts`,
+// per la ragione scritta su `ORE`.
+
+/** Un decimale al più: «2,8», «12,4». */
+const UN_DECIMALE = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 1 });
+/** Due decimali sempre: il CLS è adimensionale e «0,1» e «0,10» sono la stessa soglia. */
+const DUE_DECIMALI = new Intl.NumberFormat('it-IT', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+/** Codice ISO-2 → nome del Paese in italiano («IT» → «Italia»). */
+const NOME_PAESE = new Intl.DisplayNames(['it'], { type: 'region' });
+/** `deviceType` di Cloudflare: fallback sul grezzo per un valore ignoto. */
+const DISPOSITIVO_LABELS: Record<string, string> = {
+  desktop: 'Computer',
+  mobile: 'Telefono',
+  tablet: 'Tablet',
+};
+
+/**
+ * Le tre mappe stato → {testo, tono} della scheda Sito, esaustive sulle union
+ * del modello: uno stato nuovo dal backend NON compila finché non ha una
+ * resa — è il precedente della pastiglia `.admin-stato`, nata perché una
+ * classe interpolata dallo stato produceva pastiglie senza colore.
+ * ⚠️ I toni sono quelli del PERCORSO (`admin-stato.ts`), non della salute
+ * di /admin/fonti: `allarme` qui è «scarso»/«non indicizzata», rosso.
+ */
+interface Pastiglia {
+  testo: string;
+  tono: 'spento' | 'neutro' | 'attesa' | 'ok' | 'concluso' | 'allarme' | 'ignoto';
+}
+const GIUDIZIO: Record<GiudizioVitale, Pastiglia> = {
+  buono: { testo: 'Buono', tono: 'ok' },
+  daMigliorare: { testo: 'Da migliorare', tono: 'attesa' },
+  scarso: { testo: 'Scarso', tono: 'allarme' },
+};
+const ESITO_URL: Record<EsitoUrl, Pastiglia> = {
+  indicizzata: { testo: 'Indicizzata', tono: 'ok' },
+  parziale: { testo: 'Parziale', tono: 'attesa' },
+  nonIndicizzata: { testo: 'Non indicizzata', tono: 'allarme' },
+  // `attesa` e non `neutro`: il verdetto NEUTRAL di Google («rilevata,
+  // attualmente non indicizzata») su una delle sei pagine chiave — tutte
+  // prerenderizzate, in sitemap e senza noindex — è una notizia da leggere,
+  // e un tono muto la faceva passare per uno stato qualunque.
+  esclusa: { testo: 'Esclusa', tono: 'attesa' },
+  // «Non verificata» e non «Sconosciuto»: l'ispezione non è riuscita (di
+  // solito un 403 finché l'account di servizio non ha i permessi), e la
+  // riga porta il motivo nel sotto-testo.
+  ignoto: { testo: 'Non verificata', tono: 'ignoto' },
+};
+const STATO_SITEMAP: Record<StatoSitemap, Pastiglia> = {
+  letta: { testo: 'Letta', tono: 'ok' },
+  attesa: { testo: 'In attesa', tono: 'attesa' },
+  avvisi: { testo: 'Con avvisi', tono: 'attesa' },
+  errori: { testo: 'Con errori', tono: 'allarme' },
+};
+
+/** Una tessera dei Core Web Vitals: il valore già formattato, o null se il campo manca. */
+interface TesseraVitale {
+  chiave: 'lcp' | 'inp' | 'cls';
+  etichetta: string;
+  spiega: string;
+  valore: string | null;
+  v: VitaleSito;
+}
 
 const MESE_LABEL_FMT = new Intl.DateTimeFormat('it-IT', {
   month: 'short',
@@ -292,21 +389,24 @@ interface RigaCrescita {
 }
 
 /**
- * La sezione «Statistiche»: quattro schede — Abbonati · Incassi · Andamento ·
- * Video — su tre letture indipendenti, ognuna col proprio errore e il proprio
- * «Riprova».
+ * La sezione «Statistiche»: cinque schede — Abbonati · Incassi · Andamento ·
+ * Video · Sito — su cinque letture indipendenti, ognuna col proprio errore e
+ * il proprio «Riprova».
  *
- * ⚠️ TRE fonti e non una: `/admin/stats` (aggregazioni Mongo, cache 5 min) per
- * Abbonati e Incassi, `/admin/conteggi/andamento` (senza cache: i mesi aperti
- * si ricalcolano a ogni lettura) per Andamento, `/admin/stats/video` (una
- * chiamata di rete a Bunny) per Video. Un guasto di Bunny non deve spegnere i
- * numeri di business, e i conteggi non passano da nessuna delle altre due.
+ * ⚠️ CINQUE fonti e non una: `/admin/stats` (aggregazioni Mongo, cache 5 min)
+ * per Abbonati e Incassi, `/admin/conteggi/andamento` (senza cache: i mesi
+ * aperti si ricalcolano a ogni lettura) per Andamento, `/admin/stats/video`
+ * (una chiamata di rete a Bunny) per Video, `/admin/stats/sito/traffico`
+ * (Cloudflare) e `/admin/stats/sito/ricerca` (Google) per Sito — DUE metà con
+ * bande d'errore proprie, perché un 403 di Google non deve coprire il traffico
+ * di Cloudflare. Un guasto di Bunny non deve spegnere i numeri di business, e
+ * i conteggi non passano da nessuna delle altre.
  *
- * ⚠️ Andamento e Video si caricano PIGRAMENTE, al primo ingresso nella scheda
- * (precedente `caricaSoci` nei Conteggi): erano tre chiamate nel costruttore,
- * di cui una a Bunny, per chi apriva la pagina a leggere gli abbonati. Una
- * volta sola per scheda — un errore lascia la banda col suo «Riprova», non un
- * secondo tentativo automatico a ogni cambio di scheda.
+ * ⚠️ Andamento, Video e Sito si caricano PIGRAMENTE, al primo ingresso nella
+ * scheda (precedente `caricaSoci` nei Conteggi): erano tre chiamate nel
+ * costruttore, di cui una a Bunny, per chi apriva la pagina a leggere gli
+ * abbonati. Una volta sola per scheda — un errore lascia la banda col suo
+ * «Riprova», non un secondo tentativo automatico a ogni cambio di scheda.
  *
  * ⚠️ DUE unità di denaro convivono in questa pagina e non si incrociano MAI:
  * `/admin/stats` manda EURO float (`formattaEur`), i conteggi mandano
@@ -395,6 +495,9 @@ export class AdminStatsComponent {
     String(this.mesiAndamento()),
   );
   protected readonly giorniScelto = computed(() => String(this.giorni()));
+  protected readonly giorniSitoScelto = computed(() =>
+    String(this.giorniSito()),
+  );
 
   protected readonly meseLabel = meseLabel;
   protected readonly meseLungo = meseLungo;
@@ -418,6 +521,8 @@ export class AdminStatsComponent {
   protected readonly SERIE_INCASSO = SERIE_INCASSO;
   protected readonly SERIE_ANDAMENTO = SERIE_ANDAMENTO;
   protected readonly SERIE_VIDEO = SERIE_VIDEO;
+  protected readonly SERIE_TRAFFICO = SERIE_TRAFFICO;
+  protected readonly SERIE_RICERCA = SERIE_RICERCA;
   protected readonly roleLabel = roleLabel;
   /**
    * ⚠️ Era una mappa di DUE voci (paypal, skrill) con ripiego sullo slug: non
@@ -429,7 +534,7 @@ export class AdminStatsComponent {
    */
   protected readonly metodoLabel = metodoLabelDaSlug;
 
-  // ── Le tre fonti ──────────────────────────────────────────────────────────
+  // ── Le cinque fonti ───────────────────────────────────────────────────────
 
   protected readonly stats = signal<AdminStatsView | null>(null);
   protected readonly statsLoading = signal(false);
@@ -446,6 +551,21 @@ export class AdminStatsComponent {
   protected readonly videoError = signal<string | null>(null);
   protected readonly giorni = signal<number>(30);
 
+  /**
+   * Le due metà della scheda Sito: Cloudflare (traffico) e Google (ricerca).
+   * Due signal di dato, due di caricamento, due di errore: nessuno dei sei
+   * guarda l'altro lato. Una finestra SOLA per entrambe (`giorniSito`): la
+   * barra ammette un filtro per scheda, e il ritardo di Google si dichiara in
+   * risposta invece di spostare la finestra.
+   */
+  protected readonly traffico = signal<AdminSitoTrafficoView | null>(null);
+  protected readonly trafficoLoading = signal(false);
+  protected readonly trafficoError = signal<string | null>(null);
+  protected readonly ricerca = signal<AdminSitoRicercaView | null>(null);
+  protected readonly ricercaLoading = signal(false);
+  protected readonly ricercaError = signal<string | null>(null);
+  protected readonly giorniSito = signal<number>(30);
+
   // Guardie anti-sorpasso: cambiare finestra due volte in fretta può far
   // arrivare per ultima la risposta vecchia (stesso schema di /lezioni).
   // ⚠️ Sono anche la memoria del «già chiesto una volta» dei caricamenti pigri:
@@ -453,6 +573,8 @@ export class AdminStatsComponent {
   private statsSeq = 0;
   private andamentoSeq = 0;
   private videoSeq = 0;
+  private trafficoSeq = 0;
+  private ricercaSeq = 0;
 
   constructor() {
     this.loadStats();
@@ -483,6 +605,12 @@ export class AdminStatsComponent {
       untracked(() => {
         if (v === 'andamento' && this.andamentoSeq === 0) this.loadAndamento();
         if (v === 'video' && this.videoSeq === 0) this.loadVideo();
+        // Le due metà di Sito hanno ciascuna la propria guardia: un 500 di
+        // Google non deve far ripartire Cloudflare, né viceversa.
+        if (v === 'sito') {
+          if (this.trafficoSeq === 0) this.loadTraffico();
+          if (this.ricercaSeq === 0) this.loadRicerca();
+        }
       });
     });
 
@@ -568,6 +696,46 @@ export class AdminStatsComponent {
     });
   }
 
+  protected loadTraffico(): void {
+    const seq = ++this.trafficoSeq;
+    this.trafficoLoading.set(true);
+    this.trafficoError.set(null);
+    this.api.sitoTraffico(this.giorniSito()).subscribe({
+      next: (data) => {
+        if (seq !== this.trafficoSeq) return;
+        this.traffico.set(data);
+        this.trafficoLoading.set(false);
+      },
+      error: (err: unknown) => {
+        if (seq !== this.trafficoSeq) return;
+        this.trafficoLoading.set(false);
+        this.trafficoError.set(
+          apiErrorMessage(err, 'Caricamento del traffico non riuscito.'),
+        );
+      },
+    });
+  }
+
+  protected loadRicerca(): void {
+    const seq = ++this.ricercaSeq;
+    this.ricercaLoading.set(true);
+    this.ricercaError.set(null);
+    this.api.sitoRicerca(this.giorniSito()).subscribe({
+      next: (data) => {
+        if (seq !== this.ricercaSeq) return;
+        this.ricerca.set(data);
+        this.ricercaLoading.set(false);
+      },
+      error: (err: unknown) => {
+        if (seq !== this.ricercaSeq) return;
+        this.ricercaLoading.set(false);
+        this.ricercaError.set(
+          apiErrorMessage(err, 'Caricamento dei dati di ricerca non riuscito.'),
+        );
+      },
+    });
+  }
+
   /** La richiesta in volo della scheda che si sta guardando. */
   protected readonly caricamentoScheda = computed(() => {
     switch (this.vista()) {
@@ -578,6 +746,8 @@ export class AdminStatsComponent {
         return this.andamentoLoading();
       case 'video':
         return this.videoLoading();
+      case 'sito':
+        return this.trafficoLoading() || this.ricercaLoading();
     }
   });
 
@@ -591,6 +761,11 @@ export class AdminStatsComponent {
         return this.andamentoError();
       case 'video':
         return this.videoError();
+      case 'sito':
+        // Le due metà hanno bande PROPRIE dentro il pannello: un errore di
+        // Google non deve coprire Cloudflare, e la banda unica ne mostrerebbe
+        // uno solo. Qui, di proposito, niente.
+        return null;
     }
   });
 
@@ -607,6 +782,12 @@ export class AdminStatsComponent {
       case 'video':
         this.loadVideo();
         return;
+      case 'sito':
+        // «Ricarica» della barra rifà entrambe le metà; i due «Riprova» nelle
+        // bande proprie rifanno SOLO la loro.
+        this.loadTraffico();
+        this.loadRicerca();
+        return;
     }
   }
 
@@ -621,6 +802,10 @@ export class AdminStatsComponent {
 
   protected setGiorniDaFiltro(v: string): void {
     this.setGiorni(Number(v));
+  }
+
+  protected setGiorniSitoDaFiltro(v: string): void {
+    this.setGiorniSito(Number(v));
   }
 
   protected setMesi(n: number): void {
@@ -639,6 +824,14 @@ export class AdminStatsComponent {
     if (n === this.giorni()) return;
     this.giorni.set(n);
     this.loadVideo();
+  }
+
+  /** Una finestra sola per le due metà di Sito: cambiarla le rifà entrambe. */
+  protected setGiorniSito(n: number): void {
+    if (n === this.giorniSito()) return;
+    this.giorniSito.set(n);
+    this.loadTraffico();
+    this.loadRicerca();
   }
 
   // ── Abbonati ─────────────────────────────────────────────────────────────
@@ -1095,6 +1288,223 @@ export class AdminStatsComponent {
       },
     ].filter((g) => g.gruppo.totale > 0);
   });
+
+  // ── Sito · Traffico (Cloudflare Web Analytics) ───────────────────────────
+
+  /**
+   * Visite e pagine viste giorno per giorno, affiancate (vedi
+   * `SERIE_TRAFFICO`). Il `dettaglio` dice se il giorno è esatto o una stima:
+   * oltre i sette giorni Cloudflare campiona e moltiplica.
+   *
+   * ⚠️ NIENTE `provvisorio`: il primitivo stamperebbe la parola «provvisorio»
+   * nel tooltip e nel readout, e una stima non è provvisoria — non cambierà,
+   * è solo meno precisa. Lo stato esatti/stima è nel `dettaglio` qui e nella
+   * colonna «Dati» della tabella.
+   */
+  protected readonly colonneTraffico = computed<ColonnaGrafico[]>(() =>
+    (this.traffico()?.andamento?.serie ?? []).map((p) => ({
+      chiave: p.giorno,
+      etichetta: giornoBreve(p.giorno),
+      etichettaLunga: giornoLabel(p.giorno),
+      valori: [p.visite, p.pagineViste],
+      testi: [formattaIntero(p.visite), formattaIntero(p.pagineViste)],
+      dettaglio:
+        p.campione > 1
+          ? `Stima: Cloudflare ha tenuto circa una pagina su ${formattaIntero(
+              Math.round(p.campione),
+            )}`
+          : 'Dati esatti',
+    })),
+  );
+
+  /** Gli stessi giorni in tabella, il più recente in cima. */
+  protected readonly trafficoGiorniRows = computed(() =>
+    [...(this.traffico()?.andamento?.serie ?? [])].reverse(),
+  );
+
+  /**
+   * Le tre tessere dei Core Web Vitals, col valore già formattato nell'unità
+   * giusta: millisecondi per LCP e INP, adimensionale a due decimali per CLS.
+   * `valore` null = campo assente dal dataset, e la tessera dice «Nessun dato»
+   * — mai uno zero, che per un CWV sarebbe un voto perfetto inventato.
+   */
+  protected readonly vitaliTessere = computed<TesseraVitale[]>(() => {
+    const v = this.traffico()?.vitali;
+    if (!v) return [];
+    return [
+      {
+        chiave: 'lcp',
+        etichetta: 'LCP',
+        spiega: 'Comparsa del contenuto principale',
+        valore: v.lcp.p75 === null ? null : this.millisecondi(v.lcp.p75),
+        v: v.lcp,
+      },
+      {
+        chiave: 'inp',
+        etichetta: 'INP',
+        spiega: 'Reattività al tocco e al clic',
+        valore: v.inp.p75 === null ? null : this.millisecondi(v.inp.p75),
+        v: v.inp,
+      },
+      {
+        chiave: 'cls',
+        etichetta: 'CLS',
+        spiega: 'Salti di layout',
+        valore: v.cls.p75 === null ? null : this.dueDecimali(v.cls.p75),
+        v: v.cls,
+      },
+    ];
+  });
+
+  /** Nessuna stima, nessun elenco troncato, nessuna tranche fallita: va detto. */
+  protected readonly trafficoQualitaPulita = computed(() => {
+    const q = this.traffico()?.qualitaDati;
+    return (
+      !!q && q.giorniStimati === 0 && !q.elencoTroncato && q.finestreFallite === 0
+    );
+  });
+
+  // ── Sito · Ricerca (Google Search Console) ───────────────────────────────
+
+  /**
+   * I clic giorno per giorno, UNA serie (vedi `SERIE_RICERCA`): impressioni,
+   * CTR e posizione stanno nel `dettaglio`, da leggere nel tooltip e nel
+   * readout. La serie è densa solo fino all'ultimo giorno che Google ha
+   * pubblicato: i giorni del suo ritardo non sono colonne a zero.
+   */
+  protected readonly colonneRicerca = computed<ColonnaGrafico[]>(() =>
+    (this.ricerca()?.andamento?.serie ?? []).map((p) => ({
+      chiave: p.giorno,
+      etichetta: giornoBreve(p.giorno),
+      etichettaLunga: giornoLabel(p.giorno),
+      valori: [p.clic],
+      testi: [formattaIntero(p.clic)],
+      dettaglio: `${formattaIntero(p.impressioni)} impressioni · CTR ${
+        p.ctr === null ? '—' : formattaFrazione(p.ctr)
+      } · posizione ${
+        p.posizioneMedia === null ? '—' : this.unDecimale(p.posizioneMedia)
+      }`,
+    })),
+  );
+
+  /** Gli stessi giorni in tabella, il più recente in cima. */
+  protected readonly ricercaGiorniRows = computed(() =>
+    [...(this.ricerca()?.andamento?.serie ?? [])].reverse(),
+  );
+
+  /**
+   * Le pagine chiave che Google dichiara fuori dall'indice: «esclusa»
+   * (verdetto NEUTRAL) e «non indicizzata» (FAIL). Le «Non verificata» NON
+   * contano — un'ispezione fallita non dice niente sull'indice, e le conta
+   * già `ispezioniFallite`.
+   */
+  protected readonly pagineChiaveFuoriIndice = computed(
+    () =>
+      (this.ricerca()?.copertura?.urlChiave ?? []).filter(
+        (u) => u.esito === 'esclusa' || u.esito === 'nonIndicizzata',
+      ).length,
+  );
+
+  /**
+   * L'intervallo delle ispezioni delle pagine chiave (min e max di
+   * `ispezionatoIl`), o null senza righe. Le righe hanno orologi diversi —
+   * una riuscita vale 24 ore in cache, una fallita si riprova dopo una — quindi
+   * l'ora della prima riga non descrive le altre. Due estremi uguali = tutte
+   * ispezionate insieme (il backend timbra un lotto con lo stesso istante).
+   */
+  protected readonly ispezioniIntervallo = computed<{ dal: string; al: string } | null>(
+    () => {
+      const tempi = (this.ricerca()?.copertura?.urlChiave ?? [])
+        .map((u) => ({ iso: u.ispezionatoIl, ms: new Date(u.ispezionatoIl).getTime() }))
+        .filter((t) => !isNaN(t.ms))
+        .sort((a, b) => a.ms - b.ms);
+      if (tempi.length === 0) return null;
+      return { dal: tempi[0].iso, al: tempi[tempi.length - 1].iso };
+    },
+  );
+
+  /**
+   * Ogni clic attribuito a una parola, elenchi completi, ispezioni riuscite,
+   * sitemap lette e nessuna pagina chiave fuori dall'indice. Le ultime due
+   * arrivano dalla copertura e non da `qualitaDati`: senza, il blocco diceva
+   * «tutto a posto» sopra una tabella con le sitemap mai lette.
+   */
+  protected readonly ricercaQualitaPulita = computed(() => {
+    const r = this.ricerca();
+    const q = r?.qualitaDati;
+    return (
+      !!q &&
+      q.clicSenzaQuery === 0 &&
+      !q.righeTroncate &&
+      q.ispezioniFallite === 0 &&
+      !r?.copertura?.sitemapMotivo &&
+      this.pagineChiaveFuoriIndice() === 0
+    );
+  });
+
+  // ── Formattatori della scheda Sito ───────────────────────────────────────
+
+  /** «2,8», «12,4»: al più un decimale. */
+  protected unDecimale(v: number): string {
+    return UN_DECIMALE.format(v);
+  }
+
+  /** «0,10»: due decimali sempre, per il CLS. */
+  protected dueDecimali(v: number): string {
+    return DUE_DECIMALI.format(v);
+  }
+
+  /** Millisecondi → «2,1 s» da un secondo in su, «250 ms» sotto. */
+  protected millisecondi(ms: number): string {
+    return ms >= 1000
+      ? `${this.unDecimale(ms / 1000)} s`
+      : `${formattaIntero(ms)} ms`;
+  }
+
+  /**
+   * Il nome del Paese da un codice ISO-2 («IT» → «Italia»). Cloudflare
+   * dovrebbe dare il codice; se arriva un nome esteso o altro, si stampa il
+   * grezzo: davanti a un valore ignoto la stringa com'è è una domanda, un
+   * Paese plausibile sarebbe un'affermazione falsa.
+   */
+  protected nomePaese(codice: string): string {
+    if (!/^[A-Za-z]{2}$/.test(codice)) return codice;
+    try {
+      return NOME_PAESE.of(codice.toUpperCase()) ?? codice;
+    } catch {
+      return codice;
+    }
+  }
+
+  protected dispositivoLabel(tipo: string): string {
+    return DISPOSITIVO_LABELS[tipo] ?? tipo;
+  }
+
+  /** La provenienza vuota è il traffico diretto o senza referrer, non un buco. */
+  protected provenienzaLabel(chiave: string): string {
+    return chiave || 'Diretto o sconosciuto';
+  }
+
+  /** Il solo percorso di un URL completo, per le tabelle di Google: il `title` porta l'URL intero. */
+  protected percorsoDi(url: string): string {
+    try {
+      return new URL(url).pathname;
+    } catch {
+      return url;
+    }
+  }
+
+  protected giudizio(g: GiudizioVitale): Pastiglia {
+    return GIUDIZIO[g];
+  }
+
+  protected esitoUrl(e: EsitoUrl): Pastiglia {
+    return ESITO_URL[e];
+  }
+
+  protected statoSitemap(s: StatoSitemap): Pastiglia {
+    return STATO_SITEMAP[s];
+  }
 
   // ── Formattatori propri della pagina ─────────────────────────────────────
 

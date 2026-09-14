@@ -147,8 +147,14 @@
 // cella perché lì il testo va a capo per intero. Un tetto rimasto acceso a
 // 390px è un titolo troncato senza `title` che lo legga (col dito l'hover non
 // esiste). Le soglie vengono da `_soglie.scss`, come negli altri fogli.
+//
+// `.st__sito`: le tabelle a quattro/cinque colonne della scheda Sito, con URL
+// e parole cercate lunghe nella cella d'identità — tetto sull'elemento
+// interno, mai sul `td` (un tetto sulla cella limita la scatola, non il
+// contenuto).
 @media (min-width: #{s.$bp-tabella-blocchi + 1}) and (max-width: 1200px) {
-  .st__lezioni .admin-table__ident {
+  .st__lezioni .admin-table__ident,
+  .st__sito .admin-table__ident {
     max-width: 16rem;
   }
 }

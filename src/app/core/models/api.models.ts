@@ -1731,6 +1731,176 @@ export interface AdminVideoStatsView {
   limiti: string[];
 }
 
+// ----- Statistiche del sito (GET /admin/stats/sito/traffico, /sito/ricerca) -----
+// Ricalcate su backend/src/admin/admin-sito-traffico.types.ts e
+// admin-sito-ricerca.types.ts (le `Date` arrivano come stringhe ISO, come
+// ovunque in questo file). Query param `giorni` 1..90, come per /video.
+// ⚠️ `causa` distingue «da configurare» (mancano le env su Render) da
+// «fornitore giù» (Cloudflare/Google non hanno risposto): due azioni diverse
+// per l'owner, quindi due pastiglie diverse in pagina.
+// ⚠️ `disponibile: false` → mostrare `motivo`, MAI degli zeri: uno zero si
+// legge «nessuno visita il sito», che è l'opposto di «non lo sappiamo».
+
+export type CausaIndisponibile = 'configurazione' | 'fornitore';
+export type GiudizioVitale = 'buono' | 'daMigliorare' | 'scarso';
+
+export interface VitaleSito {
+  /** 75° percentile nell'unità del fornitore: ms per LCP e INP, adimensionale per CLS. null = campo assente. */
+  p75: number | null;
+  giudizio: GiudizioVitale | null;
+  /** Conteggi per fascia se il dataset li dà: null altrimenti. */
+  distribuzione: { buono: number; daMigliorare: number; scarso: number } | null;
+}
+
+export interface GiornoTraffico {
+  giorno: string;
+  visite: number;
+  pagineViste: number;
+  /** Intervallo di campionamento (1 = esatto, 10 = circa 1 su 10). */
+  campione: number;
+}
+
+export interface RigaTraffico {
+  chiave: string;
+  visite: number;
+  pagineViste: number;
+  /** Frazione 0..1 sul totale visite della finestra. */
+  quota: number;
+}
+
+export interface AdminSitoTrafficoView {
+  generatoIl: string;
+  aggiornatoOgniMinuti: number;
+  disponibile: boolean;
+  causa?: CausaIndisponibile;
+  motivo?: string;
+  periodo: { giorni: number; dal: string; al: string };
+  totali: {
+    visite: number;
+    pagineViste: number;
+    paginePerVisita: number;
+    visiteAlGiorno: number;
+  } | null;
+  /** Densa: ogni giorno di [dal, al]. */
+  andamento: { serie: GiornoTraffico[] } | null;
+  /** chiave = percorso della pagina, per pagineViste desc. */
+  pagine: RigaTraffico[];
+  /** chiave = host di provenienza, '' = diretto/sconosciuto, per visite desc. */
+  provenienze: RigaTraffico[];
+  /** chiave = Paese così come lo dà Cloudflare (atteso codice ISO-2). */
+  paesi: RigaTraffico[];
+  /** chiave = desktop | mobile | tablet | … */
+  dispositivi: RigaTraffico[];
+  /** chiave = nome del browser. ⚠️ Nessun sistema operativo: non è in cookie policy. */
+  browser: RigaTraffico[];
+  /** Ultimi 7 giorni, sempre; null se la query dei vitali è fallita (vedi vitaliMotivo): il traffico resta. */
+  vitali: {
+    dal: string;
+    al: string;
+    eventi: number;
+    lcp: VitaleSito;
+    inp: VitaleSito;
+    cls: VitaleSito;
+  } | null;
+  vitaliMotivo?: string;
+  qualitaDati: {
+    giorniStimati: number;
+    campioneMassimo: number;
+    elencoTroncato: boolean;
+    finestreInterrogate: number;
+    finestreFallite: number;
+  };
+  limiti: string[];
+}
+
+export interface RigaRicercaGoogle {
+  chiave: string;
+  clic: number;
+  impressioni: number;
+  ctr: number | null;
+  posizioneMedia: number | null;
+}
+
+export interface GiornoRicerca {
+  giorno: string;
+  clic: number;
+  impressioni: number;
+  ctr: number | null;
+  posizioneMedia: number | null;
+}
+
+export type StatoSitemap = 'letta' | 'attesa' | 'avvisi' | 'errori';
+
+export interface RigaSitemap {
+  url: string;
+  stato: StatoSitemap;
+  inviataIl: string | null;
+  ultimaLettura: string | null;
+  urlInviati: number | null;
+  errori: number;
+  avvisi: number;
+}
+
+export type EsitoUrl =
+  | 'indicizzata'
+  | 'parziale'
+  | 'nonIndicizzata'
+  | 'esclusa'
+  | 'ignoto';
+
+export interface RigaUrlChiave {
+  url: string;
+  esito: EsitoUrl;
+  /** coverageState di Google, testo libero localizzato it-IT: si stampa, mai si ramifica. */
+  copertura: string | null;
+  ultimaScansione: string | null;
+  /** indexingState === 'INDEXING_ALLOWED' && robotsTxtState !== 'DISALLOWED'; null se assenti. */
+  indicizzabile: boolean | null;
+  /** googleCanonical === userCanonical, null se uno manca. */
+  canonicaCoincide: boolean | null;
+  /** inspectionResultLink */
+  link: string | null;
+  ispezionatoIl: string;
+  /** Presente con esito 'ignoto' per chiamata fallita. */
+  errore?: string;
+}
+
+export interface AdminSitoRicercaView {
+  generatoIl: string;
+  aggiornatoOgniMinuti: number;
+  disponibile: boolean;
+  causa?: CausaIndisponibile;
+  motivo?: string;
+  periodo: { giorni: number; dal: string; al: string };
+  /** ctr frazione 0..1 e posizione pesata sulle impressioni: li calcola Google. */
+  totali: {
+    clic: number;
+    impressioni: number;
+    ctr: number | null;
+    posizioneMedia: number | null;
+  } | null;
+  /** Densa da `dal` a `ultimoGiornoConDati`, MAI oltre. */
+  andamento: { serie: GiornoRicerca[] } | null;
+  /** Parole cercate: SOLO in memoria, mai persistite né loggate (possono contenere nomi di terzi). */
+  query: RigaRicercaGoogle[];
+  /** chiave = URL completo. */
+  pagine: RigaRicercaGoogle[];
+  /** null solo con disponibile:false. */
+  copertura: {
+    sitemap: RigaSitemap[];
+    sitemapMotivo?: string;
+    urlChiave: RigaUrlChiave[];
+  } | null;
+  qualitaDati: {
+    ultimoGiornoConDati: string | null;
+    giorniSenzaDati: number;
+    clicSenzaQuery: number;
+    righeTroncate: boolean;
+    ispezioniFallite: number;
+  };
+  limiti: string[];
+}
+
 // ----- Affiliazioni (tracciamento poker room) -----
 // Ricalcate sulle VISTE del backend (branch `affiliazioni`):
 // `affiliations/poker-rooms.service.ts` (PokerRoomView / PokerRoomAdminView) e

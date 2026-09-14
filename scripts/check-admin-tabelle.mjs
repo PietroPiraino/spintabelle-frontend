@@ -97,6 +97,14 @@ const nomeSezione = (sez) => sez || 'panoramica';
 const misura = (page) =>
   page.evaluate(() => {
     const out = [];
+    // ⚠️ Una tabella dentro un collassabile CHIUSO ha `getBoundingClientRect()`
+    // a zero: la sonda la contava con `alta: 0` e la promuoveva senza averla
+    // misurata (vale già per «Riproduzioni giorno per giorno» di Video, e dal
+    // 14/09/2026 per sei tabelle della scheda Sito). Si aprono tutti PRIMA di
+    // misurare.
+    document.querySelectorAll('details.admin-piega').forEach((d) => {
+      d.open = true;
+    });
     document.querySelectorAll('.admin-table__scroll').forEach((box, i) => {
       const t = box.querySelector('table.admin-table');
       if (!t) return;

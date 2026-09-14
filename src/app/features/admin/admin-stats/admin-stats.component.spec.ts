@@ -10,10 +10,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import {
+  AdminSitoRicercaView,
+  AdminSitoTrafficoView,
   AdminStatsView,
   AdminVideoStatsView,
   AndamentoConteggi,
   RigaAndamento,
+  RigaUrlChiave,
 } from '../../../core/models/api.models';
 import { AdminStatsComponent } from './admin-stats.component';
 
@@ -204,6 +207,134 @@ const andamentoView = (
   ...over,
 });
 
+/**
+ * La metà Cloudflare della scheda Sito: due giorni, il 13 esatto e il 14
+ * campionato (1 pagina su 10), una pagina con l'URL lungo, una provenienza
+ * VUOTA (il traffico diretto), un Paese in ISO-2, un dispositivo con la
+ * chiave grezza di Cloudflare, i tre vitali in tre stati diversi.
+ */
+const trafficoView = (
+  over: Partial<AdminSitoTrafficoView> = {},
+): AdminSitoTrafficoView => ({
+  generatoIl: GENERATO_IL,
+  aggiornatoOgniMinuti: 15,
+  disponibile: true,
+  periodo: { giorni: 30, dal: '2026-06-16', al: '2026-07-15' },
+  totali: { visite: 120, pagineViste: 340, paginePerVisita: 2.8, visiteAlGiorno: 4 },
+  andamento: {
+    serie: [
+      { giorno: '2026-07-13', visite: 10, pagineViste: 25, campione: 1 },
+      { giorno: '2026-07-14', visite: 30, pagineViste: 60, campione: 10 },
+    ],
+  },
+  pagine: [
+    {
+      chiave: '/guide/come-si-gioca-uno-spin-and-go-dal-primo-livello-alla-fine/',
+      visite: 40,
+      pagineViste: 90,
+      quota: 0.333,
+    },
+  ],
+  provenienze: [{ chiave: '', visite: 70, pagineViste: 200, quota: 0.583 }],
+  paesi: [{ chiave: 'IT', visite: 100, pagineViste: 300, quota: 0.833 }],
+  dispositivi: [{ chiave: 'mobile', visite: 80, pagineViste: 210, quota: 0.667 }],
+  browser: [{ chiave: 'Chrome', visite: 90, pagineViste: 250, quota: 0.75 }],
+  vitali: {
+    dal: '2026-07-09',
+    al: '2026-07-15',
+    eventi: 400,
+    lcp: { p75: 2100, giudizio: 'buono', distribuzione: null },
+    inp: { p75: 250, giudizio: 'daMigliorare', distribuzione: null },
+    cls: { p75: null, giudizio: null, distribuzione: null },
+  },
+  qualitaDati: {
+    giorniStimati: 1,
+    campioneMassimo: 10,
+    elencoTroncato: false,
+    finestreInterrogate: 1,
+    finestreFallite: 0,
+  },
+  limiti: ['Un limite del traffico dichiarato dal backend.'],
+  ...over,
+});
+
+/**
+ * La metà Google: totali calcolati da Google, due giorni pubblicati (Google è
+ * indietro di tre), una parola cercata, una pagina con l'URL completo, una
+ * sitemap letta e due pagine chiave con esiti diversi.
+ */
+const ricercaView = (
+  over: Partial<AdminSitoRicercaView> = {},
+): AdminSitoRicercaView => ({
+  generatoIl: GENERATO_IL,
+  aggiornatoOgniMinuti: 60,
+  disponibile: true,
+  periodo: { giorni: 30, dal: '2026-06-16', al: '2026-07-15' },
+  totali: { clic: 45, impressioni: 1400, ctr: 0.032, posizioneMedia: 12.4 },
+  andamento: {
+    serie: [
+      { giorno: '2026-07-13', clic: 5, impressioni: 150, ctr: 0.033, posizioneMedia: 14.2 },
+      { giorno: '2026-07-14', clic: 8, impressioni: 250, ctr: 0.032, posizioneMedia: 11.8 },
+    ],
+  },
+  query: [
+    { chiave: 'tabelle push fold', clic: 12, impressioni: 375, ctr: 0.032, posizioneMedia: 12.4 },
+  ],
+  pagine: [
+    {
+      chiave: 'https://bestfishforever.it/guide/push-fold/',
+      clic: 20,
+      impressioni: 600,
+      ctr: null,
+      posizioneMedia: null,
+    },
+  ],
+  copertura: {
+    sitemap: [
+      {
+        url: 'https://bestfishforever.it/sitemap.xml',
+        stato: 'letta',
+        inviataIl: '2026-07-01T00:00:00.000Z',
+        ultimaLettura: '2026-07-14T03:00:00.000Z',
+        urlInviati: 27,
+        errori: 0,
+        avvisi: 0,
+      },
+    ],
+    urlChiave: [
+      {
+        url: 'https://bestfishforever.it/',
+        esito: 'indicizzata',
+        copertura: 'Inviato e indicizzato',
+        ultimaScansione: '2026-07-12T00:00:00.000Z',
+        indicizzabile: true,
+        canonicaCoincide: true,
+        link: null,
+        ispezionatoIl: GENERATO_IL,
+      },
+      {
+        url: 'https://bestfishforever.it/tabelle/',
+        esito: 'esclusa',
+        copertura: 'Rilevata, attualmente non indicizzata',
+        ultimaScansione: null,
+        indicizzabile: null,
+        canonicaCoincide: null,
+        link: null,
+        ispezionatoIl: GENERATO_IL,
+      },
+    ],
+  },
+  qualitaDati: {
+    ultimoGiornoConDati: '2026-07-14',
+    giorniSenzaDati: 3,
+    clicSenzaQuery: 2,
+    righeTroncate: false,
+    ispezioniFallite: 0,
+  },
+  limiti: ['Un limite della ricerca dichiarato dal backend.'],
+  ...over,
+});
+
 describe('AdminStatsComponent', () => {
   let fixture: ComponentFixture<AdminStatsComponent>;
   let http: HttpTestingController;
@@ -212,6 +343,10 @@ describe('AdminStatsComponent', () => {
   const isVideo = (r: { url: string }) => r.url === `${API}/admin/stats/video`;
   const isAndamento = (r: { url: string }) =>
     r.url === `${API}/admin/conteggi/andamento`;
+  const isTraffico = (r: { url: string }) =>
+    r.url === `${API}/admin/stats/sito/traffico`;
+  const isRicerca = (r: { url: string }) =>
+    r.url === `${API}/admin/stats/sito/ricerca`;
   const el = () => fixture.nativeElement as HTMLElement;
   // ⚠️ `textContent` e mai `innerText`: il secondo restituisce il testo come
   // lo dipinge il CSS, e su un pannello pieno di `text-transform: uppercase`
@@ -237,6 +372,30 @@ describe('AdminStatsComponent', () => {
   const flushAndamento = async (a: AndamentoConteggi = andamentoView()) => {
     http.expectOne(isAndamento).flush(a);
     await stabilizza();
+  };
+
+  /**
+   * Le due metà di Sito partono INSIEME al primo ingresso: ogni test che apre
+   * la scheda deve rispondere a entrambe, o `http.verify()` in afterEach
+   * fallisce — ed è voluto, una richiesta lasciata in volo è un test che non
+   * ha guardato metà pagina.
+   */
+  const flushTraffico = async (t: AdminSitoTrafficoView = trafficoView()) => {
+    http.expectOne(isTraffico).flush(t);
+    await stabilizza();
+  };
+
+  const flushRicerca = async (r: AdminSitoRicercaView = ricercaView()) => {
+    http.expectOne(isRicerca).flush(r);
+    await stabilizza();
+  };
+
+  const flushSito = async (
+    t: AdminSitoTrafficoView = trafficoView(),
+    r: AdminSitoRicercaView = ricercaView(),
+  ) => {
+    await flushTraffico(t);
+    await flushRicerca(r);
   };
 
   /**
@@ -299,10 +458,13 @@ describe('AdminStatsComponent', () => {
     expect(stats.request.params.get('months')).toBe('12');
     expect(stats.request.params.get('days')).toBeNull();
 
-    // Video e andamento sono PIGRI: chi apre la pagina a leggere gli abbonati
-    // non paga una chiamata a Bunny né un ricalcolo dei mesi aperti.
+    // Video, andamento e le due metà di Sito sono PIGRI: chi apre la pagina a
+    // leggere gli abbonati non paga una chiamata a Bunny, un ricalcolo dei
+    // mesi aperti, né due chiamate a Cloudflare e Google.
     http.expectNone(isVideo);
     http.expectNone(isAndamento);
+    http.expectNone(isTraffico);
+    http.expectNone(isRicerca);
 
     stats.flush(statsView());
     await stabilizza();
@@ -1216,6 +1378,835 @@ describe('AdminStatsComponent', () => {
     expect(
       righe.map((tr) => tr.querySelector('td[data-etichetta="Riproduzioni"]')?.textContent?.trim()),
     ).toEqual(['30', '10']);
+  });
+
+  // ── Sito (Cloudflare + Google Search Console) ────────────────────────────
+
+  /** La tabella `.admin-table` con la `<caption>` data. */
+  const tabella = (caption: string): HTMLTableElement => {
+    const t = Array.from(el().querySelectorAll<HTMLTableElement>('table.admin-table')).find(
+      (x) => x.querySelector('caption')?.textContent?.trim() === caption,
+    );
+    expect(t).withContext(`tabella «${caption}»`).toBeTruthy();
+    return t!;
+  };
+  /** Il collassabile `details.admin-piega` il cui summary contiene `testo`. */
+  const piega = (testo: string): HTMLDetailsElement => {
+    const d = Array.from(el().querySelectorAll<HTMLDetailsElement>('details.admin-piega')).find(
+      (x) => x.querySelector('summary')?.textContent?.includes(testo),
+    );
+    expect(d).withContext(`collassabile «${testo}»`).toBeTruthy();
+    return d!;
+  };
+  /** La voce del filtro (radio) col testo dato: ce n'è UN filtro solo per scheda. */
+  const voceFiltro = (testo: string): HTMLButtonElement => {
+    const b = Array.from(el().querySelectorAll<HTMLButtonElement>('button[role="radio"]')).find(
+      (x) => x.textContent?.trim() === testo,
+    );
+    expect(b).withContext(`voce «${testo}»`).toBeTruthy();
+    return b!;
+  };
+  /** Le pastiglie `.admin-stato` dentro `radice`, come coppie [tono, testo]. */
+  const pastiglie = (radice: ParentNode) =>
+    Array.from(radice.querySelectorAll<HTMLElement>('.admin-stato')).map((s) => [
+      s.dataset['tono'],
+      s.textContent?.trim(),
+    ]);
+
+  it('la scheda Sito chiede traffico E ricerca con `giorni=30` al primo ingresso, una volta sola', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+
+    const traffico = http.expectOne(isTraffico);
+    const ricerca = http.expectOne(isRicerca);
+    // Stesso nome di parametro di /video, e mai `days`: con
+    // forbidNonWhitelisted un nome sbagliato è un 400 sull'intera chiamata.
+    expect(traffico.request.params.get('giorni')).toBe('30');
+    expect(traffico.request.params.get('days')).toBeNull();
+    expect(ricerca.request.params.get('giorni')).toBe('30');
+    expect(ricerca.request.params.get('days')).toBeNull();
+    traffico.flush(trafficoView());
+    ricerca.flush(ricercaView());
+    await stabilizza();
+
+    // Andata e ritorno: nessuna seconda chiamata su nessuna delle due.
+    await apriScheda('Abbonati');
+    await apriScheda('Sito');
+    expect(text()).toContain('Visite');
+    expect(text()).toContain('Clic');
+  });
+
+  it('`?vista=sito` apre la scheda e fa partire ENTRAMBE le richieste', async () => {
+    fixture.componentRef.setInput('vista', 'sito');
+    await stabilizza();
+
+    const attiva = el().querySelector('button[role="tab"][aria-selected="true"]');
+    expect(attiva?.textContent?.trim()).toBe('Sito');
+    http.expectOne(isStats).flush(statsView());
+    http.expectOne(isTraffico).flush(trafficoView());
+    http.expectOne(isRicerca).flush(ricercaView());
+    await stabilizza();
+    expect(valoreTessera('Visite')).toBe('120');
+    expect(valoreTessera('Clic')).toBe('45');
+  });
+
+  it('traffico non configurato: pastiglia spenta, motivo, nessuna tessera, la ricerca resta', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito(
+      trafficoView({
+        disponibile: false,
+        causa: 'configurazione',
+        motivo: 'Mancano CLOUDFLARE_ANALYTICS_API_TOKEN e CLOUDFLARE_ACCOUNT_TAG su Render.',
+        totali: null,
+        andamento: null,
+        vitali: null,
+        pagine: [],
+        provenienze: [],
+        paesi: [],
+        dispositivi: [],
+        browser: [],
+      }),
+    );
+    const avviso = Array.from(el().querySelectorAll<HTMLElement>('.admin-avviso')).find((a) =>
+      a.textContent?.includes('Traffico non configurato'),
+    );
+    expect(avviso).withContext("l'avviso del traffico").toBeTruthy();
+    // «Da configurare» è la pastiglia SPENTA: è uno stato, non un guasto.
+    expect(pastiglie(avviso!)).toEqual([['spento', 'Traffico non configurato']]);
+    expect(avviso!.textContent).toContain('CLOUDFLARE_ANALYTICS_API_TOKEN');
+    // Nessun bottone dentro l'avviso: un `.btn--sm` lì sta a 38px, e
+    // «Ricarica» nella barra basta.
+    expect(avviso!.querySelector('button')).toBeNull();
+    // Nessuna tessera del traffico: uno zero si leggerebbe «nessuno visita».
+    expect(tessera('Visite')).toBeNull();
+    expect(text()).not.toContain('Pagine per visita');
+    // L'altra metà non passa da Cloudflare e resta piena.
+    expect(valoreTessera('Clic')).toBe('45');
+  });
+
+  it('Cloudflare non ha risposto: pastiglia in allarme', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito(
+      trafficoView({
+        disponibile: false,
+        causa: 'fornitore',
+        motivo: 'Cloudflare ha risposto HTTP 502.',
+        totali: null,
+        andamento: null,
+        vitali: null,
+      }),
+    );
+    const avviso = Array.from(el().querySelectorAll<HTMLElement>('.admin-avviso')).find((a) =>
+      a.textContent?.includes('Cloudflare non ha risposto'),
+    );
+    expect(avviso).toBeTruthy();
+    expect(pastiglie(avviso!)).toEqual([['allarme', 'Cloudflare non ha risposto']]);
+    expect(avviso!.textContent).toContain('HTTP 502');
+    expect(avviso!.querySelector('button')).toBeNull();
+  });
+
+  it('ricerca non configurata: a specchio, e il traffico resta', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito(
+      trafficoView(),
+      ricercaView({
+        disponibile: false,
+        causa: 'configurazione',
+        motivo: 'Manca GSC_SERVICE_ACCOUNT_EMAIL su Render.',
+        totali: null,
+        andamento: null,
+        query: [],
+        pagine: [],
+        copertura: null,
+      }),
+    );
+    const avviso = Array.from(el().querySelectorAll<HTMLElement>('.admin-avviso')).find((a) =>
+      a.textContent?.includes('Ricerca Google non configurata'),
+    );
+    expect(avviso).toBeTruthy();
+    expect(pastiglie(avviso!)).toEqual([['spento', 'Ricerca Google non configurata']]);
+    expect(avviso!.querySelector('button')).toBeNull();
+    expect(tessera('Clic')).toBeNull();
+    expect(text()).not.toContain("Copertura dell'indice");
+    expect(valoreTessera('Visite')).toBe('120');
+  });
+
+  it('500 su traffico: banda propria con «Riprova» che rifà SOLO il traffico, i numeri di ricerca restano', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    http.expectOne(isTraffico).flush(null, { status: 500, statusText: 'Server Error' });
+    await flushRicerca();
+
+    expect(text()).toContain('Caricamento del traffico non riuscito.');
+    expect(valoreTessera('Clic')).toBe('45');
+    // La banda è quella DENTRO il pannello, non quella unica in cima: ce n'è
+    // una sola, e il suo «Riprova» rifà la sola rotta di Cloudflare.
+    const bande = el().querySelectorAll<HTMLElement>('.st__errore');
+    expect(bande.length).toBe(1);
+    bande[0].querySelector('button')!.click();
+    await stabilizza();
+    const req = http.expectOne(isTraffico);
+    http.expectNone(isRicerca);
+    http.expectNone(isStats);
+    http.expectNone(isVideo);
+    req.flush(trafficoView());
+    await stabilizza();
+    expect(text()).not.toContain('Caricamento del traffico non riuscito.');
+    expect(valoreTessera('Visite')).toBe('120');
+    expect(valoreTessera('Clic')).toBe('45');
+  });
+
+  it('500 su ricerca: a specchio, «Riprova» rifà SOLO la ricerca', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushTraffico();
+    http.expectOne(isRicerca).flush(null, { status: 500, statusText: 'Server Error' });
+    await stabilizza();
+
+    expect(text()).toContain('Caricamento dei dati di ricerca non riuscito.');
+    expect(valoreTessera('Visite')).toBe('120');
+    const bande = el().querySelectorAll<HTMLElement>('.st__errore');
+    expect(bande.length).toBe(1);
+    bande[0].querySelector('button')!.click();
+    await stabilizza();
+    const req = http.expectOne(isRicerca);
+    http.expectNone(isTraffico);
+    http.expectNone(isStats);
+    req.flush(ricercaView());
+    await stabilizza();
+    expect(valoreTessera('Clic')).toBe('45');
+  });
+
+  it('cambiare finestra rifà entrambe con `giorni=7` e nient\'altro', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+
+    voceFiltro('7 giorni').click();
+    await stabilizza();
+    const traffico = http.expectOne(isTraffico);
+    const ricerca = http.expectOne(isRicerca);
+    expect(traffico.request.params.get('giorni')).toBe('7');
+    expect(ricerca.request.params.get('giorni')).toBe('7');
+    http.expectNone(isVideo);
+    http.expectNone(isStats);
+    traffico.flush(trafficoView({ periodo: { giorni: 7, dal: '2026-07-09', al: '2026-07-15' } }));
+    ricerca.flush(ricercaView({ periodo: { giorni: 7, dal: '2026-07-09', al: '2026-07-15' } }));
+    await stabilizza();
+
+    // La stessa voce di nuovo: nessuna richiesta (la verifica in afterEach
+    // fallirebbe su una richiesta non risposta).
+    voceFiltro('7 giorni').click();
+    await stabilizza();
+  });
+
+  it('«Ricarica» della barra rifà entrambe le metà', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+
+    el().querySelector<HTMLButtonElement>('button.st__ricarica')!.click();
+    await stabilizza();
+    http.expectOne(isTraffico).flush(trafficoView());
+    http.expectOne(isRicerca).flush(ricercaView());
+    http.expectNone(isStats);
+    await stabilizza();
+  });
+
+  it('la barra mostra il filtro dei giorni di Sito e NON quello dei mesi, e la nota d\'età di stats non trapela', async () => {
+    // La guardia contro il `@default` dei due `@switch` della barra: senza il
+    // `@case ('sito')` la scheda mostrerebbe il filtro dei mesi di /admin/stats
+    // e la SUA età («si aggiornano ogni 5 minuti») sopra numeri che non sono
+    // suoi.
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+    // L'etichetta del filtro è l'`aria-label` del radiogroup, non testo: ce
+    // n'è uno solo per scheda, e dice di quale scheda è.
+    const filtri = Array.from(el().querySelectorAll('[role="radiogroup"]')).map((g) =>
+      g.getAttribute('aria-label'),
+    );
+    expect(filtri).toEqual(['Finestra del traffico e della ricerca']);
+    expect(filtri).not.toContain('Profondità della serie mensile');
+    expect(text()).not.toContain('si aggiornano ogni 5 minuti');
+    // Ogni metà stampa la propria età, col proprio orologio.
+    expect(text()).toContain('Letto da Cloudflare il 15 lug 2026');
+    expect(text()).toContain('si aggiorna ogni 15 minuti');
+    expect(text()).toContain('Letto da Google Search Console il 15 lug 2026');
+    expect(text()).toContain('si aggiorna ogni 60 minuti');
+    expect(text()).toContain('Google ha pubblicato fino al 14 lug');
+    expect(text()).toContain('gli ultimi 3 giorni mancano');
+  });
+
+  it('ricerca senza righe: niente «fino al nessun giorno», Clic e Impressioni mute; a ritardo zero «tutti i giorni»', async () => {
+    // Il backend con `rows` assente manda totali a zero, serie vuota,
+    // `ultimoGiornoConDati: null` e `giorniSenzaDati === giorni`. La prima
+    // stesura ripiegava DENTRO la frase («fino al nessun giorno») e stampava
+    // «Clic 0» sotto una nota che diceva di non leggerli come zeri.
+    // La frase attraversa più blocchi di controllo, quindi più nodi di testo:
+    // si confronta a spazi normalizzati.
+    const frase = () => text().replace(/\s+/g, ' ');
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito(
+      trafficoView(),
+      ricercaView({
+        totali: { clic: 0, impressioni: 0, ctr: null, posizioneMedia: null },
+        andamento: { serie: [] },
+        qualitaDati: {
+          ...ricercaView().qualitaDati,
+          ultimoGiornoConDati: null,
+          giorniSenzaDati: 30,
+        },
+      }),
+    );
+    expect(text()).not.toContain('nessun giorno:');
+    expect(text()).not.toContain('fino al nessun');
+    expect(text()).toContain('Google non ha ancora pubblicato nessun giorno di questa finestra');
+    expect(text()).not.toContain('gli ultimi 30 giorni mancano');
+    expect(valoreTessera('Clic')).toBe('—');
+    expect(valoreTessera('Impressioni')).toBe('—');
+    expect(tessera('Clic')!.querySelector('.admin-kpi__valore')!.classList).toContain('is-muto');
+    expect(tessera('Clic')!.textContent).toContain('Non ancora pubblicato');
+    // Il traffico non ne risente.
+    expect(valoreTessera('Visite')).toBe('120');
+
+    // Ritardo zero: nessun «gli ultimi 0 giorni mancano».
+    el().querySelector<HTMLButtonElement>('button.st__ricarica')!.click();
+    await stabilizza();
+    http.expectOne(isTraffico).flush(trafficoView());
+    http.expectOne(isRicerca).flush(
+      ricercaView({
+        qualitaDati: {
+          ...ricercaView().qualitaDati,
+          ultimoGiornoConDati: '2026-07-15',
+          giorniSenzaDati: 0,
+        },
+      }),
+    );
+    await stabilizza();
+    expect(text()).toContain('Google ha pubblicato tutti i giorni della finestra');
+    expect(text()).not.toContain('0 giorni mancano');
+    expect(text()).not.toContain('non ha ancora pubblicato');
+    expect(valoreTessera('Clic')).toBe('45');
+
+    // Un solo giorno di ritardo: singolare, non «gli ultimi 1 giorni».
+    el().querySelector<HTMLButtonElement>('button.st__ricarica')!.click();
+    await stabilizza();
+    http.expectOne(isTraffico).flush(trafficoView());
+    http.expectOne(isRicerca).flush(
+      ricercaView({
+        qualitaDati: {
+          ...ricercaView().qualitaDati,
+          ultimoGiornoConDati: '2026-07-14',
+          giorniSenzaDati: 1,
+        },
+      }),
+    );
+    await stabilizza();
+    expect(frase()).toContain("fino al 14 lug: l'ultimo giorno manca per il suo ritardo");
+    expect(frase()).not.toContain('ultimi 1 giorni');
+  });
+
+  it('grafico del traffico: 120px, visite e pagine viste AFFIANCATE, un giorno stimato non è «provvisorio»', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+    const fig = grafico('Visite e pagine viste al giorno');
+    expect(fig.style.getPropertyValue('--grafico-h')).toBe('120px');
+    // Due giorni × due serie, una accanto all'altra: una pila direbbe
+    // «visite + pagine viste», una somma senza senso.
+    const barre = barreDi('Visite e pagine viste al giorno');
+    expect(barre.length).toBe(4);
+    const [visite, pagine] = barre.slice(0, 2);
+    expect(attr(pagine, 'x')).not.toBe(attr(visite, 'x'));
+    expect(attr(pagine, 'x')).toBeCloseTo(attr(visite, 'x') + attr(visite, 'width'), 6);
+    // Il 14 è una STIMA, non un mese aperto: niente tratteggio, niente
+    // «provvisorio» — quella parola direbbe che il numero cambierà.
+    expect(fig.querySelectorAll('rect.is-provvisoria').length).toBe(0);
+
+    const lente = lenteDi('Visite e pagine viste al giorno');
+    lente.dispatchEvent(new Event('focus'));
+    await stabilizza();
+    lente.dispatchEvent(tasto('ArrowRight'));
+    await stabilizza();
+    const detto = readoutDi('Visite e pagine viste al giorno');
+    expect(detto).toContain('14 lug');
+    expect(detto).toContain('Visite 30');
+    expect(detto).toContain('Pagine viste 60');
+    expect(detto).toContain('Stima');
+    expect(detto).not.toContain('provvisorio');
+    lente.dispatchEvent(tasto('ArrowLeft'));
+    await stabilizza();
+    expect(readoutDi('Visite e pagine viste al giorno')).toContain('Dati esatti');
+  });
+
+  it('grafico della ricerca: una serie sola, impressioni CTR e posizione nel readout', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+    const fig = grafico('Clic al giorno');
+    expect(fig.style.getPropertyValue('--grafico-h')).toBe('120px');
+    // UNA serie: le impressioni sono ×30 e sullo stesso asse i clic sparirebbero.
+    expect(barreDi('Clic al giorno').length).toBe(2);
+    const lente = lenteDi('Clic al giorno');
+    lente.dispatchEvent(new Event('focus'));
+    await stabilizza();
+    const detto = readoutDi('Clic al giorno');
+    expect(detto).toContain('14 lug');
+    expect(detto).toContain('Clic 8');
+    expect(detto).toContain('250 impressioni');
+    expect(detto).toContain('CTR 3,2%');
+    expect(detto).toContain('posizione 11,8');
+  });
+
+  it('le tabelle giornaliere sono chiuse, col più recente in cima, e «Dati» è una pastiglia stima/esatti', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+
+    const traffico = piega('Traffico giorno per giorno');
+    expect(traffico.open).toBeFalse();
+    const righe = Array.from(traffico.querySelectorAll('table.admin-table tbody tr'));
+    expect(righe.map((tr) => tr.querySelector('th')?.textContent?.trim())).toEqual([
+      '14 lug',
+      '13 lug',
+    ]);
+    expect(
+      righe.map((tr) => tr.querySelector('td[data-etichetta="Visite"]')?.textContent?.trim()),
+    ).toEqual(['30', '10']);
+    // `.admin-stato` e non `.badge`: un giorno esatto DIVENTA stima dopo sette
+    // giorni, è uno stato che cambia da sé.
+    expect(righe.map((tr) => pastiglie(tr)[0])).toEqual([
+      ['attesa', 'stima'],
+      ['ok', 'esatti'],
+    ]);
+
+    const ricerca = piega('Ricerca giorno per giorno');
+    expect(ricerca.open).toBeFalse();
+    const righeR = Array.from(ricerca.querySelectorAll('table.admin-table tbody tr'));
+    expect(
+      righeR.map((tr) => tr.querySelector('td[data-etichetta="Clic"]')?.textContent?.trim()),
+    ).toEqual(['8', '5']);
+  });
+
+  it('tabelle top: URL nel title, «Diretto o sconosciuto», «Italia», «Telefono», e il sistema operativo SOLO nella nota', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+
+    // Identità a UNA riga: l'URL lungo sta nello `strong` con il `title`
+    // uguale al testo, per leggere ciò che l'ellissi taglia.
+    const pagine = tabella('Pagine più viste');
+    expect(pagine.classList.contains('st__sito')).toBeTrue();
+    const forte = pagine.querySelector<HTMLElement>('.admin-table__ident strong')!;
+    expect(forte.textContent).toBe(
+      '/guide/come-si-gioca-uno-spin-and-go-dal-primo-livello-alla-fine/',
+    );
+    expect(forte.getAttribute('title')).toBe(forte.textContent);
+    expect(pagine.querySelector('.admin-table__sub')).toBeNull();
+
+    // La provenienza vuota è il traffico diretto, non un buco.
+    const prov = tabella('Provenienza delle visite');
+    expect(prov.querySelector('tbody th')?.textContent?.trim()).toBe('Diretto o sconosciuto');
+    // ISO-2 → nome in italiano; la chiave grezza resta nel `title`.
+    const paesi = tabella('Visite per Paese');
+    const th = paesi.querySelector('tbody th')!;
+    expect(th.textContent?.trim()).toBe('Italia');
+    expect(th.getAttribute('title')).toBe('IT');
+    expect(tabella('Visite per dispositivo').querySelector('tbody th')?.textContent?.trim()).toBe(
+      'Telefono',
+    );
+    expect(tabella('Visite per browser').querySelector('tbody th')?.textContent?.trim()).toBe(
+      'Chrome',
+    );
+
+    // Il sistema operativo NON è una tabella: non è in cookie policy. Compare
+    // SOLO nella nota che dice perché resta fuori (e nei limiti, se il
+    // backend lo nomina).
+    const occorrenze = text().match(/sistema operativo/g)?.length ?? 0;
+    const nelleNote = Array.from(
+      el().querySelectorAll<HTMLElement>('.admin-nota, details.st__limiti'),
+    ).reduce((n, x) => n + (x.textContent?.match(/sistema operativo/g)?.length ?? 0), 0);
+    expect(occorrenze).toBe(1);
+    expect(nelleNote).toBe(occorrenze);
+  });
+
+  it('Core Web Vitals: «2,1 s» buono, «250 ms» da migliorare, CLS «Nessun dato»; senza vitali l\'avviso e il traffico resta', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+
+    expect(valoreTessera('LCP')).toBe('2,1 s');
+    expect(pastiglie(tessera('LCP')!)).toEqual([['ok', 'Buono']]);
+    expect(valoreTessera('INP')).toBe('250 ms');
+    expect(pastiglie(tessera('INP')!)).toEqual([['attesa', 'Da migliorare']]);
+    // Un campo assente NON è uno zero: per un CWV sarebbe un voto perfetto.
+    const cls = tessera('CLS')!;
+    expect(valoreTessera('CLS')).toBe('Nessun dato');
+    expect(cls.querySelector('.admin-kpi__valore')?.classList.contains('is-muto')).toBeTrue();
+    expect(pastiglie(cls)).toEqual([]);
+    expect(text()).toContain('400 aperture di pagina');
+
+    // Vitali falliti: l'avviso col motivo, e le visite non ne dipendono.
+    el().querySelector<HTMLButtonElement>('button.st__ricarica')!.click();
+    await stabilizza();
+    // Il motivo ha la forma che il backend produce davvero: comincia con
+    // «Cloudflare» e finisce con la frase sul traffico. Il template non deve
+    // ripeterla con parole sue.
+    const motivo =
+      'Cloudflare ha rifiutato la richiesta: campo sconosciuto. Il traffico qui sopra non ne risente.';
+    http.expectOne(isTraffico).flush(trafficoView({ vitali: null, vitaliMotivo: motivo }));
+    http.expectOne(isRicerca).flush(ricercaView());
+    await stabilizza();
+    expect(text()).toContain('Core Web Vitals non disponibili.');
+    expect(text()).toContain(motivo);
+    expect(text().split('Il traffico qui sopra').length - 1).toBe(1);
+    expect(tessera('LCP')).toBeNull();
+    expect(valoreTessera('Visite')).toBe('120');
+  });
+
+  it('ricerca: CTR «3,2%», posizione «12,4», null → «—»; le pagine mostrano il percorso col title all\'URL', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+
+    expect(valoreTessera('CTR')).toBe('3,2%');
+    expect(valoreTessera('Posizione media')).toBe('12,4');
+
+    const query = tabella('Parole cercate su Google');
+    expect(query.classList.contains('st__sito')).toBeTrue();
+    const riga = query.querySelector('tbody tr')!;
+    expect(riga.querySelector('.admin-table__ident strong')?.textContent).toBe('tabelle push fold');
+    expect(riga.querySelector('td[data-etichetta="CTR"]')?.textContent?.trim()).toBe('3,2%');
+    expect(riga.querySelector('td[data-etichetta="Posizione"]')?.textContent?.trim()).toBe('12,4');
+
+    const pagine = tabella('Pagine trovate su Google');
+    const rigaP = pagine.querySelector('tbody tr')!;
+    const forte = rigaP.querySelector<HTMLElement>('.admin-table__ident strong')!;
+    expect(forte.textContent).toBe('/guide/push-fold/');
+    expect(forte.getAttribute('title')).toBe('https://bestfishforever.it/guide/push-fold/');
+    // Senza impressioni il CTR non esiste: un trattino, mai «0%».
+    expect(rigaP.querySelector('td[data-etichetta="CTR"]')?.textContent?.trim()).toBe('—');
+    expect(rigaP.querySelector('td[data-etichetta="Posizione"]')?.textContent?.trim()).toBe('—');
+
+    // Totali senza impressioni: la tessera dice «—», non «0%».
+    el().querySelector<HTMLButtonElement>('button.st__ricarica')!.click();
+    await stabilizza();
+    http.expectOne(isTraffico).flush(trafficoView());
+    http.expectOne(isRicerca).flush(
+      ricercaView({ totali: { clic: 0, impressioni: 0, ctr: null, posizioneMedia: null } }),
+    );
+    await stabilizza();
+    expect(valoreTessera('CTR')).toBe('—');
+    expect(valoreTessera('Posizione media')).toBe('—');
+  });
+
+  it('copertura: sitemap «Letta» con 27 inviati, pagine chiave con esito a pastiglia, e le sitemap fallite non spengono le pagine', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+
+    const sitemap = tabella('Sitemap conosciute da Google');
+    const rigaS = sitemap.querySelector('tbody tr')!;
+    expect(rigaS.querySelector('.admin-table__ident strong')?.textContent).toBe('/sitemap.xml');
+    expect(pastiglie(rigaS)).toEqual([['ok', 'Letta']]);
+    expect(rigaS.querySelector('td[data-etichetta="Inviati"]')?.textContent?.trim()).toBe('27');
+
+    const chiave = tabella('Pagine chiave ispezionate');
+    const righe = Array.from(chiave.querySelectorAll('tbody tr'));
+    // «Esclusa» in `attesa` e non `neutro`: su una pagina chiave — prerenderizzata,
+    // in sitemap, senza noindex — il verdetto NEUTRAL di Google è una notizia.
+    expect(righe.map((tr) => pastiglie(tr)[0])).toEqual([
+      ['ok', 'Indicizzata'],
+      ['attesa', 'Esclusa'],
+    ]);
+    // Il `coverageState` di Google si stampa nel sotto-testo, mai si ramifica.
+    expect(righe[1].querySelector('.admin-table__sub')?.textContent?.trim()).toBe(
+      'Rilevata, attualmente non indicizzata',
+    );
+    expect(righe[1].querySelector('td[data-etichetta="Indicizzabile"]')?.textContent?.trim()).toBe('—');
+    expect(righe[0].querySelector('td[data-etichetta="Canonica"]')?.textContent?.trim()).toBe('coincide');
+    // Ispezionate insieme (stesso istante) → una data sola; l'ora sta anche nel title della pastiglia.
+    expect(text()).toContain('Ispezionate il 15 lug 2026');
+    expect(text()).not.toContain('Ispezionate fra il');
+    expect(righe[0].querySelector('.admin-stato')?.getAttribute('title')).toMatch(
+      /^Ispezionata il 15\/07\/2026 \d{2}:\d{2}$/,
+    );
+    expect(text()).not.toContain('Sitemap non lette.');
+    // E la pagina esclusa entra fra i motivi per non fidarsi: il blocco «pulito» non compare.
+    expect(text()).toContain('1 pagina chiave non risulta nell\'indice di Google');
+    expect(text()).not.toContain('Tutti i clic sono attribuiti a una parola');
+    // Una nota-mobile PER TABELLA: le due nascondono colonne diverse.
+    const noteMobile = Array.from(
+      el().querySelectorAll('.admin-table__nota-mobile'),
+    ).map((n) => n.textContent?.trim());
+    expect(noteMobile).toContain('Su schermi stretti restano solo il nome, lo stato e gli inviati.');
+    expect(noteMobile).toContain('Su schermi stretti restano solo la pagina e l\'esito.');
+
+    // Le sitemap non lette: avviso col motivo, e le pagine chiave restano.
+    el().querySelector<HTMLButtonElement>('button.st__ricarica')!.click();
+    await stabilizza();
+    const base = ricercaView();
+    http.expectOne(isTraffico).flush(trafficoView());
+    http.expectOne(isRicerca).flush(
+      ricercaView({
+        copertura: {
+          sitemap: [],
+          sitemapMotivo: 'Google ha risposto HTTP 403.',
+          urlChiave: base.copertura!.urlChiave,
+        },
+      }),
+    );
+    await stabilizza();
+    expect(text()).toContain('Sitemap non lette.');
+    expect(text()).toContain('HTTP 403');
+    expect(tabella('Sitemap conosciute da Google').querySelector('.admin-table__vuota')).toBeTruthy();
+    expect(tabella('Pagine chiave ispezionate').querySelectorAll('tbody tr').length).toBe(2);
+    // ...e il motivo compare anche fra i motivi per non fidarsi dei dati di ricerca.
+    expect(text()).toContain('Le sitemap non sono state lette: Google ha risposto HTTP 403.');
+    expect(text()).not.toContain('Tutti i clic sono attribuiti a una parola');
+  });
+
+  it('copertura: `sitemapMotivo` da solo spegne il «tutto a posto», anche a qualità pulita e pagine tutte indicizzate', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    const base = ricercaView();
+    const indicizzata = base.copertura!.urlChiave[0];
+    await flushSito(
+      trafficoView(),
+      ricercaView({
+        copertura: {
+          sitemap: [],
+          sitemapMotivo: 'Google ha risposto HTTP 500.',
+          urlChiave: [indicizzata, { ...indicizzata, url: 'https://bestfishforever.it/guide/' }],
+        },
+        qualitaDati: {
+          ultimoGiornoConDati: '2026-07-14',
+          giorniSenzaDati: 3,
+          clicSenzaQuery: 0,
+          righeTroncate: false,
+          ispezioniFallite: 0,
+        },
+      }),
+    );
+    expect(text()).not.toContain('Tutti i clic sono attribuiti a una parola');
+    expect(text()).toContain('Le sitemap non sono state lette: Google ha risposto HTTP 500.');
+    expect(text()).not.toContain('pagina chiave non risulta');
+  });
+
+  it('copertura: ispezioni con orologi diversi → «Ispezionate fra il … e il …», e la nota dei fallimenti rimanda al motivo di riga', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    const base = ricercaView();
+    const [indicizzata, esclusa] = base.copertura!.urlChiave;
+    await flushSito(
+      trafficoView(),
+      ricercaView({
+        copertura: {
+          sitemap: base.copertura!.sitemap,
+          urlChiave: [
+            indicizzata,
+            { ...esclusa, esito: 'nonIndicizzata', copertura: 'Pagina con reindirizzamento' },
+            {
+              url: 'https://bestfishforever.it/lezioni/',
+              esito: 'ignoto',
+              copertura: null,
+              ultimaScansione: null,
+              indicizzabile: null,
+              canonicaCoincide: null,
+              link: null,
+              // Riprovata un'ora dopo il lotto: un orologio diverso dalle altre due.
+              ispezionatoIl: '2026-07-15T11:00:00.000Z',
+              errore: 'Google ha risposto HTTP 403: permessi insufficienti.',
+            },
+          ],
+        },
+        qualitaDati: { ...base.qualitaDati, ispezioniFallite: 1 },
+      }),
+    );
+    expect(text()).toMatch(/Ispezionate fra il 15 lug 2026 alle \d{2}:\d{2} e il 15 lug 2026 alle \d{2}:\d{2}\./);
+    expect(text()).not.toContain('Ispezionate il 15 lug');
+    // Singolare, e la causa NON è attribuita d'ufficio: rimanda al sotto-testo della riga.
+    expect(text()).toContain(
+      '1 controllo non riuscito: il motivo è sotto il nome della pagina (di solito l\'account di servizio senza permessi sulla proprietà); si riprova fra un\'ora.',
+    );
+    expect(text()).toContain('1 ispezione non riuscita: quella pagina risulta «Non verificata», non esclusa dall\'indice.');
+    // «Non indicizzata» conta fra le pagine fuori dall'indice; «Non verificata» NO.
+    expect(text()).toContain('1 pagina chiave non risulta nell\'indice di Google');
+    const righe = Array.from(tabella('Pagine chiave ispezionate').querySelectorAll('tbody tr'));
+    expect(righe.map((tr) => pastiglie(tr)[0])).toEqual([
+      ['ok', 'Indicizzata'],
+      ['allarme', 'Non indicizzata'],
+      ['ignoto', 'Non verificata'],
+    ]);
+  });
+
+  it('qualità: «2 clic non sono attribuiti» e «una pagina su 10»', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+    expect(text()).toContain('2 clic non sono attribuiti a nessuna parola');
+    // Un giorno solo: singolare, in ENTRAMBE le frasi (sotto le tessere e nel blocco qualità).
+    expect(text()).toContain('1 giorno su 2 è una stima: Cloudflare tiene i dati esatti');
+    expect(text()).toContain('1 giorno è una stima: Cloudflare ha tenuto circa una pagina su 10');
+    expect(text()).not.toContain('1 giorni');
+    // Nessuna tranche fallita: la tessera Visite parla dei giorni chiesti.
+    expect(tessera('Visite')?.querySelector('.admin-kpi__nota')?.textContent?.trim()).toBe(
+      'Negli ultimi 30 giorni',
+    );
+
+    // Con tutto pulito, lo dice: una sezione muta sembra rotta. Pulito vuol dire
+    // anche sitemap lette e pagine chiave tutte nell'indice (la fixture ne ha una esclusa).
+    el().querySelector<HTMLButtonElement>('button.st__ricarica')!.click();
+    await stabilizza();
+    http.expectOne(isTraffico).flush(
+      trafficoView({
+        qualitaDati: {
+          giorniStimati: 0,
+          campioneMassimo: 1,
+          elencoTroncato: false,
+          finestreInterrogate: 1,
+          finestreFallite: 0,
+        },
+      }),
+    );
+    const base = ricercaView();
+    http.expectOne(isRicerca).flush(
+      ricercaView({
+        copertura: {
+          sitemap: base.copertura!.sitemap,
+          urlChiave: [base.copertura!.urlChiave[0]],
+        },
+        qualitaDati: {
+          ultimoGiornoConDati: '2026-07-14',
+          giorniSenzaDati: 3,
+          clicSenzaQuery: 0,
+          righeTroncate: false,
+          ispezioniFallite: 0,
+        },
+      }),
+    );
+    await stabilizza();
+    expect(text()).toContain('Tutti i giorni della finestra sono conteggi esatti');
+    expect(text()).toContain('Tutti i clic sono attribuiti a una parola');
+  });
+
+  it('qualità al plurale: «2 giorni sono stime», «2 clic non sono attribuiti», «2 ispezioni non riuscite», «2 controlli non riusciti»', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    const base = ricercaView();
+    const [indicizzata] = base.copertura!.urlChiave;
+    const fallita = (url: string): RigaUrlChiave => ({
+      url,
+      esito: 'ignoto',
+      copertura: null,
+      ultimaScansione: null,
+      indicizzabile: null,
+      canonicaCoincide: null,
+      link: null,
+      ispezionatoIl: GENERATO_IL,
+      errore: 'Google ha risposto HTTP 403.',
+    });
+    await flushSito(
+      trafficoView({
+        andamento: {
+          serie: [
+            { giorno: '2026-07-13', visite: 10, pagineViste: 25, campione: 10 },
+            { giorno: '2026-07-14', visite: 30, pagineViste: 60, campione: 10 },
+          ],
+        },
+        qualitaDati: { ...trafficoView().qualitaDati, giorniStimati: 2 },
+      }),
+      ricercaView({
+        copertura: {
+          sitemap: base.copertura!.sitemap,
+          urlChiave: [
+            indicizzata,
+            fallita('https://bestfishforever.it/guide/'),
+            fallita('https://bestfishforever.it/lezioni/'),
+          ],
+        },
+        qualitaDati: { ...base.qualitaDati, ispezioniFallite: 2 },
+      }),
+    );
+    expect(text()).toContain('2 giorni su 2 sono stime');
+    expect(text()).toContain('2 giorni sono stime: Cloudflare ha tenuto');
+    expect(text()).toContain('2 clic non sono attribuiti a nessuna parola');
+    expect(text()).toContain('2 ispezioni non riuscite: quelle pagine risultano «Non verificata», non escluse');
+    expect(text()).toContain('2 controlli non riusciti: il motivo è sotto il nome della pagina');
+    expect(text()).toContain('si riprovano fra un\'ora.');
+    // Le «Non verificata» non sono «fuori dall'indice»: nessuna pagina esclusa in questa fixture.
+    expect(text()).not.toContain('pagina chiave non risulta');
+    expect(text()).not.toContain('pagine chiave non risultano');
+  });
+
+  it('qualità al singolare: «1 clic non è attribuito»', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito(
+      trafficoView(),
+      ricercaView({ qualitaDati: { ...ricercaView().qualitaDati, clicSenzaQuery: 1 } }),
+    );
+    expect(text()).toContain('1 clic non è attribuito a nessuna parola');
+    expect(text()).not.toContain('1 clic non sono');
+  });
+
+  it('una tranche fallita: la tessera Visite nomina la finestra EFFETTIVA («Dal …»), non «negli ultimi 30 giorni»', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito(
+      trafficoView({
+        // Cloudflare ha risposto solo per la tranche recente: `dal` è posticipato.
+        periodo: { giorni: 30, dal: '2026-07-06', al: '2026-07-15' },
+        qualitaDati: {
+          giorniStimati: 1,
+          campioneMassimo: 10,
+          elencoTroncato: false,
+          finestreInterrogate: 1,
+          finestreFallite: 1,
+        },
+      }),
+      ricercaView(),
+    );
+    const nota = tessera('Visite')?.querySelector('.admin-kpi__nota')?.textContent?.trim();
+    expect(nota).toBe('Dal 6 lug, finestra accorciata');
+    expect(text()).not.toContain('Negli ultimi 30 giorni');
+    // Lo stesso `dal` nel blocco qualità, così le due frasi non possono dissentire.
+    expect(text()).toContain('i numeri partono dal 6 lug');
+  });
+
+  it('i limiti delle due metà sono resi verbatim, in due collassabili chiusi', async () => {
+    await flushStats();
+    await apriScheda('Sito');
+    await flushSito();
+    const limiti = Array.from(el().querySelectorAll<HTMLDetailsElement>('details.st__limiti'));
+    expect(limiti.length).toBe(2);
+    expect(limiti.every((d) => !d.open)).toBeTrue();
+    expect(limiti[0].textContent).toContain('Un limite del traffico dichiarato dal backend.');
+    expect(limiti[1].textContent).toContain('Un limite della ricerca dichiarato dal backend.');
+  });
+
+  it('lo scheletro di Sito si rende DUE volte, uno per metà in volo, con quattro tessere e 120px', async () => {
+    const scheletri = () =>
+      Array.from(el().querySelectorAll<HTMLElement>('section.card.admin-blocco[role="status"]'));
+    await flushStats();
+    await apriScheda('Sito');
+    expect(scheletri().length).toBe(2);
+    expect(scheletri()[0].querySelectorAll('.admin-kpi.is-scheletro').length).toBe(4);
+    expect(
+      scheletri()[0]
+        .querySelector<HTMLElement>('.admin-scheletro--grafico')
+        ?.style.getPropertyValue('--grafico-h'),
+    ).toBe('120px');
+    // Ogni metà toglie il SUO scheletro quando arriva.
+    await flushTraffico();
+    expect(scheletri().length).toBe(1);
+    await flushRicerca();
+    expect(scheletri().length).toBe(0);
   });
 
   // ── Lo scheletro ─────────────────────────────────────────────────────────
