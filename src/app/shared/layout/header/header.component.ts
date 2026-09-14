@@ -65,6 +65,9 @@ export class HeaderComponent {
         // ⚠️ `isNew` spostato qui dal Negozio: il flag e' UNO e si muove a mano,
         // e il Replayer e' la sezione nuova. Riportarlo indietro e' una riga.
         { path: '/replayer', label: 'Replayer', isNew: true },
+        // ⚠️ /mie-mani era raggiungibile SOLO da /replayer (14/09/2026): la
+        // libreria di chi ha caricato delle mani non aveva una porta nel menu.
+        { path: '/mie-mani', label: 'Le mie mani' },
         { path: '/docs', label: 'Docs' },
         { path: '/simulatore-varianza', label: 'Simulatore varianza' },
         { path: '/tabelle', label: 'Tabelle' },
