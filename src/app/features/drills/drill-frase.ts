@@ -51,17 +51,20 @@ export function testoProfondita(
   return `${et.length} profondità`;
 }
 
-/** Coda della frase che dipende dalla difficoltà. Riprende `DIFFICULTY_HINTS`. */
+/**
+ * Coda della frase che dipende dalla difficoltà. Riprende `DIFFICULTY_HINTS`.
+ * ⚠️ STANDARD dice «fold compresi» dal 16/09/2026: prima diceva «escludendo i
+ * fold scontati», ed era vero nel modo sbagliato — a un nodo di apertura il
+ * fold vale EV 0 per definizione, quindi «scontati» erano TUTTI.
+ */
 function codaDifficolta(d: DrillDifficulty): string {
   switch (d) {
     case 'STANDARD':
-      return 'escludendo i fold scontati';
+      return 'fold compresi';
     case 'MIXED_ONLY':
       return 'solo dove la strategia è mista';
     case 'MARGINAL':
       return 'solo sui mix al fotofinish';
-    case 'ALL':
-      return 'senza escludere nessuna mano';
   }
 }
 
@@ -79,7 +82,7 @@ export interface DatiFrase {
 
 /**
  * «Ti proporremo 20 mani di Spin & Go, a qualsiasi profondità, da qualsiasi
- * posizione e in qualsiasi situazione, escludendo i fold scontati.»
+ * posizione e in qualsiasi situazione, fold compresi.»
  *
  * ⚠️ «Ti PROPORREMO» e non «ti serviremo»: «servire una mano» in italiano non
  * si dice, è un calco da *we'll serve you*. Ed è la stringa più letta della
@@ -97,16 +100,18 @@ export function frasePreparazione(d: DatiFrase): string {
   parti.push(
     d.situazioni.length
       ? // ⚠️ Si abbassa solo la PRIMA lettera di ogni etichetta, non l'intera
-        // stringa: dentro la frase «su apertura…» ci vuole la minuscola, ma un
-        // `toLowerCase()` secco trasformava «Apertura (RFI)» in
-        // «apertura (rfi)» — e un acronimo in minuscolo si legge come un refuso.
+        // stringa: dentro la frase «su piatto non aperto…» ci vuole la
+        // minuscola, ma un `toLowerCase()` secco trasformava «Piatto non
+        // aperto (RFI)» in «piatto non aperto (rfi)» — e un acronimo in
+        // minuscolo si legge come un refuso.
         `su ${elenco(d.situazioni.map(minuscolaIniziale))}`
       : 'in qualsiasi situazione',
   );
   // ⚠️ Le ultime due parti si legano con «e», come in una frase italiana vera —
   // MA solo se l'ultima non ne contiene già uno suo. Con due situazioni scelte
-  // la coda è «apertura e risposta all'apertura», e la congiunzione esterna
-  // produceva «dal BB **e** su apertura **e** risposta all'apertura»: due «e»
+  // la coda è «piatto non aperto (RFI) e risposta all'apertura», e la
+  // congiunzione esterna produceva «dal BB **e** su piatto non aperto (RFI)
+  // **e** risposta all'apertura»: due «e»
   // di fila, che si legge come un errore di battitura. Preso da una spec, non
   // guardando la pagina.
   const ultima = parti[parti.length - 1];
@@ -138,7 +143,8 @@ export function frasePoolVuoto(d: DatiFrase): string {
   return `${testa}: prova a cambiare formato.`;
 }
 
-/** «Apertura (RFI)» → «apertura (RFI)»: solo l'iniziale, l'acronimo resta. */
+/** «Piatto non aperto (RFI)» → «piatto non aperto (RFI)»: solo l'iniziale,
+ *  l'acronimo resta. */
 function minuscolaIniziale(v: string): string {
   return v.charAt(0).toLowerCase() + v.slice(1);
 }

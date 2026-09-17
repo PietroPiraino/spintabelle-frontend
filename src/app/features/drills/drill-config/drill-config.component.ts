@@ -97,25 +97,31 @@ export class DrillConfigComponent {
 
   protected readonly positions = ['BTN', 'SB', 'BB'];
   /**
-   * ⚠️ CINQUE, non quattro: `LIMPED` mancava del tutto qui, mentre il backend
-   * lo accetta da sempre (`SPOT_TYPES` in `drills.types.ts`, `@IsIn` sul DTO) e
-   * i dati ne contengono 1.533 nodi. Chi voleva allenare i piatti non aperti
-   * poteva solo lasciare l'asse vuoto e prenderseli mescolati a tutto il resto.
-   * ⚠️ Aggiungerlo CAMBIA il pool per chi oggi spunta tutti e quattro i chip:
-   * prima era «tutto meno i non aperti», adesso è tutto.
+   * ⚠️ QUATTRO, di nuovo — ma non i quattro di prima. Il 04/09/2026 se ne
+   * aggiunse un quinto, `LIMPED` («Piatto non aperto»), perché il backend lo
+   * accettava da sempre e la pagina non lo offriva. Il 16/09/2026 l'owner l'ha
+   * fatto confluire in `OPEN`: «piatto non aperto» e «RFI» sono lo STESSO fatto
+   * — nessuno ha ancora rilanciato — e spaccarli in due chip faceva scegliere
+   * fra due cose uguali, con «RFI» che copriva il solo BTN alla radice. Oggi
+   * `OPEN` vale per il BTN alla radice, per l'SB dopo il fold o il limp del
+   * BTN e per il BB dopo i limp: 2.513 situazioni, tutte e tre le posizioni.
+   * ⚠️ Chi spuntava «Apertura» da sola trova ora un pool più largo — è il
+   * comportamento nuovo, non un guasto.
    */
   protected readonly spotTypes: DrillSpotType[] = [
     'OPEN',
     'VS_OPEN',
     'VS_3BET',
     'VS_4BET_PLUS',
-    'LIMPED',
   ];
+  /**
+   * Niente `ALL` dal 16/09/2026: STANDARD è diventato «tutte le mani che puoi
+   * avere qui, fold compresi», cioè quello che ALL prometteva.
+   */
   protected readonly difficulties: DrillDifficulty[] = [
     'STANDARD',
     'MIXED_ONLY',
     'MARGINAL',
-    'ALL',
   ];
   protected readonly questionCounts = [10, 20, 50];
 
@@ -393,7 +399,11 @@ export class DrillConfigComponent {
    */
   private motivoDa(altre: readonly string[], asse: string): string {
     if (!altre.length) return `Nessuno spot con il formato scelto.`;
-    return `Nessuno spot con ${asse} ${altre.join(', ')}.`;
+    // ⚠️ Ogni valore fra virgolette basse, come in `frasePoolVuoto`: con
+    // un'etichetta di tre parole («Piatto non aperto (RFI)») incollata nuda
+    // a metà frase si legge una maiuscola senza motivo e non si capisce dove
+    // finisce l'elenco.
+    return `Nessuno spot con ${asse} ${altre.map((a) => `«${a}»`).join(', ')}.`;
   }
 
   protected readonly opzioniPosizione = computed<MsOpzione[]>(() => {
@@ -624,7 +634,7 @@ export class DrillConfigComponent {
   private segnalaPotatura(tolte: string[], dove: string): void {
     if (!tolte.length) return;
     this.avvisoPotatura.set(
-      `Abbiamo tolto ${tolte.join(', ')} ${dove}: con il resto della scelta non ci sono spot.`,
+      `Abbiamo tolto ${tolte.map((t) => `«${t}»`).join(', ')} ${dove}: con il resto della scelta non ci sono spot.`,
     );
   }
 

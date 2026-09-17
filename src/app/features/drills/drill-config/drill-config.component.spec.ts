@@ -39,7 +39,8 @@ describe('DrillConfigComponent — costruttore e percorsi', () => {
     combos: [
       { format: 'spin', depth: '5', position: 'BTN', spotType: 'OPEN' },
       { format: 'spin', depth: '5', position: 'BB', spotType: 'VS_OPEN' },
-      { format: 'spin', depth: '5', position: 'BB', spotType: 'LIMPED' },
+      // l'SB dopo il fold del BTN: dal 16/09/2026 è `OPEN` (era `LIMPED`)
+      { format: 'spin', depth: '5', position: 'SB', spotType: 'OPEN' },
       { format: 'spin', depth: '25', position: 'BTN', spotType: 'OPEN' },
       { format: 'spin', depth: '25', position: 'SB', spotType: 'VS_3BET' },
       { format: 'husng', depth: '10', position: 'SB', spotType: 'OPEN' },
@@ -136,7 +137,7 @@ describe('DrillConfigComponent — costruttore e percorsi', () => {
     expect(el().querySelector('.dc__riepilogo-azioni .btn--primary')).not.toBeNull();
   });
 
-  it('i quattro assi ci sono, e la situazione ha CINQUE voci', () => {
+  it('i quattro assi ci sono, e la situazione ha QUATTRO voci con «Piatto non aperto (RFI)» in testa', () => {
     const etichette = Array.from(
       el().querySelectorAll('.ms__label'),
     ).map((e) => e.textContent!.trim());
@@ -146,8 +147,10 @@ describe('DrillConfigComponent — costruttore e percorsi', () => {
       'La tua posizione',
       'Situazione',
     ]);
-    // ⚠️ `LIMPED` mancava del tutto: il backend lo accetta da sempre.
-    expect(el().textContent).toContain('Piatto non aperto');
+    // ⚠️ Dal 16/09/2026 «piatto non aperto» e «RFI» sono UNA voce (`OPEN`):
+    // erano due chip per lo stesso fatto. L'etichetta li nomina entrambi.
+    expect(el().textContent).toContain('Piatto non aperto (RFI)');
+    expect(el().textContent).not.toContain('Apertura (RFI)');
   });
 
   it('⚠️ la durata sta DENTRO il costruttore, non in una riga a parte', () => {

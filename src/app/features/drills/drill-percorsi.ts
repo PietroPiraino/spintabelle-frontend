@@ -21,8 +21,12 @@ export interface Percorso {
   id: string;
   titolo: string;
   /**
-   * Perché vale la pena. Compare solo sulla card in evidenza: sulle righe
-   * compatte sarebbe rumore, e la riga di dettaglio dice già che cosa parte.
+   * Perché vale la pena. ⚠️ Oggi NON è renderizzato da nessun template: lo
+   * mostrava la card in evidenza, sparita il 04/09/2026 quando i percorsi sono
+   * diventati scorciatoie in righe uniformi (la riga di dettaglio dice già che
+   * cosa parte). Resta come testo editoriale pronto per il giorno in cui una
+   * riga lo porterà come sotto-testo; chi lo riscrive sappia che non lo legge
+   * ancora nessuno.
    */
   perche: string;
   /** Estremi in bb (valori MOSTRATI, ante già tolta). Assenti = tutte. */
@@ -72,13 +76,23 @@ export const PERCORSI: readonly Percorso[] = [
     perche:
       'Il big blind ha già messo dei soldi nel piatto, e quasi tutti lo difendono male: chi troppo poco per paura di giocare fuori posizione, chi troppo perché «tanto ci sono già dentro».',
     positions: ['BB'],
-    spotTypes: ['VS_OPEN', 'LIMPED'],
+    // per il BB «piatto non aperto» (OPEN) significa: di fronte ai limp —
+    // fino al 16/09/2026 quel caso si chiamava `LIMPED`
+    spotTypes: ['VS_OPEN', 'OPEN'],
   },
   {
     id: 'apertura',
-    titolo: 'Aprire il piatto',
+    // ⚠️ Lo stesso nome dell'etichetta della situazione (decisione owner,
+    // 17/09/2026): «Aprire il piatto» era esatto per BTN e SB e impreciso per
+    // il BB davanti ai limp, che può anche solo checkare. L'id resta
+    // `apertura`: è solo la chiave di `track` nel template.
+    titolo: 'Piatto non aperto',
+    // ⚠️ Riscritto il 16/09/2026: `OPEN` copre ora anche l'SB dopo il fold
+    // del BTN e il BB dopo i limp, quindi «la prima decisione della mano» era
+    // diventato falso. «Quasi senza informazioni» resta vero: chi ha passato
+    // o limpato non ha ancora detto niente della propria mano.
     perche:
-      "La prima decisione della mano, e l'unica che si prende senza informazioni. Da qui dipende tutto quello che viene dopo.",
+      "La decisione che apre il piatto, presa quando nessuno ha ancora rilanciato e quindi quasi senza informazioni. Da qui dipende tutto quello che viene dopo.",
     spotTypes: ['OPEN'],
   },
   {

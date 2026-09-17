@@ -74,8 +74,12 @@ export class TagPickerComponent {
   /**
    * Chip mostrate: l'unione di quelle note e di quelle già selezionate. Senza
    * l'unione, un tag preselezionato dall'esterno e non ancora presente in
-   * archivio (es. il marcatore 'live' prima della prima VOD pubblicata) sarebbe
-   * attivo ma INVISIBILE — impossibile da togliere e facile da non notare.
+   * archivio sarebbe attivo ma INVISIBILE — impossibile da togliere e facile
+   * da non notare. (Il caso vivo era il marcatore 'live' che il pannello Live
+   * preselezionava fino al 16/09/2026, prima della prima VOD pubblicata; oggi
+   * a preselezionare è il solo form lezioni, coi tag della lezione in
+   * modifica — in archivio per definizione, ma `known` può arrivare DOPO. La
+   * regola resta: il primitivo non può sapere cosa gli passano.)
    */
   protected readonly chips = computed(() =>
     [...new Set([...this.known(), ...this.selected()])].sort(),

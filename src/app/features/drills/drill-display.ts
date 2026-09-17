@@ -70,20 +70,35 @@ export function formatLabel(format: PreflopFormat): string {
 }
 
 export const SPOT_TYPE_LABELS: Record<DrillSpotType, string> = {
-  OPEN: 'Apertura (RFI)',
+  // ⚠️ UNA voce per «nessuno ha ancora rilanciato», dal 16/09/2026 (decisione
+  // owner). Fino ad allora erano due — «Apertura (RFI)» per il percorso vuoto
+  // e «Piatto non aperto» (`LIMPED`) per i percorsi di soli fold/limp — cioè
+  // due chip che chiedevano la stessa cosa, e «RFI» finiva per coprire il solo
+  // BTN alla radice. Misurato sul Mongo locale (23.148 nodi): 980 nodi alla
+  // radice (905 spin BTN + 75 HU SB) e 1.533 non-radice senza raise (SB dopo
+  // il fold o il limp del BTN, BB dopo i limp) = **2.513 situazioni con TUTTE
+  // e tre le posizioni**. L'etichetta dice entrambe le cose perché entrambe
+  // sono vere: il piatto non è aperto, e chi agisce sta decidendo se aprirlo.
+  // ⚠️ «(RFI)» è il nome con cui lo studente CERCA la voce (è la parola che
+  // l'owner usa), non una descrizione letterale: dopo un limp chi agisce non
+  // è «first in» (629 dei 2.513 nodi contengono un call). Vale «piatto non
+  // aperto» su tutti e 2.513, ed è la metà che regge.
+  // ⚠️ NON «Piatto limpato»: su 1.533 nodi non-radice **904 non contengono
+  // nemmeno un call** (misurato il 04/09/2026) — lì nessuno ha limpato,
+  // qualcuno ha semplicemente passato.
+  OPEN: 'Piatto non aperto (RFI)',
   VS_OPEN: 'Risposta all’apertura',
   VS_3BET: 'Risposta al 3-bet',
   VS_4BET_PLUS: '4-bet e oltre',
-  // ⚠️ NON «Piatto limpato», che è falso sulla maggioranza dei casi. `spotTypeOf`
-  // classifica LIMPED ogni percorso senza raise, e su 1.533 nodi di questo tipo
-  // **904 non contengono nemmeno un call** (misurato sui dati importati,
-  // 04/09/2026): lì nessuno ha limpato, semplicemente qualcuno ha passato e il
-  // piatto è arrivato aperto solo dai bui. «Non aperto» è vero su tutti e 1.533.
-  LIMPED: 'Piatto non aperto',
 };
 
+/**
+ * ⚠️ Niente «Tutte le mani» dal 16/09/2026: STANDARD è diventato esattamente
+ * quello. Prima escludeva «i fold scontati», e a un nodo di apertura il fold
+ * vale EV 0 per definizione, quindi alla radice spin 10bb toglieva 96 mani su
+ * 169 — lo studente non vedeva mai una decisione di fold.
+ */
 export const DIFFICULTY_LABELS: Record<DrillDifficulty, string> = {
-  ALL: 'Tutte le mani',
   STANDARD: 'Standard',
   MIXED_ONLY: 'Solo mix',
   MARGINAL: 'Marginali',
@@ -104,8 +119,10 @@ export function configSummary(c: DrillConfigPayload): string {
 }
 
 export const DIFFICULTY_HINTS: Record<DrillDifficulty, string> = {
-  ALL: 'Ogni mano raggiunta, anche le pure banali.',
-  STANDARD: 'Esclude i fold scontati e le mani che non arrivano mai qui.',
+  // Le mani che il giocatore NON può avere qui (già scartate in un nodo
+  // precedente) restano fuori a ogni difficoltà, e non si nominano: non è una
+  // scelta di difficoltà, è una domanda senza senso.
+  STANDARD: 'Tutte le mani che puoi avere qui, fold compresi.',
   MIXED_ONLY: 'Solo decisioni con strategia mista (le più istruttive).',
   MARGINAL: 'Solo i mix al fotofinish: gli spot più difficili.',
 };

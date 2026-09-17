@@ -310,6 +310,20 @@ describe('AdminUsersComponent', () => {
       expect(spente).not.toContain('COACH');
     });
 
+    it('la riga «Variazione + Motivo» si allinea in ALTO: il motivo porta un aiuto sotto il campo', async () => {
+      // Stesso difetto della causale dello staking (misurato là, in
+      // admin-stakings.component.spec.ts): con l'allineamento al fondo di
+      // `.admin-panel__row` la cella col suggerimento «Lo legge l'utente nel
+      // suo account…» è più alta e il campo sale di una riga. Qui si pinna il
+      // modificatore, perché la misura vive nel primitivo condiviso.
+      await rispondi(pagina([utente()]));
+      await apri();
+      const motivo = fixture.nativeElement.querySelector('#mod-motivo') as HTMLElement;
+      const rigaMovimento = motivo.closest('.admin-panel__row') as HTMLElement;
+      expect(rigaMovimento.classList).toContain('admin-panel__row--in-alto');
+      expect(getComputedStyle(rigaMovimento).alignItems).toBe('flex-start');
+    });
+
     it('digitare sporca il form: Escape chiede conferma invece di buttare via', async () => {
       // ⚠️ È la trappola che questo lotto ha dovuto evitare due volte: un
       // `computed()` costruito su `FormControl.value` non si ricalcola mai

@@ -125,6 +125,36 @@ describe('AdminStakingsComponent', () => {
   });
 
 
+  describe('la riga del movimento', () => {
+    it('⚠️ i quattro campi stanno sulla STESSA riga anche se la causale porta un aiuto sotto', async () => {
+      // Trovato dall'owner in produzione il 16/09/2026: `.admin-panel__row`
+      // allinea al FONDO (per i pulsanti accanto ai campi), e la cella della
+      // causale — dal 14/09 con «La legge il giocatore nel suo account…» sotto
+      // il campo — era più alta delle altre tre, quindi il suo campo saliva di
+      // una riga e le etichette si leggevano su due livelli. Si misura, perché
+      // un allineamento sbagliato non fallisce niente: si vede e basta.
+      await rispondi(pagina([riga()]));
+      await apri();
+
+      // la finestra di Karma è stretta e la riga andrebbe a capo: si allarga la
+      // scatola della modale, così le quattro celle stanno davvero in una riga
+      const box = document.querySelector('.mo__box') as HTMLElement;
+      box.style.width = '1400px';
+      box.style.maxWidth = 'none';
+
+      const top = (sel: string) =>
+        (document.querySelector(sel) as HTMLElement).getBoundingClientRect().top;
+      const riferimento = top('#stk-tipo');
+      for (const sel of ['#stk-cassa', '#stk-importo', '#stk-causale']) {
+        expect(Math.abs(top(sel) - riferimento))
+          .withContext(`${sel} è sulla riga di #stk-tipo`)
+          .toBeLessThan(1);
+      }
+      // e l'aiuto pende SOTTO il suo campo, non accanto agli altri
+      expect(top('#stk-causale-aiuto')).toBeGreaterThan(top('#stk-causale'));
+    });
+  });
+
   describe('la tasca del movimento', () => {
     /** Cambia l'asse e lascia ricalcolare. */
     const scegliAsse = async (v: string) => {

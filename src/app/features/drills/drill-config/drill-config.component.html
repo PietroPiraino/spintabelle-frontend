@@ -63,7 +63,7 @@
           <p>
             Il meccanismo è semplice. Scegli che cosa vuoi allenare — il
             formato, la profondità di stack, la posizione, il tipo di
-            situazione — e ti serviamo una mano alla volta, presa da quelle
+            situazione — e ti proponiamo una mano alla volta, presa da quelle
             combinazioni. Tu dichiari l'azione: passare, chiamare, rilanciare,
             andare all-in. Subito dopo ti mostriamo la risposta di equilibrio
             per quella mano in quel punto esatto, con la frequenza con cui la
@@ -139,15 +139,15 @@
       </section>
     } @else {
     <!--
-      RAMO AUTENTICATO. Ordine: contesto (gioco, varianti, durata) → percorsi
-      pronti → «Personalizza l'allenamento», chiuso.
+      RAMO AUTENTICATO. Ordine (dal 04/09/2026): il COSTRUTTORE aperto — quattro
+      tendine (formato, profondità, posizione, situazione) + difficoltà a chip +
+      numero di mani + la frase di riepilogo col pulsante — poi i preset dello
+      studente e le scorciatoie (i percorsi) in righe uniformi.
 
-      ⚠️ I SEI `<fieldset>` DI CHIP NON SONO SPARITI: sono scesi dentro il
-      disclosure. Restavano ~65 bottoni sulla prima schermata — 9 formati, fino
-      a 42 profondità (misurate: `spin` ne ha 42), 3 posizioni, 5 situazioni, 4
-      difficoltà, 3 durate — e su un telefono la CTA cadeva molto sotto la
-      piega. Chi vuole comporsi la sessione a mano trova tutto dov'era, in un
-      clic; chi vuole allenarsi parte da un percorso senza scegliere niente.
+      ⚠️ Le tendine esistono perché a chip erano ~65 bottoni sulla prima
+      schermata — 9 formati, fino a 42 profondità (misurate: `spin` ne ha 42),
+      3 posizioni, 4 situazioni, 3 difficoltà (dal 16/09/2026: prima 5 e 4), 3
+      durate — e su un telefono la CTA cadeva molto sotto la piega.
     -->
     <div class="dc__head-row">
       <button class="btn btn--ghost btn--sm" (click)="viewResults()">
@@ -172,8 +172,8 @@
       richiesta dell'owner («una select con scelta multipla») eseguita nel
       solo modo che in HTML funzioni davvero: vedi il commento in testa a
       `multi-select.component.ts` per perché non è una `<select multiple>`.
-      Difficoltà resta a chip: tre-quattro valori dietro una tendina sono
-      peggio di tre-quattro bottoni, e non è un asse della *situazione*.
+      Difficoltà resta a chip: tre valori dietro una tendina sono peggio di
+      tre bottoni, e non è un asse della *situazione*.
     -->
     <div class="dc__assi">
       <app-multi-select

@@ -774,7 +774,11 @@ export interface UserLiveAttendance {
 export interface PublishRecordingPayload {
   title?: string;
   description?: string;
-  /** tag aggiuntivi: il marcatore 'live' lo mette il backend */
+  /**
+   * I tag della lezione, esattamente quelli scelti (max 20). Dal 16/09/2026
+   * il backend non aggiunge più il marcatore 'live': la VOD la classifica la
+   * `categoria`.
+   */
   tags?: string[];
   /** solo un ADMIN può cambiare il tier (decide il paywall) */
   stakes?: LessonStakes;
@@ -1268,13 +1272,16 @@ export interface PreflopNode {
 
 // ----- Allenamento (training drills) -----
 
-export type DrillDifficulty = 'ALL' | 'STANDARD' | 'MIXED_ONLY' | 'MARGINAL';
-export type DrillSpotType =
-  | 'OPEN'
-  | 'VS_OPEN'
-  | 'VS_3BET'
-  | 'VS_4BET_PLUS'
-  | 'LIMPED';
+/**
+ * ⚠️ Specchio delle tuple `DIFFICULTIES`/`SPOT_TYPES` di `drills.types.ts`
+ * (backend), tenuto allineato a mano: due repo, nessuna guardia. Dal 16/09/2026
+ * `ALL` e `LIMPED` non esistono più — `ALL` è diventato lo STANDARD di oggi
+ * (tutte le mani raggiungibili, fold compresi) e `LIMPED` è confluito in `OPEN`
+ * (nessuno ha ancora rilanciato, ovunque si sieda). I valori vecchi sullo
+ * storico li ripara il backend all'avvio, quindi qui non serve un ripiego.
+ */
+export type DrillDifficulty = 'STANDARD' | 'MIXED_ONLY' | 'MARGINAL';
+export type DrillSpotType = 'OPEN' | 'VS_OPEN' | 'VS_3BET' | 'VS_4BET_PLUS';
 
 /** Config inviata per avviare una sessione (insieme vuoto = "qualunque"). */
 export interface DrillConfigPayload {

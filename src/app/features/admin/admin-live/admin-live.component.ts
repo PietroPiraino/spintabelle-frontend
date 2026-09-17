@@ -138,20 +138,27 @@ export class AdminLiveComponent {
       [Validators.required, Validators.minLength(3), Validators.maxLength(200)],
     ],
     description: ['', [Validators.maxLength(2000)]],
-    // ⚠️ Precompilata su «Sessioni dal vivo» ma modificabile: è la categoria in
-    // cui gli studenti cercano una registrazione, anche quando la sessione
-    // parlava di preflop. Il backend applica lo stesso ripiego se non arriva.
-    categoria: ['sessioni-live' as LessonCategory, Validators.required],
+    // (nessuna `categoria` qui: è un campo della LEZIONE e vive nel form di
+    // pubblicazione; CreateLiveSessionDto non la conosce e forbidNonWhitelisted
+    // risponderebbe 400 se la mandassimo — fino al 16/09/2026 c'era un
+    // controllo morto, mai mostrato né inviato, con un commento che prometteva
+    // una scelta che la modale non offre)
     stakes: ['LOW' as LessonStakes, Validators.required],
     startsAt: ['', Validators.required],
     durationMin: [60],
     platform: ['', [Validators.maxLength(80)]],
-    mode: ['EXTERNAL' as LiveMode, Validators.required],
+    // ⚠️ Default On-site (decisione owner, 16/09/2026: le live si fanno tutte
+    // nella sala del sito, Zoom/Discord è l'eccezione). Il backend NON cambia
+    // il suo default (mode assente ⇒ EXTERNAL, compatibilità coi client
+    // vecchi): questo form manda sempre `mode`, quindi il default vive qui.
+    mode: ['LIVEKIT' as LiveMode, Validators.required],
     recordingEnabled: [false],
-    joinUrl: [
-      '',
-      [Validators.required, Validators.pattern(/^https?:\/\/.+/)],
-    ],
+    // ⚠️ I validatori di joinUrl DEVONO concordare col default di `mode` qui
+    // sopra: LIVEKIT lo ignora, quindi nasce senza; required + pattern glieli
+    // mette `setJoinUrlValidators` quando si sceglie EXTERNAL. Con
+    // `Validators.required` scritto qui il form nuovo sarebbe INVALIDO su un
+    // campo che il template nemmeno mostra.
+    joinUrl: ['', []],
   });
 
   /**
@@ -192,13 +199,14 @@ export class AdminLiveComponent {
 
   protected creaNuova(): void {
     this.editingId.set(null);
+    // On-site di default (owner, 16/09/2026): le live si fanno tutte nel sito.
     this.form.reset({
       stakes: 'LOW',
       durationMin: 60,
-      mode: 'EXTERNAL',
+      mode: 'LIVEKIT',
       recordingEnabled: false,
     });
-    this.setJoinUrlValidators('EXTERNAL');
+    this.setJoinUrlValidators('LIVEKIT');
     this.error.set(null);
     this.feedback.set(null);
     this.baseline.set(JSON.stringify(this.form.getRawValue()));
@@ -256,7 +264,6 @@ export class AdminLiveComponent {
     this.form.patchValue({
       title: session.title,
       description: session.description ?? '',
-      categoria: 'sessioni-live',
       stakes: session.stakes,
       startsAt: this.toLocalInput(session.startsAt),
       durationMin: session.durationMin ?? 60,
@@ -276,13 +283,17 @@ export class AdminLiveComponent {
     this.formAperto.set(null);
     this.confermaElimina.set(false);
     this.editingId.set(null);
+    // Stesso default di `creaNuova`: On-site (owner, 16/09/2026). La coppia
+    // «mode + validatori di joinUrl» si resetta INSIEME in ogni ripristino:
+    // dopo la modifica di una EXTERNAL, un reset che lasciasse `required` sul
+    // link riporterebbe il form in uno stato che la tendina non mostra.
     this.form.reset({
       stakes: 'LOW',
       durationMin: 60,
-      mode: 'EXTERNAL',
+      mode: 'LIVEKIT',
       recordingEnabled: false,
     });
-    this.setJoinUrlValidators('EXTERNAL');
+    this.setJoinUrlValidators('LIVEKIT');
     this.error.set(null);
   }
 
@@ -388,11 +399,11 @@ export class AdminLiveComponent {
 
   // ── Pubblicazione della registrazione come lezione ──────────────────────--
   //
-  // Pannello inline (idioma .admin-panel di admin-users): il titolo e la
-  // descrizione della live diventano quelli della lezione quasi mai tali e
-  // quali, e i tag prima non erano proponibili affatto. Precompilare qui
-  // sostituisce il giro "modifica live → salva → pubblica → tab Lezioni →
-  // modifica per i tag".
+  // Modale di pubblicazione (`app-modal`, dall'08/09/2026 come ogni altra
+  // sezione del pannello): il titolo e la descrizione della live diventano
+  // quelli della lezione quasi mai tali e quali, e i tag prima non erano
+  // proponibili affatto. Precompilare qui sostituisce il giro "modifica live →
+  // salva → pubblica → tab Lezioni → modifica per i tag".
 
   /** Sessione con il pannello di pubblicazione aperto (una alla volta). */
   protected readonly publishPanelId = signal<string | null>(null);
@@ -431,9 +442,12 @@ export class AdminLiveComponent {
       videoDate: session.startsAt.slice(0, 10),
       notify: true,
     });
-    // 'live' è il marcatore di sistema: il backend lo aggiunge comunque, qui è
-    // pre-selezionato perché si veda che ci sarà.
-    this.selectedTags.set(['live']);
+    // ⚠️ Nessun tag preselezionato. Fino al 16/09/2026 qui c'era `['live']`,
+    // il marcatore che il backend aggiungeva comunque: l'owner l'ha tolto
+    // («ormai le facciamo tutte dal vivo e non è necessario per la ricerca
+    // degli utenti») — a classificare la VOD è la categoria «Sessioni dal
+    // vivo», precompilata nel form qui sopra. I tag sono solo quelli scelti.
+    this.selectedTags.set([]);
     this.publishPanelId.set(session.id);
     if (this.knownTags().length === 0)
       this.lessonsApi.getTags().subscribe({
@@ -465,8 +479,9 @@ export class AdminLiveComponent {
         stakes: v.stakes,
         freePreview: v.freePreview,
         videoDate: v.videoDate,
-        // il marcatore 'live' lo aggiunge il backend: non serve rimandarlo
-        tags: this.selectedTags().filter((t) => t !== 'live'),
+        // esattamente i tag scelti: dal 16/09/2026 il backend non aggiunge
+        // (né toglie) più niente, `live` compreso
+        tags: this.selectedTags(),
         notify: v.notify,
       })
       .subscribe({

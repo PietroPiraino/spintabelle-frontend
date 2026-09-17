@@ -217,7 +217,9 @@
               Questo registro è chiuso: riaprilo per registrare un movimento.
             </p>
           } @else {
-            <div class="row admin-panel__row">
+            <!-- `--in-alto`: la cella della causale porta un aiuto sotto il
+                 campo, e con l'allineamento al fondo salirebbe di una riga -->
+            <div class="row admin-panel__row admin-panel__row--in-alto">
               <div class="field" style="margin: 0">
                 <label for="stk-tipo">Asse</label>
                 <select id="stk-tipo" class="input" formControlName="tipo">

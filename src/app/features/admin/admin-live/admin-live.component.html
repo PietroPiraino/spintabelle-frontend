@@ -291,8 +291,10 @@
           formControlName="mode"
           (change)="onModeChange()"
         >
-          <option value="EXTERNAL">Esterna — link Zoom/Discord</option>
+          <!-- On-site per prima: è il default del form (owner, 16/09/2026),
+               e la prima voce di una tendina è quella che si legge come tale -->
           <option value="LIVEKIT">On-site — sala live nel sito</option>
+          <option value="EXTERNAL">Esterna — link Zoom/Discord</option>
         </select>
       </div>
 

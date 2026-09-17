@@ -67,8 +67,12 @@ describe('frasePreparazione', () => {
   };
 
   it('la forma «tutto aperto» è una frase italiana leggibile', () => {
+    // ⚠️ «fold compresi» e non «escludendo i fold scontati» dal 16/09/2026: a
+    // un nodo di apertura il fold vale EV 0 per definizione, quindi la vecchia
+    // regola escludeva OGNI fold (96 mani su 169 alla radice spin 10bb) e la
+    // frase lo dichiarava come se fosse una scelta.
     expect(frasePreparazione(base)).toBe(
-      'Ti proporremo 20 mani di Spin & Go, a qualsiasi profondità, da qualsiasi posizione e in qualsiasi situazione, escludendo i fold scontati.',
+      'Ti proporremo 20 mani di Spin & Go, a qualsiasi profondità, da qualsiasi posizione e in qualsiasi situazione, fold compresi.',
     );
   });
 
@@ -87,13 +91,14 @@ describe('frasePreparazione', () => {
         formati: ['Spin & Go · Ante'],
         profondita: 'da 8 a 15 bb',
         posizioni: ['BB'],
-        situazioni: ['Apertura (RFI)', "Risposta all'apertura"],
+        situazioni: ['Piatto non aperto (RFI)', "Risposta all'apertura"],
       }),
       // ⚠️ «dal BB, su …» e non «dal BB e su …»: l'ultima parte contiene già
-      // una sua «e» («apertura e risposta»), e la congiunzione esterna dava
-      // due «e» di fila. E «(RFI)» resta MAIUSCOLO dentro la frase.
+      // una sua «e» («aperto (RFI) e risposta»), e la congiunzione esterna
+      // dava due «e» di fila. E «(RFI)» resta MAIUSCOLO dentro la frase, mentre
+      // la «P» di «Piatto» scende: si abbassa solo l'iniziale dell'etichetta.
     ).toBe(
-      "Ti proporremo 50 mani di Spin & Go · Ante, da 8 a 15 bb, dal BB, su apertura (RFI) e risposta all'apertura, escludendo i fold scontati.",
+      "Ti proporremo 50 mani di Spin & Go · Ante, da 8 a 15 bb, dal BB, su piatto non aperto (RFI) e risposta all'apertura, fold compresi.",
     );
   });
 
@@ -114,8 +119,10 @@ describe('frasePreparazione', () => {
     expect(frasePreparazione({ ...base, difficolta: 'MIXED_ONLY' })).toContain(
       'solo dove la strategia è mista',
     );
-    expect(frasePreparazione({ ...base, difficolta: 'ALL' })).toContain(
-      'senza escludere nessuna mano',
+    // ⚠️ Niente caso `ALL`: quella difficoltà non esiste più dal 16/09/2026,
+    // perché STANDARD è diventato ciò che ALL prometteva («fold compresi»).
+    expect(frasePreparazione({ ...base, difficolta: 'STANDARD' })).toContain(
+      'fold compresi',
     );
   });
 });
