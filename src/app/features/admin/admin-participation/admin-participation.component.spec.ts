@@ -8,6 +8,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../environments/environment';
 import {
   LessonViewsRow,
+  LiveAttendanceEntry,
+  LiveAttendanceReport,
   LiveSession,
 } from '../../../core/models/api.models';
 import { AdminParticipationComponent } from './admin-participation.component';
@@ -43,6 +45,37 @@ const riga = (over: Partial<LessonViewsRow> = {}): LessonViewsRow =>
     ...over,
   }) as LessonViewsRow;
 
+/**
+ * ⚠️ Un registro COMPLETO, con `sessione` e `totali`.
+ *
+ * Il template legge `r.totali.*` dentro il ramo «ci sono partecipanti», quindi
+ * un payload dimezzato regge finché l'elenco è vuoto — e si rompe il giorno in
+ * cui una riga di riepilogo esce da quel ramo. Un dato di prova che è valido
+ * solo per caso non è un dato di prova.
+ */
+const report = (
+  partecipanti: Partial<LiveAttendanceEntry>[] = [],
+): LiveAttendanceReport => ({
+  sessione: { id: 's1', titolo: 'Live di prova', inizio: fra(-2 * ORA), fine: null },
+  partecipanti: partecipanti.map((p, i) => ({
+    userId: `u${i + 1}`,
+    nickname: 'anonimo',
+    ruolo: 'audience',
+    primoIngresso: fra(-2 * ORA),
+    ultimaUscita: null,
+    minuti: 30,
+    ingressi: 1,
+    ancoraInSala: false,
+    durataStimata: false,
+    ...p,
+  })),
+  totali: {
+    partecipanti: partecipanti.length,
+    mediaMinuti: partecipanti.length ? 30 : null,
+    troncato: false,
+  },
+});
+
 describe('AdminParticipationComponent', () => {
   let fixture: ComponentFixture<AdminParticipationComponent>;
   let http: HttpTestingController;
@@ -64,6 +97,37 @@ describe('AdminParticipationComponent', () => {
 
   const schede = (): HTMLButtonElement[] =>
     [...fixture.nativeElement.querySelectorAll('[role="tab"]')];
+
+  /**
+   * ⚠️ I comandi di riga si cercano per NOME ACCESSIBILE, mai per classe.
+   *
+   * È contro la corrente: da quando sono solo-icona il loro `textContent` è
+   * vuoto, quindi la ricerca per testo schianta con un TypeError, e la
+   * riparazione naturale — `querySelector('.admin-ico')` — rimetterebbe il
+   * verde lasciando ZERO righe nel repo che nominano l'etichetta del comando.
+   * Cercandolo per `aria-label` il test resta una rete su ciò che rende quel
+   * bottone non anonimo.
+   */
+  const comandi = (): HTMLButtonElement[] => [
+    ...fixture.nativeElement.querySelectorAll('.admin-table__c-ultimo button'),
+  ];
+
+  const comando = (etichetta: string): HTMLButtonElement =>
+    fixture.nativeElement.querySelector(
+      `button[aria-label="${etichetta}"]`,
+    ) as HTMLButtonElement;
+
+  const campoRicerca = (): HTMLInputElement =>
+    fixture.nativeElement.querySelector(
+      'input[type="search"]',
+    ) as HTMLInputElement;
+
+  const dialog = (): HTMLDialogElement | null =>
+    fixture.nativeElement.querySelector('dialog');
+
+  const chiudiModale = () =>
+    (fixture.nativeElement.querySelector('.mo__chiudi') as HTMLButtonElement)
+      .click();
 
   /** Risponde all'elenco delle presenze (la scheda che si apre per prima). */
   const rispondiPresenze = async (items: LiveSession[]) => {
@@ -261,15 +325,199 @@ describe('AdminParticipationComponent', () => {
     it('il registro si carica SOLO all’apertura di una sessione', async () => {
       await rispondiPresenze([sessione()]);
       http.expectNone((r) => r.url === `${API}/live/s1/attendance`);
-      const apri = [...fixture.nativeElement.querySelectorAll('button')].find(
-        (b: HTMLButtonElement) => b.textContent?.trim() === 'Presenze',
-      ) as HTMLButtonElement;
-      apri.click();
+      comando('Presenze di Live di prova').click();
       await stabilizza();
       http
         .expectOne((r) => r.url === `${API}/live/s1/attendance`)
-        .flush({ partecipanti: [], ingressi: 0, unici: 0 });
+        .flush(report());
       await stabilizza();
+      expect(testo()).toContain('Nessun ingresso registrato');
+    });
+
+    it('⚠️ il comando di riga NOMINA la riga, così due righe non si confondono', async () => {
+      // `app-icon` porta `aria-hidden` sull'host: un bottone solo-icona senza
+      // etichetta è ANONIMO, e con un'etichetta fissa sarebbero N pulsanti che
+      // annunciano tutti la stessa parola. L'asserzione che conta è che le due
+      // etichette siano DIVERSE.
+      await rispondiPresenze([
+        sessione({ title: 'Prima live', startsAt: fra(-48 * ORA) }),
+        sessione({ id: 's2', title: 'Seconda live', startsAt: fra(-24 * ORA) }),
+      ]);
+      const etichette = comandi().map((b) => b.getAttribute('aria-label'));
+      expect(etichette).toEqual([
+        'Presenze di Prima live',
+        'Presenze di Seconda live',
+      ]);
+      expect(new Set(etichette).size).toBe(2);
+    });
+
+    it('il comando apre una MODALE, e chiuderla la smonta', async () => {
+      await rispondiPresenze([sessione({ durationMin: 90 })]);
+      expect(dialog()).toBeNull();
+
+      const bottone = comando('Presenze di Live di prova');
+      // Non sono i tre puntini: qui si apre una scheda modale, e dirlo è
+      // l'unica cosa che colma quella distanza.
+      expect(bottone.getAttribute('aria-haspopup')).toBe('dialog');
+      bottone.click();
+      await stabilizza();
+      http
+        .expectOne((r) => r.url === `${API}/live/s1/attendance`)
+        .flush(report([{ nickname: 'mario', minuti: 42 }]));
+      await stabilizza();
+
+      expect(dialog()).toBeTruthy();
+      expect(testo()).toContain('Presenze — Live di prova');
+      expect(testo()).toContain('mario');
+      // ⚠️ La durata prevista è la colonna che sparisce sotto i 720px, e la
+      // nota mobile promette che sia «nella scheda di ogni sessione»: se non
+      // la stampa, quella frase è falsa.
+      expect(testo()).toContain('durata prevista 90 min');
+
+      chiudiModale();
+      await stabilizza();
+      expect(dialog()).toBeNull();
+    });
+
+    it('⚠️ la risposta FUORI ORDINE non finisce sotto il titolo sbagliato', async () => {
+      // Aprire una riga, chiudere e aprirne un'altra: la risposta lenta della
+      // PRIMA arriva dopo quella della seconda. Senza guardia riempirebbe la
+      // modale con le presenze di una sessione sotto il nome di un'altra —
+      // cioè dati personali attribuiti alla persona sbagliata.
+      await rispondiPresenze([
+        sessione({ title: 'Prima live', startsAt: fra(-48 * ORA) }),
+        sessione({ id: 's2', title: 'Seconda live', startsAt: fra(-24 * ORA) }),
+      ]);
+
+      comando('Presenze di Prima live').click();
+      await stabilizza();
+      const lenta = http.expectOne((r) => r.url === `${API}/live/s1/attendance`);
+
+      chiudiModale();
+      await stabilizza();
+      comando('Presenze di Seconda live').click();
+      await stabilizza();
+      http
+        .expectOne((r) => r.url === `${API}/live/s2/attendance`)
+        .flush(report([{ nickname: 'della-seconda', minuti: 10 }]));
+      await stabilizza();
+
+      // Ora atterra la risposta della PRIMA, in ritardo.
+      lenta.flush(report([{ nickname: 'della-prima', minuti: 99 }]));
+      await stabilizza();
+
+      expect(testo()).toContain('Presenze — Seconda live');
+      expect(testo()).toContain('della-seconda');
+      expect(testo()).not.toContain('della-prima');
+    });
+  });
+
+  describe('le viste delle lezioni', () => {
+    it('la ricerca filtra per titolo, e il conteggio dice «N su M»', async () => {
+      await rispondiPresenze([sessione()]);
+      await apriViste([
+        riga(),
+        riga({ lessonId: 'l2', titolo: 'Difesa dal big blind' }),
+      ]);
+
+      const campo = campoRicerca();
+      campo.value = 'push';
+      campo.dispatchEvent(new Event('input'));
+      await stabilizza();
+
+      expect(testo()).toContain('Push-fold da 10bb');
+      expect(testo()).not.toContain('Difesa dal big blind');
+      expect(testo()).toContain('1 lezione aperta su 2');
+    });
+
+    it('⚠️ il segnaposto della ricerca promette SOLO il titolo', async () => {
+      // `LessonViewsRow` porta solo `{lessonId, titolo, spettatori, aperture,
+      // ultimaApertura}`: promettere tag o descrizione manda a cercare un campo
+      // che non esiste. Stessa regola dell'altra scheda.
+      await rispondiPresenze([sessione()]);
+      await apriViste([riga()]);
+      const campo = campoRicerca();
+      expect(campo.getAttribute('placeholder')).not.toContain('tag');
+      expect(campo.getAttribute('aria-label')).not.toContain('tag');
+    });
+
+    it('⚠️ il vuoto da ricerca è DIVERSO dal vuoto vero e offre la via d’uscita', async () => {
+      await rispondiPresenze([sessione()]);
+      await apriViste([riga()]);
+      const campo = campoRicerca();
+      campo.value = 'niente-che-esista';
+      campo.dispatchEvent(new Event('input'));
+      await stabilizza();
+
+      expect(testo()).toContain('Nessuna lezione con questa ricerca');
+      expect(testo()).not.toContain('Nessuna apertura registrata finora');
+      const azzera = [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) => b.textContent?.trim() === 'Azzera la ricerca',
+      ) as HTMLButtonElement;
+      azzera.click();
+      await stabilizza();
+      expect(testo()).toContain('Push-fold da 10bb');
+    });
+
+    it('⚠️ le due cifre portano la propria etichetta sullo stretto', async () => {
+      // Sotto i 720px `thead` sparisce: senza `data-etichetta` la riga
+      // diventerebbe «Push-fold da 10bb · 4 · 9», due numeri di cui non si sa
+      // quale sia quale. La classe `--etichettata` è OPT-IN.
+      await rispondiPresenze([sessione()]);
+      await apriViste([riga()]);
+      const tabella = fixture.nativeElement.querySelector(
+        '.admin-table',
+      ) as HTMLElement;
+      expect(tabella.classList).toContain('admin-table--etichettata');
+      const etichette = [
+        ...fixture.nativeElement.querySelectorAll('td[data-etichetta]'),
+      ].map((td: HTMLElement) => td.getAttribute('data-etichetta'));
+      expect(etichette).toEqual(['Persone', 'Aperture']);
+    });
+
+    it('gli spettatori si caricano SOLO all’apertura, in una modale', async () => {
+      await rispondiPresenze([sessione()]);
+      await apriViste([riga()]);
+      http.expectNone((r) => r.url === `${API}/lessons/l1/views`);
+
+      comando('Chi ha visto Push-fold da 10bb').click();
+      await stabilizza();
+      http.expectOne((r) => r.url === `${API}/lessons/l1/views`).flush([
+        { userId: 'u1', nome: 'mario', aperture: 3, percentualeMax: 84 },
+      ]);
+      await stabilizza();
+
+      expect(dialog()).toBeTruthy();
+      expect(testo()).toContain('Spettatori — Push-fold da 10bb');
+      expect(testo()).toContain('mario');
+      expect(testo()).toContain('84% visto');
+    });
+
+    it('⚠️ un errore sugli spettatori NON si legge come «nessuno l’ha aperta»', async () => {
+      // Fino al 18/09/2026 il ramo di errore faceva `viewers.set([])`: una
+      // chiamata fallita si leggeva come una lezione che nessuno ha guardato.
+      // Sono due fatti opposti, e solo il primo ha una via d'uscita.
+      await rispondiPresenze([sessione()]);
+      await apriViste([riga()]);
+      comando('Chi ha visto Push-fold da 10bb').click();
+      await stabilizza();
+      http
+        .expectOne((r) => r.url === `${API}/lessons/l1/views`)
+        .flush({ message: 'Boom' }, { status: 500, statusText: 'Server Error' });
+      await stabilizza();
+
+      expect(testo()).not.toContain("Nessuno l'ha ancora aperta");
+      const riprova = [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b: HTMLButtonElement) => b.textContent?.trim() === 'Riprova',
+      ) as HTMLButtonElement;
+      expect(riprova).toBeTruthy();
+
+      // E «Riprova» rifà SOLO quella chiamata.
+      riprova.click();
+      await stabilizza();
+      http.expectOne((r) => r.url === `${API}/lessons/l1/views`).flush([]);
+      await stabilizza();
+      expect(testo()).toContain("Nessuno l'ha ancora aperta");
     });
   });
 });

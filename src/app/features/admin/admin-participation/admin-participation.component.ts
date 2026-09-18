@@ -15,6 +15,8 @@ import {
 import { LessonsService } from '../../../core/services/lessons.service';
 import { LiveService } from '../../../core/services/live.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
 import {
   SchedeComponent,
   VoceScheda,
@@ -35,12 +37,25 @@ type Scheda = 'presenze' | 'viste';
  * SOLO all'apertura di una sessione (una richiesta per volta): l'elenco delle
  * live è già in pagina, caricare tutti i registri in anticipo sarebbe lavoro
  * buttato nel 90% dei casi.
+ *
+ * ⚠️ Dal 18/09/2026 le due metà sono TABELLE e il dettaglio si apre in una
+ * `app-modal`, cioè la grammatica del pannello dall'08/09/2026. Prima erano
+ * card con il dettaglio in una card sorella: una `<table>` non può ospitarlo
+ * così, e la modale è comunque la forma che il resto del pannello usa. Il
+ * foglio `admin-table.scss` era GIÀ in questa lista di stili e il template non
+ * conteneva una sola `<table>`: l'intenzione c'era, mancava la conversione.
  */
 @Component({
   selector: 'app-admin-participation',
-  imports: [DatePipe, SchedeComponent, FiltroComponent],
+  imports: [
+    DatePipe,
+    SchedeComponent,
+    FiltroComponent,
+    IconComponent,
+    ModalComponent,
+  ],
   templateUrl: './admin-participation.component.html',
-  styleUrls: ['../admin-shared.scss', '../admin-table.scss'],
+  styleUrls: ['../admin-shared.scss', '../admin-table.scss', '../admin-modale.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminParticipationComponent {
@@ -51,11 +66,23 @@ export class AdminParticipationComponent {
   protected readonly listLoading = signal(false);
   protected readonly listError = signal<string | null>(null);
 
-  /** Sessione aperta (una alla volta, come i pannelli degli Iscritti). */
-  protected readonly openId = signal<string | null>(null);
+  /** La sessione aperta NELLA MODALE (una alla volta). */
+  protected readonly apertaSessioneId = signal<string | null>(null);
   protected readonly report = signal<LiveAttendanceReport | null>(null);
   protected readonly reportLoading = signal(false);
   protected readonly reportError = signal<string | null>(null);
+
+  /**
+   * ⚠️ La modale si lega alla riga RILETTA dall'elenco, non a una copia
+   * congelata al momento del clic: se un ricaricamento fa sparire quella
+   * sessione, la modale si chiude da sé invece di restare aperta su dati che
+   * non esistono più. È l'idioma di `utenteAperto` in `admin-users`.
+   */
+  protected readonly sessioneAperta = computed<LiveSession | null>(() => {
+    const id = this.apertaSessioneId();
+    if (!id) return null;
+    return this.sessions()?.find((s) => s.id === id) ?? null;
+  });
 
   /**
    * Solo le sessioni on-site: quelle EXTERNAL (Zoom/Discord) non lasciano
@@ -177,12 +204,31 @@ export class AdminParticipationComponent {
   }
 
   protected apriScheda(s: Scheda): void {
+    // ⚠️ Le due modali vivono FUORI dall'`@if` che sceglie la scheda, quindi un
+    // id rimasto valorizzato lascerebbe aperta la scheda di una sessione sopra
+    // l'elenco delle lezioni. Oggi non è raggiungibile — un `<dialog>` modale
+    // rende inerte ciò che sta sotto — ma costa due righe e chiude il buco per
+    // costruzione invece che per coincidenza.
+    this.chiudiSessione();
+    this.chiudiLezione();
     this.scheda.set(s);
     if (this.caricate.has(s)) return;
     this.caricate.add(s);
     if (s === 'presenze') this.load();
     else this.loadViews();
   }
+
+  /**
+   * Il contatore anti-risposta-fuori-ordine dei DETTAGLI.
+   *
+   * ⚠️ Non è prudenza generica: aprendo una riga, chiudendo e aprendone
+   * un'altra, la risposta lenta della PRIMA arriva dopo quella della seconda e
+   * riempirebbe la modale con le presenze di una sessione **sotto il titolo di
+   * un'altra** — cioè dei dati personali attribuiti alla persona sbagliata.
+   * Uno solo per entrambe: le due schede sono esclusive, ma una risposta della
+   * prima può atterrare mentre è aperta la modale della seconda.
+   */
+  private seqDettaglio = 0;
 
   private load(): void {
     this.listLoading.set(true);
@@ -207,9 +253,53 @@ export class AdminParticipationComponent {
   protected readonly viewsLoading = signal(false);
   protected readonly viewsError = signal<string | null>(null);
 
-  protected readonly openLessonId = signal<string | null>(null);
+  protected readonly apertaLezioneId = signal<string | null>(null);
   protected readonly viewers = signal<LessonViewer[] | null>(null);
   protected readonly viewersLoading = signal(false);
+  /**
+   * ⚠️ Esiste dal 18/09/2026, e prima no: il ramo di errore faceva
+   * `viewers.set([])`, cioè una chiamata fallita si leggeva come «nessuno l'ha
+   * ancora aperta». Sono due fatti opposti, e il secondo ha una via d'uscita
+   * («Riprova») che il primo non ha.
+   */
+  protected readonly viewersError = signal<string | null>(null);
+
+  /** La riga RILETTA, per la stessa ragione di `sessioneAperta`. */
+  protected readonly lezioneAperta = computed<LessonViewsRow | null>(() => {
+    const id = this.apertaLezioneId();
+    if (!id) return null;
+    return this.viewsRows()?.find((r) => r.lessonId === id) ?? null;
+  });
+
+  /**
+   * ⚠️ Un signal di ricerca PER SCHEDA, non uno condiviso: le due filtrano cose
+   * diverse (sessioni live da una parte, lezioni dall'altra) e una query che
+   * sopravvive al cambio di scheda nasconderebbe righe senza che si capisca
+   * perché. Non debounced, per la ragione scritta su `ricerca`.
+   * ⚠️ Guarda SOLO il titolo, e il segnaposto deve promettere solo quello:
+   * `LessonViewsRow` porta `{lessonId, titolo, spettatori, aperture,
+   * ultimaApertura}` e nient'altro — niente tag, niente descrizione.
+   */
+  protected readonly ricercaViste = signal('');
+
+  protected readonly visteVisibili = computed(() => {
+    const q = this.ricercaViste().trim().toLowerCase();
+    const rows = this.viewsRows() ?? [];
+    if (!q) return rows;
+    return rows.filter((r) => r.titolo.toLowerCase().includes(q));
+  });
+
+  protected readonly filtroVisteAttivo = computed(
+    () => this.ricercaViste().trim().length > 0,
+  );
+
+  protected onRicercaViste(e: Event): void {
+    this.ricercaViste.set((e.target as HTMLInputElement).value);
+  }
+
+  protected azzeraRicercaViste(): void {
+    this.ricercaViste.set('');
+  }
 
   private loadViews(): void {
     this.viewsLoading.set(true);
@@ -228,41 +318,82 @@ export class AdminParticipationComponent {
     });
   }
 
-  protected toggleLesson(row: LessonViewsRow): void {
-    if (this.openLessonId() === row.lessonId) {
-      this.openLessonId.set(null);
-      return;
-    }
-    this.openLessonId.set(row.lessonId);
+  protected apriLezione(row: LessonViewsRow): void {
+    this.apertaLezioneId.set(row.lessonId);
+    this.caricaSpettatori(row.lessonId);
+  }
+
+  /**
+   * ⚠️ Azzera anche il contenuto e non solo l'id: riaprendo un'altra riga, per
+   * l'istante che precede la risposta si vedrebbe altrimenti l'elenco
+   * precedente sotto il titolo nuovo.
+   */
+  protected chiudiLezione(): void {
+    this.seqDettaglio++;
+    this.apertaLezioneId.set(null);
     this.viewers.set(null);
+    this.viewersError.set(null);
+    this.viewersLoading.set(false);
+  }
+
+  /** «Riprova» dentro la modale: rifà SOLO questa chiamata. */
+  protected riprovaSpettatori(): void {
+    const id = this.apertaLezioneId();
+    if (id) this.caricaSpettatori(id);
+  }
+
+  private caricaSpettatori(lessonId: string): void {
+    const mio = ++this.seqDettaglio;
+    this.viewers.set(null);
+    this.viewersError.set(null);
     this.viewersLoading.set(true);
-    this.lessonsApi.viewers(row.lessonId).subscribe({
+    this.lessonsApi.viewers(lessonId).subscribe({
       next: (people) => {
+        if (mio !== this.seqDettaglio) return;
         this.viewers.set(people);
         this.viewersLoading.set(false);
       },
-      error: () => {
-        this.viewers.set([]);
+      error: (err: unknown) => {
+        if (mio !== this.seqDettaglio) return;
         this.viewersLoading.set(false);
+        this.viewersError.set(
+          apiErrorMessage(err, 'Caricamento spettatori non riuscito.'),
+        );
       },
     });
   }
 
-  protected toggle(session: LiveSession): void {
-    if (this.openId() === session.id) {
-      this.openId.set(null);
-      return;
-    }
-    this.openId.set(session.id);
+  protected apriSessione(session: LiveSession): void {
+    this.apertaSessioneId.set(session.id);
+    this.caricaReport(session.id);
+  }
+
+  protected chiudiSessione(): void {
+    this.seqDettaglio++;
+    this.apertaSessioneId.set(null);
+    this.report.set(null);
+    this.reportError.set(null);
+    this.reportLoading.set(false);
+  }
+
+  protected riprovaReport(): void {
+    const id = this.apertaSessioneId();
+    if (id) this.caricaReport(id);
+  }
+
+  private caricaReport(sessionId: string): void {
+    const mio = ++this.seqDettaglio;
     this.report.set(null);
     this.reportError.set(null);
     this.reportLoading.set(true);
-    this.liveApi.getAttendance(session.id).subscribe({
+    this.liveApi.getAttendance(sessionId).subscribe({
       next: (report) => {
+        if (mio !== this.seqDettaglio) return;
         this.report.set(report);
         this.reportLoading.set(false);
       },
       error: (err: unknown) => {
+        if (mio !== this.seqDettaglio) return;
         this.reportLoading.set(false);
         this.reportError.set(
           apiErrorMessage(err, 'Caricamento presenze non riuscito.'),

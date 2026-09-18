@@ -55,14 +55,27 @@
   }
 }
 
-.mo__testa,
-.mo__piede,
 // ── Il piede: le azioni del form, che NON scorrono ─────────────────────────
 //
 // ⚠️ Esiste perché prima non esisteva: il chiamante metteva Salva e Annulla
 // dentro il corpo scorrevole, e su un form più alto della finestra i due
 // pulsanti scorrevano via. Su una modale che sostituisce un pannello inline è
 // il difetto che renderebbe la sostituzione un peggioramento.
+//
+// ⚠️ `.mo__testa` stava in QUESTA lista di selettori, e non doveva: questo
+// blocco di commento era finito in mezzo alla lista, che leggeva «testa,
+// piede, <commento>, piede» — quindi la testata prendeva dal piede il
+// `flex-wrap: wrap`, il filetto superiore e lo `:empty`. Il sintomo vivo era
+// uno solo, ed è invisibile finché i titoli sono corti: con un titolo che va a
+// capo la ✕ **scendeva sotto il titolo e si spostava a sinistra** (una riga
+// sola in un contenitore `space-between` va all'inizio). Trovato guardando la
+// modale delle presenze, dove il titolo porta il nome della lezione.
+//
+// ⚠️ E qui dentro il nome di questa classe non va MAI scritto seguito dalla
+// graffa: `bersagli-tocco.test.mjs` cerca quel selettore con un `indexOf` e poi
+// bilancia le parentesi, quindi lo troverebbe nel commento e uscirebbe dal
+// file senza misurare niente — cioè un commento spegnerebbe la guardia. Preso
+// dalla guardia stessa, al primo giro.
 .mo__piede {
   display: flex;
   flex-wrap: wrap;
@@ -106,6 +119,12 @@
 
 .mo__testa {
   display: flex;
+  // ⚠️ `nowrap` DICHIARATO e non lasciato al default: è il valore giusto e
+  // basterebbe non scriverlo, ma qui è anche la riparazione di cui sopra —
+  // scritto, chi rimettesse la testata in una lista di selettori del piede se
+  // ne accorgerebbe. A stringersi è il titolo (`.mo__titoli` ha `min-width: 0`
+  // apposta), mai la ✕, che ha `flex: none`.
+  flex-wrap: nowrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
