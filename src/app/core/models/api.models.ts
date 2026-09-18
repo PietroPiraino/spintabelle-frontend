@@ -22,6 +22,14 @@ export interface User {
   email: string;
   /** assente per gli account creati prima dell'introduzione del nickname */
   nickname?: string;
+  /**
+   * Il nome da mostrare nella sala live (facoltativo, dal 18/09/2026).
+   *
+   * ⚠️ Non è `displayName`: quello, in `auth.service.ts`, è un `computed` che
+   * significa «il nome nell'header del sito». Questo vale SOLO dentro la sala.
+   * `null` = non impostato → in sala compare il nickname.
+   */
+  nomeSala?: string | null;
   role: Role;
   verified: boolean;
   /** scadenza abbonamento (ISO) se tier attivo; null/assente per USER e ADMIN */
@@ -736,6 +744,12 @@ export interface LessonViewsRow {
 export interface LiveAttendanceEntry {
   userId: string;
   nickname: string;
+  /**
+   * Il nome con cui era in sala, solo se DIVERSO dal nickname. `null` sulle
+   * righe scritte prima del 18/09/2026 e su chi non ha impostato un nome: lì
+   * il pannello mostra il solo nickname, come ha sempre fatto.
+   */
+  nomeSala?: string | null;
   ruolo: 'coach' | 'audience';
   primoIngresso: string;
   ultimaUscita: string | null;
