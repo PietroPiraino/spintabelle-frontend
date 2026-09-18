@@ -46,7 +46,7 @@ describe('AccountProfiloComponent — dati di profilo', () => {
     await ctx.stabilizza();
     const primo = ctx.el.querySelector('[aria-labelledby="pr-profilo"] [role="status"]')!;
     expect(primo.textContent).toContain('Profilo aggiornato.');
-    expect(ctx.auth.updateProfile).toHaveBeenCalledWith({ email: 'rossana@example.it', nickname: 'NuovoNick' });
+    expect(ctx.auth.updateProfile).toHaveBeenCalledWith({ email: 'rossana@example.it', nickname: 'NuovoNick', nomeSala: '' });
   });
 
   it('non verificato che cambia SOLO il nickname: il messaggio non parla di email', async () => {
@@ -74,7 +74,7 @@ describe('AccountProfiloComponent — dati di profilo', () => {
     expect(conferma.getAttribute('role')).toBe('group');
     bottone(ctx, 'Sì, cambia email').click();
     await ctx.stabilizza();
-    expect(ctx.auth.updateProfile).toHaveBeenCalledWith({ email: 'Nuova@Example.it', nickname: 'MadRoxKO' });
+    expect(ctx.auth.updateProfile).toHaveBeenCalledWith({ email: 'Nuova@Example.it', nickname: 'MadRoxKO', nomeSala: '' });
     expect(ctx.el.querySelector('[aria-labelledby="pr-profilo"] .is-success')!.textContent).toContain('Hai cambiato email');
   });
 
@@ -97,6 +97,85 @@ describe('AccountProfiloComponent — dati di profilo', () => {
     expect(nick.getAttribute('aria-describedby')).toBe('nickname-errore');
     expect(ctx.el.querySelector('#nickname-errore')).not.toBeNull();
     expect(nick.getAttribute('autocomplete')).toBe('nickname');
+  });
+});
+
+describe('AccountProfiloComponent — il nome da mostrare in sala', () => {
+  it('⚠️ l’anteprima cambia MENTRE si digita', async () => {
+    // È la prova che impedisce di «semplificare» l'anteprima in un `computed`
+    // che legge il `FormControl`: un FormGroup non è un signal, quel computed
+    // non si ricalcolerebbe mai e l'anteprima resterebbe congelata al valore
+    // di partenza — cioè mentirebbe proprio nell'istante in cui la si guarda.
+    const ctx = await apri();
+    const aiuto = () => ctx.el.querySelector('#nomesala-aiuto')!.textContent ?? '';
+    expect(aiuto()).toContain('MadRoxKO'); // a campo vuoto: il nickname
+
+    digita(input(ctx, 'nomeSala'), 'Mario');
+    await ctx.stabilizza();
+    expect(aiuto()).toContain('Mario');
+  });
+
+  it('a campo vuoto l’anteprima dice il nickname, non una riga vuota', async () => {
+    const ctx = await apri();
+    expect(input(ctx, 'nomeSala').value).toBe('');
+    expect(ctx.el.querySelector('#nomesala-aiuto')!.textContent).toContain(
+      'MadRoxKO',
+    );
+  });
+
+  it('⚠️ l’aiuto dichiara CHI lo vede: è l’informativa del campo', async () => {
+    // Su questa frase poggia la legittimità di mostrare il proprio nome agli
+    // altri partecipanti (voce di registro A10): chi compila sa in anticipo
+    // chi lo leggerà. Accorciarla cambia il trattamento, non il testo.
+    const ctx = await apri();
+    const aiuto = ctx.el.querySelector('#nomesala-aiuto')!.textContent ?? '';
+    expect(aiuto).toContain('coach');
+    expect(aiuto).toContain('altri partecipanti');
+    // E il caveat del token: il nome si vede al prossimo ingresso, non subito.
+    expect(aiuto).toContain('prossimo ingresso');
+  });
+
+  it('il nome viaggia col salvataggio del profilo', async () => {
+    const ctx = await apri();
+    digita(input(ctx, 'nomeSala'), 'Mario Rossi');
+    bottone(ctx, 'Salva modifiche').click();
+    await ctx.stabilizza();
+    expect(ctx.auth.updateProfile).toHaveBeenCalledWith({
+      email: 'rossana@example.it',
+      nickname: 'MadRoxKO',
+      nomeSala: 'Mario Rossi',
+    });
+  });
+
+  it('svuotarlo manda la stringa vuota: è la cancellazione', async () => {
+    const ctx = await apri({ auth: authStub(utente({ nomeSala: 'Mario' })) });
+    expect(input(ctx, 'nomeSala').value).toBe('Mario');
+    digita(input(ctx, 'nomeSala'), '');
+    bottone(ctx, 'Salva modifiche').click();
+    await ctx.stabilizza();
+    expect(ctx.auth.updateProfile).toHaveBeenCalledWith(
+      jasmine.objectContaining({ nomeSala: '' }),
+    );
+  });
+
+  it('⚠️ cambiare SOLO il nome non fa scattare la conferma dell’email', async () => {
+    const ctx = await apri();
+    digita(input(ctx, 'nomeSala'), 'Mario');
+    bottone(ctx, 'Salva modifiche').click();
+    await ctx.stabilizza();
+    expect(ctx.el.querySelector('#conferma-email')).toBeNull();
+    expect(ctx.auth.updateProfile).toHaveBeenCalled();
+  });
+
+  it('un nome non ammesso è segnalato sul campo, non al salvataggio', async () => {
+    const ctx = await apri();
+    digita(input(ctx, 'nomeSala'), 'M'); // sotto i due caratteri
+    bottone(ctx, 'Salva modifiche').click();
+    await ctx.stabilizza();
+    const campo = input(ctx, 'nomeSala');
+    expect(campo.getAttribute('aria-invalid')).toBe('true');
+    expect(campo.getAttribute('aria-describedby')).toBe('nomesala-errore');
+    expect(ctx.el.querySelector('#nomesala-errore')).not.toBeNull();
   });
 });
 

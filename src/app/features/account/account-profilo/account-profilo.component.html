@@ -1,7 +1,10 @@
 <!-- ── Dati di profilo ──────────────────────────────────────────────────── -->
 <section class="card card--pad blocco" aria-labelledby="pr-profilo">
   <h2 id="pr-profilo">Dati di profilo</h2>
-  <p class="blocco__intro">Aggiorna la tua email o il tuo nickname.</p>
+  <p class="blocco__intro">
+    Aggiorna la tua email, il tuo nickname o il nome con cui compari nelle
+    lezioni dal vivo.
+  </p>
 
   <!-- Regione live PERSISTENTE: esiste prima dell'azione, così l'esito che vi
        compare viene annunciato -->
@@ -67,6 +70,50 @@
       @if (profileForm.controls.nickname.touched && profileForm.controls.nickname.invalid) {
         <span id="nickname-errore" class="field-error">
           3–24 caratteri: lettere, numeri, punto, trattino o underscore.
+        </span>
+      }
+    </div>
+
+    <!--
+      ⚠️ Questa riga di aiuto NON è stile: è l'informativa del campo. Chi lo
+      compila sa, PRIMA di scriverlo, chi lo vedrà — ed è da lì che viene la
+      legittimità di mostrare il proprio nome agli altri partecipanti. Non
+      accorciarla.
+      ⚠️ L'anteprima legge `profileForm.controls.nomeSala.value` DAL TEMPLATE e
+      non da un `computed`: un `computed` che legge un `FormControl` non si
+      ricalcola mai — un FormGroup non è un signal — e l'anteprima resterebbe
+      congelata al valore di partenza, cioè mentirebbe proprio mentre si
+      digita. Qui funziona anche in zoneless perché l'evento passa dal
+      ControlValueAccessor, che è un listener registrato da Angular.
+    -->
+    <div class="field">
+      <label for="nomeSala">Nome da mostrare nella sala live</label>
+      <input
+        id="nomeSala"
+        type="text"
+        class="input"
+        formControlName="nomeSala"
+        maxlength="32"
+        autocomplete="off"
+        placeholder="Facoltativo — es. Mario"
+        [attr.aria-invalid]="profileForm.controls.nomeSala.touched && profileForm.controls.nomeSala.invalid ? 'true' : null"
+        [attr.aria-describedby]="profileForm.controls.nomeSala.touched && profileForm.controls.nomeSala.invalid ? 'nomesala-errore' : 'nomesala-aiuto'"
+        [class.is-invalid]="profileForm.controls.nomeSala.touched && profileForm.controls.nomeSala.invalid"
+      />
+      <span id="nomesala-aiuto" class="nota">
+        Durante le lezioni dal vivo comparirai come
+        <strong>{{ profileForm.controls.nomeSala.value.trim() || user()?.nickname }}</strong>
+        invece che col nickname: lo vedono il coach e gli altri partecipanti,
+        col tuo nickname <strong>{{ user()?.nickname }}</strong> accanto
+        nell'elenco dei presenti, così chi tiene la lezione ti ricollega a
+        Discord. Lascialo vuoto per restare
+        <strong>{{ user()?.nickname }}</strong>. Il nome nuovo si vede dal
+        <strong>prossimo ingresso</strong> in sala: se sei dentro adesso, esci e
+        rientra.
+      </span>
+      @if (profileForm.controls.nomeSala.touched && profileForm.controls.nomeSala.invalid) {
+        <span id="nomesala-errore" class="field-error">
+          2–32 caratteri: lettere, numeri, spazi, apostrofi, punti e trattini.
         </span>
       }
     </div>

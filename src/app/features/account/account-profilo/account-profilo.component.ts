@@ -88,6 +88,22 @@ export class AccountProfiloComponent {
         Validators.pattern(/^[a-zA-Z0-9_.-]+$/),
       ],
     ],
+    /**
+     * Il nome da mostrare nella sala live (voce di registro A10).
+     *
+     * ⚠️ Facoltativo, e la regola NON è quella del nickname: qui servono
+     * spazi, accenti e apostrofi — «Mario Rossi», «Niccolò», «D'Amico».
+     * Specchio della regex del DTO, che è una lista di ciò che si ammette
+     * (e quindi esclude a-capo, invisibili ed emoji per costruzione).
+     * ⚠️ `^$|` in testa: la stringa vuota è valida ed è la cancellazione.
+     */
+    nomeSala: [
+      '',
+      [
+        Validators.maxLength(32),
+        Validators.pattern(/^$|^[\p{L}\p{N}][\p{L}\p{N} '’._-]{1,31}$/u),
+      ],
+    ],
   });
   protected readonly profileSaving = signal(false);
   protected readonly profileError = signal<string | null>(null);
@@ -105,6 +121,7 @@ export class AccountProfiloComponent {
     this.profileForm.patchValue({
       email: u?.email ?? '',
       nickname: u?.nickname ?? '',
+      nomeSala: u?.nomeSala ?? '',
     });
     this.notifyNewLessons.set(u?.notifyNewLessons ?? true);
   }
@@ -143,8 +160,8 @@ export class AccountProfiloComponent {
     this.profileMsg.set(null);
     this.confermaEmail.set(null);
 
-    const { email, nickname } = this.profileForm.getRawValue();
-    this.auth.updateProfile({ email, nickname }).subscribe({
+    const { email, nickname, nomeSala } = this.profileForm.getRawValue();
+    this.auth.updateProfile({ email, nickname, nomeSala }).subscribe({
       next: (user) => {
         this.profileSaving.set(false);
         // Il form si riallinea al valore NORMALIZZATO (il server salva
@@ -152,6 +169,7 @@ export class AccountProfiloComponent {
         this.profileForm.patchValue({
           email: user.email,
           nickname: user.nickname ?? '',
+          nomeSala: user.nomeSala ?? '',
         });
         // ⚠️ Il messaggio si sceglie confrontando le email, non su
         // `verified`: un non verificato che cambia solo il nickname leggeva

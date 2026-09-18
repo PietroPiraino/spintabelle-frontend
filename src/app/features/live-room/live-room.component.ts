@@ -40,6 +40,12 @@ interface ChatMessage {
 interface RosterEntry {
   identity: string;
   name: string;
+  /**
+   * Il nickname, dai metadata del token. `null` quando coincide col nome —
+   * cioè per chi non ha impostato un «nome in sala» — così l'elenco non
+   * stampa due volte la stessa stringa, una sotto l'altra.
+   */
+  nick: string | null;
   canPublish: boolean;
   micActive: boolean; // microfono pubblicato e non mutato
   canScreen: boolean; // il coach gli ha concesso lo schermo (attributo presenter)
@@ -757,23 +763,61 @@ export class LiveRoomComponent implements OnDestroy {
     }
   }
 
+  /**
+   * Il nickname dai metadata del partecipante (`{role, nick}`).
+   *
+   * ⚠️ Best-effort e mai lanciante: i metadata sono una stringa che arriva
+   * dalla rete, e un `JSON.parse` che lancia dentro `rebuildRoster()`
+   * svuoterebbe l'elenco dei presenti a metà ricostruzione. Chi entra con un
+   * token coniato prima del 18/09/2026 non ha la chiave, e va bene: `null`.
+   */
+  private nickDi(rp: { metadata?: string }): string | null {
+    if (!rp.metadata) return null;
+    try {
+      const m = JSON.parse(rp.metadata) as { nick?: unknown };
+      return typeof m.nick === 'string' && m.nick ? m.nick : null;
+    } catch {
+      return null;
+    }
+  }
+
   private rebuildRoster(): void {
     if (!this.room) return;
     const list: RosterEntry[] = [];
     this.room.remoteParticipants.forEach((rp) => {
+      // ⚠️ Il Room Composite della registrazione entra in stanza COME
+      // PARTECIPANTE: senza questo filtro, durante ogni live registrata
+      // l'elenco dei presenti mostra uno studente fantasma col suo identity
+      // tecnico. È la stessa trappola che `live-attendance.service.ts` filtra
+      // da sempre lato server, ripetuta qui e rimasta scoperta fino al
+      // 18/09/2026.
+      // ⚠️ Letto dal modulo caricato e confrontato solo se esiste: nei test il
+      // loader è uno stub, e un `this.lk.ParticipantKind.EGRESS` secco
+      // lancerebbe lì invece che in produzione. Senza l'enum non si filtra —
+      // cioè il comportamento di prima, mai un filtro che scarta tutti.
+      const egress = this.lk?.ParticipantKind?.EGRESS;
+      if (egress !== undefined && rp.kind === egress) return;
       const micPub = this.lk
         ? rp.getTrackPublication(this.lk.Track.Source.Microphone)
         : undefined;
+      const name = rp.name || rp.identity;
+      const nick = this.nickDi(rp);
       list.push({
         identity: rp.identity,
-        name: rp.name || rp.identity,
+        name,
+        // Il confronto si fa QUI e non nel template: è una decisione sui dati,
+        // e nel template sarebbe ripetuta in ogni punto che la legge.
+        nick:
+          nick && nick.toLowerCase() !== name.trim().toLowerCase() ? nick : null,
         canPublish: !!rp.permissions?.canPublish,
         micActive: !!micPub && !micPub.isMuted,
         canScreen: rp.attributes?.['presenter'] === 'true',
         quality: this.normQuality(rp.connectionQuality),
       });
     });
-    list.sort((a, b) => a.name.localeCompare(b.name));
+    // ⚠️ `localeCompare` e non `<`: da quando il nome può portare accenti e
+    // spazi, un confronto di code unit metterebbe «Álvaro» dopo «Zoe».
+    list.sort((a, b) => a.name.localeCompare(b.name, 'it', { sensitivity: 'base' }));
     this.roster.set(list);
   }
 

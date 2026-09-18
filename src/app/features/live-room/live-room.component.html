@@ -390,6 +390,17 @@
                     <span class="sr-only">Sta parlando.</span>
                   }
                   {{ p.name }}
+                  <!--
+                    ⚠️ Il nickname sotto il nome: serve a chi conduce per
+                    ricollegare la persona al canale Discord della scuola, ed è
+                    la ragione per cui il nome in sala esiste. Compare SOLO
+                    quando differisce dal nome (il confronto lo fa
+                    `rebuildRoster`), o chi non l'ha impostato leggerebbe la
+                    stessa stringa due volte.
+                  -->
+                  @if (p.nick) {
+                    <span class="live-room__roster-nick">{{ p.nick }}</span>
+                  }
                   @if (p.canScreen) {
                     <span class="badge live-room__flag" title="può condividere lo schermo">
                       <app-icon name="screen-share" [size]="13" />

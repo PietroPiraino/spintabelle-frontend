@@ -680,6 +680,22 @@
     }
   }
 
+  // Il nickname sotto il nome scelto per la sala (dal 18/09/2026).
+  //
+  // ⚠️ `display: block` e non uno `<span>` in linea: sta DENTRO
+  // `&__roster-name`, che è in grassetto — in linea leggerebbe «Mario
+  // fishkiller» come se fossero due parole dello stesso nome. Va a capo, con
+  // il peso e il colore di un sotto-testo, come la cella d'identità del
+  // pannello admin.
+  &__roster-nick {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    word-break: break-word;
+  }
+
   // Coach: azioni per-utente come ICONE con tooltip (mic / schermo / espelli).
   &__roster-actions {
     display: flex;

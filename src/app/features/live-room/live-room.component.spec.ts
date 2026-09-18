@@ -33,7 +33,24 @@ class FakeRoom {
 const fakeLiveKit = {
   Room: FakeRoom,
   RoomEvent: new Proxy({}, { get: (_t, p) => p }),
+  Track: { Source: { Microphone: 'microphone' } },
+  // ⚠️ Il valore non conta, conta che sia lo STESSO che portano i partecipanti
+  // finti: il filtro del recorder confronta `rp.kind` con questo.
+  ParticipantKind: { STANDARD: 0, EGRESS: 2 },
 };
+
+/** Un partecipante remoto finto, quel tanto che basta a `rebuildRoster()`. */
+const partecipante = (over: Record<string, unknown> = {}) => ({
+  identity: 'u1',
+  name: 'fishkiller',
+  metadata: undefined as string | undefined,
+  kind: 0,
+  permissions: { canPublish: false },
+  attributes: {} as Record<string, string>,
+  connectionQuality: 'excellent',
+  getTrackPublication: () => undefined,
+  ...over,
+});
 
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 6; i++) await Promise.resolve();
@@ -41,6 +58,11 @@ const flush = async (): Promise<void> => {
 };
 
 type Probe = { state: () => string; role: () => string };
+type RosterProbe = {
+  rebuildRoster: () => void;
+  roster: () => { identity: string; name: string; nick: string | null }[];
+  room: { remoteParticipants: Map<string, unknown> } | null;
+};
 type RecProbe = {
   applyRecording: (active: boolean, anchorIso?: string | null) => void;
   recElapsed: () => string;
@@ -148,5 +170,86 @@ describe('LiveRoomComponent', () => {
     probe.applyRecording(true);
     expect(probe.recElapsed()).toBe('00:00');
     fixture.destroy();
+  });
+
+  describe('elenco dei presenti', () => {
+    /** Connette la stanza e mette dentro i partecipanti finti. */
+    async function conPartecipanti(
+      ps: ReturnType<typeof partecipante>[],
+    ): Promise<RosterProbe> {
+      const tok = jasmine
+        .createSpy('getRoomToken')
+        .and.returnValue(
+          of({ token: 't', url: 'wss://x.livekit.cloud', role: 'coach' }),
+        );
+      configure(tok);
+      const fixture = create();
+      await flush();
+      const probe = fixture.componentInstance as unknown as RosterProbe;
+      for (const p of ps) probe.room!.remoteParticipants.set(p.identity, p);
+      probe.rebuildRoster();
+      return probe;
+    }
+
+    it('⚠️ il nickname compare SOLO se differisce dal nome mostrato', async () => {
+      // Chi non ha impostato un nome in sala ha nome e nick uguali: stamparli
+      // entrambi significherebbe la stessa stringa due volte, una sotto
+      // l'altra.
+      const probe = await conPartecipanti([
+        partecipante({
+          identity: 'a',
+          name: 'Mario Rossi',
+          metadata: JSON.stringify({ role: 'audience', nick: 'fishkiller' }),
+        }),
+        partecipante({
+          identity: 'b',
+          name: 'zorro',
+          metadata: JSON.stringify({ role: 'audience', nick: 'zorro' }),
+        }),
+      ]);
+      const mario = probe.roster().find((p) => p.identity === 'a')!;
+      expect(mario.name).toBe('Mario Rossi');
+      expect(mario.nick).toBe('fishkiller');
+      const zorro = probe.roster().find((p) => p.identity === 'b')!;
+      expect(zorro.nick).toBeNull();
+    });
+
+    it('metadata assenti o illeggibili: nessun nick e nessuna eccezione', async () => {
+      // I metadata sono una stringa che arriva dalla rete: un `JSON.parse` che
+      // lancia qui svuoterebbe l'elenco a metà ricostruzione.
+      const probe = await conPartecipanti([
+        partecipante({ identity: 'a', metadata: undefined }),
+        partecipante({ identity: 'b', name: 'x', metadata: 'non-un-json{' }),
+      ]);
+      expect(probe.roster()).toHaveSize(2);
+      expect(probe.roster().every((p) => p.nick === null)).toBeTrue();
+    });
+
+    it('⚠️ il recorder non compare fra i presenti', async () => {
+      // Il Room Composite della registrazione entra in stanza COME
+      // partecipante: senza il filtro, ogni live registrata mostrava uno
+      // studente fantasma col suo identity tecnico.
+      const probe = await conPartecipanti([
+        partecipante({ identity: 'a', name: 'Mario' }),
+        partecipante({ identity: 'EG_xyz', name: '', kind: 2 }),
+      ]);
+      expect(probe.roster()).toHaveSize(1);
+      expect(probe.roster()[0].identity).toBe('a');
+    });
+
+    it('l’ordine è alfabetico e regge gli accenti', async () => {
+      // Da quando il nome porta accenti e spazi, un confronto di code unit
+      // metterebbe «Álvaro» dopo «Zoe».
+      const probe = await conPartecipanti([
+        partecipante({ identity: 'z', name: 'Zoe' }),
+        partecipante({ identity: 'a', name: 'Álvaro' }),
+        partecipante({ identity: 'm', name: 'mario' }),
+      ]);
+      expect(probe.roster().map((p) => p.name)).toEqual([
+        'Álvaro',
+        'mario',
+        'Zoe',
+      ]);
+    });
   });
 });

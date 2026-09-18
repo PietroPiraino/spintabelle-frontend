@@ -176,6 +176,8 @@ export class AuthService {
     email?: string;
     nickname?: string;
     notifyNewLessons?: boolean;
+    /** Il nome in sala: stringa vuota = cancella (il server fa `$unset`). */
+    nomeSala?: string;
   }): Observable<User> {
     return this.http
       .patch<User>(`${API}/account/profile`, patch)
