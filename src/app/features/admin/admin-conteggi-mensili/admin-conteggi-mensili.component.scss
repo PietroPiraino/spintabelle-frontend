@@ -335,6 +335,29 @@
     max-width: 13rem;
   }
 
+  // ⚠️⚠️ E NON BASTAVA: a 1100px gli stakati sfondavano comunque di 57px, con
+  // l'identità già al suo tetto di 13rem (208px misurati). Le dieci colonne
+  // sono tutte al minimo — quattro portano un campo da compilare largo 22-36px
+  // — quindi non c'era una colonna «grassa» da stringere: lo spazio era nei
+  // PADDING, 0.6rem per lato × 10 colonne × 2 lati.
+  //
+  // ⚠️ Si stringe solo la fascia 721-1200px, che è l'unica in cui il problema
+  // esiste: a 1024 la sidebar collassa e lo spazio TORNA a 984px, a 1280 e
+  // 1440 ce n'è d'avanzo. Applicarlo sempre pagherebbe densità dove non serve.
+  // Misurato: 57px di sfondamento → 0, righe invariate a 45px, e regge anche
+  // col nome più lungo e la pastiglia «Non corrisponde» accanto.
+  //
+  // ⚠️ Le alternative sono state PROVATE e scartate: togliere un bottone dalla
+  // colonna azioni lascia 13px di sfondamento (e costerebbe il comando «Porta
+  // sul registro», che è il gesto del mese); stringere ancora l'identità
+  // taglia il nome del giocatore, che è la cosa che si legge per prima.
+  @media (min-width: #{s.$bp-tabella-blocchi + 1}) and (max-width: 1200px) {
+    &.cm__stakati th,
+    &.cm__stakati td {
+      padding-inline: 0.4rem;
+    }
+  }
+
   // Le celle calcolate si distinguono da quelle che si compilano: sono in sola
   // lettura, e senza una differenza visiva si prova a cliccarci dentro.
   .cm__calcolata {

@@ -454,7 +454,19 @@
 // 9,6 di padding di cella fanno 49,2px: una tabella meno densa proprio per la
 // modifica fatta per renderla più densa. Il padding ORIZZONTALE resta — è
 // quello che disegna la pillola.
-.admin-table__ident .badge {
+//
+// ⚠️ **E vale anche per `.admin-stato`**, dal 18/09/2026. Questa regola
+// nominava il solo `.badge`, che era l'unica pillola esistente quando fu
+// scritta; `.admin-stato` è nata il 07/09/2026 promuovendo le cinque copie
+// sparse per il pannello, e con un padding proprio — quindi una pastiglia di
+// STATO dentro l'identità ricadeva fuori da questa riga e la riga cresceva.
+// Misurato su «Soci» dei conteggi mensili: 48px contro il tetto di 46 a tutte
+// e quattro le larghezze, mentre la riga gemella senza pastiglia stava a 44,6.
+// ⚠️ Cresce solo dove c'è ANCHE un sotto-testo (il `min-height: 2lh` assorbe
+// il resto), ed è la ragione per cui il difetto è rimasto invisibile: le altre
+// tabelle che mettono una pastiglia lì dentro non hanno la seconda riga.
+.admin-table__ident .badge,
+.admin-table__ident .admin-stato {
   padding-block: 0;
 }
 
