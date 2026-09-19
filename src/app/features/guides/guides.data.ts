@@ -287,7 +287,12 @@ export const GUIDE: readonly Guide[] = [
       { q: 'Twister e Spin & Go sono lo stesso gioco?', a: 'È lo stesso formato con nomi diversi su sale diverse. Cambiano i moltiplicatori disponibili, il rake e la soglia oltre la quale il montepremi si divide fra più posti. La struttura di base resta identica, cioè tre giocatori, 25 bb, livelli rapidi e montepremi estratto, e con essa quasi tutta la strategia che studi.' },
       { q: 'Da quale buy-in ha senso iniziare?', a: 'Da uno che puoi permetterti di perdere molte volte di fila senza che la cosa pesi, perché in questo formato succede anche giocando bene. Il rischio economico è reale e nessuno può garantirti un esito. La scelta del livello è una decisione di gestione del rischio, non di ambizione: si sale quando le decisioni sono stabili, non quando si è impazienti.' },
     ],
-    correlate: ['perche-il-3max-hyper-turbo-si-decide-preflop', 'push-fold-spin-and-go', 'spin-and-go-vs-twister'],
+    correlate: [
+      'strategia-spin-and-go',
+      'perche-il-3max-hyper-turbo-si-decide-preflop',
+      'push-fold-spin-and-go',
+      'spin-and-go-vs-twister',
+    ],
   },
   {
     slug: 'bankroll-spin-and-go',
@@ -374,7 +379,12 @@ export const GUIDE: readonly Guide[] = [
       { q: 'Cambia qualcosa sui Twister o sui formati con ante e stack asimmetrici?', a: 'Il Twister è lo stesso gioco su altre sale: cambiano i moltiplicatori disponibili, il rake e la soglia oltre la quale il montepremi si divide fra più posti, quindi cambia la distribuzione dei risultati e il conto va rifatto sulla struttura che giochi davvero. L\'ante e gli stack asimmetrici pesano sulla strategia molto più che sul bankroll.' },
       { q: 'Meglio molto volume a un limite basso o poco volume a un limite alto?', a: 'Volume dove il fondo è profondo. Su un limite in cui il bankroll è corto ogni decisione viene presa con la paura addosso, e i tornei che giochi sono troppo pochi per capire se il tuo vantaggio esiste. Il limite più basso non è una punizione: è la condizione che ti permette di accumulare i dati e le ore che servono.' },
     ],
-    correlate: ['varianza-spin-and-go', 'errori-comuni-spin-and-go', 'spin-and-go-vs-twister'],
+    correlate: [
+      'strategia-spin-and-go',
+      'varianza-spin-and-go',
+      'errori-comuni-spin-and-go',
+      'spin-and-go-vs-twister',
+    ],
   },
   {
     slug: 'push-fold-spin-and-go',
@@ -460,7 +470,12 @@ export const GUIDE: readonly Guide[] = [
       { q: 'Perché la tabella cambia se l\'avversario ha già rilanciato?', a: 'Perché il suo range non è più sconosciuto. Contro una spinta o un rilancio hai un\'informazione che prima non avevi, e la domanda diventa quanto spesso sei avanti contro le mani con cui lui agisce, non quanto spesso lo fai passare. Per questo esiste un nodo diverso per ogni sequenza di azioni, e non una tabella sola per ogni stack.' },
       { q: 'Quanto conta lo stack degli avversari e non solo il mio?', a: 'Conta quello effettivo, cioè il minore fra il tuo e quello di chi può pagarti: è il massimo che può cambiare di mano. Se hai 20 big blind ma dietro c\'è un avversario con 6, contro di lui stai giocando uno spot da 6. Nei formati asimmetrici, dove uno dei bui parte più corto, questa distinzione è il punto di partenza di ogni ragionamento.' },
     ],
-    correlate: ['perche-il-3max-hyper-turbo-si-decide-preflop', 'heads-up-spin-and-go', 'errori-comuni-spin-and-go'],
+    correlate: [
+      'strategia-spin-and-go',
+      'perche-il-3max-hyper-turbo-si-decide-preflop',
+      'heads-up-spin-and-go',
+      'errori-comuni-spin-and-go',
+    ],
   },
   {
     slug: 'varianza-spin-and-go',
@@ -551,7 +566,12 @@ export const GUIDE: readonly Guide[] = [
       { q: 'Con un bankroll grande il rischio di rovina si azzera?', a: 'No, si riduce. Con un margine positivo la probabilità di rovina scende rapidamente nelle prime decine di buy-in e poi si appiattisce: ogni buy-in in più compra meno sicurezza del precedente. Con margine nullo o negativo nessuna dimensione basta, perché il tempo lavora contro. E resta comunque un rischio economico reale, non un parametro che si porta a zero.' },
       { q: 'L\'ICM cambia qualcosa in un formato del genere?', a: 'Molto meno che in un torneo a più posti pagati. Nella grande maggioranza dei tornei prende tutto il primo, quindi il secondo e il terzo posto valgono lo stesso, cioè niente, e non c\'è nessuna scaletta di premi da difendere. Una scaletta esiste solo sui moltiplicatori alti, che sono rari: trattare l\'ICM come se fosse sempre presente porta a giocare troppo stretto.' },
     ],
-    correlate: ['bankroll-spin-and-go', 'errori-comuni-spin-and-go', 'spin-and-go-vs-twister'],
+    correlate: [
+      'strategia-spin-and-go',
+      'bankroll-spin-and-go',
+      'errori-comuni-spin-and-go',
+      'spin-and-go-vs-twister',
+    ],
   },
   {
     slug: 'icm-spin-and-go',
@@ -631,7 +651,12 @@ export const GUIDE: readonly Guide[] = [
       { q: 'Sui moltiplicatori alti conviene giocare per il secondo posto?', a: 'No, l\'obiettivo resta il primo: nella ripartizione tipica la fetta del vincitore è molto più grande di quelle degli altri due. Quello che cambia è il prezzo di un\'eliminazione evitabile, non l\'obiettivo. Tradurre la correzione in «faccio fold a tutto e spero che si scontrino» è solo un altro modo di giocare male quel tavolo.' },
       { q: 'Studiare l\'ICM riduce il rischio?', a: 'No. L\'ICM riguarda come valuti una decisione, non come va a finire: il poker resta un gioco con un rischio economico reale, la varianza non si toglie e nessuno può promettere risultati. Studiarlo serve a smettere di pagare errori evitabili nei pochi tavoli in cui conta, e a non introdurne di nuovi in tutti quelli in cui non conta.' },
     ],
-    correlate: ['push-fold-spin-and-go', 'perche-il-3max-hyper-turbo-si-decide-preflop', 'heads-up-spin-and-go'],
+    correlate: [
+      'strategia-spin-and-go',
+      'push-fold-spin-and-go',
+      'perche-il-3max-hyper-turbo-si-decide-preflop',
+      'heads-up-spin-and-go',
+    ],
   },
   {
     slug: 'spin-and-go-vs-twister',
@@ -722,7 +747,12 @@ export const GUIDE: readonly Guide[] = [
       { q: 'Serve più bankroll su una struttura o sull\'altra?', a: 'Dipende dalla struttura, non dal nome. Una scala di moltiplicatori più lunga verso l\'alto allarga la distribuzione dei risultati e chiede più margine; una soglia di divisione del montepremi più bassa la restringe un po\'. La differenza si stima simulando le due strutture, e resta una stima: il rischio economico non si annulla.' },
       { q: 'Come faccio a sapere quali moltiplicatori esistono dove gioco?', a: 'Sono pubblicati nelle regole del formato, insieme alla ripartizione del montepremi per ogni fascia. È l\'unica fonte da usare: le scale cambiano nel tempo, e un elenco copiato da un forum o da un video di due anni fa descrive spesso una struttura che non esiste più.' },
     ],
-    correlate: ['varianza-spin-and-go', 'bankroll-spin-and-go', 'icm-spin-and-go'],
+    correlate: [
+      'strategia-spin-and-go',
+      'varianza-spin-and-go',
+      'bankroll-spin-and-go',
+      'icm-spin-and-go',
+    ],
   },
   {
     slug: 'scegliere-scuola-poker-spin-and-go',
@@ -808,7 +838,12 @@ export const GUIDE: readonly Guide[] = [
       { q: 'Un gruppo grande è meglio di uno piccolo?', a: 'No, conta la quota di domande che ricevono risposta. Un canale con centinaia di iscritti dove nessuno commenta le mani vale meno di un gruppo piccolo che ne rivede qualcuna ogni settimana. Guarda le ultime dieci domande tecniche: quante hanno sotto una risposta, quanto ci è voluto e chi l\'ha scritta.' },
       { q: 'Se una scuola non parla mai di varianza è un problema?', a: 'È un segnale. Con il moltiplicatore estratto a inizio torneo, 25 big blind di stack e un montepremi quasi sempre tutto al primo, i risultati oscillano molto anche su tratti lunghi. Chi insegna il formato senza mai nominarla o non lo gioca, o sta tenendo fuori dalla vetrina la parte che fa smettere le persone.' },
     ],
-    correlate: ['come-giocare-spin-and-go', 'perche-il-3max-hyper-turbo-si-decide-preflop', 'varianza-spin-and-go'],
+    correlate: [
+      'strategia-spin-and-go',
+      'come-giocare-spin-and-go',
+      'perche-il-3max-hyper-turbo-si-decide-preflop',
+      'varianza-spin-and-go',
+    ],
   },
   {
     slug: 'errori-comuni-spin-and-go',
@@ -899,7 +934,12 @@ export const GUIDE: readonly Guide[] = [
       { q: 'Devo studiare l\'ICM fin da subito?', a: 'Devi sapere che esiste e riconoscere quando serve, cioè nei tornei in cui il montepremi è diviso fra più posti. Applicarlo dappertutto è un errore comune quanto ignorarlo: nella grande maggioranza dei tornei paga solo il primo, e lì la cautela da bolla non ha nulla su cui appoggiarsi.' },
       { q: 'Dopo quanti tornei posso dire se sto migliorando?', a: 'Molti più di quelli che ti aspetti, e comunque il risultato da solo non basta: in un formato dove il montepremi dipende da un\'estrazione, una serie fortunata e una sfortunata si somigliano parecchio finché il campione resta piccolo. È più utile valutare le decisioni, spot per spot, e usare i numeri solo su campioni grandi.' },
     ],
-    correlate: ['push-fold-spin-and-go', 'icm-spin-and-go', 'perche-il-3max-hyper-turbo-si-decide-preflop'],
+    correlate: [
+      'strategia-spin-and-go',
+      'push-fold-spin-and-go',
+      'icm-spin-and-go',
+      'perche-il-3max-hyper-turbo-si-decide-preflop',
+    ],
   },
   {
     slug: 'heads-up-spin-and-go',
@@ -985,7 +1025,12 @@ export const GUIDE: readonly Guide[] = [
       { q: 'Meglio limpare o rilanciare dal bottone?', a: 'Entrambe le linee esistono nelle soluzioni, e alcune varianti del formato tolgono del tutto il limp. Limpare con un range largo richiede un piano contro il rilancio del grande buio, che in due arriva spesso; sotto una certa profondità la domanda sparisce da sola, perché restano solo l\'all-in e il fold.' },
       { q: 'Quanto postflop serve sapere per questa fase?', a: 'Meno di quanto sembri all\'inizio, più di zero. A stack corti buona parte dei piatti si chiude prima del flop, quindi la priorità è avere range coerenti preflop. Quando invece l\'heads-up comincia con stack ancora giocabili, saper condurre i flop fuori posizione è proprio ciò che rende sostenibile difendere largo dal grande buio.' },
     ],
-    correlate: ['push-fold-spin-and-go', 'perche-il-3max-hyper-turbo-si-decide-preflop', 'come-giocare-spin-and-go'],
+    correlate: [
+      'strategia-spin-and-go',
+      'push-fold-spin-and-go',
+      'perche-il-3max-hyper-turbo-si-decide-preflop',
+      'come-giocare-spin-and-go',
+    ],
   },
   {
     slug: 'perche-il-3max-hyper-turbo-si-decide-preflop',
@@ -1077,7 +1122,12 @@ export const GUIDE: readonly Guide[] = [
       { q: 'I riferimenti valgono anche sui formati asimmetrici?', a: 'In parte. La logica è la stessa, i punti di riferimento no: se uno dei bui parte con uno stack più corto, le tre coppie di giocatori hanno profondità effettive diverse e le mani che si spingono cambiano di conseguenza. Conviene guardare l\'albero per quella combinazione di stack invece di adattare a occhio quello simmetrico.' },
       { q: 'Mi serve un solver per studiare questo formato?', a: 'Non per cominciare. Il preflop a queste profondità è già risolto e consultabile: ti serve un albero navigabile con frequenze ed EV per ogni mano, non una macchina da far girare. Un solver diventa utile più avanti, quando vuoi vedere come cambia una risposta al variare di un\'ipotesi. Prima aggiunge lavoro senza aggiungere decisioni migliori.' },
     ],
-    correlate: ['push-fold-spin-and-go', 'come-giocare-spin-and-go', 'icm-spin-and-go'],
+    correlate: [
+      'strategia-spin-and-go',
+      'push-fold-spin-and-go',
+      'come-giocare-spin-and-go',
+      'icm-spin-and-go',
+    ],
   },
   // ⚠️ Query confermata il 19/09/2026 con l'autocompletamento di Google:
   // `spin and go rake`, `rake spin and go`, `spin n go rake`, `spin and go max
