@@ -1079,6 +1079,221 @@ export const GUIDE: readonly Guide[] = [
     ],
     correlate: ['push-fold-spin-and-go', 'come-giocare-spin-and-go', 'icm-spin-and-go'],
   },
+  // ⚠️ Query confermata il 19/09/2026 con l'autocompletamento di Google:
+  // `spin and go rake`, `rake spin and go`, `spin n go rake`, `spin and go max
+  // rake`, `twister poker rake`. Nessuna pagina del sito la trattava, e il rake
+  // e' il costo che decide se il conto sta in piedi.
+  // ⚠️ Il paragrafo sul rakeback resta CONCETTUALE: niente nomi di sala, niente
+  // inviti, nessun collegamento a /affiliazioni — che e' noindex proprio per
+  // l'art. 9 DL 87/2018. Descrivere che cosa sia una restituzione di rake e'
+  // didattica; proporla e' pubblicita'.
+  {
+    slug: 'rake-spin-and-go',
+    titolo: 'Il rake negli Spin & Go: quanto pesa davvero',
+    descrizione:
+      'Quanto costa davvero il rake negli Spin & Go e nei Twister: dove si nasconde, perché una percentuale piccola diventa un numero grande e come tenerne conto.',
+    occhiello: 'Costi e struttura',
+    h1: 'Il rake negli Spin & Go: quanto pesa, e perché non si vede',
+    lead: 'Il rake è il costo del servizio: la parte del tuo iscrizione che non finisce nel montepremi. In un torneo lampo non compare da nessuna parte come voce separata — paghi una cifra tonda e cominci a giocare — e proprio per questo è la spesa che quasi nessuno mette nel conto quando valuta se sta andando bene. Su un formato dove si gioca a volume, è anche la differenza fra un vantaggio reale e un pareggio.',
+    aggiornata: '2026-09-19',
+    sezioni: [
+      {
+        h2: 'Dove si nasconde il rake in un torneo che dura sei minuti',
+        paragrafi: [
+          'In un torneo l\'iscrizione è divisa in due parti: una entra nel montepremi, l\'altra resta a chi organizza. Nei tavoli tradizionali la divisione è scritta accanto al nome del torneo; negli Spin & Go e nei Twister l\'iscrizione è una cifra sola, il moltiplicatore viene estratto dopo, e la separazione non la vedi mai.',
+          'L\'ordine di grandezza è il sette-dieci per cento dell\'iscrizione, e in genere cala man mano che si sale di livello: più alto è il buy-in, più bassa è la percentuale trattenuta. È una differenza che conta, perché è una percentuale applicata a ogni singolo torneo giocato, non una tantum.',
+          'La conseguenza pratica è che il rake si paga sempre: quando vinci, quando arrivi secondo, quando esci alla prima mano. Non dipende dal risultato, dipende dal fatto che ti sei seduto. È l\'unico costo del gioco con questa caratteristica, ed è il motivo per cui va guardato in rapporto al volume e non al singolo torneo.',
+        ],
+      },
+      {
+        h2: 'Perché una percentuale piccola diventa un numero grande',
+        paragrafi: [
+          'Il sette per cento sembra poco finché si guarda un torneo. Il punto è che in questo formato un torneo dura pochi minuti, e chi gioca sul serio ne fa centinaia al mese, spesso su più tavoli insieme. Moltiplica la percentuale per il numero di iscrizioni e ottieni una cifra che in molti casi è più grande del risultato netto della stagione.',
+          'C\'è un modo semplice per farsi un\'idea senza calcoli complicati: prendi quanti tornei hai giocato nell\'ultimo mese, moltiplica per l\'iscrizione, e prendine circa un decimo. Quella è la cifra che hai pagato per sedere al tavolo. Per molti giocatori è la prima volta che la vedono scritta, e cambia il modo in cui leggono i propri risultati.',
+          'È anche il motivo per cui la scelta del livello a cui giocare non è solo una questione di bankroll. Salire di buy-in, dove la percentuale trattenuta è più bassa, riduce il costo relativo; ma alza anche la durezza del campo, e le due cose vanno pesate insieme, non una alla volta.',
+        ],
+      },
+      {
+        h2: 'Il rake mangia il vantaggio, non la varianza',
+        paragrafi: [
+          'È una distinzione che sembra accademica e non lo è. La varianza descrive quanto i risultati oscillano attorno alla media; il rake sposta la media verso il basso senza toccare l\'ampiezza dell\'oscillazione. Detto altrimenti: le curve restano larghe uguale, ma partono più in basso.',
+          'Da qui discendono due conseguenze concrete. La prima è che il punto in cui vai in pari arriva più tardi, quindi serve un campione più lungo prima che i numeri dicano qualcosa di te. La seconda è che il fondo che ti serve si allarga, perché passi più tempo sotto zero prima che il vantaggio si manifesti.',
+          'Quando provi a stimare i tuoi risultati con un simulatore, questo è l\'errore più comune: inserire un vantaggio calcolato al lordo. La curva che ne esce è più ottimistica di quella vera, e lo è in modo sistematico — non in modo casuale — quindi non si corregge da sola guardando più a lungo.',
+        ],
+      },
+      {
+        h2: 'Confrontare il rake fra due strutture senza prendersi in giro',
+        paragrafi: [
+          'La percentuale da sola non basta a dire dove conviene giocare. Due tavoli con lo stesso rake possono avere scale di moltiplicatori diverse, e la scala decide quanta parte del montepremi finisce negli eventi rari che quasi non vedrai mai. A parità di costo, una distribuzione più concentrata sui moltiplicatori bassi rende i risultati più leggibili; una più estrema li rende più rumorosi.',
+          'Conta anche la soglia oltre cui il montepremi si divide fra più posti invece di andare tutto al primo, perché cambia la forma dei risultati e non solo la loro media. E contano le condizioni pratiche: quanti tavoli sono realmente popolati alla tua ora, quanto aspetti per iniziare, quanto è duro chi trovi.',
+          'Il confronto onesto, allora, non è «dove il rake è più basso» ma «dove il conto complessivo funziona meglio per come gioco io». È una domanda con più variabili, e conviene rispondere guardandole insieme invece di ottimizzarne una e scoprire dopo che se ne è rotta un\'altra.',
+        ],
+      },
+      {
+        h2: 'Le restituzioni di rake, lette per quello che sono',
+        paragrafi: [
+          'Esistono meccanismi che restituiscono una parte del rake pagato, sotto forme diverse: programmi a punti, livelli di fedeltà, accordi di varia natura. Sul piano dei conti sono tutti la stessa cosa — una riduzione del costo — e vanno letti così: non sono un guadagno, sono uno sconto su una spesa che hai già sostenuto.',
+          'La distinzione non è pedanteria. Un giocatore che pareggia e riceve indietro una parte del rake non sta guadagnando: sta perdendo meno. Trattare quella cifra come un risultato positivo è il modo più rapido per non accorgersi che il gioco, da solo, non sta funzionando — e per continuare a giocarlo più a lungo di quanto converrebbe.',
+          'Il modo utile di usarla è un altro: sottrarla dal costo per ottenere il rake effettivo, e poi rifare i conti con quel numero. Se con il rake effettivo il vantaggio resta positivo, la restituzione ha reso più solida una situazione già sana. Se il vantaggio diventa positivo solo grazie a quella, il gioco non sta pagando: sta pagando lo sconto.',
+        ],
+      },
+      {
+        h2: 'Che cosa farne, in pratica',
+        paragrafi: [
+          'Tre cose, tutte a costo zero. La prima: calcola una volta quanto rake hai pagato nell\'ultimo mese, con la stima grezza di poco fa. Non serve precisione al centesimo, serve l\'ordine di grandezza, e di solito è sufficiente a cambiare qualche decisione.',
+          'La seconda: quando stimi i risultati futuri, usa un vantaggio già al netto. La terza: considera il rake come uno dei criteri con cui scegli il livello a cui giochi, insieme al fondo che hai e alla durezza del campo — non come l\'unico, e non come l\'ultimo.',
+          'Resta una cosa che nessun conto sul rake può fare: renderti un giocatore migliore. Il costo si ottimizza una volta e poi è fermo; il vantaggio si costruisce sulle decisioni che ripeti centinaia di volte, ed è la parte su cui puoi ancora lavorare quando sul resto non c\'è più niente da limare.',
+        ],
+      },
+    ],
+    strumenti: [
+      { testo: 'il simulatore di varianza', href: '/simulatore-varianza/' },
+      { testo: 'le tabelle preflop', href: '/tabelle/' },
+      { testo: 'gli esercizi di allenamento', href: '/allenamento/' },
+    ],
+    faq: [
+      {
+        q: 'Quanto rake si paga su uno Spin & Go?',
+        a: 'L\'ordine di grandezza è il sette-dieci per cento dell\'iscrizione, e in genere la percentuale cala salendo di buy-in. Non compare come voce separata: paghi una cifra tonda e la divisione fra montepremi e commissione avviene dietro le quinte. La cifra esatta è pubblicata da chi organizza il tavolo dove giochi, ed è il primo numero da cercare prima di scegliere dove giocare a volume.',
+      },
+      {
+        q: 'Il rake si paga anche se perdo?',
+        a: 'Sì, e non è un dettaglio: è la caratteristica che lo distingue da ogni altro costo. Si paga al momento dell\'iscrizione, quindi vale identico se vinci il torneo, se arrivi secondo o se esci alla prima mano. Per questo va valutato sul volume totale di tornei giocati e non sul risultato di una sessione.',
+      },
+      {
+        q: 'Il rake aumenta la varianza?',
+        a: 'No: sposta la media verso il basso senza cambiare quanto i risultati oscillano attorno a essa. L\'effetto pratico è che il punto di pareggio arriva più tardi e il fondo necessario si allarga, perché resti sotto zero più a lungo prima che il vantaggio si veda. Simulare con un vantaggio al lordo del rake dà una curva sistematicamente più ottimistica di quella vera.',
+      },
+      {
+        q: 'Conviene salire di buy-in per pagare meno rake?',
+        a: 'Solo se il resto regge. La percentuale trattenuta in genere cala salendo, quindi il costo relativo scende; ma sale anche la durezza del campo, e un vantaggio più piccolo su un costo più basso può valere meno di quello che avevi prima. Sono due effetti di segno opposto e vanno pesati insieme, insieme al fondo di cui disponi.',
+      },
+      {
+        q: 'Una restituzione di rake mi rende un giocatore vincente?',
+        a: 'No: riduce una spesa, non produce un risultato. Il modo corretto di usarla è sottrarla dal costo per ottenere il rake effettivo e poi rifare i conti con quel numero. Se il vantaggio resta positivo, hai reso più solida una situazione già sana; se diventa positivo solo grazie a quella, il gioco in sé non sta pagando.',
+      },
+      {
+        q: 'Il rake dei Twister è uguale a quello degli Spin & Go?',
+        a: 'La struttura è la stessa — una percentuale dell\'iscrizione trattenuta da chi organizza — ma il valore preciso, la scala dei moltiplicatori e la soglia oltre cui il montepremi si divide fra più posti cambiano da un operatore all\'altro. Confrontarli guardando solo la percentuale è fuorviante: vanno guardati insieme, perché incidono sullo stesso conto.',
+      },
+    ],
+    correlate: [
+      'strategia-spin-and-go',
+      'bankroll-spin-and-go',
+      'varianza-spin-and-go',
+      'spin-and-go-vs-twister',
+    ],
+  },
+  // ⚠️ Query confermata il 19/09/2026: `spin and go hud`, `spin and go hud pt4`,
+  // `spin and go hud hand2note`, `spin and go tracker`, `spin and go hand
+  // history`. Questa guida e' anche l'unico ingresso editoriale verso /docs
+  // (che ospita i filtri e i report PT4 e non era linkato da nessuna pagina di
+  // contenuto) e verso /replayer.
+  // ⚠️ Sugli strumenti in tempo reale la guida NON dice «usali»: dice di
+  // verificare il regolamento di dove si gioca. Molte sale li limitano o li
+  // vietano su questo formato, e una guida che lo tacesse manderebbe qualcuno
+  // a violare un regolamento per un vantaggio che qui e' quasi nullo.
+  {
+    slug: 'tracker-hud-spin-and-go',
+    titolo: 'Tracker e HUD negli Spin & Go: cosa serve davvero',
+    descrizione:
+      'HUD dal vivo, tracker e revisione delle mani negli Spin & Go: dove il software aiuta davvero, dove non serve a niente e cosa guardare dopo la sessione.',
+    occhiello: 'Strumenti di studio',
+    h1: 'Tracker e HUD negli Spin & Go: cosa serve davvero, e cosa no',
+    lead: 'La domanda arriva sempre nella stessa forma: «quale HUD uso per gli Spin & Go?». È la domanda sbagliata, e non per una questione di gusti. In un formato dove incroci un avversario per venti mani e poi non lo rivedi più, le statistiche in tempo reale dicono pochissimo; quello che sposta i risultati è il lavoro che fai dopo, sulle tue mani, con calma. Questa guida separa le due cose.',
+    aggiornata: '2026-09-19',
+    sezioni: [
+      {
+        h2: 'Perché un HUD dal vivo qui serve meno che altrove',
+        paragrafi: [
+          'Una statistica ha senso quando è costruita su abbastanza mani da essere stabile. In un cash game si siede allo stesso tavolo per ore e si accumulano centinaia di mani sullo stesso avversario; qui un torneo dura pochi minuti, gli avversari cambiano a ogni tavolo e il campione su ciascuno resta minuscolo.',
+          'Su venti o trenta mani una percentuale di apertura non è un\'informazione, è rumore: può valere il doppio o la metà del valore vero per puro caso. Decidere una spinta al limite sulla base di quel numero non è giocare informati — è dare un peso preciso a una misura imprecisa, che è un modo elegante di sbagliare.',
+          'Va aggiunta una cosa che riguarda le regole e non la strategia: molte sale limitano o vietano gli strumenti che leggono il tavolo in tempo reale, e su questo formato in particolare. Prima di installare qualunque cosa, il regolamento di dove giochi è il primo posto da guardare — un vantaggio quasi nullo non vale il rischio di un conto chiuso.',
+        ],
+      },
+      {
+        h2: 'Dove un tracker serve davvero: la revisione, non la partita',
+        paragrafi: [
+          'Lo stesso software che dal vivo dice poco diventa prezioso quando la sessione è finita. Lì il campione non è più quello di un avversario in venti mani: è il tuo, su migliaia di mani, ed è abbastanza grande da raccontare qualcosa di vero.',
+          'Il valore sta nel filtrare. Non «quanto ho vinto», che lo sai già, ma: quante volte mi sono trovato nel piccolo buio contro un\'apertura dal bottone a dieci big blind, e cosa ho fatto ogni volta. È una domanda a cui a memoria non si risponde, e a cui un filtro risponde in pochi secondi.',
+          'È anche il modo in cui si scoprono gli errori che costano davvero, che non sono quelli clamorosi. Un errore che fai una volta a sessione e ti costa tre big blind si nota subito; uno che fai in una situazione che si ripresenta ottanta volte al giorno, e che ti costa un decimo di big blind per volta, non lo vedi mai — e pesa molto di più.',
+        ],
+      },
+      {
+        h2: 'Le tre domande a cui far rispondere il tracker',
+        paragrafi: [
+          'Un tracker aperto senza una domanda è una schermata di numeri che non cambia niente. Con una domanda diventa uno strumento. Queste tre bastano per i primi mesi, e si rispondono tutte con dei filtri.',
+        ],
+        lista: [
+          'Quali situazioni si ripresentano più spesso? Sono quelle che valgono la pena di studiare per prime, indipendentemente da quanto sembrano interessanti.',
+          'In quelle situazioni, cosa faccio davvero? Non cosa penso di fare: la differenza fra le due è il grosso di quello che c\'è da correggere.',
+          'Il mio campione è abbastanza grande perché il risultato voglia dire qualcosa? Se la risposta è no, la cosa utile non è cambiare strategia ma continuare a misurare.',
+        ],
+      },
+      {
+        h2: 'Rivedere una mano, non una statistica',
+        paragrafi: [
+          'C\'è un livello che nessun aggregato raggiunge: rivedere una singola mano dall\'inizio, con gli stack veri e le azioni nell\'ordine in cui sono avvenute. Le statistiche dicono che in una certa situazione fai una certa cosa troppo spesso; solo rivedendo le mani si capisce perché la fai.',
+          'È anche il modo in cui una mano diventa una domanda da portare a qualcun altro. «Perdo troppo dal piccolo buio» non è una domanda a cui si possa rispondere; questa mano, con questi stack, con questa sequenza, lo è — e la risposta vale anche per le prossime cinquanta volte che la situazione si ripresenta.',
+          'Su questo sito le mani si caricano ed è possibile rivederle passo per passo, con il piatto e gli stack ricalcolati a ogni azione. Non serve un abbonamento e i file sono quelli che il tuo software salva già da solo.',
+        ],
+      },
+      {
+        h2: 'Che cosa un tracker non può dirti',
+        paragrafi: [
+          'Non può dirti se sei un giocatore vincente. Può dirti quanto hai vinto o perso finora, che è un\'altra cosa: in un formato con questa varianza, un risultato positivo o negativo su qualche migliaio di tornei è compatibile con molti livelli di bravura diversi. Serve un campione grande, e nel frattempo il numero va letto con prudenza.',
+          'Non può dirti che cosa fare. Un filtro mostra che in una certa situazione passi il settanta per cento delle volte; se quel settanta sia troppo, troppo poco o giusto, lo dice la strategia di riferimento per quel nodo — non il tracker, che registra e basta.',
+          'E non può distinguere una serie sfortunata da un errore, quando il campione è corto. È esattamente per questo che ha senso affiancargli due cose: una tabella di riferimento con cui confrontare le proprie scelte, e un\'idea concreta di quanto possa essere lunga una serie negativa del tutto normale.',
+        ],
+      },
+      {
+        h2: 'Da dove cominciare, senza comprare niente',
+        paragrafi: [
+          'Il primo passo non è scegliere il software: è decidere la domanda. Prendi la situazione che ti capita più spesso e che ti lascia più insicuro — nella maggior parte dei casi è la difesa da uno dei due bui a stack corto — e guarda cosa fai, contro cosa dice la tabella di riferimento per quel nodo.',
+          'Il secondo è prendere l\'abitudine di salvare e rivedere le mani che ti hanno lasciato un dubbio, invece di archiviarle. Cinque mani riviste con attenzione insegnano più di cinquecento giocate distrattamente, ed è l\'unico esercizio che funziona anche se il tuo volume è piccolo.',
+          'Il terzo, se usi già un tracker, è smettere di guardare la schermata dei risultati e cominciare a usare i filtri. I materiali di supporto della scuola comprendono filtri e report pronti per questo formato: servono a saltare la parte noiosa, che è configurare lo strumento, e ad arrivare subito alla parte utile.',
+        ],
+      },
+    ],
+    strumenti: [
+      { testo: 'i materiali e i filtri da scaricare', href: '/docs/' },
+      { testo: 'il replayer delle mani', href: '/replayer/' },
+      { testo: 'le tabelle preflop', href: '/tabelle/' },
+      { testo: 'il simulatore di varianza', href: '/simulatore-varianza/' },
+    ],
+    faq: [
+      {
+        q: 'Serve un HUD per giocare gli Spin & Go?',
+        a: 'No, e in questo formato serve meno che in qualunque altro: incroci un avversario per venti o trenta mani, e su quel campione una statistica è rumore più che informazione. Va aggiunto che molte sale limitano o vietano gli strumenti in tempo reale proprio su questo formato: il regolamento di dove giochi è il primo posto da controllare, prima di installare qualsiasi cosa.',
+      },
+      {
+        q: 'Allora un tracker non serve a niente?',
+        a: 'Serve moltissimo, ma dopo la sessione e non durante. Lì il campione non è quello di un avversario sconosciuto: è il tuo, su migliaia di mani, ed è abbastanza grande da dire qualcosa di vero. Il valore sta nel filtrare per situazione e vedere cosa fai davvero quando quella situazione si ripresenta, che è una domanda a cui a memoria non si risponde.',
+      },
+      {
+        q: 'Quali errori si scoprono con la revisione e non giocando?',
+        a: 'Quelli piccoli e ripetuti, che sono i più costosi. Un errore clamoroso si nota da solo; uno che fai in una situazione che torna ottanta volte al giorno, e che costa un decimo di big blind per volta, non si vede mai al tavolo e pesa molto di più sul risultato finale. È il tipo di cosa che solo un filtro su un campione grande porta a galla.',
+      },
+      {
+        q: 'Il tracker può dirmi se sono un giocatore vincente?',
+        a: 'Può dirti quanto hai vinto o perso finora, che non è la stessa cosa. In un formato con questa varianza un risultato su qualche migliaio di tornei è compatibile con livelli di bravura molto diversi. Prima di trattare quel numero come un giudizio conviene capire quanto grande debba essere il campione, e un simulatore di varianza serve esattamente a questo.',
+      },
+      {
+        q: 'Da dove comincio se non ho mai usato un tracker?',
+        a: 'Non dal software ma dalla domanda: prendi la situazione che ti capita più spesso e che ti lascia più insicuro, di solito la difesa da un buio a stack corto, e confronta cosa fai con la strategia di riferimento per quel nodo. Poi prendi l\'abitudine di rivedere le mani dubbie invece di archiviarle: cinque mani riviste con attenzione insegnano più di cinquecento giocate distrattamente.',
+      },
+      {
+        q: 'Servono file di configurazione particolari per questo formato?',
+        a: 'I filtri e i report generici sono pensati per cash game e tornei lunghi, quindi su un 3-max hyper turbo mostrano spesso le cose sbagliate o non trovano abbastanza mani. Avere filtri già tarati sul formato fa risparmiare la parte noiosa, che è configurare lo strumento: nella sezione materiali della scuola ce ne sono di pronti da scaricare.',
+      },
+    ],
+    correlate: [
+      'strategia-spin-and-go',
+      'errori-comuni-spin-and-go',
+      'varianza-spin-and-go',
+      'push-fold-spin-and-go',
+    ],
+  },
 ];
 
 export function guidaBySlug(slug: string): Guide | undefined {

@@ -95,6 +95,16 @@ export const GUIDE_CORRELABILI: readonly {
   parole: readonly string[];
 }[] = [
   {
+    slug: 'rake-spin-and-go',
+    titolo: 'Il rake negli Spin & Go: quanto pesa davvero',
+    parole: ['rake', 'rakeback', 'commissioni'],
+  },
+  {
+    slug: 'tracker-hud-spin-and-go',
+    titolo: 'Tracker e HUD negli Spin & Go: cosa serve davvero',
+    parole: ['hud', 'tracker', 'hand2note', 'pokertracker'],
+  },
+  {
     slug: 'strategia-spin-and-go',
     titolo: 'Strategia Spin & Go: cosa conta e in che ordine studiarlo',
     parole: [
