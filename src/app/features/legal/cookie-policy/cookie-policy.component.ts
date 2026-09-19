@@ -10,5 +10,5 @@ import { RouterLink } from '@angular/router';
 })
 export class CookiePolicyComponent {
   // ⚠️ Da bumpare a ogni modifica del testo (vedi PrivacyComponent).
-  protected readonly aggiornata = '29 luglio 2026';
+  protected readonly aggiornata = '19 settembre 2026';
 }

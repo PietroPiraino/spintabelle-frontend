@@ -46,6 +46,9 @@ shot-*.mjs
 shots-chi-siamo/
 static-serve.mjs
 # tooling locale per tarare i modelli 3D abbonati (anteprima offscreen)
+# sonde locali di misura (idioma _spike-bunny-events.mjs): il metodo e i
+# risultati vivono in gdpr/prove-*.md, lo script e' usa-e-getta
+_spike-*.mjs
 _preview-*.html
 _preview-*.mjs
 _preview-*.png

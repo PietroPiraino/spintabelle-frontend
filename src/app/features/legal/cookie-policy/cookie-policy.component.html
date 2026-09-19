@@ -8,9 +8,11 @@
       <p>
         Questa pagina spiega quali cookie, strumenti di archiviazione locale e script di
         statistica utilizza il sito <strong>bestfishforever.it</strong>. Quello che viene
-        salvato sul tuo dispositivo — dal sito e dal player dei video — è <strong>solo
+        salvato sul tuo dispositivo — dal sito e dai player dei video — è <strong>solo
         tecnico</strong>: serve a tenerti connesso, a ricordare un paio di tue preferenze
-        e a far funzionare il player delle lezioni. Nella tabella qui sotto trovi tutto
+        e a far funzionare i player dei video, quello delle lezioni e quello del video
+        del canale YouTube in home page, che <strong>si caricano soltanto quando sei tu
+        a premere per guardare</strong>. Nella tabella qui sotto trovi tutto
         quello che abbiamo rilevato all'ultima verifica. Misuriamo inoltre
         le visite con uno strumento <strong>senza cookie</strong>, che non salva nulla sul
         tuo dispositivo e non legge i cookie né gli altri dati lì salvati, e produce solo
@@ -82,6 +84,30 @@
             <td>Conta in forma aggregata le pagine viste e da dove arrivano i visitatori. Non installa identificatori; secondo quanto dichiara Cloudflare, non ti riconosce tra una visita e l'altra e non ti segue su altri siti.</td>
             <td>Nessuna: non viene salvato nulla sul tuo dispositivo</td>
           </tr>
+          <tr>
+            <td><code>yt-player-bandwidth</code></td>
+            <td>Archiviazione locale (localStorage) tecnica — player YouTube</td>
+            <td>Una stima della velocità della tua connessione, che il player usa per scegliere la qualità del video. Contiene numeri misurati, non un identificatore.</td>
+            <td>Finché non la rimuovi dal browser</td>
+          </tr>
+          <tr>
+            <td><code>yt-player-caption-persistence</code></td>
+            <td>Archiviazione locale (localStorage) tecnica/funzionale — player YouTube</td>
+            <td>Ricorda se preferisci i sottotitoli attivi.</td>
+            <td>Finché non la rimuovi dal browser</td>
+          </tr>
+          <tr>
+            <td><code>yt-icons-last-purged</code></td>
+            <td>Archiviazione locale (localStorage) tecnica — player YouTube</td>
+            <td>La data dell'ultima pulizia della cache delle icone dei comandi. È un orario, non un identificatore.</td>
+            <td>Finché non la rimuovi dal browser</td>
+          </tr>
+          <tr>
+            <td><code>ytidb::LAST_RESULT_ENTRY_KEY</code> e il database locale <code>YtIdbMeta</code></td>
+            <td>Archiviazione locale (localStorage e IndexedDB) tecnica — player YouTube</td>
+            <td>Servono al player per sapere se può usare l'archiviazione del tuo browser. Il valore che abbiamo osservato dice soltanto se il tentativo è riuscito.</td>
+            <td>Finché non li rimuovi dal browser</td>
+          </tr>
         </tbody>
       </table>
 
@@ -106,7 +132,12 @@
         cookie di profilazione, e non facciamo pubblicità basata sui tuoi
         comportamenti. I caratteri tipografici sono ospitati direttamente sul nostro
         dominio, quindi non vengono effettuate chiamate a servizi esterni per il loro
-        caricamento.
+        caricamento. L'unico servizio di Google che può essere eseguito nel tuo
+        browser è il <strong>player del video del canale YouTube</strong> che trovi
+        in home page, e solo se sei tu a premere il pulsante per guardarlo: finché
+        non lo fai, il tuo browser non contatta alcun server di Google — nemmeno per
+        l'immagine di copertina, che scarica dai nostri. Lo spieghiamo per esteso
+        nella sezione «Il video del canale YouTube» qui sotto.
       </p>
       <p>
         Trattiamo questi dati sulla base del nostro <strong>legittimo interesse</strong>
@@ -162,6 +193,48 @@
         dispositivo</strong>: è un'informazione che il player comunica alla pagina e che
         resta sui nostri server. Il dettaglio, con i tempi di conservazione, è
         nell'<a routerLink="/privacy">Informativa sulla privacy</a>.
+      </p>
+
+      <h2>Il video del canale YouTube (in home page)</h2>
+      <p>
+        In home page mostriamo l'ultimo video del nostro canale YouTube. Finché non
+        premi il pulsante per guardarlo, <strong>non succede nulla</strong>: il tuo
+        browser non contatta né YouTube né alcun altro server di Google, non viene
+        installato alcun cookie e non viene salvato nulla nell'archiviazione del tuo
+        browser. Anche l'immagine di copertina che vedi <strong>non arriva da
+        YouTube</strong>: la copiamo una volta sui nostri server e te la serviamo da
+        lì, proprio perché tu non debba contattare Google per vedere la home.
+      </p>
+      <p>
+        Quando premi per guardare il video, e solo allora, viene caricato il player di
+        YouTube. Da quel momento il tuo browser si collega ai server di Google, che
+        ricevono i dati tecnici di connessione (come l'indirizzo IP e il tipo di
+        browser) e sanno quale video stai guardando. Usiamo l'indirizzo
+        <code>youtube-nocookie.com</code>, la versione dell'incorporamento che Google
+        descrive come priva di personalizzazione pubblicitaria: alla data di questo
+        aggiornamento <strong>non abbiamo osservato alcun cookie</strong>, né al
+        caricamento del player né durante la riproduzione — lo abbiamo verificato noi,
+        con un browser pulito. Il player salva però nell'<strong>archiviazione
+        locale</strong> del tuo browser alcune informazioni tecniche che gli servono
+        per funzionare (una stima della velocità della connessione, la preferenza sui
+        sottotitoli, la data di pulizia delle icone) e crea un piccolo database locale:
+        le trovi elencate nella tabella qui sopra. I valori che abbiamo osservato sono
+        orari e numeri, <strong>non contengono identificatori</strong>, e restano nel
+        tuo browser.
+      </p>
+      <p>
+        Per questa parte <strong>Google è un titolare autonomo</strong>: tratta quei
+        dati per proprie finalità e secondo la propria informativa, non per nostro
+        conto. Se preferisci non caricarlo, la soluzione è semplice: <strong>non
+        premere</strong> il pulsante del video — il resto della home funziona
+        normalmente. Puoi anche bloccare l'indirizzo <code>youtube-nocookie.com</code>
+        dalle impostazioni del browser o con un'estensione per il blocco dei contenuti.
+      </p>
+      <p>
+        Non installiamo il pulsante «Iscriviti» ufficiale di Google e non usiamo
+        nessun altro componente di YouTube: gli inviti a iscriverti al canale sono
+        <strong>semplici collegamenti</strong>, che non eseguono nulla nel tuo browser
+        finché non li segui.
       </p>
 
       <h2>Come gestire i cookie</h2>
