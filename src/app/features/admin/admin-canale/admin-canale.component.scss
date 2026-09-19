@@ -21,6 +21,18 @@
   display: block;
   width: 100%;
   max-width: 520px;
+  /* ⚠️⚠️ `height: auto` NON e' ridondante, ed e' l'unica riga che tiene questa
+     immagine di una forma sensata. L'`<img>` porta gli attributi HTML
+     `width="1280" height="720"`: sono suggerimenti di presentazione che il
+     browser applica come CSS, e siccome qui l'altezza non la dichiara nessun
+     altro, quel 720px RESTA. Con entrambe le dimensioni definite
+     `aspect-ratio` viene ignorato, e `object-fit: cover` ritaglia l'immagine
+     dentro una scatola altissima: su iPhone la copertina occupava tutto lo
+     schermo mostrandone una fetta ingrandita.
+     Misurato a 390px: senza questa riga 358x720 (rapporto 0,50), con questa
+     riga 358x201 (1,78). Gli attributi non si tolgono — riservano lo spazio
+     prima che l'immagine arrivi — quindi la difesa e' questa. */
+  height: auto;
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: var(--radius);
