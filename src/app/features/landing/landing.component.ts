@@ -99,12 +99,11 @@ export class LandingComponent {
    * browser all'idratazione — che è ciò che permette a un video approvato di
    * comparire **senza un nuovo deploy**.
    *
-   * ⚠️ A differenza di `latestNews`, `/canale` resta **dentro** la transfer
-   * cache: così all'idratazione il client parte già dal valore del server e
-   * non c'è alcuno stato «non so» che faccia comparire e sparire il blocco
-   * sopra la piega. La ragione per esteso è accanto al filtro in
-   * `app.config.ts`; la freschezza la garantisce il rebuild automatico a ogni
-   * approvazione.
+   * ⚠️ Come `latestNews`, `/canale` è **escluso** dalla transfer cache: senza
+   * quell'esclusione la risposta resta congelata nell'HTML del build e un
+   * video appena approvato non compare ricaricando la home. Il prezzo è lo
+   * scheletro per un istante — e si paga in una scatola già riservata, quindi
+   * non sposta nulla. Ragione per esteso accanto al filtro in `app.config.ts`.
    */
   private readonly ultimoVideo = toSignal(
     this.canaleApi.ultimoVideo().pipe(catchError(() => of(null))),

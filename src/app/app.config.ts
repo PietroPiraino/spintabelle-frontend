@@ -75,26 +75,27 @@ export const appConfig: ApplicationConfig = {
     // l'HTML statico resta quello del build (accettato: e' visibile subito), poi
     // il client rifa' la chiamata e lo aggiorna.
     // `filter` risponde alla domanda "questa richiesta la metto in cache?":
-    // vero = si'. Quindi qui si nega esplicitamente solo /news.
+    // vero = si'. Quindi qui si negano esplicitamente /news e /canale.
     //
-    // ⚠️⚠️ E **/canale NON va aggiunto**, benche' il ragionamento sembri lo
-    // stesso (anche il video si approva dal pannello senza rideployare). La
-    // differenza e' DOVE stanno i due blocchi, e si misura:
-    //  - il blocco news e' SOTTO LA PIEGA. All'idratazione sparisce e
-    //    ricompare, e non lo conta nessuno.
-    //  - il blocco video sta SUBITO SOTTO L'HERO. Escludendolo, il segnale
-    //    ripartirebbe da "non so" a ogni idratazione e la home farebbe
-    //    comparire e sparire ~360px sopra la piega — su una pagina che oggi
-    //    misura CLS 0 (LCP p75 95-115ms).
-    // La freschezza qui non si perde: `CanaleService` fa partire un rebuild
-    // Cloudflare a ogni approvazione (`deploy.trigger`, verificato `on` in
-    // produzione), quindi l'HTML statico si rigenera da solo in pochi minuti.
-    // Un video approvato tre minuti fa non e' una notizia: un salto di 360px
-    // a ogni visita si'.
+    // ⚠️⚠️ **/canale c'e' dopo essere stato tolto e rimesso il 19/09/2026, e
+    // la storia vale piu' della regola.** Era stato escluso dall'elenco per
+    // evitare che il blocco video — che sta SUBITO SOTTO L'HERO, non sotto la
+    // piega come le news — facesse comparire e sparire ~360px all'idratazione.
+    // Ragionamento corretto sul CLS e SBAGLIATO nel merito: con la risposta
+    // congelata nell'HTML, un video appena approvato NON compariva ricaricando
+    // la home, e tornava solo navigando via e indietro (quando il componente
+    // rifa' la chiamata). L'ha trovato l'owner in cinque minuti.
+    // Il rebuild automatico (`deploy.trigger`) non basta: fra approvazione e
+    // build assestato passano minuti, e se il deploy hook fallisce la home
+    // resta indietro per sempre — in silenzio.
+    // Il costo dello sfarfallio e' pagato dove si deve: lo scheletro occupa
+    // LA STESSA scatola del contenuto, quindi nel caso normale (HTML statico
+    // gia' col video) non si sposta nulla, si vede un grigio per un istante.
     provideClientHydration(
       withEventReplay(),
       withHttpTransferCacheOptions({
-        filter: (req) => !req.url.includes('/news'),
+        filter: (req) =>
+          !req.url.includes('/news') && !req.url.includes('/canale'),
       }),
     ),
     provideRouter(

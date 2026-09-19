@@ -29,15 +29,15 @@ export class CanaleService {
    * che è ciò che permette a un video approvato di comparire **senza un nuovo
    * deploy**.
    *
-   * ⚠️⚠️ **E il secondo giro NON deve esistere: `/canale` resta DENTRO la
-   * transfer cache**, al contrario di `/news`. Escluderlo farebbe ripartire il
-   * segnale da «non so» a ogni idratazione, e la home farebbe comparire e
-   * sparire ~360px **sopra la piega** — su una pagina che oggi misura CLS 0.
-   * Il blocco news se lo può permettere perché sta sotto la piega; questo no.
-   * La freschezza non si perde: ogni approvazione fa partire un rebuild
-   * Cloudflare (`deploy.trigger` lato backend, verificato attivo), quindi
-   * l'HTML statico si rigenera da sé in pochi minuti. La ragione per esteso
-   * sta accanto al filtro in `app.config.ts`.
+   * ⚠️⚠️ **Perché il secondo giro esista, `/canale` deve restare ESCLUSO dalla
+   * transfer cache** (`app.config.ts`). È stato tolto e rimesso lo stesso
+   * giorno, e la storia vale più della regola: escluderlo costa uno sfarfallio
+   * dello scheletro, **includerlo costa che un video appena approvato non
+   * compaia ricaricando la home** — torna solo navigando via e indietro,
+   * quando il componente rifà la chiamata. Trovato dall'owner in cinque
+   * minuti. Il rebuild automatico non basta: fra approvazione e build
+   * assestato passano minuti, e se il deploy hook fallisce la home resta
+   * indietro per sempre, in silenzio.
    */
   ultimoVideo(): Observable<UltimoVideoCanale> {
     return this.http.get<UltimoVideoCanale>(`${this.base}/canale/ultimo-video`);
