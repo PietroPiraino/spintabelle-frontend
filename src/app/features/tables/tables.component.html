@@ -111,14 +111,84 @@
           la ribalta.
         </p>
 
+        <!--
+          ⚠️ Le due sezioni qui sotto sono scritte sul cluster `range preflop`
+          misurato il 19/09/2026 con l'autocompletamento di Google: `range
+          preflop`, `range preflop gto`, `tabelle range preflop`, `range poker
+          3 max`, `spin and go nash chart`, `push fold poker chart`. È il
+          termine PIÙ LARGO su cui questo sito abbia una risposta che nessun
+          altro in Italia può dare, e la pagina non lo nominava mai per intero.
+          ⚠️ La prima risponde anche a `range preflop 6 max` / `cash game` /
+          `mtt`, e ci risponde DICENDO CHE NON SI APPLICANO: attirare quel
+          traffico promettendogli range che qui non esistono sarebbe una
+          visita persa e un segnale di qualità peggiore, non migliore.
+        -->
+        <h2>Range preflop: perché quello di un altro formato non si riusa</h2>
+        <p>
+          «Range preflop» è una di quelle espressioni che sembrano voler dire la
+          stessa cosa ovunque, e non è così. Un range di apertura serve a
+          descrivere l'equilibrio di un gioco preciso, e cambiando il gioco
+          cambia l'equilibrio: quante persone sono sedute, quanto sono profondi
+          gli stack rispetto ai bui, quanto spesso paghi un buio, e cosa succede
+          a chi arriva secondo.
+        </p>
+        <p>
+          Il caso più comune è il range da cash game a sei giocatori usato a un
+          tavolo di Spin &amp; Go. Là sei in un buio due mani su sei e puoi
+          aspettare; qui sei in un buio due mani su tre, gli stack partono da
+          venticinque big blind e i livelli salgono ogni pochi minuti. Un range
+          di apertura costruito per aspettare, applicato a un tavolo che non
+          aspetta, apre troppo poco e regala bui — e il conto si vede solo dopo
+          centinaia di tornei, perché nessuna singola mano sembra un errore.
+        </p>
+        <p>
+          Lo stesso vale, in scala più piccola, dentro questo formato. Un tavolo
+          con l'<strong>ante</strong> ha più morto in mezzo, quindi conviene
+          attaccare più largo di uno senza; un formato <strong>asimmetrico</strong>,
+          in cui uno dei due bui parte più corto, cambia chi può permettersi di
+          mettere pressione a chi. Per questo ogni tabella qui dichiara il
+          formato, la profondità di stack e la sequenza di azioni a cui si
+          riferisce: senza quell'etichetta un range è un numero senza contesto.
+        </p>
+
+        <h2>Nash, solver e GTO: che cosa sono davvero queste tabelle</h2>
+        <p>
+          Le tabelle push/fold che circolano da anni — spesso chiamate
+          «tabelle Nash» — sono l'equilibrio di un gioco <em>semplificato</em>,
+          in cui le uniche due azioni ammesse sono entrare per tutto o passare.
+          Sono uno strumento eccellente quando gli stack sono abbastanza corti
+          da rendere quella semplificazione quasi vera, e diventano fuorvianti
+          appena c'è spazio per un rilancio parziale, per una chiamata o per una
+          risposta al rilancio.
+        </p>
+        <p>
+          Una soluzione GTO completa risolve invece l'albero intero: apertura,
+          taglie di rilancio, chiamate, rilanci sopra il rilancio, per ogni
+          profondità e per ogni posizione. È quello che trovi qui — si naviga la
+          mano azione per azione e a ogni nodo si vede il range di chi deve
+          decidere in quel momento, con frequenza ed EV di ognuna delle 169 mani.
+        </p>
+        <p>
+          Una precisazione che risparmia delusioni: «GTO» non significa «la mossa
+          che guadagna di più contro questo avversario». Significa una strategia
+          che non può essere sfruttata, cioè il punto di partenza da cui capire
+          quando conviene scostarsi. Contro un tavolo che passa troppo la scelta
+          migliore è spesso diversa da quella in tabella — ma per accorgersene
+          bisogna prima sapere qual è quella in tabella.
+        </p>
+
         </details>
 
         <div class="seo-block__cta">
           <p>
-            Le tabelle sono il primo passo: per capire quanto la fortuna può
-            allontanarti dal tuo EV nel breve periodo, prova il
+            Le tabelle sono il primo passo, non il percorso:
+            <a routerLink="/guide/strategia-spin-and-go">cosa studiare e in che ordine</a>
+            lo spiega per intero, e
+            <a routerLink="/guide/push-fold-spin-and-go">come si legge una tabella preflop</a>
+            entra nel dettaglio di push e fold. Per capire quanto la fortuna può
+            allontanarti dal tuo EV nel breve periodo c'è il
             <a routerLink="/simulatore-varianza">simulatore di varianza</a> —
-            è gratuito e non serve registrarsi. Per studiarle con i coach, dai
+            gratuito e senza registrazione. Per studiarle con i coach, dai
             un'occhiata agli <a routerLink="/abbonati">abbonamenti della scuola</a>.
           </p>
         </div>

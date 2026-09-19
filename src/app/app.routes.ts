@@ -29,7 +29,7 @@ export const routes: Routes = [
     title: 'Tabelle e range preflop GTO per Spin & Go e Twister — Best Fish Forever',
     data: {
       description:
-        'Tabelle GTO preflop per Spin & Go e Twister: range di apertura, push/fold e raise per ogni stack, posizione e formato (ante, asimmetrico).',
+        'Tabelle e range preflop GTO per Spin & Go e Twister: apertura, push/fold e raise per ogni stack, posizione e formato (ante, asimmetrico).',
     },
   },
   {

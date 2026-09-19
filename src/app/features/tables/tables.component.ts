@@ -128,6 +128,14 @@ export class TablesComponent {
       q: 'Serve un abbonamento per consultare le tabelle?',
       a: 'No: la consultazione è aperta a tutti gli iscritti e la registrazione è gratuita. L’abbonamento serve per le lezioni video, i materiali di studio e le sessioni dal vivo con i coach.',
     },
+    {
+      q: 'Posso usare i range preflop di un cash game o di un MTT negli Spin & Go?',
+      a: 'No, e non è una questione di sfumature. In un tavolo a sei paghi un buio due mani su sei e puoi aspettare; qui sei in un buio due mani su tre, parti da venticinque big blind e i livelli salgono ogni pochi minuti. Un range costruito per aspettare apre troppo poco e regala bui, e il conto si vede solo dopo centinaia di tornei perché nessuna singola mano sembra un errore. Vale anche fra un formato con ante e uno senza.',
+    },
+    {
+      q: 'Che differenza c’è fra una tabella Nash push/fold e una soluzione GTO completa?',
+      a: 'Una tabella Nash risolve un gioco semplificato in cui le uniche azioni ammesse sono entrare per tutto o passare: è un ottimo strumento quando gli stack sono così corti da rendere quella semplificazione quasi vera, e diventa fuorviante appena c’è spazio per un rilancio parziale o per una risposta al rilancio. Una soluzione completa risolve l’albero intero — aperture, taglie, chiamate, rilanci sopra il rilancio — per ogni profondità e posizione, ed è quello che trovi qui.',
+    },
   ];
 
   // Query param legati dal router (withComponentInputBinding):
