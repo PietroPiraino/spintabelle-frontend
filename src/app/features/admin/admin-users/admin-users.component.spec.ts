@@ -310,18 +310,56 @@ describe('AdminUsersComponent', () => {
       expect(spente).not.toContain('COACH');
     });
 
-    it('la riga «Variazione + Motivo» si allinea in ALTO: il motivo porta un aiuto sotto il campo', async () => {
-      // Stesso difetto della causale dello staking (misurato là, in
-      // admin-stakings.component.spec.ts): con l'allineamento al fondo di
-      // `.admin-panel__row` la cella col suggerimento «Lo legge l'utente nel
-      // suo account…» è più alta e il campo sale di una riga. Qui si pinna il
-      // modificatore, perché la misura vive nel primitivo condiviso.
+    it('⚠️ la riga «Variazione + Motivo + Applica»: campi e pulsante sul FONDO, l’aiuto su una riga sua', async () => {
+      // Storia in due atti, entrambi trovati dall'owner in produzione. Il
+      // 16/09/2026 l'aiuto «Lo legge l'utente nel suo account…» stava DENTRO la
+      // cella del motivo: quella cella era più alta e, con la riga allineata al
+      // fondo, il campo saliva di una riga. Il rimedio — allineare la riga in
+      // ALTO — ha spostato il difetto: il 19/09 «Applica», che non ha etichetta,
+      // stava all'altezza delle etichette invece che dei campi. La forma buona
+      // è l'aiuto FUORI dalla cella, ultimo figlio della riga a piena
+      // larghezza: le celle restano alte uguali e la base `flex-end` basta. Si
+      // MISURA, perché un allineamento sbagliato non fallisce niente.
       await rispondi(pagina([utente()]));
       await apri();
-      const motivo = fixture.nativeElement.querySelector('#mod-motivo') as HTMLElement;
-      const rigaMovimento = motivo.closest('.admin-panel__row') as HTMLElement;
-      expect(rigaMovimento.classList).toContain('admin-panel__row--in-alto');
-      expect(getComputedStyle(rigaMovimento).alignItems).toBe('flex-start');
+      const motivo = fixture.nativeElement.querySelector(
+        '#mod-motivo',
+      ) as HTMLElement;
+      // ⚠️ La sezione Punti è chiusa: a `<details>` chiuso ogni rettangolo
+      // misura zero e le asserzioni passerebbero a vuoto.
+      (motivo.closest('details') as HTMLDetailsElement).open = true;
+      // La finestra di Karma è stretta e la riga andrebbe a capo: si allarga la
+      // scatola della modale, così le celle stanno davvero in una riga.
+      const box = document.querySelector('.mo__box') as HTMLElement;
+      box.style.width = '1400px';
+      box.style.maxWidth = 'none';
+      await stabilizza();
+
+      const riga = motivo.closest('.admin-panel__row') as HTMLElement;
+      const r = (el: Element) => el.getBoundingClientRect();
+      expect(riga.classList).not.toContain('admin-panel__row--in-alto');
+      expect(getComputedStyle(riga).alignItems).toBe('flex-end');
+
+      const applica = [...riga.querySelectorAll('button')].find((b) =>
+        b.textContent?.includes('Applica'),
+      ) as HTMLButtonElement;
+      expect(Math.abs(r(applica).bottom - r(motivo).bottom))
+        .withContext('«Applica» al fondo del campo, non delle etichette')
+        .toBeLessThan(1);
+      const delta = riga.querySelector('#mod-delta') as HTMLElement;
+      expect(Math.abs(r(delta).top - r(motivo).top))
+        .withContext('i due campi sulla stessa riga')
+        .toBeLessThan(1);
+
+      const aiuto = riga.querySelector('#mod-motivo-aiuto') as HTMLElement;
+      expect(r(aiuto).top)
+        .withContext('l’aiuto pende SOTTO il campo')
+        .toBeGreaterThan(r(motivo).bottom);
+      expect(Math.abs(r(aiuto).left - r(riga).left))
+        .withContext('e prende la riga intera, non la colonna del motivo')
+        .toBeLessThan(1);
+      expect(Math.abs(r(aiuto).right - r(riga).right)).toBeLessThan(1);
+      expect(motivo.getAttribute('aria-describedby')).toBe('mod-motivo-aiuto');
     });
 
     it('digitare sporca il form: Escape chiede conferma invece di buttare via', async () => {

@@ -481,9 +481,16 @@
           Punti BFF — saldo {{ u.points ?? 0 }}
         </summary>
         <div class="admin-modale__corpo">
-          <!-- `--in-alto`: la cella del motivo porta un aiuto sotto il campo,
-               e con l'allineamento al fondo salirebbe di una riga -->
-          <div class="row admin-panel__row admin-panel__row--in-alto">
+          <!--
+            ⚠️ L'aiuto del motivo è l'ULTIMO figlio della riga
+            (`.admin-panel__aiuto`), non sta nella sua cella: dentro la cella
+            rendeva quella cella più alta delle altre, e allineando la riga in
+            alto — il rimedio del 16/09/2026 — «Applica», che non ha etichetta,
+            saliva all'altezza delle ETICHETTE invece che dei campi. Le celle
+            restano alte uguali e la base `flex-end` rimette il pulsante al
+            fondo del campo.
+          -->
+          <div class="row admin-panel__row">
             <div class="field" style="margin: 0">
               <label for="mod-delta">Variazione</label>
               <input
@@ -505,13 +512,6 @@
                 placeholder="es. bonus di benvenuto"
                 aria-describedby="mod-motivo-aiuto"
               />
-              <!-- ⚠️ Il motivo raggiunge lo schermo dell'utente tale e quale
-                   (area personale, movimenti punti): un «bonus per i 2.000
-                   spin di agosto su X» porterebbe nome di sala e volume di
-                   gioco accanto a un premio. -->
-              <span id="mod-motivo-aiuto" class="admin-nota">
-                Lo legge l'utente nel suo account: descrivi l'accredito, non il gioco.
-              </span>
             </div>
             <button
               type="button"
@@ -521,6 +521,14 @@
             >
               {{ salvando() ? 'Applico…' : 'Applica' }}
             </button>
+            <!-- ⚠️ Il motivo raggiunge lo schermo dell'utente tale e quale
+                 (area personale, movimenti punti): un «bonus per i 2.000
+                 spin di agosto su X» porterebbe nome di sala e volume di
+                 gioco accanto a un premio. Sotto i 560px il pulsante scende
+                 in coda (`order: 1`) e l'aiuto resta sotto il suo campo. -->
+            <p id="mod-motivo-aiuto" class="admin-panel__aiuto">
+              Lo legge l'utente nel suo account: descrivi l'accredito, non il gioco.
+            </p>
           </div>
           <!--
             ⚠️ Il significato del segno sta QUI e non nell'etichetta: come

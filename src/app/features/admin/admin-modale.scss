@@ -74,6 +74,38 @@
   padding: 0 0.9rem 0.9rem;
 }
 
+// ── Il ritmo verticale dentro una scheda di riga ────────────────────────────
+//
+// ⚠️⚠️ `.admin-modale__corpo` porta SOLO padding, e il reset globale
+// `* { margin: 0 }` azzera tutto il resto: prosa, elenchi e comandi si toccano.
+// Nata in `admin-conteggi-mensili.component.scss` («Manda il prospetto»,
+// «Rimuovi questo conto», «Scollega»: tre rilievi dell'owner nello stesso giro,
+// lo stesso difetto in tre posti), promossa qui il 19/09/2026 al TERZO
+// consumatore — la nota sotto la riga del movimento in `/admin/stakings` e in
+// `/admin/iscritti` toccava i campi, e le due `admin-nota` si leggevano come un
+// paragrafo solo spezzato su una colonna.
+//
+// ⚠️ Margine sul fratello successivo e NON `gap` sul contenitore: in una
+// colonna flex `align-items` vale `stretch`, quindi un `<button>` si
+// allargherebbe a tutta la scheda; e con `flex-start` sarebbero i campi a
+// restringersi sul contenuto. Il margine lascia le larghezze come sono.
+//
+// ⚠️ I margini adiacenti COLLASSANO (prendono il massimo, non la somma):
+// `.field` porta già `margin-bottom: 1.15rem` e resta quello a decidere.
+// ⚠️ MA solo fra blocchi: `<input>`/`<textarea>` sono inline-block e i loro
+// margini si SOMMANO. In tre modali (richieste → Rifiuta, negozio → Spedizione
+// e Annulla ordine) un `label.field` è seguito da un `.input` nudo, che con la
+// regola piena starebbe a 1,15 + 0,6rem dalla propria etichetta: `:not(.input)`
+// li lascia attaccati a chi li descrive.
+// ⚠️ Con l'incapsulamento la regola vale (0,3,0) e batte una classe sola sui
+// figli non-primi: `.admin-panel__h4` scende da .8 a .6rem di margine sopra
+// (−3px, accettato) e lo `.spinner` globale perde i suoi 3rem mentre carica
+// (transitorio, accettato). Chi ha bisogno di uno stacco diverso lo dichiara
+// con due classi, non «alzando» questa.
+.admin-modale__corpo > * + *:not(.input) {
+  margin-top: 0.6rem;
+}
+
 // La sezione distruttiva si distingue prima di essere aperta: è l'unica da cui
 // non si torna indietro.
 .admin-modale__sez--rischio {

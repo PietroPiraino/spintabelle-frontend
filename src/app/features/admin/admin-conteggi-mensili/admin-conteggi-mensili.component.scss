@@ -558,22 +558,12 @@
 
 // ── Il ritmo verticale dentro una scheda di riga ────────────────────────────
 //
-// ⚠️⚠️ `.admin-modale__corpo` porta SOLO padding, e il reset globale
-// `* { margin: 0 }` azzera tutto il resto: prosa, elenchi e comandi si toccano.
-// Tre rilievi dell'owner nello stesso giro — «Manda il prospetto», «Rimuovi
-// questo conto», «Scollega» — erano lo stesso difetto visto in tre posti, e
-// rattopparli uno per uno avrebbe lasciato il quarto.
-//
-// ⚠️ Margine sul fratello successivo e NON `gap` sul contenitore: in una
-// colonna flex `align-items` vale `stretch`, quindi un `<button>` si
-// allargherebbe a tutta la scheda; e con `flex-start` sarebbero i campi a
-// restringersi sul contenuto. Il margine lascia le larghezze come sono.
-//
-// ⚠️ I margini adiacenti COLLASSANO (prendono il massimo, non la somma):
-// `.field` porta gia' `margin-bottom: 1.15rem` e resta quello a decidere.
-.admin-modale__corpo > * + * {
-  margin-top: 0.6rem;
-}
+// ⚠️ Nato qui («Manda il prospetto», «Rimuovi questo conto», «Scollega»: lo
+// stesso difetto in tre posti), il 19/09/2026 è SALITO in `admin-modale.scss`
+// (`.admin-modale__corpo > * + *:not(.input)`) al terzo consumatore, come per
+// `.admin-totali` e `.admin-stato`. Una copia qui vincerebbe per ordine e
+// rimetterebbe in piedi il `.input` attaccato alla sua etichetta che là si
+// esclude di proposito: non riscriverla.
 
 // ⚠️ Il nome dell'account e il comando accanto: 0,5rem e' troppo poco per una
 // pastiglia da 44px affiancata a del testo semplice, e li fa leggere come una

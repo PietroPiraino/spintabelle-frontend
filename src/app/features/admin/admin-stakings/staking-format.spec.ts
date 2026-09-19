@@ -1,4 +1,13 @@
-import { formattaCent, parseImportoInCent, testoEv } from './staking-format';
+import type { StakingTipo } from '../../../core/models/api.models';
+import {
+  CODICI_MOVIMENTO_STAKING,
+  MOVIMENTI_STAKING,
+  formattaCent,
+  parseImportoInCent,
+  testoEv,
+  voceDaMovimento,
+  voceMovimento,
+} from './staking-format';
 
 describe('staking-format', () => {
   describe('parseImportoInCent — il punto è ambiguo in italiano', () => {
@@ -85,6 +94,62 @@ describe('staking-format', () => {
       expect(testoEv(-34_000)).toContain('340,00');
       expect(testoEv(-34_000)).toContain('da recuperare');
       expect(testoEv(-34_000)).not.toContain('-');
+    });
+  });
+
+  describe('MOVIMENTI_STAKING — il verso lo porta la voce, non il meno digitato', () => {
+    it('sei voci: ogni asse nei due versi, ogni coppia una volta sola', () => {
+      // Il registro è append-only: se una coppia (tipo, segno) mancasse, quella
+      // scrittura non avrebbe compensativa dall'interfaccia e un errore
+      // diventerebbe permanente. Se fosse doppia, lo storico avrebbe due nomi
+      // per lo stesso movimento.
+      expect(MOVIMENTI_STAKING.length).toBe(6);
+      expect(MOVIMENTI_STAKING.map((v) => v.codice)).toEqual([
+        ...CODICI_MOVIMENTO_STAKING,
+      ]);
+      const coppie = new Set(MOVIMENTI_STAKING.map((v) => `${v.tipo}${v.segno}`));
+      expect(coppie.size).toBe(6);
+      for (const tipo of ['FONDI', 'EV', 'PERDITA'] as const) {
+        expect(coppie.has(`${tipo}1`)).withContext(`${tipo} in positivo`).toBeTrue();
+        expect(coppie.has(`${tipo}-1`)).withContext(`${tipo} in negativo`).toBeTrue();
+      }
+    });
+
+    it('⚠️ la tasca si chiede SOLO sui fondi, nei due versi', () => {
+      // Il server rifiuta la cassa con un 400 su EV e PERDITA: un'etichetta su
+      // quelle voci farebbe comparire un campo che porta dritto a un errore.
+      for (const v of MOVIMENTI_STAKING) {
+        expect(v.etichettaCassa !== undefined)
+          .withContext(v.codice)
+          .toBe(v.tipo === 'FONDI');
+      }
+      expect(voceMovimento('ANTICIPO').etichettaCassa).toBe('Da quale portafoglio');
+      expect(voceMovimento('RIENTRO').etichettaCassa).toBe('In quale portafoglio');
+    });
+
+    it('voceDaMovimento ritrova la voce da tipo e segno, per ogni voce', () => {
+      // L'andata-ritorno è ciò che tiene allineati il select e il badge dello
+      // storico: sono la stessa tabella letta nei due versi.
+      for (const v of MOVIMENTI_STAKING) {
+        expect(voceDaMovimento(v.tipo, v.segno * 100)).withContext(v.codice).toBe(v);
+      }
+    });
+
+    it('lo storico chiama un FONDI negativo «Rientro» e una PERDITA positiva «Storno perdita»', () => {
+      // Prima diceva «Fondi −750,00 €»: il verso andava dedotto dal meno, cioè
+      // esattamente il difetto che il form aveva in scrittura.
+      expect(voceDaMovimento('FONDI', -75_000).breve).toBe('Rientro');
+      expect(voceDaMovimento('FONDI', 45_000).breve).toBe('Anticipo');
+      expect(voceDaMovimento('EV', -10_000).breve).toBe('Debito EV');
+      expect(voceDaMovimento('EV', 10_000).breve).toBe('Recupero EV');
+      expect(voceDaMovimento('PERDITA', -40_000).breve).toBe('Perso');
+      expect(voceDaMovimento('PERDITA', 40_000).breve).toBe('Storno perdita');
+    });
+
+    it('un tipo ignoto è un errore, non un badge vuoto', () => {
+      // Lo `switch` è esaustivo per il compilatore; a runtime un valore fuori
+      // dall'enum (un asse nuovo lato server) deve gridare, non stampare niente.
+      expect(() => voceDaMovimento('ALTRO' as StakingTipo, 100)).toThrow();
     });
   });
 });

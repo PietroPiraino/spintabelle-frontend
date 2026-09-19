@@ -493,19 +493,35 @@
   // ⚠️ `flex-end` è per le righe con un PULSANTE accanto ai campi (+30 giorni,
   // Applica…): il pulsante non ha etichetta e deve allinearsi al fondo del
   // campo. Presuppone che ogni cella sia alta uguale — etichetta + campo.
+  //
+  // ⚠️⚠️ Per questo un AIUTO sotto un campo («lo legge l'utente nel suo
+  // account…», art. 9) NON sta nella cella: sta in `.admin-panel__aiuto`,
+  // ULTIMO figlio della riga. Dentro la cella la riga si legge storta in
+  // ENTRAMBI gli allineamenti, ed è successo in tutti e due: al fondo il campo
+  // che porta l'aiuto sale di una riga (owner, 16/09/2026); in alto — il
+  // rimedio provato quel giorno, un modificatore `--in-alto` — l'aiuto resta
+  // largo quanto la sua colonna e va a capo su tre righe, sotto le altre celle
+  // si apre un buco, e su `/admin/iscritti` il pulsante «Applica» sale
+  // all'altezza delle ETICHETTE invece che dei campi (owner, 19/09/2026). Il
+  // modificatore non esiste più: le celle restano alte uguali e la base basta.
   align-items: flex-end;
 }
 
-// ⚠️ La riga in cui UNA cella porta un aiuto SOTTO il campo (la causale dello
-// staking, il motivo dei punti: «lo legge l'utente nel suo account»). Con
-// `flex-end` è il FONDO dell'aiuto ad allinearsi al fondo degli altri campi,
-// quindi il campo che lo porta sale di una riga e tutta la riga si legge
-// storta — trovato dall'owner in produzione il 16/09/2026, due giorni dopo che
-// i due aiuti erano stati aggiunti (art. 9). In alto: le etichette su una
-// riga, i campi su una riga, l'aiuto pende sotto il suo campo e basta.
-// ⚠️ Sta SUBITO DOPO la base, stessa specificità: vince per ordine.
-.admin-panel__row--in-alto {
-  align-items: flex-start;
+// L'aiuto sotto una riga di campi: prende la riga intera, così le celle sopra
+// restano alte uguali e il testo ha tutta la larghezza invece di quella della
+// sua colonna. Porta l'`id` che il campo cita in `aria-describedby`.
+// ⚠️ Il margine negativo lo riavvicina ai campi: dentro una modale la riga ha
+// `gap: .75rem` anche fra le righe di flex, e .75 − .30 = .45rem è la stessa
+// distanza etichetta→campo di `.field` — l'aiuto pende sotto il suo campo come
+// quando stava nella cella, senza costarne l'altezza.
+// ⚠️ Niente `.admin-nota`: il suo `max-width: 74ch` taglierebbe una frase di
+// 75 caratteri, e la spec di stakings misura che copra la riga da bordo a bordo.
+.admin-panel__aiuto {
+  flex: 1 1 100%;
+  margin: calc(0.45rem - 0.75rem) 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
 }
 
 .admin-panel__check {
@@ -527,6 +543,14 @@
 @media (max-width: 560px) {
   .admin-panel__row .field {
     flex: 1 1 100%;
+  }
+
+  // Con le celle impilate l'aiuto (ultimo figlio) finirebbe DOPO il pulsante
+  // rapido, cioè staccato dal campo che descrive: il pulsante scende in coda.
+  // In ogni riga del pannello il pulsante è già l'ultimo comando, quindi
+  // nient'altro si sposta.
+  .admin-panel__row > .btn {
+    order: 1;
   }
 }
 

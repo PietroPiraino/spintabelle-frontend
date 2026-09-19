@@ -13,7 +13,6 @@ import {
   StakingMovimento,
   StakingRow,
   StakingStato,
-  StakingTipo,
 } from '../../../core/models/api.models';
 import { CASSE } from '../../../core/models/api.models';
 import type { Cassa } from '../../../core/models/api.models';
@@ -30,9 +29,14 @@ import {
   VoceFiltro,
 } from '../../../shared/ui/filtro/filtro.component';
 import {
+  CodiceMovimentoStaking,
+  MOVIMENTI_STAKING,
+  VoceMovimentoStaking,
   formattaCent,
   parseImportoInCent,
   testoEv,
+  voceDaMovimento,
+  voceMovimento,
 } from './staking-format';
 
 type FiltroStato = StakingStato | 'TUTTI';
@@ -157,10 +161,14 @@ export class AdminStakingsComponent {
   private seqElenco = 0;
 
   protected readonly form = this.fb.nonNullable.group({
-    tipo: 'FONDI' as StakingTipo,
-    // ⚠️ Da quale portafoglio esce il denaro. Obbligatoria sui soli movimenti
-    // di FONDI: il server la RIFIUTA con un 400 sugli altri due assi, perché
-    // non muovono un centesimo da nessuna tasca.
+    // ⚠️ La VOCE, non l'asse: porta tipo E verso (`MOVIMENTI_STAKING`), e
+    // l'importo si scrive sempre positivo — il segno lo applica `registra()`.
+    // Fino al 19/09/2026 qui c'era `tipo` e il meno lo digitava l'owner, che
+    // non ha trovato come registrare un roll che rientra.
+    movimento: 'ANTICIPO' as CodiceMovimentoStaking,
+    // ⚠️ Da quale portafoglio esce il denaro, o in quale rientra. Obbligatoria
+    // sui soli movimenti di FONDI: il server la RIFIUTA con un 400 sugli altri
+    // due assi, perché non muovono un centesimo da nessuna tasca.
     cassa: 'PIETRO' as Cassa,
     importo: '',
     causale: '',
@@ -169,6 +177,8 @@ export class AdminStakingsComponent {
 
   protected readonly CASSE = CASSE;
   protected readonly cassaLabel = cassaLabel;
+  protected readonly MOVIMENTI = MOVIMENTI_STAKING;
+  protected readonly voceDaMovimento = voceDaMovimento;
 
   /**
    * La tasca scelta per ciascun movimento storico ancora da attribuire.
@@ -243,31 +253,46 @@ export class AdminStakingsComponent {
   }
 
   /**
-   * L'asse scelto muove denaro vero, quindi chiede la tasca.
-   *
-   * ⚠️ Un `computed` sul valore del form e non una lettura diretta: in zoneless
-   * il template non si ridisegna leggendo `form.controls.x.value`, e il campo
-   * della cassa resterebbe visibile anche passando a «EV» — cioè si manderebbe
-   * al server proprio la coppia che lui rifiuta.
-   */
-  /**
-   * L'asse scelto adesso.
+   * La voce di movimento scelta adesso: tipo, verso, etichette.
    *
    * ⚠️ Legge `valori()` per la DIPENDENZA e poi il controllo per il VALORE:
    * `valori` è tipizzato `Record<string, unknown>`, quindi leggerne la chiave
    * darebbe `unknown`; e leggere solo il controllo non creerebbe alcuna
    * dipendenza, cioè il computed non si ricalcolerebbe mai — in zoneless il
-   * campo della tasca resterebbe visibile anche passando a «EV», e si
+   * campo della tasca resterebbe visibile anche passando a «Recupero EV», e si
    * manderebbe al server proprio la coppia che lui rifiuta.
    */
-  protected readonly tipoScelto = computed<StakingTipo>(() => {
+  protected readonly voce = computed<VoceMovimentoStaking>(() => {
     this.valori();
-    return this.form.controls.tipo.value;
+    return voceMovimento(this.form.controls.movimento.value);
   });
 
+  /** La voce scelta muove denaro vero, quindi chiede la tasca. */
   protected readonly chiedeCassa = computed(
-    () => this.tipoScelto() === 'FONDI',
+    () => this.voce().tipo === 'FONDI',
   );
+
+  /** La tasca scelta, per nominarla nella spiegazione sotto la riga. */
+  protected readonly cassaScelta = computed<Cassa>(() => {
+    this.valori();
+    return this.form.controls.cassa.value;
+  });
+
+  /**
+   * Le perdite dichiarate su questa riga al netto degli storni, dallo storico
+   * caricato: è il tetto di uno storno. `null` finché lo storico non è
+   * arrivato — allora non si blocca niente e decide il server.
+   *
+   * ⚠️ `dettaglio` restituisce TUTTI i movimenti (nessun `limit`), quindi la
+   * somma è esatta e non una stima sulla prima pagina.
+   */
+  protected readonly perditeDichiarate = computed<number | null>(() => {
+    const mov = this.movimenti();
+    if (mov === null) return null;
+    return -mov
+      .filter((m) => m.tipo === 'PERDITA')
+      .reduce((tot, m) => tot + m.importoCent, 0);
+  });
 
   private readonly baseline = signal('');
 
@@ -294,8 +319,15 @@ export class AdminStakingsComponent {
   /**
    * Perché il movimento non si può registrare, o null se si può.
    *
-   * ⚠️ Il vincolo «≤ 0» vale SOLO sul ramo EV: applicato anche ai fondi,
-   * nessun bilancio sarebbe registrabile — cioè metà della funzione.
+   * ⚠️ Il segno lo porta la VOCE: un meno digitato è un errore e si ferma qui,
+   * prima che «Anticipo» con «-750» parta come un rientro senza che nessuno
+   * l'abbia scelto. I tetti (EV che non sale sopra zero, perdita non oltre i
+   * fondi fuori, storno non oltre le perdite dichiarate) valgono ciascuno sulla
+   * propria voce: applicati alle altre, metà del registro non sarebbe
+   * scrivibile. Il rientro NON ha un pavimento: il server ammette fondi
+   * negativi di proposito (un anticipo bruciato è un debito del giocatore, e
+   * una correzione deve poter passare), e l'anteprima mostra il saldo che ne
+   * esce.
    * ⚠️ L'autorità resta il server: qui si anticipa il suo rifiuto perché non
    * arrivi a sorpresa dopo il clic.
    */
@@ -308,17 +340,41 @@ export class AdminStakingsComponent {
     const cent = this.importoCent();
     if (cent === null) return null; // campo vuoto o incompleto: niente errore
     if (cent === 0) return "L'importo non può essere zero.";
-    if (this.form.controls.tipo.value !== 'EV') return null;
-    const dopo = riga.saldoEvCent + cent;
-    if (dopo > 0) {
-      // ⚠️ Due messaggi e non uno: a debito zero il ramo generico direbbe «al
-      // massimo −0,00 €», perché `Intl` formatta lo zero negativo col segno. Una
-      // cifra così fa dubitare del conto invece che dell'importo digitato.
-      return riga.saldoEvCent === 0
-        ? "L'EV è già in pari: non c'è niente da recuperare."
-        : `Puoi recuperare al massimo ${formattaCent(-riga.saldoEvCent)}: l'EV da recuperare non può salire sopra zero.`;
+    if (cent < 0)
+      return "Il segno lo decide il tipo di movimento: scrivi l'importo senza il meno.";
+    const voce = this.voce();
+    const delta = voce.segno * cent;
+    switch (voce.codice) {
+      case 'RECUPERO_EV': {
+        if (riga.saldoEvCent + delta <= 0) return null;
+        // ⚠️ Due messaggi e non uno: a debito zero il ramo generico direbbe «al
+        // massimo −0,00 €», perché `Intl` formatta lo zero negativo col segno.
+        // Una cifra così fa dubitare del conto invece che dell'importo digitato.
+        return riga.saldoEvCent === 0
+          ? "L'EV è già in pari: non c'è niente da recuperare."
+          : `Puoi recuperare al massimo ${formattaCent(-riga.saldoEvCent)}: l'EV da recuperare non può salire sopra zero.`;
+      }
+      case 'PERDITA': {
+        // Specchio del filtro atomico del server (`saldoFondiCent >= importo`).
+        if (riga.saldoFondiCent + delta >= 0) return null;
+        return riga.saldoFondiCent <= 0
+          ? 'Questo giocatore non ha fondi a disposizione: non c’è capitale da dichiarare perso.'
+          : `I fondi a disposizione sono ${formattaCent(riga.saldoFondiCent)}: puoi dichiarare perso al massimo quello.`;
+      }
+      case 'STORNO_PERDITA': {
+        // ⚠️ Solo lato client, e solo a storico caricato: il server non ha un
+        // tetto sullo storno, quindi qui si evita di annullare più di quanto è
+        // stato dichiarato — che nel conto economico sarebbe un costo negativo
+        // inventato.
+        const perse = this.perditeDichiarate();
+        if (perse === null || delta <= perse) return null;
+        return perse <= 0
+          ? 'Nessuna perdita dichiarata su questo registro: non c’è niente da stornare.'
+          : `Le perdite dichiarate sono ${formattaCent(perse)}: puoi stornare al massimo quello.`;
+      }
+      default:
+        return null;
     }
-    return null;
   });
 
   /**
@@ -326,18 +382,20 @@ export class AdminStakingsComponent {
    *
    * ⚠️ `void this.valori()` in testa, benché legga già `importoCent()`: un
    * `computed` che dipende solo da altri `computed` NON si ricalcola quando
-   * quelli restituiscono un valore uguale. Cambiando l'asse da Fondi a EV
-   * l'importo resta lo stesso, quindi senza questa riga l'anteprima
-   * continuerebbe a mostrare il saldo dei fondi con «EV» selezionato.
+   * quelli restituiscono un valore uguale. Cambiando la voce da «Anticipo» a
+   * «Recupero EV» l'importo resta lo stesso, quindi senza questa riga
+   * l'anteprima continuerebbe a mostrare il saldo dei fondi.
    */
   protected readonly anteprima = computed<string | null>(() => {
     void this.valori();
     const riga = this.rigaAperta();
     const cent = this.importoCent();
     if (!riga || cent === null || this.bloccoMovimento()) return null;
-    return this.form.controls.tipo.value === 'EV'
-      ? testoEv(riga.saldoEvCent + cent)
-      : formattaCent(riga.saldoFondiCent + cent);
+    const voce = this.voce();
+    const delta = voce.segno * cent;
+    return voce.tipo === 'EV'
+      ? testoEv(riga.saldoEvCent + delta)
+      : formattaCent(riga.saldoFondiCent + delta);
   });
 
   /**
@@ -446,7 +504,7 @@ export class AdminStakingsComponent {
     this.seq += 1;
     const mio = this.seq;
     this.form.reset({
-      tipo: 'FONDI',
+      movimento: 'ANTICIPO',
       cassa: 'PIETRO',
       importo: '',
       causale: '',
@@ -497,15 +555,20 @@ export class AdminStakingsComponent {
     this.salvando.set(true);
     this.error.set(null);
     this.feedback.set(null);
+    // ⚠️ Il segno lo mette la voce, qui e solo qui: l'importo digitato è
+    // positivo per costruzione (`bloccoMovimento` ferma il meno), e verso l'API
+    // parte l'asse del registro con l'importo già firmato — il contratto con il
+    // server non è cambiato.
+    const voce = this.voce();
     this.api
       .aggiungiMovimento(r.id, {
-        tipo: this.form.controls.tipo.value,
-        importoCent: cent,
+        tipo: voce.tipo,
+        importoCent: voce.segno * cent,
         causale,
         // ⚠️ Si manda SOLO dove serve: su «EV» e «Capitale perso» il server
         // risponde 400 se gliela si passa, e omettere la chiave è diverso da
         // mandarla vuota — `@IsIn` rifiuterebbe la stringa vuota.
-        ...(this.form.controls.tipo.value === 'FONDI'
+        ...(voce.tipo === 'FONDI'
           ? { cassa: this.form.controls.cassa.value }
           : {}),
       })

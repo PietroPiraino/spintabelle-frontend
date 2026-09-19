@@ -105,6 +105,60 @@ describe('AdminStakingsComponent', () => {
     await stabilizza();
   };
 
+  /** Digita la causale e lascia ricalcolare. */
+  const digitaCausale = async (v: string) => {
+    const i = fixture.nativeElement.querySelector(
+      '#stk-causale',
+    ) as HTMLInputElement;
+    i.value = v;
+    i.dispatchEvent(new Event('input'));
+    await stabilizza();
+  };
+
+  /**
+   * Sceglie la VOCE di movimento (tipo + verso) e lascia ricalcolare.
+   *
+   * ⚠️ Dal 19/09/2026 il select è `#stk-movimento` con sei voci e non più
+   * l'asse a tre: il verso lo porta la voce, e l'importo si scrive positivo.
+   */
+  const scegliMovimento = async (codice: string) => {
+    const sel = fixture.nativeElement.querySelector(
+      '#stk-movimento',
+    ) as HTMLSelectElement;
+    sel.value = codice;
+    sel.dispatchEvent(new Event('change'));
+    await stabilizza();
+  };
+
+  const bottoneRegistra = () =>
+    [...fixture.nativeElement.querySelectorAll('button')].find(
+      (b: HTMLButtonElement) => b.textContent?.includes('Registra movimento'),
+    ) as HTMLButtonElement;
+
+  /** Un movimento già in archivio, com'erano tutti prima del 12/09/2026. */
+  const storico = (over: Partial<StakingMovimento> = {}): StakingMovimento => ({
+    id: 'm-vecchio',
+    tipo: 'FONDI',
+    importoCent: 45_000,
+    causale: 'Bankroll per Ipoker',
+    saldoFondiDopoCent: 45_000,
+    saldoEvDopoCent: 0,
+    ...over,
+  });
+
+  /** Come `apri`, ma con uno storico già pieno. */
+  const apriCon = async (movimenti: StakingMovimento[], r = riga()) => {
+    const b = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (x: HTMLButtonElement) =>
+        x.getAttribute('aria-label')?.startsWith('Apri la scheda di'),
+    ) as HTMLButtonElement;
+    b.click();
+    http
+      .expectOne((q) => q.url === `${API}/admin/stakings/${r.id}`)
+      .flush({ riga: r, movimenti });
+    await stabilizza();
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AdminStakingsComponent],
@@ -126,12 +180,14 @@ describe('AdminStakingsComponent', () => {
 
 
   describe('la riga del movimento', () => {
-    it('⚠️ i quattro campi stanno sulla STESSA riga anche se la causale porta un aiuto sotto', async () => {
-      // Trovato dall'owner in produzione il 16/09/2026: `.admin-panel__row`
-      // allinea al FONDO (per i pulsanti accanto ai campi), e la cella della
-      // causale — dal 14/09 con «La legge il giocatore nel suo account…» sotto
-      // il campo — era più alta delle altre tre, quindi il suo campo saliva di
-      // una riga e le etichette si leggevano su due livelli. Si misura, perché
+    it('⚠️ i quattro campi stanno sulla STESSA riga e l’aiuto della causale prende la riga intera', async () => {
+      // Trovato dall'owner in produzione due volte. Il 16/09/2026 l'aiuto «La
+      // legge il giocatore nel suo account…» stava DENTRO la cella della
+      // causale, che era più alta delle altre tre: con la riga allineata al
+      // fondo il suo campo saliva di una riga. Il rimedio — allineare in alto —
+      // ha lasciato l'aiuto largo quanto la sua colonna, su tre righe, con un
+      // buco sotto le altre celle (19/09). La forma buona è l'aiuto FUORI dalla
+      // cella, ultimo figlio della riga a piena larghezza. Si misura, perché
       // un allineamento sbagliato non fallisce niente: si vede e basta.
       await rispondi(pagina([riga()]));
       await apri();
@@ -142,34 +198,39 @@ describe('AdminStakingsComponent', () => {
       box.style.width = '1400px';
       box.style.maxWidth = 'none';
 
-      const top = (sel: string) =>
-        (document.querySelector(sel) as HTMLElement).getBoundingClientRect().top;
-      const riferimento = top('#stk-tipo');
+      const rect = (sel: string) =>
+        (document.querySelector(sel) as HTMLElement).getBoundingClientRect();
+      const riferimento = rect('#stk-movimento').top;
       for (const sel of ['#stk-cassa', '#stk-importo', '#stk-causale']) {
-        expect(Math.abs(top(sel) - riferimento))
-          .withContext(`${sel} è sulla riga di #stk-tipo`)
+        expect(Math.abs(rect(sel).top - riferimento))
+          .withContext(`${sel} è sulla riga di #stk-movimento`)
           .toBeLessThan(1);
       }
-      // e l'aiuto pende SOTTO il suo campo, non accanto agli altri
-      expect(top('#stk-causale-aiuto')).toBeGreaterThan(top('#stk-causale'));
+      // le celle sono alte uguali, quindi basta la base: niente modificatore
+      const rigaCampi = document.querySelector('.admin-panel__row') as HTMLElement;
+      expect(rigaCampi.classList).not.toContain('admin-panel__row--in-alto');
+      expect(getComputedStyle(rigaCampi).alignItems).toBe('flex-end');
+      // l'aiuto pende SOTTO il suo campo…
+      const aiuto = rect('#stk-causale-aiuto');
+      expect(aiuto.top).toBeGreaterThan(rect('#stk-causale').bottom);
+      // …e prende la riga intera, non la colonna della causale
+      const rigaRect = rigaCampi.getBoundingClientRect();
+      expect(Math.abs(aiuto.left - rigaRect.left)).toBeLessThan(1);
+      expect(Math.abs(aiuto.right - rigaRect.right)).toBeLessThan(1);
+      // il legame col campo resta dichiarato
+      expect(
+        (document.querySelector('#stk-causale') as HTMLElement).getAttribute(
+          'aria-describedby',
+        ),
+      ).toBe('stk-causale-aiuto');
     });
   });
 
   describe('la tasca del movimento', () => {
-    /** Cambia l'asse e lascia ricalcolare. */
-    const scegliAsse = async (v: string) => {
-      const sel = fixture.nativeElement.querySelector(
-        '#stk-tipo',
-      ) as HTMLSelectElement;
-      sel.value = v;
-      sel.dispatchEvent(new Event('change'));
-      await stabilizza();
-    };
-
     const cassa = () =>
       fixture.nativeElement.querySelector('#stk-cassa') as HTMLSelectElement | null;
 
-    it('la chiede sui FONDI e la nasconde sugli altri due assi', async () => {
+    it('la chiede sui FONDI nei due versi e la nasconde sulle altre quattro voci', async () => {
       // ⚠️⚠️ Non è cosmesi: il server RIFIUTA con un 400 una cassa su «EV» o su
       // «Capitale perso», perché quei due non spostano un centesimo da nessuna
       // tasca. Un campo che resta visibile manda al server proprio la coppia
@@ -178,23 +239,42 @@ describe('AdminStakingsComponent', () => {
       await apri();
 
       expect(cassa())
-        .withContext('sui fondi la tasca si chiede')
+        .withContext('su un anticipo la tasca si chiede')
         .toBeTruthy();
 
-      await scegliAsse('EV');
+      await scegliMovimento('RIENTRO');
       expect(cassa())
-        .withContext('su EV sparisce')
-        .toBeNull();
+        .withContext('e su un rientro pure: il denaro RIENTRA in una tasca')
+        .toBeTruthy();
 
-      await scegliAsse('PERDITA');
-      expect(cassa())
-        .withContext('e su una perdita pure')
-        .toBeNull();
+      for (const voce of ['RECUPERO_EV', 'DEBITO_EV', 'PERDITA', 'STORNO_PERDITA']) {
+        await scegliMovimento(voce);
+        expect(cassa()).withContext(`su ${voce} sparisce`).toBeNull();
+      }
 
-      await scegliAsse('FONDI');
+      await scegliMovimento('ANTICIPO');
       expect(cassa())
         .withContext('tornando ai fondi ricompare')
         .toBeTruthy();
+    });
+
+    it('⚠️ l’etichetta della tasca segue il VERSO: «da quale» esce, «in quale» rientra', async () => {
+      // Fino al 19/09/2026 diceva sempre «Da quale portafoglio», anche per un
+      // roll che il giocatore RESTITUISCE: la parola sbagliata su metà dei
+      // casi, e l'owner non ha trovato come registrare un rientro.
+      await rispondi(pagina([riga()]));
+      await apri();
+      const etichetta = () =>
+        (
+          fixture.nativeElement.querySelector(
+            'label[for="stk-cassa"]',
+          ) as HTMLElement
+        ).textContent?.trim();
+      expect(etichetta()).toBe('Da quale portafoglio');
+      await scegliMovimento('RIENTRO');
+      expect(etichetta()).toBe('In quale portafoglio');
+      await scegliMovimento('ANTICIPO');
+      expect(etichetta()).toBe('Da quale portafoglio');
     });
 
     it('manda la cassa SOLO sui fondi', async () => {
@@ -220,31 +300,29 @@ describe('AdminStakingsComponent', () => {
         (q) => q.url === `${API}/admin/stakings/${r.id}/movimenti`,
       );
       expect(req.request.body.cassa).toBe('PIETRO');
+      // verso l'API parte l'ASSE con l'importo già firmato: il contratto col
+      // server non è cambiato
+      expect(req.request.body.tipo).toBe('FONDI');
+      expect(req.request.body.importoCent).toBe(25_000);
       req.flush({ riga: r, movimento: { id: 'm1', tipo: 'FONDI', importoCent: 25_000, causale: 'roll di settembre', cassa: 'PIETRO', saldoFondiDopoCent: 25_000, saldoEvDopoCent: 0 } });
       await stabilizza();
       await scaricaRilettura(pagina([r]));
     });
 
-    it('su una PERDITA la chiave non parte affatto', async () => {
+    it('su una PERDITA la chiave non parte affatto, e il segno lo mette la voce', async () => {
       // ⚠️ Omessa e non mandata vuota: `@IsIn` sul server rifiuta la stringa
       // vuota, quindi un `cassa: ''` darebbe 400 su un movimento legittimo.
+      // ⚠️ L'importo si digita POSITIVO («400») e parte negativo: è la voce a
+      // dire che un capitale perso cala i fondi, non il meno di chi scrive.
       const r = riga();
       await rispondi(pagina([r]));
       await apri(r);
 
-      await scegliAsse('PERDITA');
-      await digitaImporto('-400');
-      const causale = fixture.nativeElement.querySelector(
-        '#stk-causale',
-      ) as HTMLInputElement;
-      causale.value = 'giocatore sparito';
-      causale.dispatchEvent(new Event('input'));
-      await stabilizza();
+      await scegliMovimento('PERDITA');
+      await digitaImporto('400');
+      await digitaCausale('giocatore sparito');
 
-      const salva = [...fixture.nativeElement.querySelectorAll('button')].find(
-        (b: HTMLButtonElement) => b.textContent?.includes('Registra'),
-      ) as HTMLButtonElement;
-      salva.click();
+      bottoneRegistra().click();
       await stabilizza();
 
       const req = http.expectOne(
@@ -252,9 +330,193 @@ describe('AdminStakingsComponent', () => {
       );
       expect('cassa' in req.request.body).toBeFalse();
       expect(req.request.body.tipo).toBe('PERDITA');
-      req.flush({ riga: r, movimento: { id: 'm2', tipo: 'PERDITA', importoCent: -40_000, causale: 'giocatore sparito', saldoFondiDopoCent: 0, saldoEvDopoCent: 0 } });
+      expect(req.request.body.importoCent).toBe(-40_000);
+      req.flush({ riga: r, movimento: { id: 'm2', tipo: 'PERDITA', importoCent: -40_000, causale: 'giocatore sparito', saldoFondiDopoCent: 10_000, saldoEvDopoCent: -34_000 } });
       await stabilizza();
       await scaricaRilettura(pagina([r]));
+    });
+  });
+
+  describe('il verso del movimento lo porta la voce', () => {
+    it('⚠️ il rientro del roll: importo positivo, verso l’API parte negativo, la tasca è quella che RICEVE', async () => {
+      // La domanda dell'owner del 19/09/2026: «il giocatore ha mandato 750
+      // euro di roll a me Pietro, come lo registro?». Fino a quel giorno la
+      // risposta era «Fondi, Pietro, −750» e nessuna parola dello schermo la
+      // diceva. Ora è una voce della tendina.
+      const r = riga({ saldoFondiCent: 100_000 });
+      await rispondi(pagina([r]));
+      await apri(r);
+
+      await scegliMovimento('RIENTRO');
+      // la spiegazione dice che torna CAPITALE, e dove va il profitto
+      expect(testo()).toContain('capitale, non');
+      expect(testo()).toContain('Conteggi mensili');
+      await digitaImporto('750');
+      // l'anteprima mostra i fondi che scendono: 1.000 − 750
+      expect(testo()).toContain('Dopo questo movimento');
+      expect(testo()).toContain('250,00');
+      await digitaCausale('rientro parziale del roll');
+
+      bottoneRegistra().click();
+      await stabilizza();
+      const req = http.expectOne(
+        (q) => q.url === `${API}/admin/stakings/${r.id}/movimenti`,
+      );
+      expect(req.request.body).toEqual({
+        tipo: 'FONDI',
+        importoCent: -75_000,
+        causale: 'rientro parziale del roll',
+        cassa: 'PIETRO',
+      });
+      const dopo = riga({ saldoFondiCent: 25_000 });
+      req.flush({
+        riga: dopo,
+        movimento: {
+          id: 'm3',
+          tipo: 'FONDI',
+          importoCent: -75_000,
+          cassa: 'PIETRO',
+          causale: 'rientro parziale del roll',
+          saldoFondiDopoCent: 25_000,
+          saldoEvDopoCent: -34_000,
+        },
+      });
+      await stabilizza();
+      await scaricaRilettura(pagina([dopo]));
+      // e lo storico lo chiama col suo nome, non «Fondi −750,00 €»
+      expect(testo()).toMatch(/Rientro\s*·\s*Pietro/);
+    });
+
+    it('⚠️ un meno digitato è un errore, non un verso', async () => {
+      // «Anticipo» con «-750» partirebbe come un rientro che nessuno ha
+      // scelto: il segno lo decide la voce, e il campo lo dice prima del clic.
+      await rispondi(pagina([riga()]));
+      await apri();
+      await digitaImporto('-750');
+      await digitaCausale('rientro del roll');
+      expect(testo()).toContain('senza il meno');
+      expect(testo()).not.toContain('Dopo questo movimento');
+      expect(bottoneRegistra().disabled).toBe(true);
+      // scritto positivo, tutto torna
+      await digitaImporto('750');
+      expect(testo()).not.toContain('senza il meno');
+      expect(bottoneRegistra().disabled).toBe(false);
+    });
+
+    it('lo storico nomina il verso di ogni movimento dalla stessa tabella', async () => {
+      // Prima diceva «Fondi · Pietro −750,00 €»: il verso andava dedotto dal
+      // meno, cioè lo stesso difetto che il form aveva in scrittura.
+      await rispondi(pagina([riga()]));
+      await apriCon([
+        storico({ id: 'm-r', importoCent: -75_000, cassa: 'PIETRO' }),
+        storico({ id: 'm-a', importoCent: 45_000, cassa: 'PIETRO' }),
+        storico({ id: 'm-e', tipo: 'EV', importoCent: -10_000 }),
+        storico({ id: 'm-s', tipo: 'PERDITA', importoCent: 40_000 }),
+      ]);
+      const t = testo();
+      expect(t).toMatch(/Rientro\s*·\s*Pietro/);
+      expect(t).toMatch(/Anticipo\s*·\s*Pietro/);
+      expect(t).toContain('Debito EV');
+      expect(t).toContain('Storno perdita');
+      // l'importo resta col suo segno: il badge aggiunge la parola, non la
+      // toglie (⚠️ il meno di `Intl` può essere U+2212: si accettano entrambi)
+      expect(t).toMatch(/[-−]750,00/);
+      expect(t).toContain('+450,00');
+      // ⚠️ e il rame segue il MOVIMENTO, non il segno: un rientro è negativo ma
+      // non è una perdita, un debito EV sì
+      const righe = [...fixture.nativeElement.querySelectorAll('.stk__mov li')] as HTMLElement[];
+      const rientro = righe.find((li) => /Rientro/.test(li.textContent ?? ''))!;
+      const debito = righe.find((li) => /Debito EV/.test(li.textContent ?? ''))!;
+      expect(rientro.querySelector('strong')!.classList).not.toContain('is-debito');
+      expect(debito.querySelector('strong')!.classList).toContain('is-debito');
+    });
+
+    it('la perdita rispecchia il tetto del server prima del clic', async () => {
+      // Il server risponderebbe 400: qui lo si anticipa perché non arrivi a
+      // sorpresa dopo il clic.
+      await rispondi(pagina([riga()])); // fondi 500,00
+      await apri();
+      await scegliMovimento('PERDITA');
+      await digitaImporto('600');
+      expect(testo()).toContain('puoi dichiarare perso al massimo');
+      expect(testo()).toContain('500,00');
+      await digitaImporto('500');
+      expect(testo()).not.toContain('puoi dichiarare perso al massimo');
+      expect(testo()).toContain('0,00');
+    });
+
+    it('lo storno non supera le perdite dichiarate, e parte POSITIVO senza tasca', async () => {
+      // Il registro è append-only: una perdita dichiarata per errore si
+      // annulla solo con un movimento opposto, e quel movimento deve esistere
+      // nell'interfaccia — ma non oltre quanto è stato dichiarato, o il conto
+      // economico del mese recupererebbe un costo mai sostenuto.
+      const r = riga({ saldoFondiCent: 10_000 });
+      await rispondi(pagina([r]));
+      await apriCon([storico({ id: 'm-perso', tipo: 'PERDITA', importoCent: -40_000 })], r);
+      await scegliMovimento('STORNO_PERDITA');
+      await digitaImporto('500');
+      expect(testo()).toContain('puoi stornare al massimo');
+      expect(testo()).toContain('400,00');
+
+      await digitaImporto('400');
+      expect(testo()).not.toContain('puoi stornare al massimo');
+      await digitaCausale('storno della perdita del 12/09');
+      bottoneRegistra().click();
+      await stabilizza();
+      const req = http.expectOne(
+        (q) => q.url === `${API}/admin/stakings/${r.id}/movimenti`,
+      );
+      expect(req.request.body).toEqual({
+        tipo: 'PERDITA',
+        importoCent: 40_000,
+        causale: 'storno della perdita del 12/09',
+      });
+      req.flush({
+        riga: riga({ saldoFondiCent: 50_000 }),
+        movimento: {
+          id: 'm-st',
+          tipo: 'PERDITA',
+          importoCent: 40_000,
+          causale: 'storno della perdita del 12/09',
+          saldoFondiDopoCent: 50_000,
+          saldoEvDopoCent: -34_000,
+        },
+      });
+      await stabilizza();
+      await scaricaRilettura(pagina([riga({ saldoFondiCent: 50_000 })]));
+    });
+
+    it('un nuovo debito EV parte negativo e l’anteprima lo somma al debito', async () => {
+      await rispondi(pagina([riga()])); // EV −340,00
+      await apri();
+      await scegliMovimento('DEBITO_EV');
+      await digitaImporto('100');
+      expect(testo()).toContain('440,00');
+      expect(testo()).toContain('da recuperare');
+      await digitaCausale('passivo del conteggio di agosto');
+      bottoneRegistra().click();
+      await stabilizza();
+      const req = http.expectOne(
+        (q) => q.url === `${API}/admin/stakings/s1/movimenti`,
+      );
+      expect(req.request.body).toEqual({
+        tipo: 'EV',
+        importoCent: -10_000,
+        causale: 'passivo del conteggio di agosto',
+      });
+      req.flush({
+        riga: riga({ saldoEvCent: -44_000 }),
+        movimento: {
+          id: 'm-d',
+          tipo: 'EV',
+          importoCent: -10_000,
+          causale: 'passivo del conteggio di agosto',
+          saldoFondiDopoCent: 50_000,
+          saldoEvDopoCent: -44_000,
+        },
+      });
+      await stabilizza();
+      await scaricaRilettura(pagina([riga({ saldoEvCent: -44_000 })]));
     });
   });
 
@@ -323,17 +585,13 @@ describe('AdminStakingsComponent', () => {
     it("un recupero EV più grande del debito è bloccato PRIMA del clic", async () => {
       await rispondi(pagina([riga()]));
       await apri();
-      const tipo = fixture.nativeElement.querySelector(
-        '#stk-tipo',
-      ) as HTMLSelectElement;
-      tipo.value = 'EV';
-      tipo.dispatchEvent(new Event('change'));
+      await scegliMovimento('RECUPERO_EV');
       await digitaImporto('400');
       expect(testo()).toContain('Puoi recuperare al massimo');
       expect(testo()).toContain('340,00');
     });
 
-    it('⚠️ il vincolo «≤ 0» NON si applica ai fondi', async () => {
+    it('⚠️ il tetto dell’EV NON si applica ai fondi', async () => {
       // Applicandolo anche ai fondi, nessun bilancio sarebbe registrabile:
       // cioè metà della funzione sparirebbe, e il pulsante resterebbe spento
       // senza dire perché.
@@ -578,29 +836,10 @@ describe('AdminStakingsComponent', () => {
      * Trovato leggendo i dati di produzione, non il codice. È la quarta volta
      * che questo modulo spedisce una funzione completa lato server e muta lato
      * interfaccia.
+     *
+     * `storico` e `apriCon` vivono in testa al file: dal 19/09/2026 li usa anche
+     * il gruppo sul verso dei movimenti.
      */
-    const storico = (over: Partial<StakingMovimento> = {}): StakingMovimento => ({
-      id: 'm-vecchio',
-      tipo: 'FONDI',
-      importoCent: 45_000,
-      causale: 'Bankroll per Ipoker',
-      saldoFondiDopoCent: 45_000,
-      saldoEvDopoCent: 0,
-      ...over,
-    });
-
-    const apriCon = async (movimenti: StakingMovimento[], r = riga()) => {
-      const b = [...fixture.nativeElement.querySelectorAll('button')].find(
-        (x: HTMLButtonElement) =>
-          x.getAttribute('aria-label')?.startsWith('Apri la scheda di'),
-      ) as HTMLButtonElement;
-      b.click();
-      http
-        .expectOne((q) => q.url === `${API}/admin/stakings/${r.id}`)
-        .flush({ riga: r, movimenti });
-      await stabilizza();
-    };
-
     const bottone = () =>
       [...fixture.nativeElement.querySelectorAll('button')].find(
         (x: HTMLButtonElement) => x.textContent?.trim() === 'Attribuisci',

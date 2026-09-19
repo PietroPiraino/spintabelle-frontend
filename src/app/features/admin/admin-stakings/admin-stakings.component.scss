@@ -60,9 +60,10 @@
   }
 }
 
+// ⚠️ Nessun `margin-top`: lo stacco dalla nota sopra lo dà il ritmo di
+// `.admin-modale__corpo > * + *` (in `admin-modale.scss`, dal 19/09/2026), che
+// con l'incapsulamento vale (0,3,0) e batterebbe comunque una classe sola.
 .stk__anteprima {
-  margin-top: 0.4rem;
-
   strong {
     color: var(--text);
   }

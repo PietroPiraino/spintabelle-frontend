@@ -217,15 +217,39 @@
               Questo registro è chiuso: riaprilo per registrare un movimento.
             </p>
           } @else {
-            <!-- `--in-alto`: la cella della causale porta un aiuto sotto il
-                 campo, e con l'allineamento al fondo salirebbe di una riga -->
-            <div class="row admin-panel__row admin-panel__row--in-alto">
+            <!--
+              ⚠️ L'aiuto della causale è l'ULTIMO figlio della riga
+              (`.admin-panel__aiuto`), non sta nella sua cella: dentro la cella
+              era largo quanto la colonna e la rendeva più alta delle altre tre,
+              e la riga si leggeva storta in entrambi gli allineamenti (16/09 e
+              19/09/2026). Le celle restano alte uguali e la base `flex-end` basta.
+            -->
+            <div class="row admin-panel__row">
               <div class="field" style="margin: 0">
-                <label for="stk-tipo">Asse</label>
-                <select id="stk-tipo" class="input" formControlName="tipo">
-                  <option value="FONDI">Fondi</option>
-                  <option value="EV">EV da recuperare</option>
-                  <option value="PERDITA">Capitale perso</option>
+                <label for="stk-movimento">Movimento</label>
+                <!--
+                  ⚠️⚠️ Il VERSO lo porta la voce, non il segno digitato: regola
+                  del libro cassa (12/09/2026) — «chiedere un meno su un bonifico
+                  in uscita è il modo più rapido per registrare il verso
+                  sbagliato di un movimento di denaro». Fino al 19/09 qui c'era
+                  l'asse a tre voci con «es. 250 oppure -80,50» nell'importo, e
+                  l'owner non ha trovato come registrare un roll che rientra:
+                  nessuna parola dello schermo diceva «rientro». Sei voci perché
+                  il registro è append-only e ogni scrittura deve avere la sua
+                  compensativa (`MOVIMENTI_STAKING`).
+                  ⚠️ Opzioni da `@for` con `formControlName`: qui funziona (i
+                  reactive forms scrivono il valore dopo il montaggio) — la
+                  trappola di `[value]` riguarda i select SENZA form control.
+                -->
+                <select
+                  id="stk-movimento"
+                  class="input"
+                  formControlName="movimento"
+                  aria-describedby="stk-movimento-aiuto"
+                >
+                  @for (v of MOVIMENTI; track v.codice) {
+                    <option [value]="v.codice">{{ v.label }}</option>
+                  }
                 </select>
               </div>
               <!--
@@ -240,7 +264,12 @@
               -->
               @if (chiedeCassa()) {
                 <div class="field" style="margin: 0">
-                  <label for="stk-cassa">Da quale portafoglio</label>
+                  <!-- L'etichetta segue il VERSO della voce: «da quale» esce un
+                       anticipo, «in quale» rientra un roll restituito. Il campo
+                       è uno solo e il valore non cambia significato — a
+                       cambiare è la sola parola (idioma di `etichettaCassa` nei
+                       conteggi). -->
+                  <label for="stk-cassa">{{ voce().etichettaCassa }}</label>
                   <select id="stk-cassa" class="input" formControlName="cassa">
                     @for (c of CASSE; track c) {
                       <option [value]="c">{{ cassaLabel(c) }}</option>
@@ -256,7 +285,7 @@
                   inputmode="decimal"
                   class="input"
                   formControlName="importo"
-                  placeholder="es. 250 oppure -80,50"
+                  placeholder="es. 250 oppure 80,50"
                   autocomplete="off"
                 />
               </div>
@@ -268,38 +297,73 @@
                   class="input"
                   formControlName="causale"
                   maxlength="300"
-                  placeholder="es. anticipo di maggio"
+                  [placeholder]="voce().esempioCausale"
                   aria-describedby="stk-causale-aiuto"
                 />
-                <!-- ⚠️ Dal 14/09/2026 la causale raggiunge lo schermo del
-                     giocatore (registro nella sua area personale): un «roll per
-                     i tornei di sabato su X» porterebbe nome di sala e gioco
-                     accanto a una cifra (art. 9 DL 87/2018). È la misura 3 di
-                     valutazione-registro-staking-al-giocatore.md. -->
-                <span id="stk-causale-aiuto" class="admin-nota">
-                  La legge il giocatore nel suo account: descrivi il movimento, non il gioco.
-                </span>
               </div>
+              <!-- ⚠️ Dal 14/09/2026 la causale raggiunge lo schermo del
+                   giocatore (registro nella sua area personale): un «roll per
+                   i tornei di sabato su X» porterebbe nome di sala e gioco
+                   accanto a una cifra (art. 9 DL 87/2018). È la misura 3 di
+                   valutazione-registro-staking-al-giocatore.md.
+                   ⚠️ Ultimo figlio della RIGA, non della cella: vedi il
+                   commento in testa alla riga. -->
+              <p id="stk-causale-aiuto" class="admin-panel__aiuto">
+                La legge il giocatore nel suo account: descrivi il movimento, non il gioco.
+              </p>
             </div>
 
-            <p class="admin-nota">
-              @if (tipoScelto() === 'EV') {
-                Un valore <strong>negativo</strong> peggiora l'EV da recuperare,
-                uno <strong>positivo</strong> lo recupera. Non può salire sopra
-                zero.
-              } @else if (tipoScelto() === 'PERDITA') {
-                Un valore <strong>negativo</strong> dichiara perso quel capitale:
-                i fondi a disposizione scendono, e la perdita diventa un costo
-                della scuola <strong>diviso 65/35</strong> nel mese in cui la
-                dichiari. Non si può dichiarare perso più di quanto è fuori, e
-                una seconda dichiarazione identica viene rifiutata. Non chiede
-                una tasca: quel denaro era già uscito quando il roll è stato
-                anticipato.
-              } @else {
-                Un valore <strong>positivo</strong> aggiunge fondi, uno
-                <strong>negativo</strong> li toglie. La tasca dice chi ha messo
-                il denaro: è quello che fa comparire il capitale nel conguaglio
-                fra soci.
+            <!--
+              Cosa fa la voce scelta, nella lingua dell'owner. ⚠️ Il rientro
+              dice due volte che è CAPITALE e non profitto: la quota di vincita
+              che il giocatore versa alla scuola ha un'altra strada (i Conteggi
+              mensili), e registrarla qui abbasserebbe il capitale anticipato
+              senza far entrare un euro nel conto economico — l'errore
+              simmetrico (un roll che torna scritto come entrata «Staking»)
+              gonfierebbe il margine del mese.
+            -->
+            <p id="stk-movimento-aiuto" class="admin-nota">
+              @switch (voce().codice) {
+                @case ('ANTICIPO') {
+                  Denaro della scuola che va al giocatore: i fondi a
+                  disposizione <strong>salgono</strong>. Esce dal portafoglio di
+                  {{ cassaLabel(cassaScelta()) }}, che nel conguaglio fra soci lo
+                  vede come capitale anticipato.
+                }
+                @case ('RIENTRO') {
+                  Il giocatore restituisce una parte del roll: i fondi a
+                  disposizione <strong>scendono</strong> e il capitale anticipato
+                  da {{ cassaLabel(cassaScelta()) }} cala della stessa cifra nel
+                  conguaglio fra soci. Torna <strong>capitale, non
+                  profitto</strong>: la quota di vincita che il giocatore versa
+                  alla scuola si registra nei Conteggi mensili (entrata
+                  «Staking»), non qui.
+                }
+                @case ('RECUPERO_EV') {
+                  Il giocatore recupera parte dello scarto: l'EV da recuperare
+                  si avvicina a zero e <strong>non può superarlo</strong>. Non
+                  muove denaro e non chiede una tasca.
+                }
+                @case ('DEBITO_EV') {
+                  Aggiunge EV da recuperare. Il conteggio del mese lo scrive da
+                  solo quando il pool chiude in passivo: a mano serve solo per
+                  una correzione. Non muove denaro e non chiede una tasca.
+                }
+                @case ('PERDITA') {
+                  Dichiara perso quel capitale: i fondi a disposizione scendono,
+                  e la perdita diventa un costo della scuola
+                  <strong>diviso 65/35</strong> nel mese in cui la dichiari. Non
+                  più di quanto è fuori, e una seconda dichiarazione identica
+                  viene rifiutata. Non chiede una tasca: quel denaro era già
+                  uscito quando il roll è stato anticipato.
+                }
+                @case ('STORNO_PERDITA') {
+                  Annulla, in tutto o in parte, una perdita dichiarata per
+                  errore: i fondi a disposizione risalgono e il conto economico
+                  del mese in cui storni recupera quel costo.
+                  <strong>Non è un rientro di denaro</strong>: per un roll che
+                  torna usa «Rientro dal giocatore».
+                }
               }
             </p>
 
@@ -354,7 +418,7 @@
               <p class="admin-nota stk__coda">
                 ⚠️ {{ quanti }}
                 {{ quanti === 1 ? 'movimento di fondi non dice' : 'movimenti di fondi non dicono' }}
-                da quale portafoglio {{ quanti === 1 ? 'è uscito' : 'sono usciti' }}:
+                da quale portafoglio {{ quanti === 1 ? 'è passato' : 'sono passati' }}:
                 finché manca, quel denaro non entra nel credito di nessun socio
                 nel <strong>conguaglio fra soci</strong>. Si completa qui sotto,
                 uno per uno.
@@ -363,16 +427,20 @@
             <ul class="admin-history stk__mov">
               @for (m of movimenti()!; track m.id) {
                 <li>
+                  <!-- ⚠️ Il badge nomina il VERSO («Rientro · Pietro»), dalla
+                       stessa tabella del select: prima diceva «Fondi · Pietro
+                       −750,00 €» e il verso andava dedotto dal meno, cioè lo
+                       stesso difetto che il form aveva in scrittura. -->
                   <span class="badge badge--tag">
-                    {{
-                      m.tipo === 'EV'
-                        ? 'EV'
-                        : m.tipo === 'PERDITA'
-                          ? 'Perso'
-                          : 'Fondi'
-                    }}@if (m.cassa) { · {{ cassaLabel(m.cassa) }} }
+                    {{ voceDaMovimento(m.tipo, m.importoCent).breve }}@if (m.cassa) { · {{ cassaLabel(m.cassa) }} }
                   </span>
-                  <strong [class.is-debito]="m.importoCent < 0">
+                  <!-- ⚠️ Il rame segue il MOVIMENTO, non il segno: in questo
+                       pannello vuol dire «perso / a debito», e lo sono un nuovo
+                       debito EV e un capitale perso. Un rientro è negativo ma
+                       non è una perdita — è il roll che torna — e colorarlo
+                       come il debito direbbe che il giocatore ha perso quei
+                       soldi. -->
+                  <strong [class.is-debito]="m.importoCent < 0 && m.tipo !== 'FONDI'">
                     {{ m.importoCent > 0 ? '+' : '' }}{{ formattaCent(m.importoCent) }}
                   </strong>
                   · {{ m.causale }}
@@ -393,7 +461,7 @@
                   @if (m.tipo === 'FONDI' && !m.cassa) {
                     <span class="stk__attribuisci">
                       <label class="visually-hidden" [attr.for]="'stk-cassa-' + m.id">
-                        Da quale portafoglio è uscito questo movimento
+                        Da quale portafoglio è passato questo movimento
                       </label>
                       <select
                         [id]="'stk-cassa-' + m.id"
