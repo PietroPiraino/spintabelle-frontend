@@ -489,12 +489,137 @@
         basso e il rischio di rovina per diversi bankroll.
       </p>
 
+      <!--
+        ⚠️ Richiudibile: sopra resta cosa fa lo strumento, qui dentro il
+        dettaglio. Il testo resta nell'HTML prerenderizzato e nel conteggio
+        della guardia — <details> nativo, MAI un @if (idioma .faq__item).
+        ⚠️ Le sezioni sono scritte sugli intenti MISURATI il 19/09/2026 con
+        l'autocompletamento di Google (varianza poker · varianza nel poker ·
+        downswing spin and go · spin and go roi/win rate · bankroll): la pagina
+        era a posizione 22,6 con 758 parole e nessun H2 nel blocco editoriale.
+      -->
+      <details class="seo-more">
+        <summary class="seo-more__sum">Continua a leggere</summary>
+
+        <h2>Che cos’è la varianza, e perché in questo formato è più larga</h2>
+        <p>
+          La varianza misura quanto i risultati di breve periodo si allontanano dal
+          valore atteso. Esiste in ogni forma di poker, ma negli
+          Spin&nbsp;&amp;&nbsp;Go e nei Twister è amplificata da tre cose che
+          appartengono alla struttura del gioco, non al modo in cui giochi tu.
+        </p>
+        <p>
+          La prima è che si gioca in tre: anche chi è nettamente più forte del tavolo
+          vince una minoranza dei tornei, e la maggior parte delle volte esce senza
+          niente. La seconda è il montepremi estratto prima della prima mano, che
+          aggiunge un secondo elemento casuale sopra quello delle carte. La terza è
+          che quasi sempre paga solo il primo posto: non ci sono premi di consolazione
+          a smussare la curva, e il risultato di ogni torneo è tutto o niente.
+        </p>
+        <p>
+          Il moltiplicatore è la parte che confonde di più. Quasi tutti i tornei si
+          giocano sul moltiplicatore base; quelli molto alti sono rari e, quando
+          capitano, spostano da soli il risultato di mesi. Per questo la media di un
+          campione è tirata su da eventi che potresti non vedere mai, mentre quello
+          che vivi di solito somiglia alla mediana. Il simulatore mostra entrambe
+          apposta.
+        </p>
+
+        <h2>Come si legge il risultato di una simulazione</h2>
+        <p>
+          Il risultato non è una previsione di come andrà a te: è l’insieme dei
+          percorsi plausibili, dato l’edge che hai dichiarato. Lo stesso giocatore,
+          con lo stesso vantaggio, può finire lo stesso numero di partite molto sopra
+          o molto sotto lo zero, e la larghezza di quella forbice è esattamente
+          l’informazione che stai cercando.
+        </p>
+        <ul>
+          <li>
+            <strong>Mediana</strong>: il risultato tipico, quello che vive metà dei
+            percorsi. È il numero a cui guardare per capire cosa aspettarti davvero.
+          </li>
+          <li>
+            <strong>Media (EV)</strong>: quanto vali sul lunghissimo periodo. In un
+            formato a montepremi casuale è quasi sempre più alta della mediana, e
+            scambiare l’una per l’altra è il modo più comune di restare delusi.
+          </li>
+          <li>
+            <strong>Punto più basso</strong>: quanto in profondità è arrivato il
+            percorso peggiore prima di risalire. È la cifra che decide se il tuo
+            fondo regge.
+          </li>
+          <li>
+            <strong>Break-even più lungo</strong>: il tratto più lungo passato senza
+            guadagnare nulla. Di solito è più lungo di quanto chiunque si aspetti.
+          </li>
+          <li>
+            <strong>Rischio di rovina</strong>: la probabilità di finire il fondo
+            prima che il vantaggio si realizzi, calcolata per diversi bankroll.
+          </li>
+        </ul>
+
+        <h2>ROI e win rate: quanto campione serve prima di fidarsi</h2>
+        <p>
+          In questo formato il ROI di un giocatore forte è una percentuale piccola, e
+          oscilla molto. Ne segue una cosa poco intuitiva: qualche migliaio di tornei
+          non dice quasi nulla sul tuo livello. Non è un modo di dire prudente, è
+          misurabile — imposta il tuo edge e il volume che hai giocato davvero, e
+          guarda quanti percorsi su cento finiscono sotto zero pur partendo da un
+          vantaggio positivo.
+        </p>
+        <p>
+          È anche il modo onesto di leggere i propri numeri. Un ROI negativo su un
+          campione corto non dimostra che stai sbagliando, e uno positivo non dimostra
+          il contrario: dimostrano solo che il campione è corto. Quello che si può
+          fare nel frattempo è lavorare sulle decisioni che si ripetono, che è la
+          parte del risultato che dipende da te.
+        </p>
+
+        <h2>Quanti buy-in servono davvero</h2>
+        <p>
+          Non esiste un numero valido per tutti, e chi te ne dà uno secco sta tirando a
+          indovinare. Il fondo che ti serve dipende da quanto sei più forte del campo,
+          dalla scala dei moltiplicatori del tavolo dove giochi e da quanto sei
+          disposto a perdere prima di fermarti. Sono tre variabili, e il grafico del
+          rischio di rovina serve proprio a metterle insieme invece di sceglierne una
+          a caso.
+        </p>
+        <p>
+          C’è un quarto elemento che quasi nessuno mette nel conto: il rake, nell’ordine
+          del sette-dieci per cento a seconda del buy-in. Si toglie da ogni torneo
+          giocato, quindi riduce il vantaggio e allarga il fondo necessario — e lo fa
+          in silenzio, perché non si vede in nessuna singola mano. Simulare con un edge
+          già al netto del rake dà una risposta molto diversa da simulare senza.
+        </p>
+
+        <h2>Il downswing: quanto può essere profondo, quanto può durare</h2>
+        <p>
+          Un downswing è una fase prolungata in cui il bankroll resta sotto il punto di
+          partenza nonostante un vantaggio reale. Nei lottery-SNG può durare migliaia
+          di partite e contenere tratti lunghissimi in cui non succede niente. Non è il
+          segnale che qualcosa si è rotto: è la forma normale dei risultati in un
+          formato con questa struttura.
+        </p>
+        <p>
+          L’uso pratico di saperlo è decidere <em>prima</em> cosa farai quando capiterà,
+          invece di deciderlo mentre sta capitando. Quanti buy-in tieni da parte, a
+          quale limite scendi, quando smetti per la giornata: sono scelte che si
+          prendono male sotto pressione e bene davanti a un grafico. Il poker comporta
+          un rischio economico reale, e nessuna simulazione lo toglie — quello che
+          toglie è la sorpresa.
+        </p>
+      </details>
+
       <div class="vz__cta">
         <p>
-          Vuoi ridurre l’impatto della varianza? Parti dalle decisioni: consulta le
-          <a routerLink="/tabelle">tabelle GTO preflop</a>, allenati sugli
-          <a routerLink="/allenamento">spot di allenamento</a> e scopri il
-          <a routerLink="/abbonati">percorso di coaching</a> di Best Fish Forever.
+          I numeri che vedi qui sono spiegati per intero nelle guide:
+          <a routerLink="/guide/varianza-spin-and-go">la varianza negli Spin &amp; Go</a>
+          e <a routerLink="/guide/bankroll-spin-and-go">quanti buy-in servono davvero</a>.
+          Per ridurne l’impatto si lavora sulle decisioni —
+          <a routerLink="/guide/strategia-spin-and-go">cosa studiare e in che ordine</a>,
+          le <a routerLink="/tabelle">tabelle preflop</a> e gli
+          <a routerLink="/allenamento">esercizi</a> — e, se vuoi farlo con un coach,
+          c’è il <a routerLink="/abbonati">percorso della scuola</a>.
         </p>
       </div>
 

@@ -98,6 +98,14 @@ export class VarianzaComponent {
       q: 'Posso avere un ROI positivo ed essere comunque in perdita?',
       a: 'Sì. Su campioni di poche migliaia di partite la varianza può nascondere del tutto un edge positivo: è normale essere sotto zero pur giocando bene. Per ridurre l’impatto della varianza conta migliorare le decisioni e giocare volume, allenando i range preflop e gli spot ricorrenti.',
     },
+    {
+      q: 'Quanto incide il rake sulla varianza e sul bankroll?',
+      a: 'Il rake non cambia la varianza, cambia il vantaggio: si toglie da ogni torneo giocato, nell’ordine del sette-dieci per cento a seconda del buy-in, quindi assottiglia l’edge e allarga il fondo necessario per sopportare le oscillazioni. È anche la ragione per cui conviene simulare con un edge già al netto del rake: farlo al lordo dà una curva del rischio di rovina più ottimistica di quella vera.',
+    },
+    {
+      q: 'Qual è un buon win rate negli Spin & Go?',
+      a: 'Non esiste un numero di riferimento, e le cifre che circolano non sono confrontabili fra loro: dipendono dal buy-in, dalla scala dei moltiplicatori della sala, dal rake e da quanto è duro il campo in quel momento. Quello che si può fare è misurare il proprio su un campione abbastanza grande, e questo simulatore serve a capire quanto grande debba essere prima che il numero voglia dire qualcosa.',
+    },
   ];
 
   protected readonly formats = VARIANCE_FORMATS;
