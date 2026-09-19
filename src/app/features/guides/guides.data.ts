@@ -388,7 +388,7 @@ export const GUIDE: readonly Guide[] = [
   },
   {
     slug: 'push-fold-spin-and-go',
-    titolo: 'Push or fold: come si legge una tabella preflop',
+    titolo: 'Push or fold negli Spin & Go: come si legge una tabella preflop',
     descrizione: 'Che cosa vuol dire una mano giocata al 33%, come si confronta un EV in big blind e perché in un 3-max hyper turbo il push or fold arriva dopo poche mani.',
     occhiello: 'Preflop',
     h1: 'Push or fold: come si legge davvero una tabella preflop',
@@ -1342,6 +1342,315 @@ export const GUIDE: readonly Guide[] = [
       'errori-comuni-spin-and-go',
       'varianza-spin-and-go',
       'push-fold-spin-and-go',
+    ],
+  },
+  // ⚠️⚠️ QUESTA GUIDA E' LA PIU' ESPOSTA DEL SITO SUL PIANO LEGALE, e va letta
+  // prima di toccarla. Query confermata (`twister poker truccato`), intento
+  // emotivo, quasi nessuna fonte seria a rispondere. Pubblicata il 19/09/2026
+  // su decisione esplicita dell'owner, con quattro paletti che NON sono stile:
+  //   1. nessun nome di sala, di rete o di operatore, in nessuna forma;
+  //   2. nessun invito a giocare, nessuna promessa, nessun «conviene»;
+  //   3. il rischio economico dichiarato dentro il testo, non in una nota;
+  //   4. il taglio e' probabilistico e psicologico — perche' SEMBRA truccato —
+  //      e mai una difesa di qualcuno: non si scrive che un operatore e'
+  //      affidabile, si scrive come funziona una distribuzione asimmetrica.
+  // Spostare uno di questi quattro significa riaprire la valutazione art. 9
+  // DL 87/2018, non «ritoccare il tono».
+  {
+    slug: 'spin-and-go-truccati',
+    titolo: 'Gli Spin & Go sono truccati? Cosa dicono i numeri',
+    descrizione:
+      'Perché gli Spin & Go e i Twister sembrano truccati: la distribuzione dei moltiplicatori, la memoria selettiva e come controllare il proprio campione.',
+    occhiello: 'Domande ricorrenti',
+    h1: 'Gli Spin & Go e i Twister sono truccati? Cosa dicono i numeri',
+    lead: 'È la domanda che torna in ogni forum e in ogni chat, quasi sempre dopo una serie negativa: il moltiplicatore alto non arriva mai, gli avversari sembrano trovare sempre la carta giusta, il conto scende. Vale la pena prendere la domanda sul serio invece di liquidarla, perché la sensazione è reale anche quando la spiegazione non è quella che sembra. Questa pagina separa le tre cose che di solito vengono chiamate con la stessa parola.',
+    aggiornata: '2026-09-19',
+    sezioni: [
+      {
+        h2: 'Tre cose diverse chiamate con la stessa parola',
+        paragrafi: [
+          'Quando si dice «è truccato» si intendono, in genere, tre cose molto diverse fra loro, e confonderle è il motivo per cui la discussione non porta mai da nessuna parte.',
+          'La prima è la manipolazione vera: un\'estrazione o una distribuzione di carte alterata contro un giocatore preciso. La seconda è una struttura sfavorevole ma dichiarata: scale di moltiplicatori, soglie, commissioni — condizioni pubblicate che quasi nessuno legge prima di sedersi e che spiegano da sole gran parte dei risultati. La terza è la varianza, cioè il fatto che una serie negativa lunghissima è normale in un formato con questa struttura.',
+          'Delle tre, solo la prima sarebbe un imbroglio. Le altre due sono il gioco così com\'è scritto, e sono anche le due che producono quasi tutte le sensazioni da cui nasce il sospetto. Vale la pena guardarle in quest\'ordine, perché la seconda e la terza si possono verificare da soli.',
+        ],
+      },
+      {
+        h2: 'Perché il moltiplicatore alto sembra non arrivare mai',
+        paragrafi: [
+          'Il montepremi viene estratto prima della prima mano, e la distribuzione delle estrazioni è fortemente asimmetrica: i moltiplicatori bassi escono quasi sempre, quelli altissimi sono rari in modo che l\'intuito fatica a rappresentarsi. Non è un difetto del sistema, è il modo in cui il formato è costruito — e la scala precisa è pubblicata da chi organizza il tavolo.',
+          'La conseguenza è contro-intuitiva e vale la pena scriverla chiaramente: un giocatore può giocare per anni, a volume alto, e non vedere mai il moltiplicatore massimo. Non perché sia sfortunato, ma perché con quelle probabilità il risultato più probabile, per la maggior parte delle persone, è proprio non vederlo mai. La media del formato è tirata su da un evento che quasi nessuno sperimenta.',
+          'Da qui nasce metà della sensazione di essere presi in giro. Ci si aspetta, senza dirlo esplicitamente, che il proprio campione somigli alla media pubblicizzata; ma in una distribuzione così sbilanciata la media non descrive quasi nessuno. Quello che descrive la maggior parte delle persone è la mediana, che è molto più bassa — e nessuno la mette in vetrina.',
+        ],
+      },
+      {
+        h2: 'La memoria non è una prova, ed è costruita male apposta',
+        paragrafi: [
+          'La seconda metà della sensazione è il modo in cui ricordiamo. Le mani perse in modo doloroso — lo sfavorito che trova la carta al river, il piatto grosso scivolato via — si fissano; le decine di volte in cui la stessa situazione è andata come doveva non lasciano traccia. È un meccanismo noto e non ha nulla a che vedere col poker: vale per qualunque sequenza di eventi in cui alcuni esiti fanno male e altri no.',
+          'Su un formato dove si giocano centinaia di tornei al mese, l\'effetto è amplificato. Un evento che capita una volta su venti si presenta comunque decine di volte in una settimana di volume: abbastanza spesso da sembrare sistematico, mai abbastanza da esserlo davvero. E siccome le volte «normali» non si contano, il rapporto che si ha in testa fra le due è sbilanciato in partenza.',
+          'Non è una debolezza personale ed è inutile combatterla a forza di buona volontà. L\'unico rimedio che funziona è smettere di affidarsi al ricordo e cominciare a contare, che è esattamente quello che si può fare in mezz\'ora.',
+        ],
+      },
+      {
+        h2: 'Come si controlla davvero, invece di indovinare',
+        paragrafi: [
+          'Il controllo è alla portata di chiunque e non richiede software particolari. Serve il proprio storico dei tornei giocati e la scala delle probabilità pubblicata per il formato dove si gioca. Si contano quanti tornei sono usciti per ciascun livello di moltiplicatore e si confronta con la frequenza dichiarata.',
+          'Qui arriva il passaggio che quasi nessuno fa, ed è quello decisivo: prima di concludere qualcosa da uno scostamento, bisogna sapere quanto è grande lo scostamento normale su un campione di quella dimensione. Su poche centinaia di tornei le differenze sono enormi anche a estrazione perfettamente regolare, e leggerle come un segnale è come giudicare un dado da dieci lanci.',
+          'Vale lo stesso per il risultato economico. Un simulatore mostra quanti percorsi su cento, partendo da un vantaggio reale, finiscono comunque sotto zero dopo il numero di tornei che hai giocato tu. Quando quel numero è alto — e su campioni corti lo è quasi sempre — il fatto di essere in perdita non è un indizio di niente: è il risultato più comune.',
+        ],
+      },
+      {
+        h2: 'Su che cosa conviene essere sospettosi davvero',
+        paragrafi: [
+          'C\'è una forma di sospetto che è ben riposta, e non riguarda l\'estrazione. Riguarda le condizioni: quanto viene trattenuto su ogni iscrizione, come è fatta la scala dei moltiplicatori, oltre quale soglia il montepremi si divide fra più posti, quali strumenti sono ammessi e quali no. Sono tutte informazioni pubblicate, e sono anche quelle che decidono se un vantaggio tecnico può sopravvivere oppure no.',
+          'È un sospetto migliore perché è verificabile e perché porta a una decisione. «Forse è truccato» non si può né dimostrare né usare; «qui viene trattenuto il dieci per cento e la scala è molto sbilanciata» è un dato che si legge prima di sedersi e su cui si può agire.',
+          'E va detta una cosa che nessuna analisi cambia: il poker comporta un rischio economico reale. Nessuna verifica sull\'estrazione, nessun simulatore e nessun percorso di studio lo tolgono. Quello che si può fare è ridurre gli errori evitabili e sapere in anticipo quanto può essere larga l\'oscillazione — il che è utile, ma è un\'altra cosa dall\'avere una garanzia.',
+        ],
+      },
+      {
+        h2: 'Che cosa fare quando la sensazione torna',
+        paragrafi: [
+          'La sensazione torna, ed è normale che torni: arriva dopo una serie negativa, cioè nel momento in cui si è meno lucidi e più stanchi. Per questo vale la pena decidere prima cosa farne, invece di deciderlo mentre si è dentro.',
+          'Tre cose funzionano. La prima è fermarsi: una sessione giocata mentre si pensa che il gioco sia contro di te è una sessione in cui si prendono decisioni peggiori, e questo peggiora il risultato per davvero — l\'unico modo in cui il sospetto diventa profezia. La seconda è contare invece di ricordare, come sopra. La terza è portare due o tre mani concrete a qualcuno che le guardi: quasi sempre la sensazione di ingiustizia si concentra su spot in cui c\'era anche qualcosa da correggere, e vederlo toglie più peso di qualunque rassicurazione.',
+        ],
+      },
+    ],
+    strumenti: [
+      { testo: 'il simulatore di varianza', href: '/simulatore-varianza/' },
+      { testo: 'il replayer delle mani', href: '/replayer/' },
+      { testo: 'le tabelle preflop', href: '/tabelle/' },
+    ],
+    faq: [
+      {
+        q: 'Gli Spin & Go sono truccati?',
+        a: 'Le sensazioni da cui nasce il sospetto si spiegano quasi sempre con due fatti che non hanno nulla di occulto: la distribuzione dei moltiplicatori è fortemente asimmetrica, quindi la media del formato è portata da eventi rarissimi che la maggior parte dei giocatori non vedrà mai; e la memoria conserva le mani perse male e non quelle andate come dovevano. Prima di concludere qualcosa conviene contare il proprio campione e confrontarlo con le frequenze pubblicate, tenendo presente che su campioni corti gli scostamenti normali sono enormi.',
+      },
+      {
+        q: 'Perché non mi esce mai il moltiplicatore alto?',
+        a: 'Perché con quelle probabilità il risultato più probabile, per la maggior parte delle persone, è proprio non vederlo mai — nemmeno giocando a volume alto per anni. È il modo in cui funziona una distribuzione molto sbilanciata: la media del formato viene tirata su da un evento che quasi nessuno sperimenta, mentre quello che vive la maggioranza somiglia alla mediana, che è molto più bassa.',
+      },
+      {
+        q: 'Ho perso venti tornei di fila: è normale?',
+        a: 'In un formato dove si gioca in tre e quasi sempre paga solo il primo, anche un giocatore forte vince una minoranza dei tornei: serie negative lunghe fanno parte della struttura, non sono un segnale. Il modo di verificarlo è guardare quanti percorsi, partendo da un vantaggio reale, restano sotto zero dopo il numero di tornei che hai giocato: su campioni corti sono moltissimi.',
+      },
+      {
+        q: 'Come faccio a controllare se le estrazioni sono regolari?',
+        a: 'Conta quanti dei tuoi tornei sono usciti per ciascun livello di moltiplicatore e confronta con le frequenze pubblicate per il formato dove giochi. Il passaggio che quasi nessuno fa, ed è quello che conta, è chiedersi quanto sia grande lo scostamento normale su un campione di quella dimensione: su poche centinaia di tornei è enorme anche a estrazione perfettamente regolare.',
+      },
+      {
+        q: 'Allora non c\'è niente di cui diffidare?',
+        a: 'Al contrario, ma non dell\'estrazione: delle condizioni. Quanto viene trattenuto su ogni iscrizione, com\'è fatta la scala dei moltiplicatori, oltre quale soglia il montepremi si divide fra più posti, quali strumenti sono ammessi. Sono informazioni pubblicate, si leggono prima di sedersi, e sono quelle che decidono se un vantaggio tecnico può sopravvivere. È un sospetto migliore perché è verificabile e perché porta a una decisione.',
+      },
+      {
+        q: 'Studiare mi mette al riparo da queste serie?',
+        a: 'No, e chi dice il contrario sta vendendo qualcosa. Il poker comporta un rischio economico reale e le oscillazioni restano larghe anche giocando bene: quello che si riduce è la quota di errori evitabili, e quello che si guadagna è sapere in anticipo quanto può essere lunga una serie negativa normale. Sono due cose utili, ma nessuna delle due è una garanzia sul risultato.',
+      },
+    ],
+    correlate: [
+      'strategia-spin-and-go',
+      'varianza-spin-and-go',
+      'moltiplicatori-spin-and-go',
+      'rake-spin-and-go',
+    ],
+  },
+  // ⚠️ Query confermate: `spin and go multiplier odds`, `spin and go odds`,
+  // `spin and go jackpot`, `spin and go payout structure`, `pokerstars spin and
+  // go jackpot` (quest'ultima NON si insegue: contiene un nome di sala).
+  // ⚠️ Nessuna tabella di probabilita' concreta: cambiano da operatore a
+  // operatore e invecchiano in silenzio. La guida insegna a LEGGERE la scala
+  // pubblicata, non la ricopia — una cifra sbagliata qui sarebbe peggio
+  // dell'assenza, e una cifra giusta riferita a un operatore preciso lo
+  // nominerebbe.
+  {
+    slug: 'moltiplicatori-spin-and-go',
+    titolo: 'I moltiplicatori degli Spin & Go: come funzionano e quanto sono rari',
+    descrizione:
+      'Come viene estratto il montepremi negli Spin & Go e nei Twister, perché i moltiplicatori alti sono così rari e cosa cambia quando il premio si divide.',
+    occhiello: 'Struttura del formato',
+    h1: 'I moltiplicatori degli Spin & Go: come funzionano, e quanto sono rari davvero',
+    lead: 'Il moltiplicatore è la cosa che rende questo formato diverso da qualunque altro torneo: non sai quanto vale il tavolo finché non ti siedi. È anche la parte che più spesso viene fraintesa — non perché sia complicata, ma perché le probabilità in gioco sono di quelle che l\'intuito rappresenta male. Vale la pena capirla bene, perché decide la forma dei tuoi risultati più di qualunque scelta al tavolo.',
+    aggiornata: '2026-09-19',
+    sezioni: [
+      {
+        h2: 'Come viene deciso il montepremi',
+        paragrafi: [
+          'Ti iscrivi per una cifra fissa, il tavolo si forma con tre giocatori e a quel punto viene estratto un moltiplicatore. Il montepremi è la tua iscrizione moltiplicata per quel numero, e la mano comincia. Non c\'è nulla da scegliere e nulla da aspettare: l\'estrazione avviene una volta sola, prima che vengano distribuite le carte.',
+          'La scala dei moltiplicatori disponibili e la frequenza con cui esce ciascuno sono pubblicate da chi organizza il tavolo, e cambiano da un operatore all\'altro. È il primo documento da leggere prima di decidere dove giocare a volume, insieme alla percentuale trattenuta sull\'iscrizione — e sono due informazioni che vanno lette insieme, perché incidono sullo stesso conto.',
+          'Nella grande maggioranza delle estrazioni esce il moltiplicatore più basso della scala, o uno vicino. È il caso normale, quello su cui si gioca quasi sempre, ed è anche quello su cui ha senso costruire la propria strategia.',
+        ],
+      },
+      {
+        h2: 'Perché i moltiplicatori alti sono più rari di quanto sembri',
+        paragrafi: [
+          'Una distribuzione in cui pochi eventi valgono moltissimo e quasi tutti gli altri valgono poco si comporta in un modo che l\'intuito non rappresenta bene. Il punto non è che i moltiplicatori alti siano «difficili»: è che la loro frequenza è di un ordine di grandezza per cui il numero di tornei necessario a vederne uno supera, spesso, il volume di una vita di gioco.',
+          'Ne segue una cosa che vale la pena scrivere in chiaro: il fatto che a te non sia mai uscito non è un\'anomalia. Con probabilità di quel tipo, non vederlo mai è il risultato più probabile per la maggior parte delle persone, e non dice niente né su di te né su chi organizza il tavolo.',
+          'C\'è anche un effetto meno ovvio. Siccome una parte consistente del valore complessivo del formato è concentrata in quegli eventi rari, la media dichiarata non descrive l\'esperienza tipica: la descrive la mediana, che è più bassa. Costruire aspettative sulla media significa costruirle su un\'esperienza che quasi nessuno vivrà.',
+        ],
+      },
+      {
+        h2: 'Quando il montepremi non va tutto al primo',
+        paragrafi: [
+          'Nella maggior parte dei tavoli vince tutto chi arriva primo, e il secondo non prende nulla. Sopra una certa soglia di moltiplicatore, però, il montepremi si divide fra più posti — la soglia cambia da un operatore all\'altro, e in alcuni casi dipende anche dalla cifra dell\'iscrizione.',
+          'È l\'unico caso in cui la strategia cambia davvero per via del moltiplicatore. Quando esiste un premio anche per chi non vince, le fiches che metti a rischio valgono più di quelle che puoi vincere, e conviene stringere in alcuni spot: è la situazione, e l\'unica, in cui le correzioni di cui si parla sotto il nome di ICM hanno senso.',
+          'Nel caso normale — premio tutto al primo — quelle correzioni non si applicano affatto, e applicarle costa. È il motivo per cui una parte del materiale che circola su questo formato è tarato sulla situazione sbagliata: si occupa del caso raro e lascia scoperto quello che si presenta quasi sempre.',
+        ],
+      },
+      {
+        h2: 'Che cosa cambia, e che cosa non cambia, quando esce un moltiplicatore alto',
+        paragrafi: [
+          'La risposta breve è: quasi niente, tranne nel caso appena visto. Se il premio va comunque tutto al primo, il valore delle fiches resta lineare — raddoppiare lo stack raddoppia quanto vale la tua posizione — e la strategia corretta è la stessa che useresti al moltiplicatore base. Cambia quanto vale il torneo, non come si gioca.',
+          'Quello che cambia sul serio è la testa. Vedere una cifra grande accende l\'idea che quella mano vada «protetta», e la protezione al tavolo si traduce quasi sempre in giocare più stretto di quanto convenga, nel formato in cui aspettare è già la strategia perdente. È un errore caro perché si presenta proprio nei tornei che valgono di più.',
+          'La regola pratica è breve: leggi il moltiplicatore, controlla se sei sopra la soglia in cui il premio si divide, e se non lo sei gioca esattamente come giocheresti al tavolo da pochi euro. È più facile a dirsi che a farsi, ed è uno dei motivi per cui rivedere le proprie mani dopo ha senso.',
+        ],
+      },
+      {
+        h2: 'Perché inseguire il moltiplicatore non è una strategia',
+        paragrafi: [
+          'Ogni tanto si legge di persone che cercano di «trovare» i tavoli col moltiplicatore alto, o che giocano di più nella speranza che arrivi. L\'estrazione è indipendente da quella precedente: non esiste un credito che matura, né un tavolo più caldo di un altro, e nessuna sequenza passata rende più vicino un evento futuro.',
+          'Giocare più tornei aumenta il numero di estrazioni, quindi in senso stretto aumenta la probabilità di vederne uno; ma aumenta anche il rake pagato e l\'esposizione alla varianza, e lo fa in proporzione. Se il gioco è in perdita al netto delle commissioni, farne di più non avvicina il moltiplicatore: accelera la perdita.',
+          'Il modo sano di guardarlo è l\'opposto: costruire un risultato che stia in piedi sul caso normale — il moltiplicatore basso, quello che esce quasi sempre — e trattare gli eventi rari per quello che sono, cioè qualcosa che può capitare e su cui non si programma nulla. Il poker comporta un rischio economico reale, e una strategia che dipende da un evento raro è il modo più rapido per trasformarlo in una perdita certa.',
+        ],
+      },
+    ],
+    strumenti: [
+      { testo: 'il simulatore di varianza', href: '/simulatore-varianza/' },
+      { testo: 'le tabelle preflop', href: '/tabelle/' },
+      { testo: 'gli esercizi di allenamento', href: '/allenamento/' },
+    ],
+    faq: [
+      {
+        q: 'Come viene deciso il moltiplicatore di uno Spin & Go?',
+        a: 'Viene estratto quando il tavolo si forma, una volta sola, prima che vengano distribuite le carte: il montepremi è la tua iscrizione moltiplicata per quel numero. La scala dei moltiplicatori disponibili e la frequenza di ciascuno sono pubblicate da chi organizza il tavolo e cambiano da un operatore all\'altro — vanno lette insieme alla percentuale trattenuta sull\'iscrizione, perché incidono sullo stesso conto.',
+      },
+      {
+        q: 'Quanto è probabile che esca il moltiplicatore massimo?',
+        a: 'Abbastanza poco da rendere il numero di tornei necessario a vederne uno superiore, spesso, al volume di una vita di gioco. La cifra esatta la pubblica chi organizza il tavolo. La conseguenza pratica è che non averlo mai visto non è un\'anomalia: con probabilità di quell\'ordine è il risultato più probabile per la maggior parte delle persone.',
+      },
+      {
+        q: 'Con un moltiplicatore alto devo giocare diversamente?',
+        a: 'Solo se sei sopra la soglia in cui il montepremi si divide fra più posti, perché lì le fiches che rischi valgono più di quelle che puoi vincere. Se il premio va comunque tutto al primo il valore delle fiches resta lineare e la strategia corretta è identica a quella del moltiplicatore base: cambia quanto vale il torneo, non come si gioca.',
+      },
+      {
+        q: 'Giocare più tornei aumenta le probabilità di prendere il jackpot?',
+        a: 'Aumenta il numero di estrazioni, ma nella stessa proporzione aumenta il rake pagato e l\'esposizione alla varianza. Le estrazioni sono indipendenti: non matura alcun credito e nessun tavolo è più caldo di un altro. Se il gioco è in perdita al netto delle commissioni, aumentare il volume non avvicina il moltiplicatore alto — rende la perdita più rapida.',
+      },
+      {
+        q: 'Perché la media dichiarata non somiglia ai miei risultati?',
+        a: 'Perché una parte consistente del valore del formato è concentrata in eventi rarissimi, e la media li include. Quello che descrive l\'esperienza della maggioranza è la mediana, che è più bassa e che nessuno mette in vetrina. Costruire aspettative sulla media significa costruirle su un\'esperienza che quasi nessuno vivrà.',
+      },
+      {
+        q: 'La scala dei moltiplicatori è uguale ovunque?',
+        a: 'No: cambiano i valori disponibili, le frequenze e la soglia oltre cui il premio si divide fra più posti, e in alcuni casi la soglia dipende anche dalla cifra dell\'iscrizione. Per questo il confronto fra due strutture non si fa guardando solo la commissione trattenuta: una scala più concentrata sui moltiplicatori bassi rende i risultati più leggibili, una più estrema li rende più rumorosi.',
+      },
+    ],
+    correlate: [
+      'strategia-spin-and-go',
+      'come-giocare-spin-and-go',
+      'icm-spin-and-go',
+      'spin-and-go-truccati',
+    ],
+  },
+  // ⚠️ Query confermate: `spin and go vs sit and go`, `spin and go vs cash
+  // game`, `spin and go vs`. Completa `spin-and-go-vs-twister`, che confronta
+  // due nomi dello STESSO gioco; questa confronta giochi diversi.
+  {
+    slug: 'spin-and-go-vs-sit-and-go',
+    titolo: 'Spin & Go o Sit & Go: le differenze che contano',
+    descrizione:
+      'Spin & Go, Sit & Go e cash game a confronto: struttura, durata, varianza e quanto di quello che sai in un formato si trasferisce davvero nell\'altro.',
+    occhiello: 'Formati a confronto',
+    h1: 'Spin & Go, Sit & Go e cash game: le differenze che contano davvero',
+    lead: 'Sono tutti poker e sono tre giochi diversi. Cambiano il numero di avversari, la profondità degli stack, il tempo che hai per decidere e — soprattutto — come si distribuisce il premio. Chi passa da uno all\'altro porta con sé abitudini che nel formato nuovo costano, e quasi sempre sono abitudini corrette nel formato di partenza. Questa pagina dice che cosa si trasferisce e che cosa no.',
+    aggiornata: '2026-09-19',
+    sezioni: [
+      {
+        h2: 'La differenza che genera tutte le altre: come si divide il premio',
+        paragrafi: [
+          'In un Sit & Go classico il montepremi è noto in anticipo e diviso fra più posti: arrivare secondo o terzo vale qualcosa. In uno Spin & Go il montepremi viene estratto quando il tavolo si forma e, salvo i casi rari sopra una certa soglia, paga soltanto chi arriva primo.',
+          'È da qui che discende quasi tutto il resto. Quando esiste un premio per chi non vince, le fiches che rischi valgono più di quelle che potresti vincerne, e conviene stringere man mano che ci si avvicina ai posti pagati — è il ragionamento che sta dietro alle correzioni di cui si parla sotto il nome di ICM. Quando paga solo il primo, quel ragionamento non si applica: le fiches valgono in modo lineare e non c\'è nessun secondo posto da proteggere.',
+          'Chi arriva dai Sit & Go porta con sé quella prudenza e la applica dove non serve, giocando più stretto del necessario in un formato dove aspettare è già di per sé la strategia perdente. È il singolo errore più costoso nel passaggio fra i due, e non si vede: ogni singola mano passata sembra una scelta ragionevole.',
+        ],
+      },
+      {
+        h2: 'Tre giocatori invece di sei o nove',
+        paragrafi: [
+          'In tre, i bui ti passano addosso una volta ogni tre mani invece che una ogni nove. Una mano che a un tavolo pieno è facilmente scartabile diventa, a tre, una mano con cui si apre — non perché sia diventata più forte, ma perché il costo di non giocare è triplicato.',
+          'Cambia anche quanto spesso ti trovi a decidere. In un formato a tre partecipi a una quota molto più alta dei piatti, quindi il numero di decisioni per ora è molto maggiore, e con esso il peso degli errori ripetuti. Una scelta marginale sbagliata in un cash game a sei si presenta qualche volta a sessione; qui si presenta decine di volte.',
+          'E cambia chi hai davanti: con due soli avversari, l\'idea di «tavolo medio» perde significato. Ogni tavolo è due persone specifiche, e la parte della strategia che dipende da chi hai di fronte pesa molto di più.',
+        ],
+      },
+      {
+        h2: 'Stack corti, livelli rapidi, e la scomparsa del postflop',
+        paragrafi: [
+          'Uno Spin & Go parte da venticinque big blind con livelli che salgono ogni pochi minuti; un Sit & Go tradizionale parte molto più profondo e sale lentamente; un cash game è profondo e non sale mai. Sono tre giochi diversi anche solo per questo.',
+          'Con stack corti le decisioni postflop diventano poche e arrivano con gran parte dei soldi già in mezzo. La conseguenza è che il peso relativo del preflop cresce enormemente: nello Spin & Go una parte molto grande di quello che si guadagna o si perde si decide prima del flop, mentre in un cash game profondo il preflop è soltanto il primo di quattro momenti.',
+          'Ne segue anche un ordine di studio diverso. Chi gioca cash investe presto sul postflop perché è lì che si decide; qui investire presto sul postflop significa lavorare sulla parte più piccola del margine, prima di avere solide le aperture e le spinte.',
+        ],
+      },
+      {
+        h2: 'Che cosa si trasferisce davvero',
+        paragrafi: [
+          'Non tutto va buttato: alcune cose valgono ovunque, e sono le più difficili da costruire.',
+        ],
+        lista: [
+          'Il ragionamento sulle probabilità e sull\'equity: quanto vale una mano contro un ventaglio di mani non cambia col formato.',
+          'La gestione del bankroll come disciplina, anche se i numeri cambiano parecchio: il formato a varianza più alta chiede più buy-in.',
+          'La capacità di leggere un avversario e di adattarsi, che anzi in tre pesa di più che a un tavolo pieno.',
+          'L\'abitudine a rivedere le proprie mani invece di fidarsi del ricordo.',
+        ],
+      },
+      {
+        h2: 'Che cosa non si trasferisce, e costa',
+        paragrafi: [
+          'I range, prima di tutto: un range di apertura è la risposta a un gioco preciso, e cambiando numero di giocatori, profondità e struttura del premio cambia la risposta. Riusarli è il modo più silenzioso di perdere, perché nessuna singola mano sembra un errore.',
+          'Poi la pazienza come virtù. In un cash game profondo saltare una mano marginale costa quasi nulla; in un 3-max hyper turbo costa un buio ogni tre mani, e sommato su centinaia di tornei è gran parte del risultato.',
+          'E infine le aspettative sulla lettura dei risultati. Un cash player abituato a valutarsi su un numero di mani enorme si trova qui con campioni molto più rumorosi: i tornei sono pochi rispetto alle mani, e il moltiplicatore aggiunge un secondo elemento casuale sopra quello delle carte. Serve molto più tempo prima che i numeri dicano qualcosa.',
+        ],
+      },
+      {
+        h2: 'Quale ha più senso per chi comincia',
+        paragrafi: [
+          'Non esiste una risposta valida per tutti, e la domanda utile non è quale sia «il migliore» ma quale si adatti al tempo che hai e a come ti trovi a giocare. Un formato che dura pochi minuti a torneo si presta a sessioni corte e spezzate; uno che dura un\'ora e mezza chiede una finestra di tempo continua.',
+          'Sul piano dello studio, un formato a stack corti e decisioni concentrate prima del flop ha un vantaggio pratico: l\'insieme delle situazioni da imparare è finito e si può coprire per intero. È più difficile dire lo stesso di un cash game profondo, dove l\'albero delle possibilità si allarga a ogni strada.',
+          'Quello che vale in ogni caso è non tenere il piede in due scarpe all\'inizio. I due formati chiedono abitudini opposte su alcune cose importanti, e alternarli prima di averne assimilato uno significa costruirsi due mezze competenze che si disturbano a vicenda.',
+        ],
+      },
+    ],
+    strumenti: [
+      { testo: 'le tabelle preflop', href: '/tabelle/' },
+      { testo: 'gli esercizi di allenamento', href: '/allenamento/' },
+      { testo: 'il simulatore di varianza', href: '/simulatore-varianza/' },
+    ],
+    faq: [
+      {
+        q: 'Qual è la differenza fra Spin & Go e Sit & Go?',
+        a: 'La più importante è come si divide il premio: in un Sit & Go il montepremi è noto in anticipo e pagato a più posti, in uno Spin & Go viene estratto quando il tavolo si forma e salvo casi rari va tutto al primo. Da lì discendono le altre: tre giocatori invece di sei o nove, venticinque big blind di partenza, livelli che salgono ogni pochi minuti e quindi quasi tutte le decisioni concentrate prima del flop.',
+      },
+      {
+        q: 'Posso usare la stessa strategia nei due formati?',
+        a: 'No, e l\'errore più caro è portare negli Spin & Go la prudenza che nei Sit & Go è corretta. Là esiste un premio anche per chi non vince, quindi stringere avvicinandosi ai posti pagati ha senso; qui paga solo il primo, le fiches valgono in modo lineare e giocare stretto in un formato dove i bui passano una mano su tre costa ogni giro.',
+      },
+      {
+        q: 'Gli Spin & Go hanno più varianza dei Sit & Go?',
+        a: 'Sì, e di parecchio: ci sono due elementi casuali sovrapposti invece di uno — le carte e il moltiplicatore estratto a ogni torneo — e quasi sempre paga solo il primo, quindi mancano i piazzamenti che smussano la curva. La conseguenza pratica è che serve un fondo più ampio in numero di buy-in e un campione molto più grande prima che i risultati dicano qualcosa.',
+      },
+      {
+        q: 'Cosa si trasferisce da un cash game agli Spin & Go?',
+        a: 'Il ragionamento su probabilità ed equity, la disciplina sul bankroll, la capacità di adattarsi all\'avversario e l\'abitudine di rivedere le proprie mani. Non si trasferiscono i range, che sono la risposta a un gioco preciso, né la pazienza come virtù: in un cash profondo saltare una mano marginale costa quasi nulla, in un 3-max hyper turbo costa un buio ogni tre mani.',
+      },
+      {
+        q: 'Conviene giocare entrambi i formati insieme?',
+        a: 'All\'inizio è meglio di no. Chiedono abitudini opposte su alcune cose importanti — quanto aprire, quando stringere, quanto pesa arrivare secondi — e alternarli prima di averne assimilato uno porta a costruirsi due mezze competenze che si disturbano a vicenda. Una volta che uno dei due è solido, il passaggio diventa molto più gestibile.',
+      },
+      {
+        q: 'Quale formato richiede meno tempo per imparare?',
+        a: 'Nessuno è «facile», ma un formato a stack corti ha un vantaggio pratico nello studio: le decisioni si concentrano prima del flop e l\'insieme delle situazioni da imparare è finito, quindi si può coprire per intero. In un cash game profondo l\'albero delle possibilità si allarga a ogni strada, e il percorso non ha un punto in cui si può dire di averlo chiuso.',
+      },
+    ],
+    correlate: [
+      'strategia-spin-and-go',
+      'come-giocare-spin-and-go',
+      'icm-spin-and-go',
+      'spin-and-go-vs-twister',
     ],
   },
 ];

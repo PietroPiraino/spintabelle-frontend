@@ -48,6 +48,21 @@ function contiene(testo, parola) {
  */
 export const GUIDE_CORRELABILI = [
   {
+    slug: 'spin-and-go-truccati',
+    titolo: 'Gli Spin & Go sono truccati? Cosa dicono i numeri',
+    parole: ['truccato', 'truccati', 'manipolato', 'rng'],
+  },
+  {
+    slug: 'moltiplicatori-spin-and-go',
+    titolo: 'I moltiplicatori degli Spin & Go: come funzionano e quanto sono rari',
+    parole: ['jackpot', 'premio massimo'],
+  },
+  {
+    slug: 'spin-and-go-vs-sit-and-go',
+    titolo: 'Spin & Go o Sit & Go: le differenze che contano',
+    parole: ['sit and go', 'sit n go', 'sng', 'cash game'],
+  },
+  {
     slug: 'rake-spin-and-go',
     titolo: 'Il rake negli Spin & Go: quanto pesa davvero',
     parole: ['rake', 'rakeback', 'commissioni'],
@@ -87,7 +102,7 @@ export const GUIDE_CORRELABILI = [
   },
   {
     slug: 'push-fold-spin-and-go',
-    titolo: 'Push or fold: come si legge una tabella preflop',
+    titolo: 'Push or fold negli Spin & Go: come si legge una tabella preflop',
     parole: [
       'push fold',
       'push or fold',
