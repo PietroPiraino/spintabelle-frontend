@@ -3749,3 +3749,63 @@ export interface RigaRakebackPayload {
   metodoPagamento?: MetodoMovimento;
   nota?: string;
 }
+
+/* ------------------------------------------------------------------ */
+/* Ultimo video del canale YouTube in home (voce di registro A19)      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Il video come lo riceve la home.
+ *
+ * ⚠️ **Nessuna descrizione, nessun conteggio visualizzazioni**, benché il feed
+ * di YouTube li offra: la descrizione è prosa di terzi che finirebbe in HTML
+ * indicizzabile (su un canale di poker contiene con ogni probabilità link
+ * affiliati e nomi di sale, art. 9 DL 87/2018), il conteggio su una pagina
+ * prerenderizzata sarebbe un numero congelato al giorno del build. Il backend
+ * non li manda: questo tipo non li chiede.
+ */
+export interface VideoCanale {
+  videoId: string;
+  titolo: string;
+  url: string;
+  pubblicatoIl: string;
+  /**
+   * ⚠️ È un indirizzo sul **nostro** CDN, mai `i.ytimg.com`. È la condizione
+   * su cui poggia l'esimente dell'art. 122: prima del clic il browser non deve
+   * contattare alcun dominio di Google.
+   */
+  miniaturaUrl: string | null;
+}
+
+/** ⚠️ Risponde 200 anche quando non c'è niente da mostrare: mai un 503. */
+export type UltimoVideoCanale =
+  | { disponibile: true; video: VideoCanale }
+  | {
+      disponibile: false;
+      causa: 'nessuno' | 'spento' | 'configurazione';
+      motivo: string;
+    };
+
+/** Lo stato completo, per la schermata di amministrazione. */
+export interface StatoCanale {
+  abilitato: boolean;
+  configurato: boolean;
+  approvato: VideoCanaleAdmin | null;
+  proposto: VideoCanaleAdmin | null;
+  approvatoDa: string | null;
+  approvatoIl: string | null;
+  ultimoPollIl: string | null;
+  ultimoPollEsito: string | null;
+  rifiutati: number;
+}
+
+/** La vista admin porta in più ciò che serve a decidere. */
+export interface VideoCanaleAdmin extends VideoCanale {
+  miniaturaPercorso: string | null;
+  miniaturaSorgente: string | null;
+  /**
+   * Termini dell'art. 9 DL 87/2018 trovati nel titolo. **Consultivi**: il
+   * cancello blocca solo sulle parole promozionali, un nome di sala segnala.
+   */
+  segnalazioni: string[];
+}

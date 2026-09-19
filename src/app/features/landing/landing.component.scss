@@ -131,3 +131,95 @@
   display: block;
   margin-block: clamp(0.5rem, 2vw, 1.5rem);
 }
+
+/* ------------------------------------------------------------------ */
+/* Ultimo video del canale (sotto l'hero)                              */
+/* ------------------------------------------------------------------ */
+
+.ultimo-video__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.6rem;
+}
+
+/* ⚠️ `flex: 1 1 min(560px, 100%)` e non una larghezza fissa: sotto i ~760px
+   le due colonne si impilano da sole, senza una media query da tenere
+   allineata con nient'altro. La colonna del video non supera i 560px perché a
+   piena larghezza (1180) un 16:9 sarebbe alto 664px — una schermata intera di
+   video prima di aver detto che cos'e' la scuola. */
+.ultimo-video__media {
+  flex: 1 1 min(560px, 100%);
+  max-width: 560px;
+  min-width: 0;
+}
+
+.ultimo-video__copy {
+  flex: 1 1 min(320px, 100%);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+/* ⚠️ Due righe FISSE, e non è estetica: il titolo cambia a ogni video
+   approvato, e senza un'altezza dichiarata la card cresce o si accorcia
+   spingendo tutto il resto della pagina. `min-height` in `lh` segue la
+   dimensione del carattere invece di inseguirla con un numero. */
+.ultimo-video__titolo {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2lh;
+  margin: 0;
+  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+}
+
+.ultimo-video__azioni {
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* ⚠️ `.btn--sm` nudo sta sui 38px: i 44 del bersaglio di tocco non arrivano
+   da soli e vanno DICHIARATI (stessa regola di `_news-share.scss`). */
+.ultimo-video__btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ultimo-video__nota {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Lo scheletro: stessa scatola del contenuto vero, così fra i due non si
+   muove niente. Nessuna animazione sotto `prefers-reduced-motion`. */
+.ultimo-video__media--scheletro {
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.ultimo-video__sk {
+  display: block;
+  height: 1lh;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface-2);
+}
+
+.ultimo-video__sk--occhiello {
+  width: 7ch;
+  height: 0.8lh;
+}
+
+.ultimo-video__sk--titolo {
+  width: 80%;
+  height: 2lh;
+}
+
+.ultimo-video__sk--riga {
+  width: 60%;
+}

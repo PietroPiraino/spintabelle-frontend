@@ -39,6 +39,79 @@
   </div>
 </section>
 
+
+<!--
+  ULTIMO VIDEO DEL CANALE
+  ⚠️ Sta QUI, subito sotto l'hero, perché la ragione per cui esiste è «chi
+  arriva vede subito un contenuto gratuito». Spostarlo più in basso lo rende
+  una cosa diversa.
+  ⚠️ NON è un 16:9 a tutta larghezza: a 1180px sarebbero 664px di altezza,
+  cioè una schermata intera di video prima di aver detto che cos'è la scuola.
+  Due colonne, e su telefono si impilano.
+  ⚠️ La <section> resta nel DOM anche mentre il dato arriva, e lo scheletro
+  occupa LA STESSA scatola del contenuto vero: è ciò che tiene a zero lo
+  spostamento su una pagina che oggi misura CLS 0. Sparisce del tutto solo
+  quando il server ha risposto che non c'è niente da mostrare.
+-->
+@if (statoVideo() !== 'assente') {
+  <section class="section ultimo-video" aria-labelledby="ultimo-video-titolo">
+    <div class="container ultimo-video__inner">
+      @if (videoCanale(); as v) {
+        <div class="ultimo-video__media">
+          <app-video-youtube [video]="v" />
+        </div>
+        <div class="ultimo-video__copy">
+          <span class="eyebrow">Dal canale</span>
+          <!--
+            ⚠️ <h2> e non <h1>: la home ne ha già uno nell'hero, e la guardia
+            di contenuto del build ne pretende esattamente uno.
+          -->
+          <h2 id="ultimo-video-titolo" class="ultimo-video__titolo">{{ v.titolo }}</h2>
+          <!--
+            ⚠️ Questa riga è NOSTRA e fissa. La descrizione che YouTube
+            pubblica col video non si importa mai: è prosa di terzi che
+            finirebbe in HTML indicizzabile, e su un canale di poker contiene
+            con ogni probabilità link e nomi di sale (art. 9 DL 87/2018).
+          -->
+          <p class="text-muted">
+            Una lezione gratuita dal canale della scuola. Premi play: il video
+            si apre qui, senza uscire dal sito.
+          </p>
+          <div class="row ultimo-video__azioni">
+            <a
+              [href]="social.youtubeIscriviti"
+              target="_blank"
+              rel="noopener"
+              class="btn btn--primary btn--sm ultimo-video__btn"
+            >
+              Iscriviti al canale
+            </a>
+            <a
+              [href]="v.url"
+              target="_blank"
+              rel="noopener"
+              class="btn btn--ghost btn--sm ultimo-video__btn"
+            >
+              Guarda su YouTube
+            </a>
+          </div>
+          <p class="ultimo-video__nota text-muted">
+            Iscriviti e attiva la campanella: i video nuovi escono ogni
+            settimana.
+          </p>
+        </div>
+      } @else {
+        <!-- Stesso ingombro del contenuto vero: fra i due non si muove nulla. -->
+        <div class="ultimo-video__media ultimo-video__media--scheletro"></div>
+        <div class="ultimo-video__copy" aria-hidden="true">
+          <span class="ultimo-video__sk ultimo-video__sk--occhiello"></span>
+          <span class="ultimo-video__sk ultimo-video__sk--titolo"></span>
+          <span class="ultimo-video__sk ultimo-video__sk--riga"></span>
+        </div>
+      }
+    </div>
+  </section>
+}
 <!-- VALUE PROPS -->
 <section class="section">
   <div class="container">

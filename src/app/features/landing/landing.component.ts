@@ -2,24 +2,34 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  computed,
   inject,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
-import { News } from '../../core/models/api.models';
+import { News, VideoCanale } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
+import { CanaleService } from '../../core/services/canale.service';
 import { NewsService } from '../../core/services/news.service';
 import { SeoService } from '../../core/services/seo.service';
 import { NewsCardComponent } from '../../shared/ui/news-card/news-card.component';
 import { SuitDividerLiveComponent } from '../../shared/suit-divider-live/suit-divider-live.component';
 import { SOCIAL_LINKS } from '../../core/social-links';
 import { IconComponent, IconName } from '../../shared/ui/icon/icon.component';
+import { VideoYoutubeComponent } from '../../shared/ui/video-youtube/video-youtube.component';
 import { Hero3dComponent } from './hero-3d/hero-3d.component';
 
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink, Hero3dComponent, NewsCardComponent, SuitDividerLiveComponent, IconComponent],
+  imports: [
+    RouterLink,
+    Hero3dComponent,
+    NewsCardComponent,
+    SuitDividerLiveComponent,
+    IconComponent,
+    VideoYoutubeComponent,
+  ],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +37,7 @@ import { Hero3dComponent } from './hero-3d/hero-3d.component';
 export class LandingComponent {
   protected readonly auth = inject(AuthService);
   private readonly newsApi = inject(NewsService);
+  private readonly canaleApi = inject(CanaleService);
   private readonly seo = inject(SeoService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -76,6 +87,50 @@ export class LandingComponent {
       a: "Sono la strategia di equilibrio per ogni situazione preflop del formato: per ognuna delle 169 mani di partenza dicono con che frequenza aprire, rilanciare, chiamare o passare, a una data profondità di stack e posizione. Sul sito non sono un PDF ma un albero navigabile nodo per nodo, con frequenze ed EV per mano.",
     },
   ];
+
+
+  /**
+   * L'ultimo video del canale.
+   *
+   * ⚠️ **Field initializer e nessuna guardia `isPlatformBrowser`**, esattamente
+   * come `latestNews` qui sotto e per la stessa ragione: la home è
+   * prerenderizzata, quindi questa chiamata parte **al build** e l'HTML statico
+   * nasce già pieno (niente spostamento di layout, niente lampo), e riparte nel
+   * browser all'idratazione — che è ciò che permette a un video approvato di
+   * comparire **senza un nuovo deploy**.
+   *
+   * ⚠️ A differenza di `latestNews`, `/canale` resta **dentro** la transfer
+   * cache: così all'idratazione il client parte già dal valore del server e
+   * non c'è alcuno stato «non so» che faccia comparire e sparire il blocco
+   * sopra la piega. La ragione per esteso è accanto al filtro in
+   * `app.config.ts`; la freschezza la garantisce il rebuild automatico a ogni
+   * approvazione.
+   */
+  private readonly ultimoVideo = toSignal(
+    this.canaleApi.ultimoVideo().pipe(catchError(() => of(null))),
+    { initialValue: null },
+  );
+
+  /** Il video da mostrare, o `null` se non c'è o non è ancora arrivato. */
+  protected readonly videoCanale = computed<VideoCanale | null>(() => {
+    const r = this.ultimoVideo();
+    return r && r.disponibile ? r.video : null;
+  });
+
+  /**
+   * Tre stati e non due, ed è la differenza che tiene il CLS a zero.
+   *
+   * `attesa` = non abbiamo ancora una risposta (prerender iniziale, e di nuovo
+   * il primo istante dopo l'idratazione): la sezione **resta**, con uno
+   * scheletro che occupa la stessa scatola. `assente` = il server ha risposto
+   * che non c'è niente: solo allora la sezione sparisce. Collassare i due
+   * significherebbe far comparire e sparire ~360px sopra la piega.
+   */
+  protected readonly statoVideo = computed<'attesa' | 'pronto' | 'assente'>(() => {
+    const r = this.ultimoVideo();
+    if (r === null) return 'attesa';
+    return r.disponibile ? 'pronto' : 'assente';
+  });
 
   protected readonly latestNews = toSignal(
     this.newsApi.getLatest(3).pipe(catchError(() => of([] as News[]))),

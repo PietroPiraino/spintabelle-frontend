@@ -446,6 +446,14 @@ export const routes: Routes = [
         title: 'Admin · Redazione — Best Fish Forever',
       },
       {
+        path: 'canale',
+        loadComponent: () =>
+          import('./features/admin/admin-canale/admin-canale.component').then(
+            (m) => m.AdminCanaleComponent,
+          ),
+        title: 'Admin · Canale — Best Fish Forever',
+      },
+      {
         path: 'fonti',
         loadComponent: () =>
           import('./features/admin/admin-fonti/admin-fonti.component').then(

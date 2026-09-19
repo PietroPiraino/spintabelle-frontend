@@ -8,6 +8,11 @@
  * nell'altra — un'azione nuova va aggiunta QUI e in nessun altro posto.
  */
 export const ACTION_LABELS: Record<string, string> = {
+  // ⚠️ Le tre stringhe sono VERBATIM quelle della union `AdminAction` nel
+  // backend: se divergono, il tab Log stampa lo slug grezzo.
+  'approve-channel-video': 'Video del canale messo in home',
+  'reject-channel-video': 'Video del canale scartato',
+  'remove-channel-video': 'Video del canale tolto dalla home',
   'set-expiry': 'Scadenza modificata',
   'grant-subscription': 'Abbonamento concesso',
   'set-role': 'Ruolo modificato',

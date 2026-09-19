@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { AdminHandsService } from './admin-hands.service';
 import { AffiliationsService } from './affiliations.service';
+import { CanaleService } from './canale.service';
 import { NewsService } from './news.service';
 import { SubscriptionsService } from './subscriptions.service';
 
@@ -22,6 +23,7 @@ export class AdminPendingService {
   private readonly newsApi = inject(NewsService);
   private readonly handsApi = inject(AdminHandsService);
   private readonly subscriptionsApi = inject(SubscriptionsService);
+  private readonly canaleApi = inject(CanaleService);
 
   readonly richieste = signal<number | null>(null);
   readonly affiliazioni = signal<number | null>(null);
@@ -29,6 +31,8 @@ export class AdminPendingService {
   readonly redazione = signal<number | null>(null);
   /** Segnalazioni aperte sulle mani del Replayer. */
   readonly segnalazioni = signal<number | null>(null);
+  /** Il video del canale in attesa di approvazione: 0 o 1, non serve altro. */
+  readonly canale = signal<number | null>(null);
 
   /** Istante dell'ultimo refresh non forzato partito davvero. */
   private lastRefresh = 0;
@@ -64,6 +68,10 @@ export class AdminPendingService {
     this.handsApi.segnalazioniAperte().subscribe({
       next: (res) => this.segnalazioni.set(res.count),
       error: () => this.segnalazioni.set(null),
+    });
+    this.canaleApi.pendingCount().subscribe({
+      next: (res) => this.canale.set(res.inAttesa),
+      error: () => this.canale.set(null),
     });
   }
 }

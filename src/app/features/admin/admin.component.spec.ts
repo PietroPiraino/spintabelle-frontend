@@ -26,16 +26,19 @@ describe('AdminComponent (shell dashboard)', () => {
     r.url === `${API}/admin/news/pending-count`;
   const isSegnalazioni = (r: { url: string }) =>
     r.url === `${API}/admin/hands/reports/pending-count`;
+  const isCanale = (r: { url: string }) =>
+    r.url === `${API}/admin/canale/pending-count`;
 
   const el = () => fixture.nativeElement as HTMLElement;
   const text = () => el().textContent ?? '';
 
-  /** Risponde ai QUATTRO conteggi del costruttore (`AdminPendingService`). */
+  /** Risponde ai CINQUE conteggi del costruttore (`AdminPendingService`). */
   const flushPending = async (
     richieste: number | null,
     inVerifica: number | null,
     inCoda: number | null = 0,
     segnalazioni: number | null = 0,
+    canale: number | null = 0,
   ) => {
     const reqRichieste = http.expectOne(isRichieste);
     if (richieste === null) {
@@ -66,6 +69,12 @@ describe('AdminComponent (shell dashboard)', () => {
       reqSegn.flush(null, { status: 500, statusText: 'Server Error' });
     } else {
       reqSegn.flush({ count: segnalazioni });
+    }
+    const reqCanale = http.expectOne(isCanale);
+    if (canale === null) {
+      reqCanale.flush(null, { status: 500, statusText: 'Server Error' });
+    } else {
+      reqCanale.flush({ inAttesa: canale });
     }
     await fixture.whenStable();
     fixture.detectChanges();
@@ -98,10 +107,10 @@ describe('AdminComponent (shell dashboard)', () => {
     return link?.querySelector('.admin-shell__badge')?.textContent?.trim() ?? null;
   };
 
-  it('rende le 18 voci raggruppate, col chip "Presto" sul solo placeholder rimasto', async () => {
+  it('rende le 19 voci raggruppate, col chip "Presto" sul solo placeholder rimasto', async () => {
     await flushPending(0, 0);
 
-    expect(el().querySelectorAll('.admin-shell__link').length).toBe(18);
+    expect(el().querySelectorAll('.admin-shell__link').length).toBe(19);
     for (const label of ['Contenuti', 'Vendite', 'Utenti', 'Finanze', 'Analisi']) {
       expect(text()).toContain(label);
     }

@@ -76,6 +76,21 @@ export const appConfig: ApplicationConfig = {
     // il client rifa' la chiamata e lo aggiorna.
     // `filter` risponde alla domanda "questa richiesta la metto in cache?":
     // vero = si'. Quindi qui si nega esplicitamente solo /news.
+    //
+    // ⚠️⚠️ E **/canale NON va aggiunto**, benche' il ragionamento sembri lo
+    // stesso (anche il video si approva dal pannello senza rideployare). La
+    // differenza e' DOVE stanno i due blocchi, e si misura:
+    //  - il blocco news e' SOTTO LA PIEGA. All'idratazione sparisce e
+    //    ricompare, e non lo conta nessuno.
+    //  - il blocco video sta SUBITO SOTTO L'HERO. Escludendolo, il segnale
+    //    ripartirebbe da "non so" a ogni idratazione e la home farebbe
+    //    comparire e sparire ~360px sopra la piega — su una pagina che oggi
+    //    misura CLS 0 (LCP p75 95-115ms).
+    // La freschezza qui non si perde: `CanaleService` fa partire un rebuild
+    // Cloudflare a ogni approvazione (`deploy.trigger`, verificato `on` in
+    // produzione), quindi l'HTML statico si rigenera da solo in pochi minuti.
+    // Un video approvato tre minuti fa non e' una notizia: un salto di 360px
+    // a ogni visita si'.
     provideClientHydration(
       withEventReplay(),
       withHttpTransferCacheOptions({

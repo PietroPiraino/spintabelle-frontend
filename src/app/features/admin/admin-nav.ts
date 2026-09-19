@@ -9,7 +9,9 @@ export type AdminBadge =
   | 'richieste'
   | 'affiliazioni'
   | 'redazione'
-  | 'segnalazioni';
+  | 'segnalazioni'
+  /** Il video del canale YouTube proposto e in attesa di approvazione (0 o 1). */
+  | 'canale';
 
 export interface AdminNavItem {
   /** Segmento figlio sotto `/admin` (`''` = Panoramica). */
@@ -64,6 +66,11 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       // cioè una chiamata a ogni cambio di sezione per un numero che su una riga
       // SPENTA sarebbe per giunta congelato all'ultima valutazione.
       { path: 'fonti', label: 'Fonti', icon: 'rss' },
+      // Il video del canale YouTube che finisce in home. Sta fra i Contenuti
+      // perche' e' contenuto editoriale, e porta il badge perche' una proposta
+      // in attesa E' una decisione in attesa — al contrario di «Fonti», dove
+      // una riga degradata e' uno stato da guardare, non da decidere.
+      { path: 'canale', label: 'Canale', icon: 'play', badge: 'canale' },
       { path: 'documenti', label: 'Documenti', icon: 'file-text' },
     ],
   },

@@ -207,6 +207,12 @@ describe('AdminOverviewComponent (Panoramica)', () => {
   // Quarta fonte: le segnalazioni sulle mani del Replayer.
   const isSegnalazioni = (r: { url: string }) =>
     r.url === `${API}/admin/hands/reports/pending-count`;
+  // Quinta fonte: il video del canale YouTube in attesa di approvazione.
+  // ⚠️ Va SCARICATA anche se la Panoramica non la mostra: `AdminPendingService`
+  // la chiama per il badge della sidebar, e una richiesta non consumata fa
+  // fallire `http.verify()` di TUTTE le prove di questo file.
+  const isCanale = (r: { url: string }) =>
+    r.url === `${API}/admin/canale/pending-count`;
 
   const el = () => fixture.nativeElement as HTMLElement;
   // ⚠️ `textContent` e mai `innerText`: il secondo restituisce il testo COME
@@ -322,6 +328,10 @@ describe('AdminOverviewComponent (Panoramica)', () => {
       reqSegn.flush({ count: segnalazioni });
     }
 
+    // Il badge del canale non ha una tessera nella Panoramica: qui si
+    // consuma soltanto, con un valore neutro.
+    http.expectOne(isCanale).flush({ inAttesa: 0 });
+
     await fixture.whenStable();
     fixture.detectChanges();
   };
@@ -347,7 +357,7 @@ describe('AdminOverviewComponent (Panoramica)', () => {
 
   // ── Le sette richieste e gli scheletri ─────────────────────────────────────
 
-  it('fa SETTE richieste: cruscotto, stats senza `months`, log limit 8, richieste limit 1, tre conteggi', async () => {
+  it('fa OTTO richieste: cruscotto, stats senza `months`, log limit 8, richieste limit 1, quattro conteggi', async () => {
     const cruscotto = http.expectOne(isCruscotto);
     expect(cruscotto.request.params.keys().length).toBe(0);
 
@@ -370,6 +380,10 @@ describe('AdminOverviewComponent (Panoramica)', () => {
     http.expectOne(isAffiliazioni).flush({ inVerifica: 0 });
     http.expectOne(isRedazione).flush({ inCoda: 0 });
     http.expectOne(isSegnalazioni).flush({ count: 0 });
+    // ⚠️ Ottava: il badge del canale. La Panoramica non lo mostra, ma
+    // `AdminPendingService` lo chiede per la sidebar — e una richiesta non
+    // consumata fa fallire `http.verify()`.
+    http.expectOne(isCanale).flush({ inAttesa: 0 });
     await fixture.whenStable();
   });
 

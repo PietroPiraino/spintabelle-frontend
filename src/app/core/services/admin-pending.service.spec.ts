@@ -25,6 +25,9 @@ describe('AdminPendingService', () => {
    *  nessuno ha atteso, ed è proprio così che questa si è fatta notare. */
   const isSegnalazioni = (r: { url: string }) =>
     r.url === `${API}/admin/hands/reports/pending-count`;
+  /** ⚠️ QUINTA chiamata: il video del canale YouTube in attesa (0 o 1). */
+  const isCanale = (r: { url: string }) =>
+    r.url === `${API}/admin/canale/pending-count`;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -49,6 +52,7 @@ describe('AdminPendingService', () => {
     http.expectOne(isAffiliazioni).flush({ inVerifica: 2 });
     http.expectOne(isRedazione).flush({ inCoda: 3 });
     http.expectOne(isSegnalazioni).flush({ count: 3 });
+    http.expectOne(isCanale).flush({ inAttesa: 1 });
 
     expect(service.richieste()).toBe(7);
     expect(service.affiliazioni()).toBe(2);
@@ -63,6 +67,7 @@ describe('AdminPendingService', () => {
     http.expectOne(isAffiliazioni).flush({ inVerifica: 0 });
     http.expectOne(isRedazione).flush({ inCoda: 0 });
     http.expectOne(isSegnalazioni).flush({ count: 0 });
+    http.expectOne(isCanale).flush({ inAttesa: 0 });
 
     // la shell chiama refresh() a ogni cambio sezione: senza il freno ogni
     // click farebbe tre chiamate — qui NON deve partire nulla
@@ -79,6 +84,7 @@ describe('AdminPendingService', () => {
     http.expectOne(isAffiliazioni).flush({ inVerifica: 1 });
     http.expectOne(isRedazione).flush({ inCoda: 5 });
     http.expectOne(isSegnalazioni).flush({ count: 5 });
+    http.expectOne(isCanale).flush({ inAttesa: 1 });
     expect(service.richieste()).toBe(4);
     expect(service.redazione()).toBe(5);
   });
@@ -95,6 +101,7 @@ describe('AdminPendingService', () => {
     http.expectOne(isAffiliazioni).flush({ inVerifica: 9 });
     http.expectOne(isRedazione).flush({ inCoda: 5 });
     http.expectOne(isSegnalazioni).flush({ count: 5 });
+    http.expectOne(isCanale).flush({ inAttesa: 1 });
     expect(service.richieste()).toBe(7);
     expect(service.redazione()).toBe(5);
 
@@ -108,6 +115,7 @@ describe('AdminPendingService', () => {
       .expectOne(isRedazione)
       .flush(null, { status: 500, statusText: 'Server Error' });
     http.expectOne(isSegnalazioni).flush({ count: 4 });
+    http.expectOne(isCanale).flush({ inAttesa: 1 });
 
     expect(service.richieste()).toBeNull();
     // I vicini sani non vengono trascinati giù: i conteggi sono indipendenti.

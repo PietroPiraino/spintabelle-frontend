@@ -33,7 +33,7 @@ const RADICE = process.cwd();
 const leggi = (p) => readFileSync(resolve(RADICE, p), 'utf8');
 
 /**
- * I QUINDICI punti in cui il bersaglio di tocco è dichiarato una volta sola —
+ * I DICIASSETTE punti in cui il bersaglio di tocco è dichiarato una volta sola —
  * e da cui ogni sezione lo eredita invece di riscriverselo. Dodici sono del
  * pannello admin; dal 14/09/2026 tre vengono dall'area personale (/account) e
  * dal primitivo `.riga` che quella pagina ha promosso in `_utilities.scss`.
@@ -121,6 +121,22 @@ const PUNTI = [
     attese: ['min-height: 44px'],
     perche:
       'il comando che apre le sezioni su schermo stretto: senza, il padding lo lascia a 38,1px, e non c\'è altro modo di cambiare sezione dal telefono',
+  },
+  {
+    // I due punti del blocco video del canale (19/09/2026). Entrambi sono
+    // `.btn--sm`, che nudo sta sui 38,1px.
+    file: 'src/app/features/landing/landing.component.scss',
+    selettore: '.ultimo-video__btn {',
+    attese: ['min-height: 44px'],
+    perche:
+      'gli inviti del blocco video in home («Iscriviti al canale», «Guarda su YouTube»): stanno subito sotto la testata, cioè fra i primi comandi che un telefono incontra',
+  },
+  {
+    file: 'src/app/features/admin/admin-canale/admin-canale.component.scss',
+    selettore: '.cn__btn {',
+    attese: ['min-height: 44px'],
+    perche:
+      'i comandi della schermata «Canale»: uno di essi decide che cosa compare sulla home page pubblica, e va premuto una volta sola e con intenzione',
   },
   {
     // I tre punti del cruscotto (Panoramica e Statistiche, 13/09/2026).

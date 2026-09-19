@@ -1,0 +1,222 @@
+<div class="admin-users">
+  <div class="admin-barra">
+    <h2 class="admin-barra__titolo">Canale</h2>
+    <button
+      type="button"
+      class="btn btn--ghost btn--sm"
+      [disabled]="inCorso() || caricamento()"
+      (click)="controlla()"
+    >
+      Controlla ora
+    </button>
+  </div>
+
+  <p class="admin-nota">
+    Il controllo automatico legge il feed del canale una volta l'ora e
+    <strong>propone</strong> l'ultimo video lungo (gli Short vengono saltati).
+    In home ci va solo quello che approvi tu.
+  </p>
+
+  @if (errore(); as e) {
+    <p class="admin-avviso admin-avviso--attenzione">
+      {{ e }}
+      <button type="button" class="btn btn--ghost btn--sm" (click)="carica()">
+        Riprova
+      </button>
+    </p>
+  }
+
+  @if (esito(); as m) {
+    <p class="admin-avviso" role="status">{{ m }}</p>
+  }
+
+  @if (stato(); as s) {
+    @if (!s.abilitato) {
+      <p class="admin-avviso admin-avviso--attenzione">
+        <span class="admin-stato" data-tono="spento">spento</span>
+        La raccolta è disattivata da <code>CANALE_FEED_ENABLED</code> su Render:
+        il controllo non parte e non arriveranno nuove proposte.
+      </p>
+    } @else if (!s.configurato) {
+      <p class="admin-avviso admin-avviso--attenzione">
+        <span class="admin-stato" data-tono="spento">non configurato</span>
+        Manca <code>YOUTUBE_CHANNEL_ID</code> su Render (formato
+        <code>UC</code> + 22 caratteri, lo trovi in YouTube Studio →
+        Impostazioni → Canale → Avanzate). Finché non c'è, il controllo non ha
+        un canale da leggere.
+      </p>
+    }
+
+    <!-- ------------------------------------------------- IN ATTESA -->
+    @if (s.proposto; as p) {
+      <section class="cn__card">
+        <div class="admin-barra">
+          <h3 class="admin-barra__titolo">In attesa di una tua decisione</h3>
+          <span class="admin-stato" data-tono="attesa">da approvare</span>
+        </div>
+
+        <!--
+          ⚠️ LA COPERTINA VA GRANDE, e non è una scelta estetica: è l'unico
+          controllo possibile sull'immagine. Nessun cancello automatico legge
+          il logo di una sala da gioco dentro un JPEG (art. 9 DL 87/2018), e
+          sul canale è già esistito un video col marchio stampato sopra.
+          Mostrarla piccola rende l'approvazione un clic automatico.
+        -->
+        @if (p.miniaturaUrl) {
+          <img class="cn__cover" [src]="p.miniaturaUrl" alt="" width="1280" height="720" />
+        } @else {
+          <div class="cn__cover cn__cover--manca">
+            <app-icon name="alert-triangle" [size]="28" />
+            <span>Copertina non disponibile</span>
+          </div>
+        }
+
+        <h4 class="cn__titolo">{{ p.titolo }}</h4>
+        <p class="admin-nota">
+          Pubblicato il {{ p.pubblicatoIl | date: 'd MMMM y' }} ·
+          <a [href]="p.url" target="_blank" rel="noopener">apri su YouTube</a>
+          @if (p.miniaturaSorgente) {
+            · copertina <code>{{ p.miniaturaSorgente }}</code>
+          }
+        </p>
+
+        @if (p.segnalazioni.length) {
+          <!--
+            ⚠️ SEGNALA, non blocca. Un video di cronaca su un operatore che
+            entra in Italia può essere una scelta editoriale legittima: il
+            sistema dice che cosa ha visto e lascia decidere. Bloccare una
+            decisione esplicita dell'owner porta solo ad aggirare il sistema.
+          -->
+          <p class="admin-avviso admin-avviso--attenzione">
+            Il titolo nomina:
+            <strong>{{ p.segnalazioni.join(', ') }}</strong>. Su una pagina
+            pubblica è pubblicità di gioco se il contesto è promozionale
+            (art. 9 DL 87/2018): approva solo se sei convinto che sia cronaca.
+          </p>
+        }
+
+        @if (bloccoApprovazione(); as b) {
+          <p class="admin-avviso admin-avviso--attenzione">{{ b }}</p>
+        }
+
+        <div class="row cn__azioni">
+          <button
+            type="button"
+            class="btn btn--primary btn--sm cn__btn"
+            [disabled]="inCorso() || !!bloccoApprovazione()"
+            (click)="approva(p.videoId)"
+          >
+            Metti in home
+          </button>
+
+          @if (conferma() === 'scarta') {
+            <button
+              type="button"
+              class="btn btn--danger btn--sm cn__btn"
+              [disabled]="inCorso()"
+              (click)="scarta(p.videoId)"
+            >
+              Scarta davvero
+            </button>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm cn__btn"
+              (click)="conferma.set(null)"
+            >
+              Annulla
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm cn__btn"
+              [disabled]="inCorso()"
+              (click)="conferma.set('scarta')"
+            >
+              Scarta
+            </button>
+          }
+        </div>
+        <p class="admin-nota">
+          Scartandolo non verrà più riproposto, e al prossimo controllo il
+          sistema cercherà il video ancora precedente.
+        </p>
+      </section>
+    }
+
+    <!-- -------------------------------------------------- IN HOME -->
+    <section class="cn__card">
+      <div class="admin-barra">
+        <h3 class="admin-barra__titolo">In home ora</h3>
+        @if (s.approvato) {
+          <span class="admin-stato" data-tono="ok">pubblicato</span>
+        } @else {
+          <span class="admin-stato" data-tono="neutro">nessuno</span>
+        }
+      </div>
+
+      @if (s.approvato; as a) {
+        @if (a.miniaturaUrl) {
+          <img class="cn__cover" [src]="a.miniaturaUrl" alt="" width="1280" height="720" />
+        }
+        <h4 class="cn__titolo">{{ a.titolo }}</h4>
+        <p class="admin-nota">
+          Pubblicato il {{ a.pubblicatoIl | date: 'd MMMM y' }}
+          @if (s.approvatoDa) {
+            · messo in home da {{ s.approvatoDa }}
+          }
+          @if (s.approvatoIl) {
+            il {{ s.approvatoIl | date: 'd MMM y, HH:mm' }}
+          }
+        </p>
+        <div class="row cn__azioni">
+          @if (conferma() === 'togli') {
+            <button
+              type="button"
+              class="btn btn--danger btn--sm cn__btn"
+              [disabled]="inCorso()"
+              (click)="togli()"
+            >
+              Togli davvero
+            </button>
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm cn__btn"
+              (click)="conferma.set(null)"
+            >
+              Annulla
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm cn__btn"
+              [disabled]="inCorso()"
+              (click)="conferma.set('togli')"
+            >
+              Togli dalla home
+            </button>
+          }
+        </div>
+      } @else {
+        <p class="admin-nota">
+          In home non compare nessun blocco video. Comparirà appena approvi una
+          proposta.
+        </p>
+      }
+    </section>
+
+    <!-- ----------------------------------------------- DIAGNOSTICA -->
+    <p class="admin-nota">
+      @if (s.ultimoPollIl) {
+        Ultimo controllo: {{ s.ultimoPollIl | date: 'd MMM y, HH:mm' }} —
+        {{ s.ultimoPollEsito }}.
+      } @else {
+        Il controllo automatico non è ancora mai partito.
+      }
+      @if (s.rifiutati) {
+        · {{ s.rifiutati }} video scartati in passato non verranno riproposti.
+      }
+    </p>
+  } @else if (caricamento()) {
+    <p class="admin-nota">Carico lo stato del canale…</p>
+  }
+</div>
