@@ -55,6 +55,153 @@ export interface Guide {
 }
 
 export const GUIDE: readonly Guide[] = [
+  // ⚠️ LA PAGINA PILASTRO, ed è la PRIMA dell'array per questo: l'indice rende
+  // `GUIDE` nell'ordine in cui è scritto.
+  //
+  // PERCHE' ESISTE, misurato e non ipotizzato (Search Console, 19/09/2026). Le
+  // dieci guide avevano 117 impressioni in 90 giorni a posizione media 7,2, su
+  // query che Google anonimizza perché troppo rare: il sito presidiava nove
+  // SOTTO-temi e nessuna pagina rispondeva al termine generico «strategia
+  // Spin & Go». Questa pagina possiede la query testa e passa il lettore alla
+  // guida che approfondisce.
+  //
+  // ⚠️ `correlate` elenca QUI TUTTE le altre, contro le tre delle sorelle: il
+  // template le rende senza tetto, e un hub che ne linka tre sarebbe una guida
+  // come le altre messa in cima. È l'unico punto del sito in cui ogni guida ha
+  // un ingresso interno garantito — togliere una voce da qui significa lasciare
+  // quella guida con i soli ingressi casuali del blocco «Per approfondire».
+  //
+  // ⚠️ Ogni sezione riassume una guida e NON la sostituisce: il riassunto deve
+  // restare fedele al `lead` della guida a cui rimanda, o le due pagine si
+  // contraddicono e il lettore se ne accorge al primo clic.
+  {
+    slug: 'strategia-spin-and-go',
+    titolo: 'Strategia Spin & Go: cosa conta e in che ordine studiarlo',
+    descrizione:
+      'La strategia degli Spin & Go in una pagina: cosa decide davvero un 3-max hyper turbo, in che ordine studiarlo e dove approfondire ogni singolo pezzo.',
+    occhiello: 'Guida principale',
+    h1: 'Strategia Spin & Go: cosa conta davvero, e in che ordine studiarlo',
+    lead: 'La strategia di un 3-max hyper turbo non è una lista di mosse da imparare: è una conseguenza della struttura. Tre giocatori, venticinque big blind di partenza, livelli che salgono ogni pochi minuti e un montepremi che quasi sempre va tutto al primo. Da lì discende tutto il resto: dove si decide il torneo, cosa conviene studiare per primo e cosa invece pesa molto meno di quanto si legga in giro. Questa pagina mette le parti in fila, e ognuna rimanda alla guida che la spiega per intero.',
+    aggiornata: '2026-09-19',
+    sezioni: [
+      {
+        h2: 'Tutto parte dalla struttura, non da una lista di mosse',
+        paragrafi: [
+          'Un torneo di questo tipo comincia con venticinque big blind a testa e livelli che salgono ogni pochi minuti. Dopo pochi giri gli stack sono corti in termini di bui, e quando gli stack sono corti il numero di decisioni possibili crolla: non c\'è spazio per costruire un piatto su tre strade, e gran parte dei soldi entra prima del flop o subito dopo, con le mani già impegnate.',
+          'La seconda particolarità è il montepremi. Non lo conosci quando ti siedi: viene estratto quando il tavolo si forma, e nella grande maggioranza dei casi paga soltanto chi arriva primo. Ha una conseguenza che vale per tutta la strategia: le fiches valgono in modo lineare, cioè raddoppiare lo stack raddoppia davvero quanto vale la tua posizione nel torneo.',
+          'La terza è il numero di giocatori. In tre, ogni mano ti vede al bottone, nel piccolo buio o nel grande buio, e i bui ti passano addosso una volta ogni tre mani invece che una ogni nove. Non puoi aspettare: aspettare, qui, è una strategia che perde da sola.',
+        ],
+      },
+      {
+        h2: 'Le tre fasi del torneo, e quanto pesa ognuna',
+        paragrafi: [
+          'Un torneo si divide in tre tratti che chiedono cose diverse. Il primo è il gioco a tre con stack ancora giocabili, dove si aprono e si difendono piatti. Il secondo è il gioco a tre corto, dove le scelte si riducono a entrare per tutto o passare. Il terzo è l\'heads-up, che comincia quando qualcuno esce e dura fino alla fine.',
+          'La distribuzione del tempo sorprende quasi tutti: la fase in cui si gioca il maggior numero di mani è l\'ultima. A tre le mani finiscono in fretta, spesso senza vedere il flop; in due si gioca ogni mano, e si gioca finché uno dei due non ha tutte le fiches. È la ragione per cui chi prepara con cura le aperture a tre e improvvisa l\'heads-up ha studiato a fondo la parte più corta del torneo.',
+          'Questo non rende secondario il gioco a tre, perché è lì che si decide con quale stack arrivi in due. Cambia però l\'ordine delle priorità quando il tempo per studiare è poco, ed è quasi sempre poco.',
+        ],
+      },
+      {
+        h2: 'Il preflop è la parte che si può davvero sapere',
+        paragrafi: [
+          'Le mani di partenza sono centosessantanove. Per ogni profondità di stack, per ogni posizione al tavolo e per ogni sequenza di azioni già avvenute esiste una risposta di riferimento su cosa farne. Non è un\'opinione che cambia con l\'umore: è un insieme finito di situazioni, e si può studiare fino a saperlo.',
+          'Quando gli stack si accorciano il ventaglio si stringe ancora: le uniche due azioni sensate diventano mettere dentro tutto o passare, perché un rilancio parziale lascia dietro un resto così piccolo che chi risponde ha ragioni matematiche per non passare quasi mai. È il tratto in cui un errore ripetuto costa di più, perché la stessa situazione torna decine di volte in una sessione.',
+          'È anche la parte in cui il materiale deve dichiarare su cosa è calcolato. Una tabella costruita su un tavolo senza ante propone spinte troppo strette dove l\'ante c\'è, perché con del morto in mezzo conviene attaccare più largo. Se una tabella non dice formato, profondità e presenza di ante, non sai se descrive il tavolo dove sei seduto.',
+        ],
+      },
+      {
+        h2: 'Che cosa cambia quando restate in due',
+        paragrafi: [
+          'In heads-up cambiano le distanze, non solo i range. Sei sempre in uno dei due bui, quindi paghi per vedere ogni mano; il bottone e il piccolo buio sono la stessa persona, e quella persona agisce per prima prima del flop e per ultima dopo. Mani che a tre passi senza pensarci diventano rilanci obbligati.',
+          'Il prezzo che ti fa il buio è l\'altra metà. Difendere troppo poco dal grande buio regala piatti piccoli ma continui; difendere troppo ti porta in piatti dove sei battuto e fuori posizione. La differenza fra i due errori, ripetuta per centinaia di mani, è quasi tutto il margine di questa fase.',
+          'È anche il tratto in cui l\'avversario conta di più. A tre e corto molte decisioni sono quasi meccaniche; in due, con stack ancora profondi rispetto ai bui, chi hai davanti — quanto folda, quanto rilancia, cosa fa quando lo rialzi — sposta la risposta giusta.',
+        ],
+      },
+      {
+        h2: 'Il moltiplicatore non cambia quasi mai come si gioca',
+        paragrafi: [
+          'È il malinteso più diffuso su questo formato: esce un moltiplicatore alto e si pensa che vada giocato in un altro modo. Nella grande maggioranza dei tavoli il premio va tutto al primo, e in quel caso il valore delle fiches è lineare: non c\'è alcuna correzione da applicare, perché non c\'è un secondo posto da proteggere.',
+          'La correzione serve solo quando il montepremi si divide fra più posti, cosa che succede oltre una certa soglia di moltiplicatore e che cambia da operatore a operatore. Lì, e soltanto lì, mettere fiches a rischio costa più di quanto renda vincerne altrettante, e conviene stringere in alcuni spot.',
+          'Chi ti riempie di ICM su un formato dove quasi ogni torneo paga un posto solo ti sta insegnando una correzione che al tuo tavolo non si applica, e nel frattempo non ti sta insegnando i range.',
+        ],
+      },
+      {
+        h2: 'Ante, formati asimmetrici e rake: quando i range si spostano',
+        paragrafi: [
+          'Lo stesso gioco non è identico dappertutto. Alcuni tavoli hanno l\'ante, altri no. In alcuni formati uno dei due bui parte con uno stack più corto degli altri due, e quell\'asimmetria cambia chi può attaccare chi. La scala dei moltiplicatori disponibili e la soglia oltre cui il montepremi si divide cambiano da un operatore all\'altro.',
+          'Cambia anche il rake, nell\'ordine del sette-dieci per cento a seconda del buy-in. Non è un dettaglio da contabili: è il costo fisso che si toglie da ogni torneo giocato, e più è alto più ampio deve essere il vantaggio tecnico perché il conto stia in piedi.',
+          'Sono differenze che spostano i range, non sfumature. Studiare su materiale calcolato per una struttura e giocare su un\'altra è il modo più silenzioso di sbagliare, perché nessuna singola mano sembra un errore.',
+        ],
+      },
+      {
+        h2: 'Bankroll e varianza fanno parte della strategia',
+        paragrafi: [
+          'Tre giocatori, pochi minuti a torneo e un montepremi quasi sempre tutto al primo producono oscillazioni larghe, anche su tratti lunghi. Una serie negativa di centinaia di tornei non dimostra che stai sbagliando qualcosa, e una serie positiva non dimostra il contrario: è la struttura del gioco, non un contrattempo.',
+          'La conseguenza pratica è che il fondo che tieni da parte e i buy-in che scegli non sono un capitolo separato dalla strategia: sono il vincolo che decide se potrai continuare a giocarla. Salire di livello troppo presto trasforma una serie del tutto normale in una serie che ti ferma.',
+          'Il poker comporta un rischio economico reale, e nessuno studio lo toglie. Quello che si può ridurre è la quota di errori evitabili, e la probabilità di trovarsi senza fondo nel mezzo di una serie negativa che era prevedibile.',
+        ],
+      },
+      {
+        h2: 'Un ordine di studio che regge',
+        paragrafi: [
+          'Se il tempo è poco, l\'ordine conta più della quantità. Prima le aperture e le difese a tre alle profondità in cui il formato si gioca davvero, poi il push or fold di quando gli stack si accorciano, poi l\'heads-up, che è la fase più lunga. Il postflop viene dopo, perché a questi stack ci arrivi di rado e quasi sempre con gran parte dei soldi già in mezzo.',
+          'Poi serve un modo per esercitarsi, non solo per leggere. Consultare una tabella mentre giochi insegna poco; rispondere alla stessa situazione cento volte, sbagliando e vedendo subito la risposta, è quello che la fa restare. E rivedere le proprie mani è l\'unico modo per scoprire quali errori stai ripetendo senza accorgertene.',
+          'In pratica, per il primo mese, un ordine che funziona è questo:',
+        ],
+        lista: [
+          'Aperture e difese a tre, alle profondità in cui il formato si gioca davvero.',
+          'Push or fold: riconoscere quando le azioni sensate sono soltanto due, e saperle a memoria.',
+          'Heads-up: range di apertura e di difesa, perché è la fase in cui giocherai più mani.',
+          'Gli errori ricorrenti, per controllare quali stai facendo tu invece di studiarli in astratto.',
+          'Bankroll e varianza, prima di scegliere a quale buy-in sederti.',
+          'Solo dopo, il postflop e le situazioni rare.',
+        ],
+      },
+    ],
+    strumenti: [
+      { testo: 'le tabelle preflop', href: '/tabelle/' },
+      { testo: 'gli esercizi di allenamento', href: '/allenamento/' },
+      { testo: 'il simulatore di varianza', href: '/simulatore-varianza/' },
+      { testo: 'le lezioni video della scuola', href: '/lezioni/' },
+    ],
+    faq: [
+      {
+        q: 'Qual è la strategia di base negli Spin & Go?',
+        a: 'Giocare molte mani e giocarle in modo aggressivo prima del flop, perché con venticinque big blind e livelli rapidi aspettare le mani forti costa più di quanto renda. In concreto: aperture larghe dal bottone, difese misurate dai bui, e il passaggio al push or fold appena lo stack si accorcia. Il resto sono raffinamenti di queste tre cose.',
+      },
+      {
+        q: 'Da dove si comincia se non si è mai giocato questo formato?',
+        a: 'Dalla struttura, non dai range: capire perché un 3-max hyper turbo si decide quasi sempre prima del flop rende sensato tutto il resto. Subito dopo vengono le aperture a tre alle profondità in cui si gioca davvero, e poi l\'heads-up. Studiare i range senza sapere da dove vengono significa impararli a memoria e non saperli adattare.',
+      },
+      {
+        q: 'Serve studiare l\'ICM per gli Spin & Go?',
+        a: 'Quasi mai. L\'ICM descrive cosa succede quando il montepremi è diviso fra più posti, e nella grande maggioranza di questi tornei paga solo il primo: lì le fiches valgono in modo lineare e non c\'è nulla da correggere. Serve sopra la soglia di moltiplicatore in cui il premio si divide, che cambia da operatore a operatore.',
+      },
+      {
+        q: 'Quanto conta il postflop in questo formato?',
+        a: 'Meno di quanto si creda, e non perché sia facile. Con stack corti e livelli rapidi al flop ci arrivi di rado, e quando ci arrivi gran parte dei soldi è già in mezzo, quindi le scelte residue sono poche. Studiarlo prima di avere range preflop solidi vuol dire lavorare sulla parte più piccola del margine.',
+      },
+      {
+        q: 'Quanto tempo serve per capire se una strategia funziona?',
+        a: 'Più di quanto suggerisca l\'istinto. Con tre giocatori, un moltiplicatore estratto a ogni torneo e un premio quasi sempre tutto al primo, i risultati oscillano molto anche su migliaia di tornei. Un simulatore di varianza serve proprio a questo: vedere quanto può essere lunga una serie negativa del tutto normale, prima di trovartici dentro.',
+      },
+      {
+        q: 'Le tabelle preflop bastano da sole?',
+        a: 'Sono la base e non il percorso. Una tabella dice cosa fare in una situazione; non dice perché, non ti segnala gli errori che ripeti e non copre l\'heads-up giocato contro una persona che si adatta. Servono insieme a degli esercizi e a un modo per rivedere le mani, altrimenti restano un riferimento che consulti e dimentichi.',
+      },
+    ],
+    correlate: [
+      'perche-il-3max-hyper-turbo-si-decide-preflop',
+      'come-giocare-spin-and-go',
+      'push-fold-spin-and-go',
+      'heads-up-spin-and-go',
+      'errori-comuni-spin-and-go',
+      'icm-spin-and-go',
+      'spin-and-go-vs-twister',
+      'varianza-spin-and-go',
+      'bankroll-spin-and-go',
+      'scegliere-scuola-poker-spin-and-go',
+    ],
+  },
   {
     slug: 'come-giocare-spin-and-go',
     titolo: 'Come giocare gli Spin & Go: guida al 3-max hyper turbo',

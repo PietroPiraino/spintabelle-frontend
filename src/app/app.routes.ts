@@ -26,7 +26,7 @@ export const routes: Routes = [
       import('./features/tables/tables.component').then(
         (m) => m.TablesComponent,
       ),
-    title: 'Tabelle — Best Fish Forever',
+    title: 'Tabelle e range preflop GTO per Spin & Go e Twister — Best Fish Forever',
     data: {
       description:
         'Tabelle GTO preflop per Spin & Go e Twister: range di apertura, push/fold e raise per ogni stack, posizione e formato (ante, asimmetrico).',
@@ -39,7 +39,7 @@ export const routes: Routes = [
       import('./features/varianza/varianza.component').then(
         (m) => m.VarianzaComponent,
       ),
-    title: 'Simulatore di Varianza — Best Fish Forever',
+    title: 'Simulatore di varianza per Spin & Go e Twister — Best Fish Forever',
     data: {
       description:
         'Simulatore di varianza per Spin & Go e Twister lottery: migliaia di percorsi Monte Carlo per capire swing, downswing e bankroll necessario. Gratis, senza registrazione.',

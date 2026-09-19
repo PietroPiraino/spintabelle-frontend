@@ -65,7 +65,7 @@ describe('guide-links — la mappa', () => {
     expect(proponibili.has(RIPIEGO_PREDEFINITO)).toBeTrue();
   });
 
-  it('⚠️ le dieci guide sono tutte proponibili: nessuna resta senza ingressi', () => {
+  it('⚠️ ogni guida è proponibile: nessuna resta senza ingressi', () => {
     // Non è pedanteria: una guida che nessun articolo può linkare è una pagina
     // che il flusso di news non irrora — cioè non partecipa alla ragione per
     // cui questo meccanismo esiste.

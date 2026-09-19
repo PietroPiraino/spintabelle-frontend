@@ -1,7 +1,7 @@
 // «Per approfondire»: da un articolo alle guide — SORGENTE CANONICA.
 //
 // PERCHÉ ESISTE. Il flusso di news serve alla ricerca solo se irrora le pagine
-// che possono davvero posizionarsi, e quelle sono le dieci guide evergreen. Al
+// che possono davvero posizionarsi, e quelle sono le guide evergreen. Al
 // 23/08/2026, misurato sugli otto articoli pubblicati, i link interni erano
 // **zero**: uno solo in tutto l'archivio, e andava a YouTube. Un articolo di
 // cronaca su un dominio nuovo non batterà mai le testate di settore sulla sua
@@ -75,7 +75,7 @@ function contiene(testo: string, parola: string): boolean {
 }
 
 /**
- * Le dieci guide con le parole che le agganciano.
+ * Le guide con le parole che le agganciano.
  *
  * ⚠️ LE PAROLE SONO SPECIFICHE DI PROPOSITO. La tentazione è mettere «spin go»
  * sulla guida introduttiva: aggancerebbe **ogni** articolo di questo sito, cioè
@@ -94,6 +94,17 @@ export const GUIDE_CORRELABILI: readonly {
   titolo: string;
   parole: readonly string[];
 }[] = [
+  {
+    slug: 'strategia-spin-and-go',
+    titolo: 'Strategia Spin & Go: cosa conta e in che ordine studiarlo',
+    parole: [
+      'strategia spin go',
+      'strategie spin go',
+      'principiante',
+      'principianti',
+      'da dove cominciare',
+    ],
+  },
   {
     slug: 'come-giocare-spin-and-go',
     titolo: 'Come giocare gli Spin & Go: guida al 3-max hyper turbo',

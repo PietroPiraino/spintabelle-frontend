@@ -48,6 +48,17 @@ function contiene(testo, parola) {
  */
 export const GUIDE_CORRELABILI = [
   {
+    slug: 'strategia-spin-and-go',
+    titolo: 'Strategia Spin & Go: cosa conta e in che ordine studiarlo',
+    parole: [
+      'strategia spin go',
+      'strategie spin go',
+      'principiante',
+      'principianti',
+      'da dove cominciare',
+    ],
+  },
+  {
     slug: 'come-giocare-spin-and-go',
     titolo: 'Come giocare gli Spin & Go: guida al 3-max hyper turbo',
     parole: [
