@@ -1381,6 +1381,136 @@ export const VOCI: readonly Voce[] = [
     correlati: ['trips', 'nuts', 'equity', 'range'],
     aggiornata: '2026-09-20',
   },
+  {
+    slug: 'gutshot',
+    termine: 'Gutshot',
+    varianti: ['scala interna', 'inside straight draw', 'belly buster'],
+    query: 'gutshot poker significato',
+    titolo: 'Gutshot nel poker: significato di scala interna',
+    definizione:
+      'Il gutshot è un progetto di scala «interna»: manca una sola carta nel mezzo, e la chiudono quattro carte del mazzo contro le otto di una scala bilaterale.',
+    spiegazione: [
+      'Con 8-9 su un board 5-6-K si ha un gutshot: serve un 7, e nel mazzo ce ne sono quattro. La scala bilaterale (open-ended), per esempio 8-9 su 6-7-K, si chiude con un 5 o con un 10, cioè otto carte. La differenza pesa: dal flop al river un gutshot arriva circa il 17% delle volte, una bilaterale il 32%. Per questo il gutshot da solo raramente giustifica una chiamata grande; serve qualcos’altro (una carta alta, un progetto di colore, la posizione).',
+      'Negli Spin & Go i progetti si giocano quasi sempre in un’unica decisione, perché con stack corti la puntata al flop mette dentro il resto delle fiches: il conto è «quanta equity ho contro il range dell’avversario» e non «quante volte chiudo». Un gutshot con due carte alte (A-J su 10-Q-4) vale più di quanto sembri, perché somma le quattro carte della scala alle sei che accoppiano; un gutshot nudo con carte basse vale poco. Come semi-bluff il gutshot funziona se l’avversario può passare, non se chiama con tutto.',
+      'Il termine viene dall’inglese («colpo allo stomaco»); in italiano si dice anche scala interna o «scala a buco».',
+    ],
+    esempio:
+      'Grande buio con 14 big blind chiama l’apertura del bottone con 9-8; flop 5-6-K. Serve solo un 7, quattro carte: un gutshot. Il bottone punta 2 nel piatto di 4,5: le pot odds chiedono circa il 31% di equity e il gutshot da solo ne ha il 17% al turn, quindi si passa, salvo un piano di check-raise come semi-bluff. Con flop 6-7-K la stessa mano avrebbe una scala bilaterale (un 5 o un 10, otto carte) e il conto cambierebbe.',
+    guida: {
+      testo: 'la guida a come si gioca uno Spin & Go, che tratta i progetti a stack corto',
+      href: '/guide/come-giocare-spin-and-go',
+    },
+    strumento: {
+      testo: 'il replayer delle mani, che calcola l’equity di ogni progetto all-in',
+      href: '/replayer',
+    },
+    correlati: ['flush-draw', 'scala', 'equity', 'pot-odds'],
+    aggiornata: '2026-09-20',
+  },
+  {
+    slug: 'scala',
+    termine: 'Scala',
+    varianti: ['straight', 'scala colore', 'scala reale'],
+    query: 'scala poker regole',
+    titolo: 'Scala nel poker: regole, scala colore e scala reale',
+    definizione:
+      'La scala è il punto formato da cinque carte in sequenza di semi diversi: A-2-3-4-5 è la più bassa (l’asso vale uno), 10-J-Q-K-A la più alta (broadway).',
+    spiegazione: [
+      'Nella scala dei punti del Texas hold’em la scala batte il tris e perde contro il colore. Fra due scale vince quella con la carta più alta; l’asso può stare in cima (10-J-Q-K-A) o in fondo (A-2-3-4-5, detta «ruota» o wheel), ma non «gira»: Q-K-A-2-3 non è una scala. La scala colore è una scala con cinque carte dello stesso seme e batte il poker; la scala reale è la scala colore 10-J-Q-K-A, il punto massimo del gioco.',
+      'Negli Spin & Go la scala compare soprattutto come progetto: le mani connesse dello stesso seme (8-7, 9-8) fanno parte dei range di apertura e di chiamata proprio perché possono chiudere scale e colori, e a stack corto un progetto forte al flop si gioca spesso all-in come semi-bluff. Chi legge il board deve chiedersi sempre se è possibile una scala: con 6-7-8 sul tavolo, chi ha una coppia di assi ha un punto fragile.',
+      'Il nome viene dalla sequenza delle carte come i pioli di una scala; l’inglese straight significa «dritta», nel senso di «in fila».',
+    ],
+    esempio:
+      'Board 6-7-8-K-2. Chi ha 9-10 ha la scala massima (6-7-8-9-10); chi ha 4-5 ha una scala più bassa (4-5-6-7-8) e perde; chi ha 9-5 ha 5-6-7-8-9 e sta in mezzo. Con tre carte in sequenza sul board, la domanda «chi può avere la scala?» va fatta prima di puntare.',
+    guida: {
+      testo: 'la guida a come si gioca uno Spin & Go, che ripassa i punti del poker',
+      href: '/guide/come-giocare-spin-and-go',
+    },
+    strumento: {
+      testo: 'il replayer delle mani, col valutatore che mostra il punto di ognuno',
+      href: '/replayer',
+    },
+    correlati: ['gutshot', 'broadway', 'flush-draw', 'nuts'],
+    aggiornata: '2026-09-20',
+  },
+  {
+    slug: 'flush-draw',
+    termine: 'Flush draw',
+    varianti: ['progetto di colore', 'draw a colore', 'nut flush draw'],
+    query: 'flush draw poker significato',
+    titolo: 'Flush draw nel poker: significato e probabilità di chiudere',
+    definizione:
+      'Il flush draw è il progetto di colore: quattro carte dello stesso seme fra mano e board, con nove carte nel mazzo che lo chiudono al turn o al river.',
+    spiegazione: [
+      'Con due carte dello stesso seme in mano e altre due sul flop si ha un flush draw: restano nove carte di quel seme (13 meno le 4 viste) su 47 non viste. La probabilità di chiudere è circa il 19% al turn, il 19% al river e il 35% dal flop al river con due carte da vedere. Il nut flush draw è il progetto con l’asso: se il colore arriva, è il migliore possibile. Un flush draw con carte basse rischia di chiudere e perdere contro un colore più alto.',
+      'Negli Spin & Go il flush draw è il progetto che più spesso finisce all-in al flop: contro una continuation bet, un check-raise all-in con nove carte per chiudere più, spesso, due carte alte da accoppiare ha equity vicina al 50% contro molte mani, e in più prende il piatto quando l’avversario passa. È il semi-bluff più comune del formato. Da parte di chi ha la mano fatta, il conto è speculare: puntare abbastanza perché il progetto non abbia le pot odds per chiamare.',
+      'Un errore diffuso è contare gli out due volte: le nove carte del colore si contano una volta sola, e se una di esse accoppia anche il board può regalare un full all’avversario.',
+    ],
+    esempio:
+      'Grande buio con 12 big blind ha A-8 dello stesso seme; flop 9-5-2 con due carte di quel seme. Il bottone punta 2 nel piatto di 4,5: il check-raise all-in ha il 35% di chiudere il nut flush più le tre carte che accoppiano l’asso, e fa passare tutte le mani con cui il bottone puntava in bluff.',
+    guida: {
+      testo: 'la guida a come si gioca uno Spin & Go, che tratta i progetti e i semi-bluff',
+      href: '/guide/come-giocare-spin-and-go',
+    },
+    strumento: {
+      testo: 'il replayer delle mani, che calcola l’equity all-in di ogni progetto',
+      href: '/replayer',
+    },
+    correlati: ['gutshot', 'equity', 'bluff', 'nuts'],
+    aggiornata: '2026-09-20',
+  },
+  {
+    slug: 'broadway',
+    termine: 'Broadway',
+    varianti: ['carte broadway', 'scala broadway'],
+    query: 'broadway poker significato',
+    titolo: 'Broadway nel poker: significato di carte e scala broadway',
+    definizione:
+      'Broadway indica le cinque carte più alte del mazzo (10, J, Q, K, A) e la scala che formano, 10-J-Q-K-A, che è la scala più alta possibile.',
+    spiegazione: [
+      'Il nome viene dalla strada di New York e nel gergo del poker ha due usi: «carte broadway» sono le figure più il 10 e l’asso, «la broadway» è la scala che le contiene tutte. Due carte broadway in mano (K-Q, Q-J, A-10) sono mani che valgono per la loro capacità di fare la coppia più alta con un buon kicker e, in più, di chiudere la scala massima.',
+      'Negli Spin & Go le mani broadway sono una fetta importante dei range di apertura e di chiamata all-in: a 10 big blind il bottone spinge K-Q, K-J e Q-J, e il grande buio chiama con molte di esse, perché contro un range largo due carte alte hanno equity decorosa (circa il 55-60% contro due carte basse) e giocano bene anche quando non accoppiano. Il loro limite è essere «dominate» da assi e coppie: K-Q contro A-K ha circa il 25% di equity, ed è il caso in cui il kicker decide.',
+      'Board con tre carte broadway (per esempio J-Q-K) sono quelli in cui le scale sono più probabili e in cui una coppia alta vale meno di quanto sembri.',
+    ],
+    esempio:
+      'Piccolo buio con 8 big blind spinge Q-J dello stesso seme; il grande buio chiama con A-9. Preflop Q-J ha circa il 42% di equity; se il flop porta 10-K-4, la mano diventa un gutshot alla broadway più due overcard al 10, e se arriva l’asso al turn la scala è chiusa.',
+    guida: {
+      testo: 'la guida al push/fold negli Spin & Go, dove le mani broadway stanno nei range di spinta',
+      href: '/guide/push-fold-spin-and-go',
+    },
+    strumento: {
+      testo: 'le tabelle preflop GTO, con la frequenza di ogni mano broadway a ogni profondità',
+      href: '/tabelle',
+    },
+    correlati: ['scala', 'kicker', 'range', 'gutshot'],
+    aggiornata: '2026-09-20',
+  },
+  {
+    slug: 'deep-stack',
+    termine: 'Deep stack',
+    varianti: ['stack profondo', 'deep', 'giocare deep'],
+    query: 'deep stack poker significato',
+    titolo: 'Deep stack nel poker: significato di stack profondo',
+    definizione:
+      'Deep stack indica una situazione con stack grandi rispetto ai bui — di norma sopra le 100 big blind — in cui il gioco dopo il flop conta più del preflop.',
+    spiegazione: [
+      'Con stack profondi una mano ha tre strade dopo il flop in cui le puntate possono crescere, e le mani che valgono di più sono quelle capaci di fare punti nascosti e forti — coppie piccole per il set, connettori dello stesso seme per scale e colori — perché possono vincere uno stack intero da chi ha una coppia alta. Le carte alte non accoppiate, al contrario, perdono valore: fanno spesso la mano migliore al flop ma non reggono tre puntate grandi.',
+      'Negli Spin & Go il deep stack praticamente non esiste: si parte con 25 big blind e in pochi minuti si scende sotto le 15. È la ragione per cui la strategia del formato è quasi tutta preflop e per cui i range del cash game profondo non si riusano: a 10 big blind una coppia di 5 vale per il suo showdown value all-in, non per il set che potrebbe fare al flop. L’unico momento «profondo» di uno Spin & Go sono le prime mani, e già lì 25 big blind sono uno stack corto per gli standard del cash game.',
+      'Il contrario è lo short stack; l’intermedio (20-40 big blind) è la zona in cui rilancio piccolo e all-in convivono e la scelta della dimensione conta di più.',
+    ],
+    esempio:
+      'In un cash game con 150 big blind, chiamare un’apertura con 5-5 per cercare il set è corretto: le volte che arriva (circa una su otto) si può vincere uno stack enorme. A 12 big blind in uno Spin & Go la stessa coppia si gioca all-in preflop, perché non c’è profondità per aspettare il flop.',
+    guida: {
+      testo: 'la guida che confronta Spin & Go e Sit & Go, dove le profondità sono una delle differenze',
+      href: '/guide/spin-and-go-vs-sit-and-go',
+    },
+    strumento: {
+      testo: 'le tabelle preflop GTO, che coprono le profondità reali del formato, da 1 a 33 big blind',
+      href: '/tabelle',
+    },
+    correlati: ['stack', 'big-blind', 'push-fold', 'open-raise'],
+    aggiornata: '2026-09-20',
+  },
   // ⚠️ FINE VOCI — le nuove si aggiungono SOPRA questa riga.
 ];
 
