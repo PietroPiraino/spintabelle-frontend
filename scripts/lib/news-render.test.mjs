@@ -33,6 +33,7 @@ import {
   SITO,
   TITOLO_INDICE,
   estratto,
+  sommarioOEstratto,
   linkCondivisione,
   percorsoCanonico,
   redirezione,
@@ -163,6 +164,33 @@ test('titolo, description e OG sono quelli dell articolo, non quelli della home'
   assert.equal(contenutoMeta(html, 'property', 'og:description'), descrizione);
   // Nessun residuo dei meta della home.
   assert.doesNotMatch(html, /Scuola di poker Spin & Go e Twister — Best Fish Forever/);
+});
+
+// ⚠️ Il sommario (dal 20/09/2026): la description scritta dalla redazione, che
+// vince sul taglio del corpo. `||` e non `??`: la stringa vuota — che lo
+// schema con `trim: true` puo' produrre — deve ripiegare sull'estratto.
+test('con un sommario la description e la og:description sono il sommario; vuoto → estratto', () => {
+  const conSommario = renderArticolo(
+    scheletro,
+    { ...ARTICOLO, sommario: '  Una riga scritta dalla redazione, col numero: 1.212 entries.  ' },
+    ARTICOLO.slug,
+  );
+  assert.equal(
+    contenutoMeta(conSommario, 'name', 'description'),
+    'Una riga scritta dalla redazione, col numero: 1.212 entries.',
+  );
+  assert.equal(
+    contenutoMeta(conSommario, 'property', 'og:description'),
+    'Una riga scritta dalla redazione, col numero: 1.212 entries.',
+  );
+  const vuoto = renderArticolo(scheletro, { ...ARTICOLO, sommario: '' }, ARTICOLO.slug);
+  assert.match(contenutoMeta(vuoto, 'name', 'description'), /^Primo paragrafo dell articolo/);
+  assert.equal(sommarioOEstratto({ sommario: 'x', body: 'y' }), 'x');
+  assert.equal(sommarioOEstratto({ sommario: '   ', body: 'corpo' }), 'corpo');
+  assert.equal(sommarioOEstratto({ body: 'corpo' }), 'corpo');
+  // anche il riassunto della card nell'indice
+  const indice = renderIndice(scheletro, [{ ...ARTICOLO, sommario: 'Riga della card.' }]);
+  assert.match(indice, /Riga della card\./);
 });
 
 test('senza copertina l immagine OG e quella predefinita del sito', () => {
@@ -971,6 +999,14 @@ test('deriva: la byline e la nota di rettifica hanno la stessa forma nel templat
 
 test('deriva: il taglio dell estratto combacia con news-detail.component.ts', () => {
   const sorgente = readFileSync(COMPONENTE, 'utf8');
+  // Il sommario vince con `||` in ENTRAMBE le rese: qui e' `sommarioOEstratto`,
+  // la' la riga di applySeo. Un `??` di la' farebbe vincere la stringa vuota.
+  assert.match(
+    sorgente,
+    /news\.sommario\?\.trim\(\) \|\| this\.excerpt\(news\.body\)/,
+    "news-detail.component.ts non fa piu' `sommario || excerpt`: allinea " +
+      '`sommarioOEstratto` in functions/lib/render-news.mjs.',
+  );
   assert.match(
     sorgente,
     /text\.length > 155/,

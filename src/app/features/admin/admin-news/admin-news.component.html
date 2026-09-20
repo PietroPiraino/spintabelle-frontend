@@ -519,6 +519,23 @@
       </div>
 
       <div class="field">
+        <label for="news-sommario">Sommario (la riga sotto il titolo nei risultati di ricerca)</label>
+        <input
+          id="news-sommario"
+          type="text"
+          class="input"
+          formControlName="sommario"
+          maxlength="155"
+          placeholder="Una frase col fatto e il suo numero; vuoto = il primo rigo del testo"
+          [class.is-invalid]="form.controls.sommario.touched && form.controls.sommario.invalid"
+          aria-describedby="news-sommario-aiuto"
+        />
+        <p id="news-sommario-aiuto" class="admin-nota">
+          {{ form.controls.sommario.value.length }}/155 · niente sale, niente inviti: passa dal cancello del titolo.
+        </p>
+      </div>
+
+      <div class="field">
         <div class="admin-news__editor-head">
           <label for="news-body">Testo</label>
           <!--

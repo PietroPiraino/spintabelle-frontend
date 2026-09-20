@@ -210,6 +210,8 @@ export class AdminNewsComponent {
 
   protected readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
+    // La meta description (≤ 155): vuota = si usa il taglio del corpo.
+    sommario: ['', [Validators.maxLength(155)]],
     body: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(20000)]],
     coverImageUrl: [''],
   });
@@ -856,6 +858,7 @@ export class AdminNewsComponent {
     this.error.set(null);
     this.form.patchValue({
       title: news.title,
+      sommario: news.sommario ?? '',
       body: news.body,
       coverImageUrl: news.coverImageUrl ?? '',
     });
@@ -881,9 +884,13 @@ export class AdminNewsComponent {
     this.error.set(null);
     this.feedback.set(null);
 
-    const { title, body, coverImageUrl } = this.form.getRawValue();
+    const { title, sommario, body, coverImageUrl } = this.form.getRawValue();
     const payload = {
       title,
+      // ⚠️ Si manda anche VUOTO in modifica (per poterlo cancellare), mai in
+      // creazione: `forbidNonWhitelisted` non c'entra, il campo e' nel DTO —
+      // ma un sommario '' su una riga nuova sarebbe un campo presente e vuoto.
+      ...(this.editingId() || sommario.trim() ? { sommario: sommario.trim() } : {}),
       body,
       // campo opzionale: non inviarlo vuoto (forbidNonWhitelisted lato API è ok,
       // ma un URL vuoto fallirebbe la validazione IsUrl)

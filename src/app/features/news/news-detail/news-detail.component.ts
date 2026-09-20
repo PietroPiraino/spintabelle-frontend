@@ -240,7 +240,9 @@ export class NewsDetailComponent {
 
   /** Titolo + description + immagine dinamici, e dati strutturati NewsArticle. */
   private applySeo(news: News): void {
-    const description = this.excerpt(news.body);
+    // ⚠️ `||` e non `??`: `sommario` puo' arrivare stringa vuota (trim nello
+    // schema). COPIA di `sommarioOEstratto()` in functions/lib/render-news.mjs.
+    const description = news.sommario?.trim() || this.excerpt(news.body);
     const pubblicato = news.publishedAt ?? news.createdAt;
     this.seo.setSeo({
       title: news.title,

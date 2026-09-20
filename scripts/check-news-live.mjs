@@ -75,6 +75,7 @@
 // eseguibile (API muta, nessun articolo): stessa filosofia delle altre guardie.
 
 import { guideCorrelate } from '../functions/lib/guide-links.mjs';
+import { sommarioOEstratto } from '../functions/lib/render-news.mjs';
 import { hasNoindex } from './lib/csr-noindex.mjs';
 
 const argv = process.argv.slice(2);
@@ -344,6 +345,33 @@ async function sonda() {
               'sia piu VECCHIA del repo — functions/ sta fuori da dist/, nessuna guardia ' +
               'di build se ne accorge.'
             : ' (ogImageUrl se c e, altrimenti coverImageUrl, altrimenti og.png).'),
+      );
+
+    // ---- La description (il sommario, dal 20/09/2026) --------------------
+    //
+    // La meta description e' `sommario || estratto(body)` in ENTRAMBE le rese,
+    // e l'edge la compone da solo: una Function piu' vecchia del repo
+    // stamperebbe ancora il taglio del corpo su un articolo che ha un sommario,
+    // e nessuna guardia di build lo vedrebbe.
+    const attesaDescrizione = sommarioOEstratto(rec);
+    const descrizione =
+      (html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i) ||
+        [])[1] ?? null;
+    const decodifica = (t) =>
+      String(t ?? '')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>');
+    if (descrizione === null) nota(`${urlArticolo} — manca la meta description.`);
+    else if (decodifica(descrizione) !== attesaDescrizione)
+      nota(
+        `${urlArticolo} — description "${decodifica(descrizione).slice(0, 60)}…", attesa "${attesaDescrizione.slice(0, 60)}…"` +
+          (rec.sommario
+            ? ": l'API dichiara un sommario e la pagina serve il taglio del corpo. Il " +
+              "sospetto e' che la Function all'edge sia piu VECCHIA del repo."
+            : ' (sommario se c e, altrimenti i primi 152 caratteri del corpo).'),
       );
 
     // ---- La condivisione (lotto B) ---------------------------------------

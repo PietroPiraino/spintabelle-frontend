@@ -156,6 +156,19 @@ export function jsonLdSicuro(dati) {
  * description diverse per la stessa pagina (una per gli scraper, una per
  * Google). I due numeri (155 / 152) sono fissati dal test.
  */
+/**
+ * La description di un articolo: il `sommario` scritto dalla redazione se
+ * c'e', altrimenti l'estratto del corpo. ⚠️ `||` e non `??`: lo schema ha
+ * `trim: true` e il campo puo' arrivare stringa VUOTA (la lezione di
+ * `ogImageUrl`) — con `??` la stringa vuota vincerebbe e la pagina uscirebbe
+ * senza description. E' la COPIA di `news-detail.component.ts#descrizione`:
+ * due tagli diversi sarebbero due description per la stessa pagina.
+ */
+export function sommarioOEstratto(articolo) {
+  const s = typeof articolo?.sommario === 'string' ? articolo.sommario.trim() : '';
+  return s || estratto(articolo?.body);
+}
+
 export function estratto(corpo) {
   const testo = String(corpo ?? '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '') // immagini md
@@ -580,7 +593,7 @@ export function renderArticolo(scheletro, articolo, chiave) {
   const dati = articolo ?? {};
   const titolo = String(dati.title ?? '').trim();
   const titoloPagina = `${titolo || 'News'}${SUFFISSO}`;
-  const descrizione = estratto(dati.body);
+  const descrizione = sommarioOEstratto(dati);
   const copertina = typeof dati.coverImageUrl === 'string' ? dati.coverImageUrl : '';
   // ⚠️ DUE campi, e non uno. `ogImageUrl` e' la targa 1200x675 generata da noi:
   // esiste SOLO per le anteprime social (WhatsApp, Telegram, Facebook), e in
@@ -725,7 +738,7 @@ export function renderIndice(scheletro, articoli) {
       if (!chiave) return '';
       const iso = String(a?.createdAt ?? '');
       const quando = dataLeggibile(iso);
-      const sommario = estratto(a?.body);
+      const sommario = sommarioOEstratto(a);
       // ⚠️ Il campo è opzionale per costruzione (il backend legge in `.lean()`,
       // che non applica i default di schema): una riga storica può non averlo,
       // e un'etichetta sconosciuta non deve stampare `undefined`.

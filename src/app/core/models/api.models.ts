@@ -847,6 +847,8 @@ export interface News {
   _id: string;
   title: string;
   body: string;
+  /** Meta description scritta dalla redazione (≤ 155). Assente o vuota → estratto del corpo. */
+  sommario?: string;
   coverImageUrl?: string;
   /**
    * Copertina **social** generata dal backend (la targa 1200×675 con occhiello
@@ -911,6 +913,8 @@ export interface News {
 
 export interface NewsPayload {
   title: string;
+  /** Meta description (≤ 155); stringa vuota in modifica = cancellala. */
+  sommario?: string;
   body: string;
   coverImageUrl?: string;
 }
@@ -1054,6 +1058,7 @@ export type NewsImageSource = 'GENERATA' | 'LICENZIATA' | 'AI';
 export interface NewsAdmin {
   _id: string;
   title: string;
+  sommario?: string;
   body: string;
   coverImageUrl?: string;
   /**
