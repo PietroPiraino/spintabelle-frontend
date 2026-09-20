@@ -5,8 +5,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
  * promosso a componente il 28/08/2026 quando l'owner ha deciso che quel modello
  * vale per tutte le sezioni.
  *
- * ⚠️ Le carte sono FISSE: A♣ 7♣ 4♣, la mano del marchio — la stessa del logo,
- * del boot-loader in `index.html` e dell'hero 3D della home. Non è un input di
+ * ⚠️ Le carte sono FISSE: A♣ 7♥ 4♣ — la mano 7/4 del marchio (logo, boot-loader
+ * in `index.html`, hero 3D della home) con l'asso davanti. Non è un input di
  * proposito: se ogni pagina scegliesse le sue, i semi finirebbero nei `.ts`
  * delle pagine consumatrici e ognuna dovrebbe entrare nell'elenco `AMMESSI`
  * di `scripts/lib/semi-nudi.test.mjs` — un elenco che cresce è una guardia che
@@ -14,6 +14,13 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
  *
  * ⚠️ Qui i semi sono CONTENUTO (una carta da gioco ha un seme, e si scrive come
  * si scrive), non ornamento tipografico: è il caso che la guardia ammette.
+ *
+ * ⚠️ Il 7 è di CUORI (è la carta in rame: `.hero-cards__card--2` porta
+ * `color: var(--copper-600)` in `_utilities.scss`, e fino al 20/09/2026 sotto
+ * quel colore c'era un ♣ — un fiori rosso). Il glifo porta il selettore
+ * U+FE0E (`♥︎`): senza, su iOS ♥ prende la presentazione EMOJI, si porta
+ * dentro il proprio rosso e ignora il rame del tema. ♣ non ne ha bisogno.
+ * La stessa stringa, byte per byte, sta in `functions/lib/render-news.mjs`.
  *
  * Gli stili sono GLOBALI (`.hero-cards` in `styles/_utilities.scss`), non del
  * componente: la resa dell'edge di /news emette lo stesso markup come `<span>`
@@ -26,7 +33,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   host: { 'aria-hidden': 'true', class: 'hero-cards' },
   template: `
     <span class="hero-cards__card hero-cards__card--1">A♣</span>
-    <span class="hero-cards__card hero-cards__card--2">7♣</span>
+    <span class="hero-cards__card hero-cards__card--2">7♥︎</span>
     <span class="hero-cards__card hero-cards__card--3">4♣</span>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

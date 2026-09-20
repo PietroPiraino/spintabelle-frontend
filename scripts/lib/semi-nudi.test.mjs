@@ -53,7 +53,7 @@ const AMMESSI = new Map([
   // voce per tutte le undici pagine che lo usano, ed è il motivo per cui le
   // carte sono fisse invece che un input: carte configurabili metterebbero i
   // semi nei `.ts` delle pagine, e ogni pagina dovrebbe entrare qui.
-  ['shared/ui/hero-cards/hero-cards.component.ts', 'le tre carte dell ornamento hero (A♣ 7♣ 4♣): contenuto'],
+  ['shared/ui/hero-cards/hero-cards.component.ts', 'le tre carte dell ornamento hero (A♣ 7♥ 4♣): contenuto'],
 
   // ⚠️ Le voci qui sotto sono nate il 27/08/2026, quando la scansione si è
   // estesa da `.html` a `.ts` e `.scss`. Non sono un allargamento delle

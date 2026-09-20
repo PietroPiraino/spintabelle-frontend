@@ -774,7 +774,9 @@ export function renderIndice(scheletro, articoli) {
     '<div class="page-hero__ornament">',
     '<span class="hero-cards" aria-hidden="true">',
     '<span class="hero-cards__card hero-cards__card--1">A\u2663</span>',
-    '<span class="hero-cards__card hero-cards__card--2">7\u2663</span>',
+    // Il 7 e' di cuori, con U+FE0E come nel componente (su iOS U+2665 nudo
+    // diventa un emoji e ignora il rame di `.hero-cards__card--2`).
+    '<span class="hero-cards__card hero-cards__card--2">7\u2665\ufe0e</span>',
     '<span class="hero-cards__card hero-cards__card--3">4\u2663</span>',
     '</span>',
     '</div>',
