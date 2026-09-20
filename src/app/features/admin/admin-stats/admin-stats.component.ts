@@ -225,7 +225,7 @@ const ESITO_URL: Record<EsitoUrl, Pastiglia> = {
   parziale: { testo: 'Parziale', tono: 'attesa' },
   nonIndicizzata: { testo: 'Non indicizzata', tono: 'allarme' },
   // `attesa` e non `neutro`: il verdetto NEUTRAL di Google («rilevata,
-  // attualmente non indicizzata») su una delle sei pagine chiave — tutte
+  // attualmente non indicizzata») su una delle pagine chiave — tutte
   // prerenderizzate, in sitemap e senza noindex — è una notizia da leggere,
   // e un tono muto la faceva passare per uno stato qualunque.
   esclusa: { testo: 'Esclusa', tono: 'attesa' },

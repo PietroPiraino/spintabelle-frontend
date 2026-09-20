@@ -2402,15 +2402,16 @@
               </details>
             </section>
 
-            <!-- BLOCCO 8: Copertura dell'indice — sitemap e sei pagine chiave. -->
+            <!-- BLOCCO 8: Copertura dell'indice — sitemap e le pagine chiave (l'elenco lo
+                 decide il backend, SITO_URL_CHIAVE: qui non si conta). -->
             @if (r.copertura; as c) {
               <section class="card card--pad admin-blocco">
                 <div class="admin-blocco__testa">
                   <h3 class="admin-blocco__titolo">Copertura dell'indice</h3>
                 </div>
                 <p class="admin-nota">
-                  Sitemap che Google conosce per la proprietà e sei pagine fisse ispezionate
-                  al massimo una volta al giorno.
+                  Sitemap che Google conosce per la proprietà e le pagine chiave qui sotto,
+                  ispezionate al massimo una volta al giorno.
                 </p>
                 @if (c.sitemapMotivo) {
                   <p class="admin-avviso admin-avviso--attenzione">
