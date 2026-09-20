@@ -180,6 +180,7 @@ export const GUIDE: readonly Guide[] = [
       { testo: 'gli esercizi di allenamento', href: '/allenamento/' },
       { testo: 'il simulatore di varianza', href: '/simulatore-varianza/' },
       { testo: 'le lezioni video della scuola', href: '/lezioni/' },
+      { testo: 'la chart push/fold a 10 big blind dal bottone, pubblica e commentata', href: '/tabelle/spin-and-go-btn-10bb' },
     ],
     faq: [
       {
@@ -487,6 +488,8 @@ export const GUIDE: readonly Guide[] = [
       { testo: 'le tabelle GTO preflop', href: '/tabelle/' },
       { testo: 'le lezioni video della scuola', href: '/lezioni/' },
       { testo: 'creare un account gratuito', href: '/registrazione' },
+      { testo: 'la chart push/fold a 10 big blind dal bottone', href: '/tabelle/spin-and-go-btn-10bb' },
+      { testo: 'il range di call del big blind a 10 big blind contro l’all-in', href: '/tabelle/spin-and-go-bb-10bb-vs-push-sb' },
     ],
     faq: [
       { q: 'Sotto quante big blind si gioca solo push or fold?', a: 'Non c\'è un numero unico. Sotto una decina di big blind le alternative alla spinta valgono quasi sempre meno; nella fascia subito sopra dipende da posizione, presenza dell\'ante e da quanto gli avversari sono disposti a passare a un rilancio piccolo. Il criterio pratico è un altro: se dopo un\'apertura standard resta uno stack che nessuno può realisticamente passare, quell\'apertura è già una spinta mascherata.' },

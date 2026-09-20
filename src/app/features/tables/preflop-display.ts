@@ -1,5 +1,10 @@
 // Helper puri di presentazione per il viewer delle tabelle preflop.
-import { PreflopAction, PreflopFormat } from '../../core/models/api.models';
+// ⚠️ `import type` e non `import`: e' l'unico import del file, e di soli tipi.
+// Cosi' Node 24 lo importa senza build (type stripping) e `MATRIX_HANDS`,
+// `displayActions`, `depthDisplay`… sono leggibili dagli script di
+// `scripts/lib/` e da `backend/scripts/export-situazioni.mjs` — un import di
+// valori senza estensione non risolverebbe in ESM.
+import type { PreflopAction, PreflopFormat } from '../../core/models/api.models';
 
 /** I due giochi base; le varianti (ante, raise only) sono interruttori. */
 export type PreflopBase = 'spin' | 'husng';

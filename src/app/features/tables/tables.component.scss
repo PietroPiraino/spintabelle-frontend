@@ -61,6 +61,36 @@
 // `styles/_utilities.scss`, promosse da questa pagina, che del modello e'
 // l'originale.
 
+// L'hub delle 24 pagine chart pubbliche, nel blocco editoriale: righe da 44px
+// (bersaglio di tocco dichiarato), due colonne dove c'e' spazio. Vive dentro
+// `.seo-block`, che porta la tipografia dei link.
+.pf__situazioni {
+  list-style: none;
+  margin: 0 0 1.4rem;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+
+  li {
+    display: flex;
+  }
+
+  a {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-height: 44px;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    font-size: 0.92rem;
+    line-height: 1.35;
+    text-decoration: none;
+  }
+}
+
 // ---------- intestazione e toolbar ----------
 
 .pf__head {

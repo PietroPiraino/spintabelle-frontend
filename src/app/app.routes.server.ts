@@ -1,6 +1,7 @@
 import { PrerenderFallback, RenderMode, ServerRoute } from '@angular/ssr';
 import { slugGuide } from './features/guides/guides.data';
 import { slugGlossario } from './features/glossario/glossario.data';
+import { slugSituazioni } from './features/tables/situazioni/situazioni.catalogo';
 
 /**
  * Mappa RenderMode (outputMode 'static': solo Prerender e Client).
@@ -43,6 +44,15 @@ import { slugGlossario } from './features/glossario/glossario.data';
 export const serverRoutes: ServerRoute[] = [
   { path: '', renderMode: RenderMode.Prerender },
   { path: 'tabelle', renderMode: RenderMode.Prerender },
+  // Le 24 situazioni pubbliche: slug dal catalogo (file del repo), fallback
+  // None = 404 vero su uno slug ignoto. Il resolver gira anche in prerender.
+  {
+    path: 'tabelle/:slug',
+    renderMode: RenderMode.Prerender,
+    fallback: PrerenderFallback.None,
+    getPrerenderParams: async () =>
+      slugSituazioni().map((slug) => ({ slug })),
+  },
   { path: 'simulatore-varianza', renderMode: RenderMode.Prerender },
   { path: 'chi-siamo', renderMode: RenderMode.Prerender },
   { path: 'abbonati', renderMode: RenderMode.Prerender },

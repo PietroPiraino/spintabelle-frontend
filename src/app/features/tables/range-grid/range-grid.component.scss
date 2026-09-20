@@ -25,8 +25,14 @@
   font-size: clamp(0.4rem, 2.1cqw, 0.8rem);
   font-weight: 700;
   line-height: 1;
-  cursor: pointer;
   transition: transform var(--t-fast), box-shadow var(--t-fast);
+}
+
+// Solo la cella INTERATTIVA (il bottone del viewer) risponde al mouse: la
+// variante statica delle pagine /tabelle/<slug> e' uno <span> e non deve
+// ne' ingrandirsi ne' promettere un'azione col cursore.
+button.rg__cell {
+  cursor: pointer;
 
   &:hover,
   &:focus-visible {
@@ -35,6 +41,13 @@
     box-shadow: 0 0 0 2px var(--neon-cyan), 0 6px 16px rgba(10, 16, 30, 0.3);
     outline: none;
   }
+}
+
+.rg__cell--statica {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
 }
 
 // scrim scuro dietro l'etichetta: bianco leggibile su QUALSIASI colore

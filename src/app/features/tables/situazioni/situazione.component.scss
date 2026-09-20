@@ -1,0 +1,120 @@
+// Pagina di una situazione: la colonna di lettura di `.guida` (tipografia da
+// `.seo-block`) con in mezzo la griglia, che puo' essere piu' larga del testo.
+.sit {
+  max-width: 74ch;
+  margin-inline: auto;
+
+  h1 {
+    margin-top: 0.5rem;
+  }
+
+  h2 {
+    font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+    margin-top: 2.4rem;
+    margin-bottom: 0.7rem;
+  }
+
+  p {
+    color: var(--text-muted);
+    line-height: 1.75;
+    margin-bottom: 1rem;
+  }
+
+  a:not(.btn) {
+    color: var(--copper-600);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: var(--copper-500);
+    }
+  }
+}
+
+.sit__breadcrumb {
+  display: flex;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin-bottom: 1.2rem;
+
+  a {
+    color: var(--text-faint);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--copper-600);
+    }
+  }
+}
+
+// La griglia: dimensioni decise dal CSS (aspect-ratio delle celle, container
+// query nel foglio di range-grid) → nessun CLS all'idratazione.
+.sit__figura {
+  margin: 1.5rem 0 2rem;
+
+  figcaption {
+    margin-top: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+.sit__didascalia {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.sit__legenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+}
+
+.sit__campione {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 3px;
+  flex: none;
+}
+
+.sit__sorelle {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+
+  li {
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+  }
+
+  a {
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--cream-100);
+
+    &:hover {
+      color: var(--copper-600);
+    }
+  }
+}

@@ -1,0 +1,117 @@
+@if (situazione(); as s) {
+  @if (nodo(); as n) {
+    <section class="section">
+      <div class="container">
+        <article class="sit">
+          <nav class="sit__breadcrumb" aria-label="Percorso">
+            <a routerLink="/tabelle">Tabelle preflop</a>
+            <span aria-hidden="true">/</span>
+            <span>{{ etichetta() }}</span>
+          </nav>
+
+          <span class="eyebrow">Tabelle preflop GTO · {{ etichetta() }}</span>
+          <h1>{{ s.h1 }}</h1>
+          <p class="lead">{{ s.descrizione }}</p>
+
+          <!--
+            La griglia in un <figure> con <figcaption>, MAI un heading: la
+            guardia del build vuole un solo <h1>, e la didascalia non e' un
+            titolo. La legenda usa gli stessi token colore delle celle.
+          -->
+          <figure class="sit__figura">
+            <app-range-grid [node]="n" [colorMap]="colorMap()" [statica]="true" />
+            <figcaption>
+              <span class="sit__didascalia">
+                {{ s.h1 }} — strategia di equilibrio, 169 mani.
+              </span>
+              @if (stats(); as st) {
+                <ul class="sit__legenda" aria-label="Legenda dei colori">
+                  @for (a of st.azioni; track a.code) {
+                    <li>
+                      <span
+                        class="sit__campione"
+                        [style.background]="'var(' + a.colore + ')'"
+                        aria-hidden="true"
+                      ></span>
+                      {{ a.label }} · {{ (a.quotaCombo * 100).toFixed(1).replace('.', ',') }}%
+                    </li>
+                  }
+                </ul>
+              }
+            </figcaption>
+          </figure>
+
+          <div class="sit__testo">
+            @for (p of paragrafi(); track $index) {
+              <p>{{ p }}</p>
+            }
+          </div>
+
+          <div class="seo-block__cta">
+            <p>
+              Questo è uno dei 24 nodi pubblici: nel
+              <a routerLink="/tabelle" [queryParams]="paramViewer()"
+                >visualizzatore delle tabelle</a
+              >
+              (gratis, con un account) si apre esattamente questo spot, con
+              l’EV di ogni mano, ogni altra profondità e ogni nodo successivo;
+              l’<a routerLink="/allenamento">allenamento preflop</a> propone
+              proprio queste decisioni; le guide spiegano il
+              <a routerLink="/guide/push-fold-spin-and-go">push/fold</a> e la
+              <a routerLink="/guide/strategia-spin-and-go"
+                >strategia Spin &amp; Go</a
+              >
+              per intero.
+            </p>
+          </div>
+
+          @if (faq().length) {
+            <h2>Domande frequenti</h2>
+            <div class="faq">
+              @for (item of faq(); track item.q) {
+                <details class="faq__item">
+                  <summary class="faq__sum"><h3 class="faq__q">{{ item.q }}</h3></summary>
+                  <p class="faq__a">{{ item.a }}</p>
+                </details>
+              }
+            </div>
+          }
+
+          @if (sorelle().length) {
+            <h2>La stessa situazione ad altre profondità</h2>
+            <ul class="sit__sorelle">
+              @for (x of sorelle(); track x.slug) {
+                <li><a [routerLink]="['/tabelle', x.slug]">{{ x.h1 }}</a></li>
+              }
+            </ul>
+          }
+        </article>
+      </div>
+    </section>
+  } @else {
+    <section class="section">
+      <div class="container">
+        <div class="empty-state">
+          <div class="empty-state__suit" aria-hidden="true"></div>
+          <p>I dati di questa situazione non sono disponibili.</p>
+          <a routerLink="/tabelle" class="btn btn--primary">Tutte le tabelle</a>
+        </div>
+      </div>
+    </section>
+  }
+} @else {
+  <!--
+    Slug sconosciuto: `tabelle/:slug` e' prerenderizzata per ogni slug del
+    catalogo e Cloudflare risponde 404 sugli altri. Questo ramo copre la
+    navigazione interna verso un link rotto.
+  -->
+  <section class="section">
+    <div class="container">
+      <div class="empty-state">
+        <div class="empty-state__suit" aria-hidden="true"></div>
+        <p>Questa situazione non esiste o e' stata spostata.</p>
+        <a routerLink="/tabelle" class="btn btn--primary">Tutte le tabelle</a>
+      </div>
+    </div>
+  </section>
+}

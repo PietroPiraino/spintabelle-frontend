@@ -35,6 +35,13 @@ export class RangeGridComponent {
   readonly node = input.required<PreflopNode>();
   readonly colorMap = input.required<Record<string, string>>();
   readonly selected = input<string | null>(null);
+  /**
+   * Griglia di sola lettura (le pagine statiche /tabelle/<slug>): celle
+   * `<span>` invece di `<button>`, nessun output. Stesso `cells()`, stessi
+   * colori, stesso foglio: la variante vive QUI perche' il gradiente per
+   * frequenza e le aria-label restino una sorgente sola.
+   */
+  readonly statica = input(false);
 
   readonly handHover = output<string | null>();
   readonly handPick = output<string>();

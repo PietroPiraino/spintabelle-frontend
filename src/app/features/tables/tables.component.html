@@ -193,6 +193,25 @@
           </p>
         </div>
 
+        <!--
+          L'HUB delle 24 pagine chart pubbliche (features/tables/situazioni):
+          sono i link IN ENTRATA delle situazioni, dalla miglior pagina non-brand
+          del sito. Solo il catalogo, nessun dato dei nodi: il chunk del teaser
+          non deve crescere.
+        -->
+        <h2 id="pf-situazioni">Le situazioni più cercate, gratis e senza account</h2>
+        <p>
+          Ventiquattro nodi del dataset sono pubblici: una pagina per ciascuno,
+          con la griglia GTO completa e il testo che la spiega. Il resto
+          dell'albero — ogni profondità, ogni nodo successivo, le varianti con
+          ante e stack asimmetrici — è nel visualizzatore, con un account gratuito.
+        </p>
+        <ul class="pf__situazioni" aria-labelledby="pf-situazioni">
+          @for (s of situazioni; track s.slug) {
+            <li><a [routerLink]="['/tabelle', s.slug]">{{ s.h1 }}</a></li>
+          }
+        </ul>
+
         <h2>Domande frequenti sulle tabelle preflop</h2>
         <div class="faq">
           @for (item of faq; track item.q) {

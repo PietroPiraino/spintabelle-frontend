@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard, roleGuard } from './core/guards/auth.guard';
 import { adminTabCompatGuard } from './features/admin/admin-tab-compat.guard';
+import { nodoSituazioneResolver } from './features/tables/situazioni/situazioni.resolver';
 
 export const routes: Routes = [
   {
@@ -31,6 +32,21 @@ export const routes: Routes = [
       description:
         'Tabelle e range preflop GTO per Spin & Go e Twister: apertura, push/fold e raise per ogni stack, posizione e formato (ante, asimmetrico).',
     },
+  },
+  {
+    // Le 24 situazioni PUBBLICHE (`features/tables/situazioni/situazioni.catalogo.ts`):
+    // una pagina statica per nodo, con la griglia GTO dentro. Il nodo lo carica
+    // il RESOLVER prima del render (un import() nel componente sarebbe
+    // hydration-unsafe: 169 celle diverse fra HTML statico e DOM del client).
+    // Sorella di `tabelle` e non figlia: il visualizzatore vive nei query param
+    // della rotta piatta, qui il segmento e' lo slug.
+    path: 'tabelle/:slug',
+    loadComponent: () =>
+      import('./features/tables/situazioni/situazione.component').then(
+        (m) => m.SituazioneComponent,
+      ),
+    resolve: { dati: nodoSituazioneResolver },
+    title: 'Tabelle preflop — Best Fish Forever',
   },
   {
     // Pubblica di proposito: strumento gratuito ad alto valore (SEO/condivisione/conversione).

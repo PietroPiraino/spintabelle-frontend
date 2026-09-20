@@ -38,6 +38,7 @@ import {
 } from './preflop-display';
 import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 import { RangeGridComponent } from './range-grid/range-grid.component';
+import { SITUAZIONI } from './situazioni/situazioni.catalogo';
 
 /**
  * Una casella della timeline della mano: chi decideva, con che stack
@@ -95,6 +96,9 @@ export class TablesComponent {
    * /tabelle: risposte reali, non riempitivo. Testo e dati strutturati che
    * divergono sono una segnalazione di spam.
    */
+  /** Le 24 pagine chart pubbliche, per l'hub del teaser (solo il catalogo). */
+  protected readonly situazioni = SITUAZIONI;
+
   protected readonly faq: readonly { q: string; a: string }[] = [
     {
       q: 'Cosa sono le tabelle GTO preflop negli Spin & Go?',
