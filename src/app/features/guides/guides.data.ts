@@ -220,6 +220,14 @@ export const GUIDE: readonly Guide[] = [
       'bankroll-spin-and-go',
       'scegliere-scuola-poker-spin-and-go',
     ],
+    termini: [
+      { slug: 'range', termine: 'Range' },
+      { slug: 'stack', termine: 'Stack' },
+      { slug: 'push-fold', termine: 'Push/fold' },
+      { slug: 'icm', termine: 'ICM (Independent Chip Model)' },
+      { slug: 'bankroll', termine: 'Bankroll' },
+      { slug: 'varianza', termine: 'Varianza' },
+    ],
   },
   {
     slug: 'come-giocare-spin-and-go',
@@ -411,6 +419,12 @@ export const GUIDE: readonly Guide[] = [
       'varianza-spin-and-go',
       'errori-comuni-spin-and-go',
       'spin-and-go-vs-twister',
+    ],
+    termini: [
+      { slug: 'bankroll', termine: 'Bankroll' },
+      { slug: 'buy-in', termine: 'Buy-in' },
+      { slug: 'varianza', termine: 'Varianza' },
+      { slug: 'rake', termine: 'Rake' },
     ],
   },
   {
@@ -607,6 +621,13 @@ export const GUIDE: readonly Guide[] = [
       'errori-comuni-spin-and-go',
       'spin-and-go-vs-twister',
     ],
+    termini: [
+      { slug: 'varianza', termine: 'Varianza' },
+      { slug: 'downswing', termine: 'Downswing' },
+      { slug: 'bankroll', termine: 'Bankroll' },
+      { slug: 'ev', termine: 'EV (valore atteso)' },
+      { slug: 'buy-in', termine: 'Buy-in' },
+    ],
   },
   {
     slug: 'icm-spin-and-go',
@@ -691,6 +712,12 @@ export const GUIDE: readonly Guide[] = [
       'push-fold-spin-and-go',
       'perche-il-3max-hyper-turbo-si-decide-preflop',
       'heads-up-spin-and-go',
+    ],
+    termini: [
+      { slug: 'icm', termine: 'ICM (Independent Chip Model)' },
+      { slug: 'stack', termine: 'Stack' },
+      { slug: 'range', termine: 'Range' },
+      { slug: 'big-blind', termine: 'Big blind' },
     ],
   },
   {
@@ -788,6 +815,13 @@ export const GUIDE: readonly Guide[] = [
       'bankroll-spin-and-go',
       'icm-spin-and-go',
     ],
+    termini: [
+      { slug: 'moltiplicatore', termine: 'Moltiplicatore' },
+      { slug: 'rake', termine: 'Rake' },
+      { slug: 'buy-in', termine: 'Buy-in' },
+      { slug: 'ante', termine: 'Ante' },
+      { slug: 'icm', termine: 'ICM (Independent Chip Model)' },
+    ],
   },
   {
     slug: 'scegliere-scuola-poker-spin-and-go',
@@ -878,6 +912,12 @@ export const GUIDE: readonly Guide[] = [
       'come-giocare-spin-and-go',
       'perche-il-3max-hyper-turbo-si-decide-preflop',
       'varianza-spin-and-go',
+    ],
+    termini: [
+      { slug: 'gto', termine: 'GTO (Game Theory Optimal)' },
+      { slug: 'range', termine: 'Range' },
+      { slug: 'ante', termine: 'Ante' },
+      { slug: 'varianza', termine: 'Varianza' },
     ],
   },
   {
@@ -1071,6 +1111,13 @@ export const GUIDE: readonly Guide[] = [
       'perche-il-3max-hyper-turbo-si-decide-preflop',
       'come-giocare-spin-and-go',
     ],
+    termini: [
+      { slug: 'all-in', termine: 'All-in' },
+      { slug: 'range', termine: 'Range' },
+      { slug: 'stack', termine: 'Stack' },
+      { slug: 'bluff', termine: 'Bluff' },
+      { slug: 'big-blind', termine: 'Big blind' },
+    ],
   },
   {
     slug: 'perche-il-3max-hyper-turbo-si-decide-preflop',
@@ -1167,6 +1214,13 @@ export const GUIDE: readonly Guide[] = [
       'push-fold-spin-and-go',
       'come-giocare-spin-and-go',
       'icm-spin-and-go',
+    ],
+    termini: [
+      { slug: 'stack', termine: 'Stack' },
+      { slug: 'all-in', termine: 'All-in' },
+      { slug: 'big-blind', termine: 'Big blind' },
+      { slug: 'fold', termine: 'Fold' },
+      { slug: 'rake', termine: 'Rake' },
     ],
   },
   // ⚠️ Query confermata il 19/09/2026 con l'autocompletamento di Google:
@@ -1272,6 +1326,12 @@ export const GUIDE: readonly Guide[] = [
       'bankroll-spin-and-go',
       'varianza-spin-and-go',
       'spin-and-go-vs-twister',
+    ],
+    termini: [
+      { slug: 'rake', termine: 'Rake' },
+      { slug: 'buy-in', termine: 'Buy-in' },
+      { slug: 'bankroll', termine: 'Bankroll' },
+      { slug: 'varianza', termine: 'Varianza' },
     ],
   },
   // ⚠️ Query confermata il 19/09/2026: `spin and go hud`, `spin and go hud pt4`,
@@ -1383,6 +1443,12 @@ export const GUIDE: readonly Guide[] = [
       'varianza-spin-and-go',
       'push-fold-spin-and-go',
     ],
+    termini: [
+      { slug: 'hud', termine: 'HUD (Heads-Up Display)' },
+      { slug: 'stack', termine: 'Stack' },
+      { slug: 'big-blind', termine: 'Big blind' },
+      { slug: 'varianza', termine: 'Varianza' },
+    ],
   },
   // ⚠️⚠️ QUESTA GUIDA E' LA PIU' ESPOSTA DEL SITO SUL PIANO LEGALE, e va letta
   // prima di toccarla. Query confermata (`twister poker truccato`), intento
@@ -1491,6 +1557,11 @@ export const GUIDE: readonly Guide[] = [
       'moltiplicatori-spin-and-go',
       'rake-spin-and-go',
     ],
+    termini: [
+      { slug: 'moltiplicatore', termine: 'Moltiplicatore' },
+      { slug: 'varianza', termine: 'Varianza' },
+      { slug: 'rake', termine: 'Rake' },
+    ],
   },
   // ⚠️ Query confermate: `spin and go multiplier odds`, `spin and go odds`,
   // `spin and go jackpot`, `spin and go payout structure`, `pokerstars spin and
@@ -1587,6 +1658,12 @@ export const GUIDE: readonly Guide[] = [
       'come-giocare-spin-and-go',
       'icm-spin-and-go',
       'spin-and-go-truccati',
+    ],
+    termini: [
+      { slug: 'moltiplicatore', termine: 'Moltiplicatore' },
+      { slug: 'varianza', termine: 'Varianza' },
+      { slug: 'icm', termine: 'ICM (Independent Chip Model)' },
+      { slug: 'rake', termine: 'Rake' },
     ],
   },
   // ⚠️ Query confermate: `spin and go vs sit and go`, `spin and go vs cash
@@ -1691,6 +1768,13 @@ export const GUIDE: readonly Guide[] = [
       'come-giocare-spin-and-go',
       'icm-spin-and-go',
       'spin-and-go-vs-twister',
+    ],
+    termini: [
+      { slug: 'icm', termine: 'ICM (Independent Chip Model)' },
+      { slug: 'varianza', termine: 'Varianza' },
+      { slug: 'range', termine: 'Range' },
+      { slug: 'equity', termine: 'Equity' },
+      { slug: 'buy-in', termine: 'Buy-in' },
     ],
   },
 ];
