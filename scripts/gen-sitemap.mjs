@@ -51,6 +51,7 @@ const META = new Map([
   // Le guide: l'indice qui, le singole prendono il default (monthly/0.5) e
   // entrano da sole appena compaiono nel manifest.
   ['/guide', { changefreq: 'weekly', priority: '0.8' }],
+  ['/glossario', { changefreq: 'weekly', priority: '0.7' }],
   ['/live', { changefreq: 'weekly', priority: '0.7' }],
   ['/docs', { changefreq: 'monthly', priority: '0.6' }],
   ['/chi-siamo', { changefreq: 'monthly', priority: '0.7' }],

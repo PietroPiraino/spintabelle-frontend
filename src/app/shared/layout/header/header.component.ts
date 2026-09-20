@@ -71,6 +71,7 @@ export class HeaderComponent {
         { path: '/docs', label: 'Docs' },
         { path: '/simulatore-varianza', label: 'Simulatore varianza' },
         { path: '/tabelle', label: 'Tabelle' },
+        { path: '/glossario', label: 'Glossario' },
         { path: '/allenamento', label: 'Allenamento' },
       ],
     },

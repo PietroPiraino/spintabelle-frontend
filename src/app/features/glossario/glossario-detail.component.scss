@@ -1,0 +1,118 @@
+// Colonna di lettura di una voce: la stessa ricetta di `.guida`
+// (guide-detail.component.scss), con la tipografia di base che arriva da
+// `.seo-block` in styles/_utilities.scss. Non e' un import del foglio della
+// guida perche' i due componenti hanno vite diverse e il foglio di una guida
+// porta regole (le FAQ, le sezioni) che qui non esistono.
+.voce {
+  max-width: 74ch;
+  margin-inline: auto;
+
+  h1 {
+    margin-top: 0.5rem;
+  }
+
+  h2 {
+    font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+    margin-top: 2.4rem;
+    margin-bottom: 0.7rem;
+  }
+
+  p {
+    color: var(--text-muted);
+    line-height: 1.75;
+    margin-bottom: 1rem;
+  }
+
+  // `a:not(.btn)`: la regola di colonna (0-1-1) batterebbe `.btn--primary`
+  // (0-1-0) e renderebbe illeggibile un pulsante dentro la voce.
+  a:not(.btn) {
+    color: var(--copper-600);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: var(--copper-500);
+    }
+  }
+}
+
+.voce__breadcrumb {
+  display: flex;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin-bottom: 1.2rem;
+
+  a {
+    color: var(--text-faint);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--copper-600);
+    }
+  }
+}
+
+.voce__meta {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.voce__esempio {
+  padding: 0.9rem 1.1rem;
+  border-left: 3px solid var(--copper-600);
+  background: var(--surface-1);
+  border-radius: 0 var(--radius) var(--radius) 0;
+
+  strong {
+    color: var(--text);
+  }
+}
+
+.voce__correlati {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+
+  li {
+    padding: 0.9rem 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  a {
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--cream-100);
+
+    &:hover {
+      color: var(--copper-600);
+    }
+  }
+}
+
+.voce__correlati-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.voce__chiusura {
+  margin-top: 2.2rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+}

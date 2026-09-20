@@ -188,7 +188,7 @@ export class LandingComponent {
     {
       tint: 'rgba(255, 181, 71, 0.14)',
       title: 'Guide di strategia',
-      text: 'Dieci guide che spiegano il formato dalle fondamenta. Si leggono subito: non serve nemmeno un account.',
+      text: 'Sedici guide che spiegano il formato dalle fondamenta, più un glossario dei termini. Si leggono subito: non serve nemmeno un account.',
       link: '/guide',
       cta: 'Leggi le guide',
     },

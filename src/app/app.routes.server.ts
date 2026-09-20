@@ -1,5 +1,6 @@
 import { PrerenderFallback, RenderMode, ServerRoute } from '@angular/ssr';
 import { slugGuide } from './features/guides/guides.data';
+import { slugGlossario } from './features/glossario/glossario.data';
 
 /**
  * Mappa RenderMode (outputMode 'static': solo Prerender e Client).
@@ -79,6 +80,16 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Prerender,
     fallback: PrerenderFallback.None,
     getPrerenderParams: async () => slugGuide().map((slug) => ({ slug })),
+  },
+  // Glossario: indice + una pagina per voce, stesso schema delle guide (slug
+  // da un file del repo, fallback None = 404 vero su uno slug ignoto).
+  { path: 'glossario', renderMode: RenderMode.Prerender },
+  {
+    path: 'glossario/:slug',
+    renderMode: RenderMode.Prerender,
+    fallback: PrerenderFallback.None,
+    getPrerenderParams: async () =>
+      slugGlossario().map((slug) => ({ slug })),
   },
   // ⚠️ INDICE NEWS — Client QUI, ma NON e' una pagina vuota per il lettore:
   // l'HTML iniziale (titolo, h1, elenco degli articoli, meta, canonical) lo

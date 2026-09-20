@@ -252,6 +252,33 @@ export const routes: Routes = [
     title: 'Guide — Best Fish Forever',
   },
   {
+    // Glossario: le voci vivono in `features/glossario/glossario.data.ts`,
+    // stesso schema delle guide (contenuto strutturato nel repo, prerender
+    // dagli slug del file). Nasce dalla misura del 19/09/2026: la domanda su
+    // «X poker significato» non dipende dal formato, quella su «spin» in
+    // Italia quasi non esiste.
+    path: 'glossario',
+    loadComponent: () =>
+      import('./features/glossario/glossario-list.component').then(
+        (m) => m.GlossarioListComponent,
+      ),
+    title: 'Glossario del poker: termini e significati — Best Fish Forever',
+    data: {
+      description:
+        'I termini del poker spiegati in italiano, con l’angolo Spin & Go e Twister: cip, limp, shove, squeeze, equity, ICM, push/fold e altri. Gratis, senza account.',
+    },
+  },
+  {
+    // Una sola rotta per N voci: title, description e canonical li imposta il
+    // componente da `glossario.data.ts` (idioma di guide/:slug).
+    path: 'glossario/:slug',
+    loadComponent: () =>
+      import('./features/glossario/glossario-detail.component').then(
+        (m) => m.GlossarioDetailComponent,
+      ),
+    title: 'Glossario — Best Fish Forever',
+  },
+  {
     path: 'news',
     loadComponent: () =>
       import('./features/news/news-list/news-list.component').then(

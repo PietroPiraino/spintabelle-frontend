@@ -40,6 +40,20 @@
           </div>
         }
 
+        @if (g.termini?.length) {
+          <!--
+            I link IN ENTRATA del glossario: senza, le voci avrebbero solo
+            l'indice come ingresso interno (la lezione della pagina pilastro).
+            Forma array del routerLink, senza slash: idioma di guide/:slug.
+          -->
+          <h2>Termini usati in questa guida</h2>
+          <ul class="guida__termini">
+            @for (t of g.termini; track t.slug) {
+              <li><a [routerLink]="['/glossario', t.slug]">{{ t.termine }}</a></li>
+            }
+          </ul>
+        }
+
         <h2>Domande frequenti</h2>
         <div class="faq">
           @for (item of g.faq; track item.q) {

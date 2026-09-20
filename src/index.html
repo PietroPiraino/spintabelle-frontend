@@ -33,7 +33,13 @@
 
   <link rel="canonical" href="https://bestfishforever.it/">
 
-  <!-- Dati strutturati: aiuta Google a riconoscere la scuola (rich results) -->
+  <!--
+    Dati strutturati: aiuta Google a riconoscere la scuola (rich results).
+    ⚠️ `sameAs` DEVE coincidere con `src/app/core/social-links.ts` (youtube,
+    instagram, discord): lo confronta `scripts/lib/index-jsonld.test.mjs`. Tre
+    profili collegati sono il modo in cui il pannello di conoscenza del marchio
+    si compone; fino al 20/09/2026 c'era il solo YouTube.
+  -->
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -43,7 +49,17 @@
       "url": "https://bestfishforever.it/",
       "logo": "https://bestfishforever.it/logo-256.png",
       "description": "Scuola italiana di poker dedicata a Spin & Go e Twister: lezioni video, tabelle GTO, allenamento e lezioni dal vivo.",
-      "sameAs": ["https://www.youtube.com/@Best_Fish_Forever"]
+      "sameAs": [
+        "https://www.youtube.com/@Best_Fish_Forever",
+        "https://www.instagram.com/bestfishforever/",
+        "https://discord.gg/Cq7VUN6Kgc"
+      ],
+      "founder": {
+        "@type": "Person",
+        "name": "Pietro Piraino",
+        "alternateName": "NagatoUzumaki",
+        "url": "https://bestfishforever.it/chi-siamo/"
+      }
     }
   </script>
 

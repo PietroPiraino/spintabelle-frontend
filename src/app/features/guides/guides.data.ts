@@ -26,6 +26,16 @@ export interface GuideLink {
   href: string;
 }
 
+/**
+ * Rimando a una voce del glossario (/glossario/<slug>/). `termine` e' copiato
+ * dalla voce per non importare il glossario nel chunk delle guide: il lint
+ * (`scripts/lib/glossario-lint.mjs`, `lintTermini`) verifica che coincida.
+ */
+export interface VoceLink {
+  slug: string;
+  termine: string;
+}
+
 export interface GuideSection {
   h2: string;
   paragrafi: string[];
@@ -52,6 +62,14 @@ export interface Guide {
   faq: { q: string; a: string }[];
   /** Slug di altre guide, per il blocco "continua da qui". */
   correlate: string[];
+  /**
+   * Voci del glossario usate nella guida: il blocco «Termini usati in questa
+   * guida», cioe' i link IN ENTRATA del glossario (un hub che da' e non riceve
+   * e' mezzo hub). ⚠️ ULTIMO campo, e ultimo anche in ogni oggetto:
+   * `guide-links.test.mjs` legge questo file con una regex che vuole `titolo:`
+   * subito dopo `slug:`.
+   */
+  termini?: VoceLink[];
 }
 
 export const GUIDE: readonly Guide[] = [
@@ -293,6 +311,14 @@ export const GUIDE: readonly Guide[] = [
       'push-fold-spin-and-go',
       'spin-and-go-vs-twister',
     ],
+    termini: [
+      { slug: 'big-blind', termine: 'Big blind' },
+      { slug: 'limp', termine: 'Limp' },
+      { slug: 'raise', termine: 'Raise' },
+      { slug: 'check', termine: 'Check' },
+      { slug: 'call', termine: 'Call' },
+      { slug: 'fold', termine: 'Fold' },
+    ],
   },
   {
     slug: 'bankroll-spin-and-go',
@@ -475,6 +501,12 @@ export const GUIDE: readonly Guide[] = [
       'perche-il-3max-hyper-turbo-si-decide-preflop',
       'heads-up-spin-and-go',
       'errori-comuni-spin-and-go',
+    ],
+    termini: [
+      { slug: 'push-fold', termine: 'Push/fold' },
+      { slug: 'all-in', termine: 'All-in' },
+      { slug: 'shove', termine: 'Shove' },
+      { slug: 'open-shove', termine: 'Open shove' },
     ],
   },
   {
@@ -939,6 +971,11 @@ export const GUIDE: readonly Guide[] = [
       'push-fold-spin-and-go',
       'icm-spin-and-go',
       'perche-il-3max-hyper-turbo-si-decide-preflop',
+    ],
+    termini: [
+      { slug: 'fold', termine: 'Fold' },
+      { slug: 'call', termine: 'Call' },
+      { slug: 'limp', termine: 'Limp' },
     ],
   },
   {

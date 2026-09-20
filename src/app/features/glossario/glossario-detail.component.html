@@ -1,0 +1,92 @@
+@if (voce(); as v) {
+  <section class="section">
+    <div class="container">
+      <article class="voce">
+        <nav class="voce__breadcrumb" aria-label="Percorso">
+          <a routerLink="/glossario">Glossario</a>
+          <span aria-hidden="true">/</span>
+          <span>{{ v.termine }}</span>
+        </nav>
+
+        <span class="eyebrow">Glossario del poker</span>
+        <h1>{{ v.termine }}</h1>
+        <p class="lead">{{ v.definizione }}</p>
+        <p class="voce__meta">
+          @if (v.varianti?.length) {
+            <span>Detto anche: {{ v.varianti!.join(', ') }} ·</span>
+          }
+          <span>Aggiornata il {{ v.aggiornata | date: 'd MMMM yyyy' }}</span>
+        </p>
+
+        @for (p of v.spiegazione; track p) {
+          <p>{{ p }}</p>
+        }
+
+        @if (v.esempio) {
+          <!--
+            L'esempio e' un <p> con una classe, non un <aside> ne' un <h2>:
+            e' prosa che appartiene alla voce, e un heading in piu' spezzerebbe
+            la gerarchia (un solo h1, poi gli h2 di servizio qui sotto).
+          -->
+          <p class="voce__esempio"><strong>Esempio.</strong> {{ v.esempio }}</p>
+        }
+
+        @if (v.guida || v.strumento) {
+          <h2>Dove lo usi</h2>
+          <div class="seo-block__cta">
+            <p>
+              @if (v.guida; as g) {
+                Per approfondire c'e'
+                <a [routerLink]="g.href">{{ g.testo }}</a>{{ v.strumento ? ';' : '.' }}
+              }
+              @if (v.strumento; as s) {
+                per vederlo in pratica ci sono
+                <a [routerLink]="s.href">{{ s.testo }}</a>.
+              }
+            </p>
+          </div>
+        }
+
+        @if (correlati().length) {
+          <h2>Termini collegati</h2>
+          <ul class="voce__correlati">
+            @for (c of correlati(); track c.slug) {
+              <li>
+                <a [routerLink]="['/glossario', c.slug]">{{ c.termine }}</a>
+                <span class="voce__correlati-desc">{{ c.definizione }}</span>
+              </li>
+            }
+          </ul>
+        }
+
+        <div class="voce__chiusura">
+          <p>
+            Il glossario e' gratuito e non richiede un account. Se vuoi mettere
+            insieme questi concetti, la
+            <a routerLink="/guide/strategia-spin-and-go"
+              >guida completa alla strategia Spin &amp; Go</a
+            >
+            e' il punto da cui partire; per le tabelle preflop e gli esercizi
+            basta <a routerLink="/registrazione">registrarsi</a>, gratis.
+          </p>
+        </div>
+      </article>
+    </div>
+  </section>
+} @else {
+  <!--
+    Slug sconosciuto. In produzione non ci si arriva quasi mai: `glossario/:slug`
+    e' prerenderizzata per ogni slug noto e Cloudflare risponde 404
+    (public/404.html) sugli altri. Questo ramo copre la navigazione interna
+    verso un link rotto.
+  -->
+  <section class="section">
+    <div class="container">
+      <div class="empty-state">
+        <div class="empty-state__suit" aria-hidden="true"></div>
+        <p>Questa voce non esiste o e' stata spostata.</p>
+        <a routerLink="/glossario" class="btn btn--primary">Tutto il glossario</a>
+      </div>
+    </div>
+  </section>
+}

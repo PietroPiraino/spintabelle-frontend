@@ -36,6 +36,30 @@ describe('AboutComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
+  afterEach(() => {
+    for (const c of COACHES) document.getElementById(`ld-coach-${c.id}`)?.remove();
+  });
+
+  // ⚠️ Un Person per coach, SENZA bio ne' tag: quei due campi nominano reti e
+  // sale, e lo structured data e' testo pubblico come la pagina (art. 9).
+  it('scrive un Person JSON-LD per ogni coach col nome piano, senza bio, e lo toglie alla distruzione', () => {
+    const fixture = TestBed.createComponent(AboutComponent);
+    fixture.detectChanges();
+    for (const c of COACHES) {
+      const el = document.getElementById(`ld-coach-${c.id}`);
+      expect(el).withContext(c.id).toBeTruthy();
+      const ld = JSON.parse(el!.textContent ?? '{}');
+      expect(ld['@type']).toBe('Person');
+      expect(ld['name']).toBe(c.nome);
+      expect(ld['alternateName']).toBe(c.nickname);
+      expect(ld['description']).toBeUndefined();
+      expect(JSON.stringify(ld)).not.toContain(c.bio.slice(0, 20));
+      expect(JSON.stringify(ld)).not.toContain(c.tag);
+    }
+    fixture.destroy();
+    for (const c of COACHES) expect(document.getElementById(`ld-coach-${c.id}`)).toBeNull();
+  });
+
   it('mostra un pannello per ogni coach, con lati alternati', () => {
     const el = render();
     const panels = el.querySelectorAll('.coachpanel');

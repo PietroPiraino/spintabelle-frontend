@@ -11,6 +11,11 @@ export interface Coach {
   nickname: string;
   /** Nome e cognome reali, mostrati sotto il nickname. */
   fullName: string;
+  /**
+   * Nome e cognome PIANI, senza il nickname fra virgolette: e' il `name` del
+   * `Person` JSON-LD di /chi-siamo (il nickname va in `alternateName`).
+   */
+  nome: string;
   eyebrow: string;
   tag: string;
   bio: string;
@@ -26,6 +31,7 @@ export const COACHES: Coach[] = [
     num: '01',
     nickname: 'Exivezzz',
     fullName: 'Alessandro “Exivezzz” Vendramin',
+    nome: 'Alessandro Vendramin',
     eyebrow: 'Main Coach',
     tag: 'Twister 200 € · specialista exploit',
     bio:
@@ -47,6 +53,7 @@ export const COACHES: Coach[] = [
     num: '02',
     nickname: 'NagatoUzumaki',
     fullName: 'Pietro “NagatoUzumaki” Piraino',
+    nome: 'Pietro Piraino',
     eyebrow: 'Founder & Coach',
     tag: 'Twister 50 € · Software Developer',
     bio:
@@ -70,6 +77,7 @@ export const COACHES: Coach[] = [
     num: '03',
     nickname: 'Bastogne87',
     fullName: 'Pietro “Bastogne87” Bulfon',
+    nome: 'Pietro Bulfon',
     eyebrow: 'Coach',
     tag: 'People’s Poker · 50 e 100 €',
     bio:

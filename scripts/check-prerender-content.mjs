@@ -73,6 +73,11 @@ const MIN_PAROLE = {
   '/affiliazioni': 200, // volutamente neutra (art. 9 DL 87/2018), non gonfiarla
   '/news': 60, // indice: solo estratti troncati, cresce col numero di articoli
   '/guide': 60, // indice: occhiello + titolo + descrizione per guida
+  // Indice del glossario: TUTTE le definizioni in chiaro (una frase per voce
+  // piu' intro e chiusura). Con dieci voci sta sui 400; con cento sui 2.500.
+  // La soglia sta sotto il minimo possibile, non sotto il misurato: e' un
+  // pavimento anti-svuotamento, e cresce con le ondate.
+  '/glossario': 300,
   // ⚠️ Le singole /guide/<slug> NON hanno una soglia propria: prendono il
   // default (120). E' voluto — una guida nuova non deve richiedere una modifica
   // qui — ma il default e' un pavimento anti-pagina-vuota, non l'obiettivo: una
@@ -80,6 +85,24 @@ const MIN_PAROLE = {
   '/privacy': 500,
   '/cookie-policy': 400,
 };
+
+// Soglie per PREFISSO: valgono per le figlie di una sezione che non hanno
+// una riga propria in MIN_PAROLE (le voci del glossario, le pagine chart).
+// ⚠️ La voce /tabelle/ sta a 450 e non a 120 per una ragione misurabile: la
+// griglia 13x13 stampa 169 etichette di mano (AKs, 72o...) che il conteggio
+// vede come parole, quindi col default una pagina chart SENZA prosa passerebbe.
+// 450 = 169 etichette + almeno ~280 parole di testo vero.
+const MIN_PAROLE_PREFISSO = new Map([
+  ['/glossario/', 150],
+  ['/tabelle/', 450],
+]);
+function sogliaPer(rotta) {
+  if (rotta in MIN_PAROLE) return MIN_PAROLE[rotta];
+  for (const [prefisso, soglia] of MIN_PAROLE_PREFISSO) {
+    if (rotta.startsWith(prefisso) && rotta.length > prefisso.length) return soglia;
+  }
+  return MIN_PAROLE_DEFAULT;
+}
 
 // Pagine che possono legittimamente NON avere un canonical proprio o un h1:
 // oggi nessuna. La lista esiste perche' un'eccezione va dichiarata con la sua
@@ -294,7 +317,7 @@ for (const file of pagine.sort()) {
   const h1 = contaTag(html, 'h1');
   const canonical = (html.match(/<link rel="canonical" href="([^"]+)"/) || [])[1] ?? null;
   const noindex = hasNoindex(html);
-  const soglia = MIN_PAROLE[rotta] ?? MIN_PAROLE_DEFAULT;
+  const soglia = sogliaPer(rotta);
   const esente = ESENTI.get(rotta);
 
   righe.push({ rotta, parole, h1, canonical, soglia, noindex });

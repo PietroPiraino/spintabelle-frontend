@@ -110,6 +110,43 @@
   line-height: 1.55;
 }
 
+// Le pillole dei termini: bersaglio di tocco dichiarato (44px), come ogni
+// controllo del sito — un elenco di parole corte sta sui 30px da solo.
+// ⚠️ `.guida .guida__termini` e non `.guida__termini`: `.guida ul` (0-1-1)
+// impone `flex-direction: column` a ogni elenco della colonna, e una classe
+// sola (0-1-0) perderebbe — le pillole uscirebbero incolonnate, una per riga.
+.guida .guida__termini {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  li {
+    line-height: 1;
+  }
+
+  a:not(.btn) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    color: var(--cream-100);
+    text-decoration: none;
+    font-weight: 600;
+
+    &:hover {
+      color: var(--copper-600);
+      border-color: var(--copper-600);
+    }
+  }
+}
+
 .guida__chiusura {
   margin-top: 2.2rem;
   padding-top: 1.4rem;
