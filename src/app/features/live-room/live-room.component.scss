@@ -531,6 +531,12 @@
     font-weight: 600;
     white-space: nowrap;
   }
+  &__rec-fatta {
+    align-self: center;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
 
 
   &__mic-flag {

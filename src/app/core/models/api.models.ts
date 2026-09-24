@@ -816,6 +816,12 @@ export interface LiveRoomToken {
    * Ancora il timer "REC" al tempo effettivo invece che al proprio ingresso.
    */
   recordingStartedAt?: string | null;
+  /**
+   * Si può ancora avviare una registrazione? `false` dopo che ne è stata fatta
+   * una: la sessione ne tiene UNA sola, e un riavvio farebbe perdere la prima.
+   * Opzionale: un backend più vecchio non lo manda, e allora vale `true`.
+   */
+  recordingAvviabile?: boolean;
 }
 
 /** Nota di rettifica pubblicata in calce a un articolo (§4.4). */

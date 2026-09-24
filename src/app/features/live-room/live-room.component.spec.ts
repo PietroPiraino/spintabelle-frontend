@@ -1,5 +1,6 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { LiveService } from '../../core/services/live.service';
@@ -69,7 +70,10 @@ type RecProbe = {
 };
 
 describe('LiveRoomComponent', () => {
-  function configure(getRoomToken: jasmine.Spy): jasmine.Spy {
+  function configure(
+    getRoomToken: jasmine.Spy,
+    extra: Record<string, jasmine.Spy> = {},
+  ): jasmine.Spy {
     const loadSpy = jasmine
       .createSpy('loadLiveKit')
       .and.resolveTo(fakeLiveKit);
@@ -79,7 +83,7 @@ describe('LiveRoomComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: LIVEKIT_LOADER, useValue: loadSpy },
-        { provide: LiveService, useValue: { getRoomToken } },
+        { provide: LiveService, useValue: { getRoomToken, ...extra } },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => 'sess-1' } } },
@@ -170,6 +174,89 @@ describe('LiveRoomComponent', () => {
     probe.applyRecording(true);
     expect(probe.recElapsed()).toBe('00:00');
     fixture.destroy();
+  });
+
+  describe('una sola registrazione per sessione (23/09/2026)', () => {
+    const tokenCoach = (over: Record<string, unknown> = {}) =>
+      jasmine.createSpy('getRoomToken').and.returnValue(
+        of({
+          token: 't',
+          url: 'wss://x.livekit.cloud',
+          role: 'coach',
+          recordingEnabled: true,
+          recordingStartedAt: null,
+          ...over,
+        }),
+      );
+    const bottoneRec = (el: HTMLElement) =>
+      Array.from(el.querySelectorAll('button')).find((b) =>
+        /Registra|Ferma/.test(b.textContent ?? ''),
+      );
+    const testoConclusa = (el: HTMLElement) =>
+      el.querySelector('.live-room__rec-fatta')?.textContent?.trim();
+
+    async function apri(
+      over: Record<string, unknown> = {},
+      extra: Record<string, jasmine.Spy> = {},
+    ) {
+      configure(tokenCoach(over), extra);
+      const fixture = create();
+      await flush();
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('registrazione già fatta (token) → niente «Registra», c’è «Registrazione conclusa»', async () => {
+      const fixture = await apri({ recordingAvviabile: false });
+      const el = fixture.nativeElement as HTMLElement;
+      expect(bottoneRec(el)).toBeUndefined();
+      expect(testoConclusa(el)).toBe('Registrazione conclusa');
+    });
+
+    it('backend vecchio (campo assente) → «Registra» resta come oggi', async () => {
+      const fixture = await apri();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(bottoneRec(el)?.textContent).toContain('Registra');
+      expect(testoConclusa(el)).toBeUndefined();
+    });
+
+    it('stop osservato in sala → il pulsante non torna', async () => {
+      const fixture = await apri({ recordingAvviabile: true });
+      const el = fixture.nativeElement as HTMLElement;
+      const probe = fixture.componentInstance as unknown as RecProbe;
+      probe.applyRecording(true);
+      fixture.detectChanges();
+      expect(bottoneRec(el)?.textContent).toContain('Ferma');
+      probe.applyRecording(false);
+      fixture.detectChanges();
+      expect(bottoneRec(el)).toBeUndefined();
+      expect(testoConclusa(el)).toBe('Registrazione conclusa');
+      fixture.destroy();
+    });
+
+    it('409 all’avvio → il pulsante sparisce', async () => {
+      const startRecording = jasmine
+        .createSpy('startRecording')
+        .and.returnValue(
+          throwError(
+            () =>
+              new HttpErrorResponse({
+                status: 409,
+                error: { message: 'già stata fatta' },
+              }),
+          ),
+        );
+      const fixture = await apri(
+        { recordingAvviabile: true },
+        { startRecording },
+      );
+      const el = fixture.nativeElement as HTMLElement;
+      bottoneRec(el)!.click();
+      fixture.detectChanges();
+      expect(startRecording).toHaveBeenCalledWith('sess-1');
+      expect(bottoneRec(el)).toBeUndefined();
+      expect(testoConclusa(el)).toBe('Registrazione conclusa');
+    });
   });
 
   describe('elenco dei presenti', () => {

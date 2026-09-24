@@ -33,15 +33,26 @@
               <app-icon [name]="soundOn() ? 'bell' : 'bell-off'" [size]="16" />
             </button>
             @if (recordingEnabled()) {
-              <button
-                type="button"
-                class="btn btn--sm btn--ghost"
-                [disabled]="recPending()"
-                (click)="toggleRecording()"
-              >
-                <app-icon [name]="recording() ? 'square' : 'record'" [size]="16" />
-                {{ recPending() ? '…' : recording() ? 'Ferma' : 'Registra' }}
-              </button>
+              <!-- Una sessione tiene UNA sola registrazione: dopo lo stop il
+                   pulsante non torna, e al suo posto c'è un testo (non un bottone
+                   disabilitato, che si leggerebbe come un comando rotto). -->
+              @if (recording() || recordingAvviabile()) {
+                <button
+                  type="button"
+                  class="btn btn--sm btn--ghost"
+                  [disabled]="recPending()"
+                  (click)="toggleRecording()"
+                >
+                  <app-icon [name]="recording() ? 'square' : 'record'" [size]="16" />
+                  {{ recPending() ? '…' : recording() ? 'Ferma' : 'Registra' }}
+                </button>
+              } @else {
+                <span
+                  class="live-room__rec-fatta"
+                  title="La sessione tiene una sola registrazione: riavviarla farebbe perdere la prima."
+                  >Registrazione conclusa</span
+                >
+              }
             }
             @if (isConfirming('muteAll')) {
               <span class="live-room__confirm">

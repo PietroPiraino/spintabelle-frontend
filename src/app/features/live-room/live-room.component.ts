@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type {
@@ -107,6 +108,10 @@ export class LiveRoomComponent implements OnDestroy {
   // registrazione (Fase 3)
   protected readonly recordingEnabled = signal(false); // la sessione è registrabile
   protected readonly recording = signal(false); // egress attivo ora (room.isRecording)
+  // Si può ancora avviare? Una sessione tiene UNA sola registrazione: dopo lo stop
+  // un riavvio farebbe perdere la prima (23/09/2026). La regola la decide il server
+  // (token + 409 all'avvio); qui si spegne anche sullo stop osservato in sala.
+  protected readonly recordingAvviabile = signal(true);
   protected readonly recElapsed = signal(''); // durata REC (mm:ss / h:mm:ss)
   protected readonly recAnnounce = signal(''); // annuncio sr-only avvio/stop REC
   protected readonly endingLive = signal(false); // "Termina live" in corso
@@ -199,6 +204,7 @@ export class LiveRoomComponent implements OnDestroy {
       );
       this.role.set(tok.role);
       this.recordingEnabled.set(tok.recordingEnabled);
+      this.recordingAvviabile.set(tok.recordingAvviabile ?? true);
       const LK = await this.loadLiveKit();
       if (this.disposed) return;
       this.lk = LK;
@@ -1067,14 +1073,26 @@ export class LiveRoomComponent implements OnDestroy {
     if (this.recPending()) return;
     this.recPending.set(true);
     const id = this.id();
-    const req$ = this.recording()
+    const stop = this.recording();
+    const req$ = stop
       ? this.liveApi.stopRecording(id)
       : this.liveApi.startRecording(id);
     req$.subscribe({
-      next: () => this.recPending.set(false),
-      error: () => {
+      next: () => {
         this.recPending.set(false);
-        this.toast.error('Operazione di registrazione non riuscita.');
+        // lo stop è definitivo: «Registra» non deve ricomparire nell'attimo in
+        // cui l'evento di LiveKit non è ancora arrivato
+        if (stop) this.recordingAvviabile.set(false);
+      },
+      error: (err: unknown) => {
+        this.recPending.set(false);
+        // 409 = il server rifiuta un secondo avvio: il pulsante sparisce e il
+        // messaggio del server dice perché
+        if (err instanceof HttpErrorResponse && err.status === 409)
+          this.recordingAvviabile.set(false);
+        this.toast.error(
+          apiErrorMessage(err, 'Operazione di registrazione non riuscita.'),
+        );
       },
     });
   }
@@ -1088,6 +1106,8 @@ export class LiveRoomComponent implements OnDestroy {
   private applyRecording(active: boolean, anchorIso?: string | null): void {
     const was = this.recording();
     this.recording.set(active);
+    // una registrazione che finisce non si può riavviare (vedi recordingAvviabile)
+    if (was && !active) this.recordingAvviabile.set(false);
     // annuncio sr-only solo sulle transizioni reali (non il conteggio al secondo)
     if (active && !was) this.recAnnounce.set('Registrazione avviata');
     else if (!active && was) this.recAnnounce.set('Registrazione terminata');
