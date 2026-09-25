@@ -40,6 +40,11 @@ import { slugSituazioni } from './features/tables/situazioni/situazioni.catalogo
  * prefisso letterale include la barra, il contrario di `_redirects` — ed è per
  * questo che la Function è `[[path]]` (catch-all opzionale: prende sia il
  * prefisso nudo sia i figli). Lo verifica `scripts/check-routes.mjs`.
+ *
+ * ⚠️ E una rotta Prerender nuova va aggiunta anche a `core/barra-finale.ts`
+ * (`PERCORSI_CON_BARRA_FINALE`), o i link verso di lei scrivono l'indirizzo
+ * senza la barra finale — un 308 per link, contato da Search Console. Se te ne
+ * dimentichi il build fallisce e ti dice la riga da aggiungere.
  */
 export const serverRoutes: ServerRoute[] = [
   { path: '', renderMode: RenderMode.Prerender },

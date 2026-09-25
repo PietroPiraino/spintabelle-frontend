@@ -12,6 +12,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { readRoutes } from './lib/route-inventory.mjs';
 import { parseRedirects, findMatch, lintRules, sampleUrl, routeCoversUrl } from './lib/redirects.mjs';
 import {
@@ -366,6 +367,75 @@ for (const rotta of dallaFunction) {
   }
 }
 
+// ---- 4-ter. La barra finale dei link interni ---------------------------
+//
+// `src/app/core/barra-finale.ts` elenca a mano gli indirizzi che vivono con la
+// barra finale, e il serializer del router la aggiunge ai loro `href`. E' la
+// QUINTA lista a mano del routing, e sbaglia in due versi con due costi
+// diversi, quindi si controllano entrambi:
+//   - una pagina pubblica che manca dall'elenco: i link verso di lei tornano a
+//     scrivere `href="/x"`, cioe' un 308, e Search Console li conta in «Pagina
+//     con reindirizzamento» (123 il 25/09/2026, il motivo per cui l'elenco
+//     esiste). Nessuno se ne accorgerebbe a occhio;
+//   - una rotta CLIENT dentro l'elenco: i suoi link diventano `/login/`, che non
+//     corrisponde a nessuna regola di `_redirects` -> chi ricarica la pagina
+//     riceve la 404. E' il verso grave.
+let barra;
+try {
+  barra = await import(pathToFileURL(join(ROOT, 'src/app/core/barra-finale.ts')).href);
+} catch (e) {
+  nonCapisco(`src/app/core/barra-finale.ts non importabile da Node (${e.message})`);
+}
+if (!Array.isArray(barra.PERCORSI_CON_BARRA_FINALE) || barra.PERCORSI_CON_BARRA_FINALE.length < 5)
+  nonCapisco('barra-finale.ts: PERCORSI_CON_BARRA_FINALE mancante o quasi vuoto');
+
+const ELENCO_BARRA = 'PERCORSI_CON_BARRA_FINALE (src/app/core/barra-finale.ts)';
+let rotteConBarra = 0;
+for (const rotta of rotte) {
+  if (rotta === '') continue; // la radice ha gia' la sua barra
+  const url = sampleUrl(rotta);
+  const pubblica =
+    dallaFunction.includes(rotta) || prerender.some((p) => routeCoversUrl(rotta, p));
+  const conBarra = barra.percorsoVuoleBarraFinale(url);
+  if (pubblica && conBarra) rotteConBarra++;
+  if (pubblica && !conBarra)
+    nota(
+      `DERIVA: \`/${rotta}\` e' servita con la barra finale ma non e' in ${ELENCO_BARRA}. ` +
+        `I link interni verso di lei scrivono \`href="${url}"\` e rispondono con un ` +
+        'reindirizzamento: Search Console li conta in «Pagina con reindirizzamento». ' +
+        `Aggiungi \`'${rotta}'\` all'elenco.`,
+    );
+  if (!pubblica && conBarra)
+    nota(
+      `DERIVA GRAVE: \`/${rotta}\` e' una rotta CLIENT (nessuna pagina in dist, non ` +
+        `servita dalla Function) ma e' in ${ELENCO_BARRA}. I suoi link diventerebbero ` +
+        `\`${url}/\`, che nessuna regola di public/_redirects serve: chi ricarica la ` +
+        'pagina riceve la 404. Toglila dall\'elenco.',
+    );
+}
+// Le regole di _redirects sono la definizione stessa di "rotta client": nessuna
+// deve finire con la barra. Doppione voluto del ciclo sopra, per le regole che
+// in app.routes.ts non hanno una rotta gemella esatta (`/admin/*`).
+for (const r of regole ?? []) {
+  const esempio = r.from.replace(/:[^/]+/g, 'esempio').replace(/\*$/, 'esempio');
+  if (barra.percorsoVuoleBarraFinale(esempio))
+    nota(
+      `DERIVA GRAVE: la regola di riga ${r.line} di public/_redirects (\`${r.from}\`) serve ` +
+        `una rotta client, ma ${ELENCO_BARRA} le aggiunge la barra finale: \`${esempio}/\` ` +
+        'non corrisponde piu\' alla regola e risponde 404.',
+    );
+}
+// E nessuna voce morta: uno schema che non corrisponde a nessuna rotta e' un
+// refuso o una pagina cancellata, e un elenco con voci finte smette di essere
+// letto come la verita'.
+for (const schema of barra.PERCORSI_CON_BARRA_FINALE) {
+  if (!rotte.some((rotta) => routeCoversUrl(rotta, sampleUrl(schema))))
+    nota(
+      `DERIVA: \`${schema}\` e' in ${ELENCO_BARRA} ma nessuna rotta di app.routes.ts ` +
+        'le corrisponde (refuso, o pagina tolta?).',
+    );
+}
+
 // ---- 5. (non c'e' piu': era il check "ogni prerender e' in sitemap.xml") -
 // RIMOSSO il 16/07/2026, quando gen-sitemap.mjs ha smesso di avere la lista
 // scritta a mano e ha iniziato a DERIVARE la sitemap da prerendered-routes.json.
@@ -397,7 +467,8 @@ console.log(
       ? ', _routes.json senza catch-all e senza sovrapposizioni non dichiarate,' +
         ' ogni rotta della Function e\' raggiunta in entrambe le forme (nuda e con' +
         ' lo slash) e nessuna e\' scavalcata da _redirects.'
-      : '.'),
+      : '.') +
+    `\n✅ barra finale nei link: ${rotteConBarra} rotte pubbliche nell'elenco, nessuna rotta client.`,
 );
 
 // ⚠️ E il limite piu' importante di questa guardia, da quando le news si

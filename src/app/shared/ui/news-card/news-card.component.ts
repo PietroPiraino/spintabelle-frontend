@@ -61,11 +61,17 @@ function troncaAlleParole(testo: string, max: number): string {
             <span class="badge">{{ etichette[c] }}</span>
           }
         </div>
+        <!--
+          Lo SLUG e non l'id: la forma buona dell'indirizzo e' /news/<slug>/,
+          e dall'id la Function risponde 301 — un reindirizzamento per ogni
+          card, anche con la barra finale. L'id resta come ripiego per le
+          righe che uno slug non ce l'hanno (il campo e' opzionale).
+        -->
         <h3 class="news-card__title">
-          <a [routerLink]="['/news', news()._id]">{{ news().title }}</a>
+          <a [routerLink]="['/news', indirizzo()]">{{ news().title }}</a>
         </h3>
         <p class="news-card__excerpt">{{ excerpt() }}</p>
-        <a [routerLink]="['/news', news()._id]" class="btn btn--link">Leggi tutto →</a>
+        <a [routerLink]="['/news', indirizzo()]" class="btn btn--link">Leggi tutto →</a>
       </div>
     </article>
   `,
@@ -172,6 +178,14 @@ export class NewsCardComponent {
    */
   protected readonly immagine = computed(
     () => this.news().coverImageUrl || this.news().ogImageUrl || '',
+  );
+
+  /**
+   * Il segmento dell'indirizzo: lo slug, e l'id solo se lo slug manca.
+   * ⚠️ `||` e non `??`: uno slug stringa vuota darebbe `/news/` — l'indice.
+   */
+  protected readonly indirizzo = computed(
+    () => this.news().slug?.trim() || this.news()._id,
   );
 
   /**

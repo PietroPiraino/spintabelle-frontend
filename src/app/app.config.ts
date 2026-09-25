@@ -25,12 +25,14 @@ import {
   NavigationStart,
   Router,
   Scroll,
+  UrlSerializer,
   provideRouter,
   withComponentInputBinding,
   withInMemoryScrolling,
 } from '@angular/router';
 
 import { routes } from './app.routes';
+import { BarraFinaleUrlSerializer } from './core/barra-finale.serializer';
 import { ChunkErrorHandler } from './core/errors/chunk-error.handler';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { AuthService } from './core/services/auth.service';
@@ -118,6 +120,12 @@ export const appConfig: ApplicationConfig = {
       // pagava solo la dissolvenza di default dello user agent. Era arrivata
       // col boilerplate iniziale (`git log -S` -> un solo commit, 75fb3a4).
     ),
+    // La barra finale sui link alle pagine pubbliche (`href="/glossario/limp/"`):
+    // senza, ogni link interno era un 308 verso quella forma, e Search Console
+    // li contava uno per uno in «Pagina con reindirizzamento» (123 il
+    // 25/09/2026). Elenco e regole in core/barra-finale.ts; `check-routes.mjs`
+    // lo confronta a ogni build col manifest, `_routes.json` e `_redirects`.
+    { provide: UrlSerializer, useClass: BarraFinaleUrlSerializer },
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: LOCALE_ID, useValue: 'it' },
     // Avvia il ripristino sessione in background (senza await: non blocca

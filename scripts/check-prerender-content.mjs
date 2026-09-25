@@ -19,8 +19,10 @@
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve, relative, dirname, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { hasCanonical, hasNoindex } from './lib/csr-noindex.mjs';
 import { verificaCssInline } from './lib/csr-css.mjs';
+import { linkSenzaBarraGiusta } from './lib/barra-finale-link.mjs';
 
 // ⚠️ Il default e' `process.cwd()` e NON un percorso Windows assoluto. Con
 // `'C:/Projects/poker-ranges/frontend'` questa guardia era MUTA su Cloudflare:
@@ -159,6 +161,17 @@ if (process.env.SKIP_PRERENDER_CHECK === '1')
   nonEseguibile('SKIP_PRERENDER_CHECK=1 — stai deployando senza rete di sicurezza.');
 
 if (!existsSync(BROWSER)) nonEseguibile(`manca ${BROWSER} — hai lanciato ng build?`);
+
+// La regola della barra finale sta in un sorgente dell'app (una fonte sola per
+// il router e per le guardie); Node 24 importa un `.ts` di sole funzioni pure.
+let percorsoVuoleBarraFinale;
+try {
+  ({ percorsoVuoleBarraFinale } = await import(
+    pathToFileURL(join(ROOT, 'src/app/core/barra-finale.ts')).href
+  ));
+} catch (e) {
+  nonCapisco(`src/app/core/barra-finale.ts non importabile da Node (${e.message})`);
+}
 
 // ---- 1. Raccolta degli artefatti ----------------------------------------
 
@@ -363,6 +376,23 @@ for (const file of pagine.sort()) {
           vietata.motivo,
       );
   }
+
+  // (f) i link interni nella forma giusta della barra finale. Senza, ogni link
+  // verso una pagina pubblica e' un 308 (Search Console, «Pagina con
+  // reindirizzamento»: 123 il 25/09/2026) e ogni link con la barra verso una
+  // rotta client e' una 404. Regola in src/app/core/barra-finale.ts.
+  const storti = linkSenzaBarraGiusta(html, percorsoVuoleBarraFinale);
+  if (storti.length)
+    nota(
+      `${rotta} — ${storti.length} link interni nella forma sbagliata della barra finale ` +
+        `(${storti
+          .slice(0, 4)
+          .map((s) => `"${s.href}" invece di "${s.atteso}"`)
+          .join(', ')}${storti.length > 4 ? ', …' : ''}). ` +
+        'Se sono `routerLink`, il serializer del router non gira (app.config.ts) o ' +
+        "l'elenco di barra-finale.ts non copre la rotta; se sono `href` scritti a mano, " +
+        'correggili li\'.',
+    );
 
   const deveEssereNoindex = NOINDEX_ATTESO.has(rotta);
   if (noindex && !deveEssereNoindex)
