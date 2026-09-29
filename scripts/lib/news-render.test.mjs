@@ -30,6 +30,7 @@ import {
   LEAD_INDICE,
   OCCHIELLO_INDICE,
   GLIFI_CONDIVISIONE,
+  ID_DATI_ARTICOLO,
   SITO,
   TITOLO_INDICE,
   estratto,
@@ -57,6 +58,7 @@ const STILI_COMPONENTE = join(
 );
 const STILI_GLOBALI = join(REPO, 'src/styles/_news-share.scss');
 const FOGLIO_GLOBALE = join(REPO, 'src/styles.scss');
+const COSTANTI_NEWS = join(REPO, 'src/app/core/news.constants.ts');
 
 const scheletro = injectNoindex(readFileSync(INDEX, 'utf8'));
 
@@ -238,6 +240,59 @@ test('un `</script>` nel titolo non esce dal blocco JSON-LD (XSS memorizzato)', 
   assert.match(html, /\\u003c\/script>/);
   // E nel testo visibile il titolo e' scappato come HTML.
   assert.match(dentroMain(html), /&lt;\/script&gt;/);
+});
+
+// ---- L'articolo consegnato all'app (dal 29/09/2026) ---------------------
+//
+// Montandosi, Angular svuota `<app-root>` e `news-detail` riscaricava
+// l'articolo: su un 429 o un 5xx la pagina diventava «News non trovata», la
+// stessa per tutti gli articoli, e Search Console ne ha ripiegati 17 su altri.
+// Ora l'edge consegna l'articolo in un blocco JSON e il componente parte da li'.
+
+/** Il contenuto del blocco `bff-articolo`, o `null` se manca. */
+function datiArticolo(html) {
+  const m = html.match(
+    new RegExp(`<script[^>]+id=["']${ID_DATI_ARTICOLO}["'][^>]*>([\\s\\S]*?)<\\/script>`, 'i'),
+  );
+  return m ? m[1] : null;
+}
+
+test('l articolo viaggia nella pagina come JSON, identico a quello dell API', () => {
+  const grezzo = datiArticolo(renderArticolo(scheletro, ARTICOLO, ARTICOLO.slug));
+  assert.ok(grezzo, `manca il blocco <script id="${ID_DATI_ARTICOLO}">`);
+  assert.deepEqual(JSON.parse(grezzo), ARTICOLO);
+});
+
+test('⚠️ il blocco sta nella TESTA, fuori da <app-root> (che Angular svuota)', () => {
+  const html = renderArticolo(scheletro, ARTICOLO, ARTICOLO.slug);
+  const testa = html.slice(0, html.search(/<\/head\s*>/i));
+  assert.ok(datiArticolo(testa), 'il blocco non e nella testa');
+  const root = html.match(/<app-root[^>]*>[\s\S]*?<\/app-root>/i)[0];
+  assert.equal(datiArticolo(root), null, 'dentro <app-root> Angular lo cancellerebbe prima di leggerlo');
+});
+
+test('un `</script>` nel titolo non chiude il blocco dei dati', () => {
+  const titolo = 'Titolo con </script><script>alert(1)</script> dentro';
+  const html = renderArticolo(scheletro, { ...ARTICOLO, title: titolo }, ARTICOLO.slug);
+  const grezzo = datiArticolo(html);
+  assert.doesNotMatch(grezzo, /<\/script/i);
+  assert.equal(JSON.parse(grezzo).title, titolo, 'il titolo deve tornare intatto dopo il parse');
+});
+
+test('l indice non porta il blocco: vale per un articolo solo', () => {
+  assert.equal(datiArticolo(renderIndice(scheletro, [ARTICOLO])), null);
+});
+
+test('deriva: l id del blocco combacia con quello che legge il componente', () => {
+  const sorgente = readFileSync(COSTANTI_NEWS, 'utf8');
+  const m = sorgente.match(/export const ID_DATI_ARTICOLO = '([^']+)'/);
+  assert.ok(m, 'ID_DATI_ARTICOLO non si trova in src/app/core/news.constants.ts');
+  assert.equal(m[1], ID_DATI_ARTICOLO);
+  assert.match(
+    readFileSync(COMPONENTE, 'utf8'),
+    /getElementById\(ID_DATI_ARTICOLO\)/,
+    'news-detail deve leggere il blocco con la costante, non con un letterale',
+  );
 });
 
 test('un titolo con `$&` resta identico (la trappola di String.replace)', () => {

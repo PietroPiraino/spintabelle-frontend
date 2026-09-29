@@ -709,7 +709,36 @@ export function renderArticolo(scheletro, articolo, chiave) {
       },
     },
   });
+  html = inserisciNellaTesta(html, datiArticoloHtml(dati));
   return impostaCorpo(html, corpo);
+}
+
+/**
+ * L'id dello `<script>` che porta l'articolo all'app. ⚠️ COPIA di
+ * `ID_DATI_ARTICOLO` in `src/app/core/news.constants.ts`: la Function non puo'
+ * importare il sorgente Angular (due build diverse), e a tenerle allineate e'
+ * `scripts/lib/news-render.test.mjs`.
+ */
+export const ID_DATI_ARTICOLO = 'bff-articolo';
+
+/**
+ * L'articolo così come l'API l'ha restituito, in un blocco JSON nella TESTA.
+ *
+ * Perché esiste (29/09/2026): questa pagina non è idratabile, quindi montandosi
+ * Angular svuota `<app-root>` e `news-detail` riscaricava l'articolo dall'API —
+ * e su qualunque errore (un 429 del tetto per IP, un 5xx) mostrava «News non
+ * trovata», la stessa pagina per tutti gli articoli. Search Console ne ha
+ * ripiegati 17 su ALTRI articoli, e quella pagina identica è la causa più
+ * probabile. Col blocco il componente parte da qui e la seconda chiamata non
+ * c'è più: la pagina non dipende dall'API due volte.
+ *
+ * ⚠️ NELLA TESTA e MAI dentro `<app-root>`: quello Angular lo svuota prima che
+ * il componente possa leggerlo. ⚠️ `jsonLdSicuro` e non `JSON.stringify`: un
+ * `</script>` nel titolo chiuderebbe il blocco. ⚠️ Nessun campo in più di
+ * quelli che l'API già espone al pubblico: è l'oggetto ricevuto, tale e quale.
+ */
+function datiArticoloHtml(articolo) {
+  return `<script type="application/json" id="${ID_DATI_ARTICOLO}">${jsonLdSicuro(articolo)}</script>`;
 }
 
 /**

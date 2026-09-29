@@ -136,9 +136,9 @@ export const VOCI: readonly Voce[] = [
   {
     slug: 'shove',
     termine: 'Shove',
-    varianti: ['jam', 'push', 'spingere'],
+    varianti: ['jam', 'push', 'pushare', 'shovare', 'spingere'],
     query: 'shove poker significato',
-    titolo: 'Shove nel poker: significato di shove, jam e push',
+    titolo: 'Shove nel poker: significato di pushare, jam e shove',
     definizione:
       'Shove (o jam, o push) è il verbo con cui si indica l’andare all-in: «shovare» una mano significa puntare tutto lo stack in un colpo solo.',
     spiegazione: [
@@ -188,9 +188,9 @@ export const VOCI: readonly Voce[] = [
   {
     slug: 'fold',
     termine: 'Fold',
-    varianti: ['passare', 'foldare', 'lasciare'],
+    varianti: ['passare', 'foldare', 'foldato', 'lasciare'],
     query: 'fold poker significato',
-    titolo: 'Fold nel poker: significato e perché è la mossa più usata',
+    titolo: 'Fold nel poker: cosa vuol dire foldare e quando farlo',
     definizione:
       'Fold significa abbandonare la mano: si rinuncia alle carte e a qualunque diritto sul piatto, senza mettere altre fiches.',
     spiegazione: [
@@ -240,9 +240,9 @@ export const VOCI: readonly Voce[] = [
   {
     slug: 'check',
     termine: 'Check',
-    varianti: ['passare la parola', 'bussare'],
+    varianti: ['checkare', 'passare la parola', 'bussare'],
     query: 'check poker significato',
-    titolo: 'Check nel poker: significato e quando si può fare',
+    titolo: 'Check nel poker: significato di checkare e quando farlo',
     definizione:
       'Check significa non puntare e passare la parola al giocatore successivo restando in mano: è possibile solo se nessuno ha ancora puntato in quel giro.',
     spiegazione: [
@@ -944,7 +944,7 @@ export const VOCI: readonly Voce[] = [
     termine: 'Bluff',
     varianti: ['bluffare', 'semi-bluff', 'bluff catcher'],
     query: 'bluff poker',
-    titolo: 'Bluff nel poker: significato, semi-bluff e quando ha senso',
+    titolo: 'Bluff nel poker: cosa vuol dire bluffare e quando ha senso',
     definizione:
       'Il bluff è una puntata fatta con una mano che, se chiamata, quasi sempre perde: serve a far passare mani migliori e rende solo se l’avversario folda abbastanza.',
     spiegazione: [
@@ -968,9 +968,9 @@ export const VOCI: readonly Voce[] = [
   {
     slug: 'tilt',
     termine: 'Tilt',
-    varianti: ['andare in tilt', 'tiltare', 'tilt control'],
+    varianti: ['andare in tilt', 'tiltare', 'tiltato', 'tilt control'],
     query: 'tilt meaning poker',
-    titolo: 'Tilt nel poker: significato e come si riconosce',
+    titolo: 'Tilt nel poker: cosa vuol dire tiltare e come riconoscerlo',
     definizione:
       'Il tilt è lo stato in cui un’emozione — rabbia, frustrazione, fretta — prende il posto del ragionamento e fa giocare peggio di quanto si sappia fare.',
     spiegazione: [

@@ -9,7 +9,7 @@ import { LOCALE_ID, provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../../environments/environment';
-import { AI_DISCLOSURE } from '../../../core/news.constants';
+import { AI_DISCLOSURE, ID_DATI_ARTICOLO } from '../../../core/news.constants';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { NewsDetailComponent } from './news-detail.component';
 
@@ -125,6 +125,121 @@ describe('NewsDetailComponent', () => {
     expect((f.nativeElement as HTMLElement).querySelector('.news-share'))
       .withContext('il blocco di condivisione è finito fuori dal ramo dell\'articolo')
       .toBeNull();
+  });
+
+  // ---- L'articolo consegnato dall'edge, e gli errori che NON sono un 404 ----
+  //
+  // ⚠️ Nasce dal 29/09/2026: montandosi il componente riscaricava l'articolo, e
+  // su un 429 o un 5xx diceva «News non trovata: forse è stata rimossa» — la
+  // stessa pagina, senza titolo, per ogni articolo. Search Console ne aveva
+  // ripiegati 17 su altri. Ora il primo articolo arriva dalla pagina stessa
+  // (`<script id="bff-articolo">`, scritto da `functions/lib/render-news.mjs`) e
+  // «non trovata» vale solo per un 404.
+
+  /** Il blocco che la resa all'edge mette nella testa della pagina. */
+  function bloccoEdge(dati: unknown): HTMLScriptElement {
+    const el = document.createElement('script');
+    el.type = 'application/json';
+    el.id = ID_DATI_ARTICOLO;
+    el.textContent = JSON.stringify(dati);
+    document.head.appendChild(el);
+    return el;
+  }
+
+  function montaSenzaRisposta(id = 'articolo-vero'): ComponentFixture<NewsDetailComponent> {
+    const f = TestBed.createComponent(NewsDetailComponent);
+    f.componentRef.setInput('id', id);
+    f.detectChanges();
+    return f;
+  }
+
+  describe('articolo consegnato dall\'edge', () => {
+    afterEach(() => document.getElementById(ID_DATI_ARTICOLO)?.remove());
+
+    it('parte dal blocco della pagina e NON rifà la chiamata', () => {
+      bloccoEdge({ ...ARTICOLO, slug: 'articolo-vero' });
+      const f = montaSenzaRisposta();
+      http.expectNone(`${API}/news/articolo-vero`);
+      f.detectChanges();
+
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('h1')?.textContent?.trim()).toBe('Titolo di prova');
+      expect(el.textContent).not.toContain('News non trovata');
+      expect(jsonLd()['headline']).toBe('Titolo di prova');
+    });
+
+    it('⚠️ il blocco si consuma: dopo la prima lettura non è più nella pagina', () => {
+      bloccoEdge({ ...ARTICOLO, slug: 'articolo-vero' });
+      montaSenzaRisposta();
+      expect(document.getElementById(ID_DATI_ARTICOLO))
+        .withContext('una navigazione interna successiva riuserebbe dati vecchi')
+        .toBeNull();
+    });
+
+    it('un blocco di un ALTRO articolo si ignora: si fa la chiamata', () => {
+      bloccoEdge({ ...ARTICOLO, _id: 'altro', slug: 'un-altro-articolo', title: 'Altro' });
+      const f = montaSenzaRisposta();
+      http.expectOne(`${API}/news/articolo-vero`).flush(ARTICOLO);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('h1')?.textContent?.trim())
+        .toBe('Titolo di prova');
+    });
+
+    it('un blocco illeggibile non rompe la pagina: si fa la chiamata', () => {
+      const el = bloccoEdge(null);
+      el.textContent = '{non è json';
+      const f = montaSenzaRisposta();
+      http.expectOne(`${API}/news/articolo-vero`).flush(ARTICOLO);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).textContent).toContain('Titolo di prova');
+    });
+  });
+
+  for (const [status, statusText] of [
+    [429, 'Too Many Requests'],
+    [500, 'Internal Server Error'],
+  ] as const) {
+    it(`⚠️ un errore ${status} NON è «non trovata»: dice che non riesce a caricare, e offre Riprova`, () => {
+      const f = montaSenzaRisposta();
+      http
+        .expectOne(`${API}/news/articolo-vero`)
+        .flush({ message: 'x' }, { status, statusText });
+      f.detectChanges();
+
+      const el = f.nativeElement as HTMLElement;
+      expect(el.textContent).not.toContain('News non trovata');
+      expect(el.textContent).toContain('Non riesco a caricare l\'articolo');
+      expect(el.querySelector('.news-detail__riprova')).withContext('manca Riprova').toBeTruthy();
+      expect(el.querySelector('.news-share')).toBeNull();
+    });
+  }
+
+  it('⚠️ la rete che cade NON è «non trovata»', () => {
+    const f = montaSenzaRisposta();
+    http.expectOne(`${API}/news/articolo-vero`).error(new ProgressEvent('error'));
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.textContent).not.toContain('News non trovata');
+    expect(el.querySelector('.news-detail__riprova')).toBeTruthy();
+  });
+
+  it('«Riprova» rifà la chiamata e, se va, mostra l\'articolo', () => {
+    const f = montaSenzaRisposta();
+    http
+      .expectOne(`${API}/news/articolo-vero`)
+      .flush({ message: 'x' }, { status: 503, statusText: 'Service Unavailable' });
+    f.detectChanges();
+
+    (f.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.news-detail__riprova')!
+      .click();
+    f.detectChanges();
+    http.expectOne(`${API}/news/articolo-vero`).flush(ARTICOLO);
+    f.detectChanges();
+
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('h1')?.textContent?.trim()).toBe('Titolo di prova');
+    expect(el.textContent).not.toContain('Non riesco a caricare');
   });
 
   it('mostra titolo e corpo quando l\'articolo esiste', () => {

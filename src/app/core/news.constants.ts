@@ -43,6 +43,14 @@ const APERTURA = (revisore: string) =>
 const ANCORA = 'policy editoriale';
 const CHIUSURA = '.';
 
+/**
+ * L'id del blocco JSON con cui la resa all'edge (`functions/lib/render-news.mjs`,
+ * che ne tiene una COPIA — a tenerle allineate è `scripts/lib/news-render.test.mjs`)
+ * consegna l'articolo all'app: `news-detail` parte da lì invece di riscaricarlo.
+ * ⚠️ Questo file non deve importare niente: il test Node lo legge così com'è.
+ */
+export const ID_DATI_ARTICOLO = 'bff-articolo';
+
 export const AI_DISCLOSURE = {
   versione: '2026-08-19',
   /**

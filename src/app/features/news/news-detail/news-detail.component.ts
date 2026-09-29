@@ -1,4 +1,5 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DOCUMENT } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -9,11 +10,12 @@ import {
   inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { News } from '../../../core/models/api.models';
-import { AI_DISCLOSURE } from '../../../core/news.constants';
+import { AI_DISCLOSURE, ID_DATI_ARTICOLO } from '../../../core/news.constants';
 import { NewsService } from '../../../core/services/news.service';
 import { SeoService } from '../../../core/services/seo.service';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
@@ -50,6 +52,13 @@ const SITE = 'https://bestfishforever.it';
  * copre un caso diverso e va lasciato dov'è — chi è già dentro lo SPA e apre un
  * articolo cancellato mentre naviga: lì non c'è nessuna risposta HTTP da
  * marcare, c'è solo una pagina da mostrare.
+ *
+ * ⚠️ DAL 29/09/2026 IL PRIMO ARTICOLO NON SI RISCARICA: l'edge lo consegna in un
+ * `<script id="bff-articolo">` nella testa (`datiDaEdge`), e «non trovata» si
+ * dice solo su un 404 dell'API — ogni altro errore è una banda con «Riprova».
+ * Prima, un 429 o un 5xx al montaggio trasformava qualunque articolo nella
+ * stessa pagina «non trovata» senza titolo, e Search Console aveva ripiegato 17
+ * articoli su altri.
  *
  * ---
  *
@@ -102,6 +111,11 @@ export class NewsDetailComponent {
 
   protected readonly news = signal<News | null>(null);
   protected readonly notFound = signal(false);
+  /** L'API non ha risposto (429, 5xx, rete): NON vuol dire che l'articolo non c'è. */
+  protected readonly erroreCarico = signal(false);
+  /** Incrementato da «Riprova»: l'`effect` lo legge e ricarica. */
+  private readonly tentativo = signal(0);
+  private readonly document = inject(DOCUMENT);
 
   /** Rotta della policy editoriale, per il collegamento dentro l'etichetta. */
   protected readonly rottaPolicy = AI_DISCLOSURE.ancoraRotta;
@@ -223,19 +237,69 @@ export class NewsDetailComponent {
   constructor() {
     effect(() => {
       const id = this.id();
+      // Letto solo per farsi rieseguire da «Riprova».
+      this.tentativo();
       this.news.set(null);
       this.notFound.set(false);
+      this.erroreCarico.set(false);
+
+      // ⚠️ Prima l'articolo che l'edge ha già messo nella pagina: vedi
+      // `datiDaEdge`. Senza, la pagina dipendeva dall'API DUE volte (edge e
+      // montaggio), e la seconda era quella che poteva fallire.
+      const daEdge = untracked(() => this.datiDaEdge(id));
+      if (daEdge) {
+        this.news.set(daEdge);
+        untracked(() => this.applySeo(daEdge));
+        return;
+      }
+
       this.newsApi.getById(id).subscribe({
         next: (news) => {
           this.news.set(news);
           this.applySeo(news);
         },
-        error: () => this.notFound.set(true),
+        // ⚠️ «Non trovata» SOLO se l'API lo dice. Un 429, un 5xx o la rete che
+        // cade non dicono niente sull'esistenza dell'articolo: annunciarlo
+        // rimosso (su una pagina identica per tutti, senza titolo) è il difetto
+        // del 29/09/2026 — per chi legge, e con ogni probabilità per Google.
+        error: (err: unknown) =>
+          err instanceof HttpErrorResponse && err.status === 404
+            ? this.notFound.set(true)
+            : this.erroreCarico.set(true),
       });
     });
     // Rimuovi i dati strutturati specifici dell'articolo lasciando la pagina:
     // altrimenti il NewsArticle resterebbe nel <head> anche sulle altre pagine.
     inject(DestroyRef).onDestroy(() => this.seo.removeJsonLd('ld-news-article'));
+  }
+
+  protected riprova(): void {
+    this.tentativo.update((n) => n + 1);
+  }
+
+  /**
+   * L'articolo che la resa all'edge ha messo nella testa della pagina
+   * (`<script id="bff-articolo">`, vedi `datiArticoloHtml` in
+   * `functions/lib/render-news.mjs`), oppure `null`.
+   *
+   * ⚠️ Il blocco si CONSUMA: lo si toglie dalla pagina alla prima lettura,
+   * qualunque cosa contenga. Vale per il solo articolo con cui il sito è stato
+   * aperto; una navigazione interna successiva — anche tornando su quello
+   * stesso articolo — rifà la chiamata e prende la versione corrente.
+   * ⚠️ Si usa solo se è l'articolo della rotta (slug o id): un blocco che non
+   * corrisponde è un blocco da ignorare, non da mostrare.
+   */
+  private datiDaEdge(id: string): News | null {
+    const el = this.document.getElementById(ID_DATI_ARTICOLO);
+    if (!el) return null;
+    el.remove();
+    try {
+      const dati = JSON.parse(el.textContent ?? '') as News | null;
+      if (!dati || typeof dati !== 'object' || typeof dati.title !== 'string') return null;
+      return dati.slug === id || dati._id === id ? dati : null;
+    } catch {
+      return null;
+    }
   }
 
   /** Titolo + description + immagine dinamici, e dati strutturati NewsArticle. */

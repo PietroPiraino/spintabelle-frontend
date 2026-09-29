@@ -6,6 +6,18 @@
         <p>News non trovata: forse è stata rimossa.</p>
         <a routerLink="/news" class="btn btn--ghost" style="margin-top: 1rem">Tutte le news</a>
       </div>
+    } @else if (erroreCarico()) {
+      <!--
+        L'API non ha risposto: NON è «non trovata». Dirlo rimosso su un
+        errore temporaneo (un 429, un 5xx) era il difetto del 29/09/2026.
+      -->
+      <div class="empty-state" role="alert">
+        <div class="empty-state__suit" aria-hidden="true"></div>
+        <p>Non riesco a caricare l'articolo in questo momento.</p>
+        <button type="button" class="btn btn--ghost news-detail__riprova" style="margin-top: 1rem" (click)="riprova()">
+          Riprova
+        </button>
+      </div>
     } @else if (!news()) {
       <div class="spinner" role="status" aria-label="Caricamento"></div>
     } @else {

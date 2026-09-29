@@ -556,6 +556,42 @@ async function sonda() {
         );
     }
 
+    // L'articolo consegnato all'app (dal 29/09/2026). Senza, `news-detail`
+    // riscarica l'articolo al montaggio e su un 429 o un 5xx la pagina diventa
+    // «News non trovata», la stessa per tutti gli articoli — la causa piu'
+    // probabile dei 17 articoli che Search Console aveva ripiegato su altri.
+    // ⚠️ Dall'esterno e' l'unico modo di sapere che la Function in produzione
+    // lo scrive: l'app ricade da sola sulla chiamata, quindi a occhio non
+    // cambia niente.
+    const bloccoDati = html.match(
+      /<script[^>]+id=["']bff-articolo["'][^>]*>([\s\S]*?)<\/script>/i,
+    );
+    if (!bloccoDati)
+      nota(
+        `${urlArticolo} — manca il blocco <script id="bff-articolo"> con l'articolo. ` +
+          "La Function all'edge e' piu' VECCHIA del repo: l'app riscarica l'articolo al " +
+          "montaggio, e un errore dell'API torna a sembrare «News non trovata».",
+      );
+    else {
+      let dati = null;
+      try {
+        dati = JSON.parse(bloccoDati[1]);
+      } catch {
+        nota(`${urlArticolo} — il blocco bff-articolo non e' JSON leggibile.`);
+      }
+      if (dati && (dati.title !== rec.title || String(dati.slug ?? '') !== String(rec.slug ?? '')))
+        nota(
+          `${urlArticolo} — il blocco bff-articolo porta "${dati.title}" (${dati.slug}), ` +
+            `l'API "${rec.title}" (${rec.slug}): l'app mostrerebbe un altro articolo.`,
+        );
+      const testa = html.slice(0, html.search(/<\/head\s*>/i));
+      if (!testa.includes('id="bff-articolo"'))
+        nota(
+          `${urlArticolo} — il blocco bff-articolo non sta nella testa: dentro <app-root> ` +
+            'Angular lo cancella prima che il componente possa leggerlo.',
+        );
+    }
+
     // ⚠️ Il controllo per cui esiste questo file.
     if (hasNoindex(html))
       nota(
