@@ -217,7 +217,7 @@ test('i rimandi delle guide al glossario (Guide.termini) esistono e portano il t
 test('anti-guardia-vuota: il glossario ha almeno 40 voci e slug unici', () => {
   // ⚠️ Da alzare a 90 con la seconda ondata: una guardia che passa su zero
   // voci non ha guardato niente.
-  assert.ok(glossario.VOCI.length >= 40, `solo ${glossario.VOCI.length} voci`);
+  assert.ok(glossario.VOCI.length >= 90, `solo ${glossario.VOCI.length} voci`);
   assert.equal(new Set(glossario.slugGlossario()).size, glossario.VOCI.length);
 });
 

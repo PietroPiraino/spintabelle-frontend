@@ -524,6 +524,8 @@ export const GUIDE: readonly Guide[] = [
       { slug: 'all-in', termine: 'All-in' },
       { slug: 'shove', termine: 'Shove' },
       { slug: 'open-shove', termine: 'Open shove' },
+      { slug: 'hyper-turbo', termine: 'Hyper turbo' },
+      { slug: 'effective-stack', termine: 'Stack effettivo' },
     ],
   },
   {
@@ -627,6 +629,7 @@ export const GUIDE: readonly Guide[] = [
       { slug: 'bankroll', termine: 'Bankroll' },
       { slug: 'ev', termine: 'EV (valore atteso)' },
       { slug: 'buy-in', termine: 'Buy-in' },
+      { slug: 'hyper-turbo', termine: 'Hyper turbo' },
     ],
   },
   {
@@ -718,6 +721,8 @@ export const GUIDE: readonly Guide[] = [
       { slug: 'stack', termine: 'Stack' },
       { slug: 'range', termine: 'Range' },
       { slug: 'big-blind', termine: 'Big blind' },
+      { slug: 'bubble', termine: 'Bolla (bubble)' },
+      { slug: 'coin-flip', termine: 'Coin flip' },
     ],
   },
   {
@@ -821,6 +826,7 @@ export const GUIDE: readonly Guide[] = [
       { slug: 'buy-in', termine: 'Buy-in' },
       { slug: 'ante', termine: 'Ante' },
       { slug: 'icm', termine: 'ICM (Independent Chip Model)' },
+      { slug: 'hyper-turbo', termine: 'Hyper turbo' },
     ],
   },
   {
@@ -918,6 +924,8 @@ export const GUIDE: readonly Guide[] = [
       { slug: 'range', termine: 'Range' },
       { slug: 'ante', termine: 'Ante' },
       { slug: 'varianza', termine: 'Varianza' },
+      { slug: 'heads-up', termine: 'Heads-up' },
+      { slug: 'hyper-turbo', termine: 'Hyper turbo' },
     ],
   },
   {
@@ -1019,6 +1027,9 @@ export const GUIDE: readonly Guide[] = [
       { slug: 'fold', termine: 'Fold' },
       { slug: 'call', termine: 'Call' },
       { slug: 'limp', termine: 'Limp' },
+      { slug: 'posizione', termine: 'Posizione' },
+      { slug: 'button', termine: 'Button' },
+      { slug: 'small-blind', termine: 'Small blind' },
     ],
   },
   {
@@ -1117,6 +1128,7 @@ export const GUIDE: readonly Guide[] = [
       { slug: 'stack', termine: 'Stack' },
       { slug: 'bluff', termine: 'Bluff' },
       { slug: 'big-blind', termine: 'Big blind' },
+      { slug: 'heads-up', termine: 'Heads-up' },
     ],
   },
   {
@@ -1221,6 +1233,7 @@ export const GUIDE: readonly Guide[] = [
       { slug: 'big-blind', termine: 'Big blind' },
       { slug: 'fold', termine: 'Fold' },
       { slug: 'rake', termine: 'Rake' },
+      { slug: 'hyper-turbo', termine: 'Hyper turbo' },
     ],
   },
   // ⚠️ Query confermata il 19/09/2026 con l'autocompletamento di Google:
@@ -1448,6 +1461,8 @@ export const GUIDE: readonly Guide[] = [
       { slug: 'stack', termine: 'Stack' },
       { slug: 'big-blind', termine: 'Big blind' },
       { slug: 'varianza', termine: 'Varianza' },
+      { slug: 'tracker', termine: 'Tracker' },
+      { slug: 'short-stack', termine: 'Short stack' },
     ],
   },
   // ⚠️⚠️ QUESTA GUIDA E' LA PIU' ESPOSTA DEL SITO SUL PIANO LEGALE, e va letta
@@ -1775,6 +1790,7 @@ export const GUIDE: readonly Guide[] = [
       { slug: 'range', termine: 'Range' },
       { slug: 'equity', termine: 'Equity' },
       { slug: 'buy-in', termine: 'Buy-in' },
+      { slug: 'sit-and-go', termine: 'Sit and go (SNG)' },
     ],
   },
 ];

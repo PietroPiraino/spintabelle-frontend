@@ -76,9 +76,17 @@ export interface Voce {
 
 /**
  * Le voci, nell'ordine in cui sono state scritte: l'indice le riordina per
- * lettera, quindi qui l'ordine non conta. Ondata 1 = le 50 con domanda
- * definitoria italiana esplicita; ondata 2 = le 50 con «X poker» ≥ 10
- * suggerimenti e pertinenza Spin & Go (piano del 20/09/2026).
+ * lettera, quindi qui l'ordine non conta. Ondata 1 = le 55 con domanda
+ * definitoria italiana esplicita (20/09/2026); ondata 2 = 45 voci (30/09/2026).
+ *
+ * ⚠️ L'ONDATA 2 DA' LA PRECEDENZA AL GERGO, ed e' una scelta misurata: dieci
+ * giorni dopo l'ondata 1 le uniche query non di marca a posizione 8-10 erano
+ * gergo («pushare», «tiltare», «checkare», «cip», «itm», «vpip»), mentre le voci
+ * generiche sui punti («scala», «colore») stavano a 40-60 contro siti enormi.
+ * Esclusi apposta: rakeback, freeroll, make-up e backer (una pagina indicizzabile
+ * su premi o staking riapre l'art. 9); semi-bluff, bluff catcher e solver (sono
+ * gia' varianti di `bluff` e `gto`: due pagine sulla stessa query si rubano le
+ * posizioni).
  */
 export const VOCI: readonly Voce[] = [
   {
@@ -130,7 +138,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'l’allenamento preflop, che propone proprio le decisioni push/fold a stack corto',
       href: '/allenamento',
     },
-    correlati: ['all-in', 'shove', 'nash', 'stack'],
+    correlati: ['all-in', 'shove', 'nash', 'fold-equity'],
     aggiornata: '2026-09-20',
   },
   {
@@ -156,7 +164,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'le tabelle preflop GTO, nodo per nodo, dove ogni shove ha la sua frequenza',
       href: '/tabelle',
     },
-    correlati: ['all-in', 'open-shove', 'push-fold', 'raise'],
+    correlati: ['all-in', 'open-shove', 'push-fold', 'fold-equity'],
     aggiornata: '2026-09-20',
   },
   {
@@ -338,7 +346,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'le tabelle preflop GTO, indicizzate per profondità in big blind',
       href: '/tabelle',
     },
-    correlati: ['ante', 'stack', 'blind', 'call'],
+    correlati: ['ante', 'stack', 'blind', 'small-blind'],
     aggiornata: '2026-09-20',
   },
   {
@@ -364,7 +372,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'le tabelle preflop GTO, una per ogni profondità',
       href: '/tabelle',
     },
-    correlati: ['big-blind', 'push-fold', 'all-in', 'bankroll'],
+    correlati: ['big-blind', 'push-fold', 'all-in', 'effective-stack'],
     aggiornata: '2026-09-20',
   },
   {
@@ -416,7 +424,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'le tabelle preflop GTO, che mostrano il range di apertura di ogni posizione a ogni profondità',
       href: '/tabelle',
     },
-    correlati: ['raise', 'open-shove', 'limp', 'range'],
+    correlati: ['raise', 'open-shove', 'limp', 'min-raise'],
     aggiornata: '2026-09-20',
   },
   {
@@ -442,7 +450,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'l’allenamento preflop, che propone decisioni di call all-in con l’EV di ogni scelta',
       href: '/allenamento',
     },
-    correlati: ['equity', 'call', 'ev', 'fold'],
+    correlati: ['equity', 'call', 'ev', 'outs'],
     aggiornata: '2026-09-20',
   },
   {
@@ -468,7 +476,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'il replayer delle mani, che calcola l’equity all-in e l’EV Diff di ogni mano caricata',
       href: '/replayer',
     },
-    correlati: ['pot-odds', 'ev', 'call', 'range'],
+    correlati: ['pot-odds', 'ev', 'coin-flip', 'range'],
     aggiornata: '2026-09-20',
   },
   {
@@ -676,7 +684,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'le tabelle preflop GTO, dove ogni range è una griglia 13 per 13 con le frequenze',
       href: '/tabelle',
     },
-    correlati: ['gto', 'equity', 'open-raise', 'push-fold'],
+    correlati: ['gto', 'equity', 'suited', 'push-fold'],
     aggiornata: '2026-09-20',
   },
   {
@@ -780,7 +788,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'le tabelle preflop GTO, che ragionano in EV di fiches perché nel formato è ciò che conta',
       href: '/tabelle',
     },
-    correlati: ['itm', 'ev', 'moltiplicatore', 'mtt'],
+    correlati: ['itm', 'ev', 'moltiplicatore', 'bubble'],
     aggiornata: '2026-09-20',
   },
   {
@@ -1066,7 +1074,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'le tabelle preflop GTO, la base comune con cui ogni reg gioca',
       href: '/tabelle',
     },
-    correlati: ['exploit', 'gto', 'grinder', 'hud'],
+    correlati: ['exploit', 'gto', 'grinder', 'fish'],
     aggiornata: '2026-09-20',
   },
   {
@@ -1118,7 +1126,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'il replayer delle mani, per rivedere la mano e verificare che non c’era alternativa',
       href: '/replayer',
     },
-    correlati: ['tilt', 'varianza', 'equity', 'ev'],
+    correlati: ['tilt', 'varianza', 'equity', 'bad-beat'],
     aggiornata: '2026-09-20',
   },
   {
@@ -1144,7 +1152,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'la libreria dei documenti, con i filtri e i report per PokerTracker',
       href: '/docs',
     },
-    correlati: ['vpip', 'pfr', 'reg', 'exploit'],
+    correlati: ['vpip', 'pfr', 'reg', 'tracker'],
     aggiornata: '2026-09-20',
   },
   {
@@ -1170,7 +1178,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'la libreria dei documenti, con i report che leggono VPIP e PFR per posizione',
       href: '/docs',
     },
-    correlati: ['pfr', 'hud', 'range', 'reg'],
+    correlati: ['pfr', 'hud', 'nit', 'reg'],
     aggiornata: '2026-09-20',
   },
   {
@@ -1352,7 +1360,7 @@ export const VOCI: readonly Voce[] = [
       testo: 'il replayer delle mani, con il valutatore che mostra il punto di ogni giocatore',
       href: '/replayer',
     },
-    correlati: ['kicker', 'nuts', 'equity', 'value-bet'],
+    correlati: ['kicker', 'nuts', 'equity', 'set'],
     aggiornata: '2026-09-20',
   },
   {
@@ -1510,6 +1518,1073 @@ export const VOCI: readonly Voce[] = [
     },
     correlati: ['stack', 'big-blind', 'push-fold', 'open-raise'],
     aggiornata: '2026-09-20',
+  },
+  // ---- Ondata 2, lotto 1: Spin & Go e torneo (30/09/2026) ----
+  {
+    slug: 'heads-up',
+    termine: 'Heads-up',
+    varianti: ['heads up', 'HU', 'testa a testa'],
+    query: 'heads up poker significato',
+    titolo: 'Heads-up nel poker: significato e come cambia il gioco',
+    definizione:
+      'Heads-up significa testa a testa: una mano o una partita giocata fra due soli giocatori, in cui lo small blind è anche il bottone.',
+    spiegazione: [
+      'L’espressione si usa in due sensi. Una mano va «in heads-up» quando restano due giocatori, anche a un tavolo pieno; una partita è heads-up quando al tavolo ci sono soltanto due persone, come nei tornei Heads-Up o nel finale di uno Spin & Go. Nel secondo caso cambia l’ordine di parola: lo small blind siede sul bottone, parla per primo prima del flop e per ultimo dopo.',
+      'Negli Spin & Go la fase a due è quella che decide il torneo, perché quasi sempre paga solo il primo. Ci si arriva spesso con stack corti, e i range si allargano molto: in heads-up a 10 big blind lo small blind gioca quasi nove mani su dieci. Secondo la strategia di equilibrio ne entra a limp circa il 65%, va all-in con il 23% e passa appena il 12%.',
+      'Il motivo è semplice: con un solo avversario la mano media vale di più, e passare costa i bui a ogni giro. Chi arriva al testa a testa giocando stretto come a tre regala fiche a ogni mano.',
+    ],
+    esempio:
+      'Restate in due con 10 big blind a testa e sei di small blind con K-6 spaiati. A tre giocatori sarebbe spesso un fold; in heads-up la tabella la spinge all-in, perché passarla vorrebbe dire lasciare mezzo big blind a ogni giro contro un solo avversario.',
+    guida: {
+      testo: 'la guida al testa a testa negli Spin & Go',
+      href: '/guide/heads-up-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella dello small blind in heads-up a 10 big blind',
+      href: '/tabelle/heads-up-sb-10bb',
+    },
+    correlati: ['small-blind', 'push-fold', 'limp', 'big-blind'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'small-blind',
+    termine: 'Small blind',
+    varianti: ['piccolo buio', 'SB'],
+    query: 'small blind poker significato',
+    titolo: 'Small blind nel poker: significato e come si gioca',
+    definizione:
+      'Lo small blind, o piccolo buio, è la puntata obbligatoria, di solito metà del big blind, messa prima delle carte dal giocatore a sinistra del bottone.',
+    spiegazione: [
+      'Insieme al big blind forma il piatto di partenza di ogni mano: senza bui nessuno avrebbe motivo di giocare, e tutti aspetterebbero gli assi. Lo small blind mette mezza puntata e ha già un piede nel piatto, ma dopo il flop parla per primo: è la posizione peggiore del tavolo.',
+      'Negli Spin & Go a tre la posizione dello small blind diventa decisiva quando il bottone passa: resta un solo avversario, il big blind, e nel piatto c’è già 1,5 big blind. Per questo lo small blind a 10 big blind, dopo il fold del bottone, gioca molto largo: secondo la strategia di equilibrio va all-in con il 42% delle mani, rilancia con un altro 16% e passa soltanto il 41%.',
+      'In heads-up le parti si invertono: lo small blind è anche il bottone, parla per primo prima del flop e per ultimo dopo, e diventa la posizione migliore.',
+    ],
+    esempio:
+      'Il bottone passa, sei small blind con 10 big blind e A-4 spaiati. Contro il solo big blind la tabella va all-in; in un torneo a nove giocatori, con sei avversari ancora da parlare, la stessa mano si passerebbe spesso.',
+    guida: {
+      testo: 'la guida al push/fold negli Spin & Go',
+      href: '/guide/push-fold-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella dello small blind a 10 big blind dopo il fold del bottone',
+      href: '/tabelle/spin-and-go-sb-10bb-dopo-fold',
+    },
+    correlati: ['big-blind', 'blind', 'heads-up', 'push-fold'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'fold-equity',
+    termine: 'Fold equity',
+    varianti: ['equity di fold'],
+    query: 'fold equity significato',
+    titolo: 'Fold equity nel poker: significato e come si calcola',
+    definizione:
+      'La fold equity è il valore che una puntata guadagna perché l’avversario può passare: la parte del risultato che viene dai fold, non dallo showdown.',
+    spiegazione: [
+      'Quando vai all-in vinci in due modi: l’avversario passa e prendi subito il piatto, oppure chiama e vinci allo showdown. La fold equity misura il primo modo. Si stima moltiplicando la probabilità di fold per il piatto che si raccoglie: se il big blind passa il 60% delle volte su un piatto di 1,5 big blind, la spinta incassa già 0,9 big blind di media prima ancora di guardare le carte.',
+      'È la ragione per cui nel push/fold chi spinge per primo gioca più mani di chi chiama: chi apre all-in ha la fold equity dalla sua, chi chiama no e deve avere la mano. Negli Spin & Go a 10 big blind lo small blind, dopo il fold del bottone, va all-in con il 42% delle mani; il big blind chiama quella spinta con circa il 37%.',
+      'La fold equity si riduce quando lo stack è troppo corto: con 3 big blind quasi nessuno passa più, perché il piatto è già grande rispetto a quello che si rischia. Da qui la regola di non aspettare troppo prima di spingere.',
+    ],
+    esempio:
+      'Sei small blind con 10 big blind e Q-5 dello stesso seme; il bottone ha passato. Se il big blind chiama sei sfavorito contro quasi tutto il suo range, ma passa più di sei volte su dieci: quei piatti vinti senza showdown bastano a rendere la spinta migliore del fold.',
+    guida: {
+      testo: 'la guida al push/fold negli Spin & Go',
+      href: '/guide/push-fold-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella del big blind contro l’all-in dello small blind a 10 big blind',
+      href: '/tabelle/spin-and-go-bb-10bb-vs-push-sb',
+    },
+    correlati: ['equity', 'push-fold', 'shove', 'ev'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'min-raise',
+    termine: 'Min-raise',
+    varianti: ['min raise', 'rilancio minimo', '2x'],
+    query: 'min raise poker',
+    titolo: 'Min-raise nel poker: il rilancio minimo e quando usarlo',
+    definizione:
+      'Il min-raise è il rilancio più piccolo consentito: portare la puntata al doppio di quella da superare, per esempio a 2 big blind in apertura.',
+    spiegazione: [
+      'Nel No Limit Hold’em un rilancio deve essere almeno pari all’ultima puntata o all’ultimo rilancio. In apertura, con il big blind a 1, il minimo è quindi 2 big blind: da qui il nome «2x». Il min-raise costa poco, costruisce il piatto quanto basta e lascia spazio alle decisioni successive.',
+      'Negli Spin & Go è l’apertura più comune quando gli stack sono medi. Dal bottone a 15 big blind la strategia di equilibrio apre con il min-raise il 25% delle mani e va all-in solo con il 7,5%; a 25 big blind l’all-in sparisce e il min-raise sale a circa il 39%. Sotto le 10 big blind il rilancio piccolo lascia il posto alla spinta: a 8 big blind dal bottone ci sono solo all-in e fold.',
+      'Il limite del min-raise è lo stack corto: con 10 big blind, aprire a 2 e passare sulla spinta di un avversario costa un quinto dello stack.',
+    ],
+    esempio:
+      'Bottone con 20 big blind e K-9 spaiati: la tabella apre a 2 big blind, un decimo dello stack, e resta la possibilità di passare se lo small blind va all-in. Con 8 big blind la stessa mano si gioca direttamente all-in.',
+    guida: {
+      testo: 'la guida su come si gioca uno Spin & Go',
+      href: '/guide/come-giocare-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella del bottone a 15 big blind, dove convivono min-raise e all-in',
+      href: '/tabelle/spin-and-go-btn-15bb',
+    },
+    correlati: ['raise', 'open-raise', 'open-shove', 'push-fold'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'hyper-turbo',
+    termine: 'Hyper turbo',
+    varianti: ['hyper', 'hyper-turbo', 'struttura hyper'],
+    query: 'hyper turbo poker',
+    titolo: 'Hyper turbo nel poker: cosa significa e cosa cambia',
+    definizione:
+      'Un torneo hyper turbo ha livelli di bui brevissimi, di pochi minuti, e stack iniziali ridotti: dopo poche mani si gioca già con stack corti.',
+    spiegazione: [
+      'Le strutture dei tornei si distinguono per la velocità con cui salgono i bui: normale, turbo, hyper turbo. Nell’hyper i livelli durano pochi minuti e si parte con poche decine di big blind. Il risultato è che la parte giocata a stack profondi dura pochissimo, e il grosso delle decisioni si prende con 15 big blind o meno.',
+      'Gli Spin & Go sono tornei hyper turbo a tre giocatori: si parte intorno alle 25 big blind e in pochi livelli si scende sotto le 15. Per questo contano così tanto le tabelle preflop e il push/fold, e relativamente poco il gioco dopo il flop. Le partite sono brevi e se ne giocano molte: servono migliaia di partite perché i risultati dicano qualcosa sul livello di gioco.',
+      'La velocità ha un prezzo: meno tempo per rimediare a un errore e più varianza. Chi viene dai tornei lenti tende a giocare troppo stretto, aspettando mani che la struttura non gli lascia il tempo di vedere.',
+    ],
+    esempio:
+      'Due giocatori partono con 25 big blind e per qualche livello non vincono piatti: gli stessi gettoni, con i bui raddoppiati, valgono ormai 12 big blind. A quel punto aprire con un rilancio e passare sull’all-in brucia già un sesto dello stack.',
+    guida: {
+      testo: 'perché uno Spin & Go si decide prima del flop',
+      href: '/guide/perche-il-3max-hyper-turbo-si-decide-preflop',
+    },
+    strumento: {
+      testo: 'il simulatore di varianza, per vedere quante partite servono',
+      href: '/simulatore-varianza',
+    },
+    correlati: ['push-fold', 'varianza', 'stack', 'mtt'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'coin-flip',
+    termine: 'Coin flip',
+    varianti: ['flip', 'race', 'testa o croce'],
+    query: 'coin flip poker definizione',
+    titolo: 'Coin flip nel poker: significato e percentuali reali',
+    definizione:
+      'Il coin flip è un all-in fra due mani con probabilità quasi pari, come una coppia bassa contro due carte più alte: vicino al 50 e 50, ma non esattamente.',
+    spiegazione: [
+      'Il nome viene dal lancio della moneta: nessuna delle due mani è davvero favorita. L’esempio da manuale è una coppia media o bassa contro due carte più alte, come 2-2 contro A-K spaiati: la coppia vince il 53% delle volte, A-K il 47%. Non è esattamente metà e metà, e la piccola differenza, ripetuta migliaia di volte, conta.',
+      'Molte situazioni chiamate «flip» non lo sono affatto: Q-Q contro A-K spaiati vince il 57%, e A-K spaiati contro J-T dello stesso seme sono avanti 59 a 41. Nel push/fold degli Spin & Go questi scontri capitano di continuo, e la scelta giusta non dipende dal flip in sé ma dal piatto già presente: con i bui e la spinta dell’avversario in mezzo, anche un 50% può valere un call.',
+      'Il problema dei flip in un torneo è la sopravvivenza: perderne uno può voler dire uscire. Negli Spin & Go, dove quasi sempre paga solo il primo, questo pesa meno che altrove.',
+    ],
+    esempio:
+      'In heads-up a 10 big blind l’avversario va all-in e tu hai 5-5 di big blind. Contro le sue carte alte sei in coin flip, contro le coppie più alte sei sotto; ma il piatto contiene già il tuo big blind e la sua spinta, e la tabella chiama.',
+    guida: {
+      testo: 'la guida al push/fold negli Spin & Go',
+      href: '/guide/push-fold-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella del big blind contro l’all-in in heads-up a 10 big blind',
+      href: '/tabelle/heads-up-bb-10bb-vs-push',
+    },
+    correlati: ['all-in', 'equity', 'pot-odds', 'varianza'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'sit-and-go',
+    termine: 'Sit and go (SNG)',
+    varianti: ['SNG', 'sit & go', 'sitngo'],
+    query: 'sng significato',
+    titolo: 'Sit and go (SNG) nel poker: significato e differenze',
+    definizione:
+      'Un sit and go è un torneo senza orario d’inizio che parte appena si riempiono i posti, da due giocatori in su, con i premi fissati prima.',
+    spiegazione: [
+      'Il nome dice come funziona: ti siedi e si gioca. Non c’è un calendario né un’iscrizione tardiva: quando l’ultimo posto è occupato partono le carte. Esistono sit and go a nove giocatori, a sei, heads-up, con strutture normali, turbo o hyper turbo, e di solito vanno a premio i primi due o tre.',
+      'Gli Spin & Go sono una variante del sit and go: tre giocatori, struttura hyper turbo e un montepremi estratto a sorte prima della partita, che moltiplica il buy-in. La differenza pratica è grande: nei sit and go classici si gioca anche per piazzarsi e conta l’ICM; negli Spin & Go, con i moltiplicatori più comuni, vince tutto il primo e le fiche valgono in modo lineare.',
+      'Anche per questo molti consigli presi dai sit and go tradizionali, come stringere il gioco vicino alla bolla, negli Spin & Go non valgono.',
+    ],
+    esempio:
+      'In un sit and go classico a sei giocatori con due premi, chi è corto può aspettare che un altro esca: il secondo posto paga. In uno Spin & Go con moltiplicatore basso il secondo posto non paga nulla, e aspettare non serve a niente.',
+    guida: {
+      testo: 'il confronto fra Spin & Go e sit and go',
+      href: '/guide/spin-and-go-vs-sit-and-go',
+    },
+    correlati: ['mtt', 'buy-in', 'icm', 'hyper-turbo'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'roi',
+    termine: 'ROI',
+    varianti: ['return on investment', 'ritorno sull’investimento'],
+    query: 'roi poker significato',
+    titolo: 'ROI nel poker: significato e come si calcola nei tornei',
+    definizione:
+      'Il ROI è il ritorno sull’investimento: il risultato netto diviso per la somma dei buy-in pagati, espresso in percentuale, positiva o negativa.',
+    spiegazione: [
+      'È il numero con cui si misurano i risultati nei tornei. La formula è: (premi incassati − buy-in pagati) ÷ buy-in pagati. Chi gioca 1.000 Spin & Go da 10 euro paga 10.000 euro di buy-in; se in premi ne ha incassati 10.300 il ROI è del 3%, se ne ha incassati 9.500 è del −5%.',
+      'Negli Spin & Go il ROI va letto con due cautele. La prima è il rake: il buy-in comprende la commissione della sala, e chi gioca alla pari con il campo ha un ROI negativo più o meno di quella misura. La seconda è la varianza: il montepremi dipende dal moltiplicatore estratto, e su qualche migliaio di partite il ROI misurato può scostarsi di molti punti da quello reale.',
+      'Per questo il ROI da solo, su un campione piccolo, dice poco: va guardato insieme al numero di partite e all’andamento in EV, che toglie la fortuna delle mani all-in.',
+    ],
+    esempio:
+      'Due giocatori hanno entrambi un ROI del 4% dopo 500 partite. Uno ha pescato due volte un moltiplicatore alto, l’altro mai: tolti quei due premi il primo sarebbe in perdita. Il ROI è lo stesso, la lettura no.',
+    guida: {
+      testo: 'la guida al rake negli Spin & Go',
+      href: '/guide/rake-spin-and-go',
+    },
+    strumento: {
+      testo: 'il simulatore di varianza, che mostra quanto oscillano i risultati su migliaia di partite',
+      href: '/simulatore-varianza',
+    },
+    correlati: ['rake', 'varianza', 'buy-in', 'ev'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'short-stack',
+    termine: 'Short stack',
+    varianti: ['stack corto', 'shortstack'],
+    query: 'short stack poker',
+    titolo: 'Short stack nel poker: significato e come si gioca',
+    definizione:
+      'Short stack indica uno stack corto rispetto ai bui, in genere sotto le 15 big blind, oppure il giocatore che ha meno fiche al tavolo.',
+    spiegazione: [
+      'La misura che conta non sono le fiche ma le big blind: 500 fiche sono tante con i bui a 5/10 e pochissime a 50/100. Sotto le 15 big blind le opzioni si riducono, sotto le 10 si gioca quasi solo all-in o fold, perché un rilancio seguito da un fold costerebbe una parte troppo grande dello stack.',
+      'Negli Spin & Go lo short stack è la condizione normale: si parte intorno alle 25 big blind e la struttura hyper turbo porta presto tutti sotto le 15. Chi è corto ha un’arma precisa, la fold equity della spinta: dal bottone a 8 big blind la strategia di equilibrio va all-in con il 34% delle mani e non rilancia mai di meno.',
+      'L’errore tipico è aspettare troppo. Ogni giro i bui tolgono 1,5 big blind dal tavolo, e con 4-5 big blind una spinta fa passare sempre meno avversari: lo stack corto va giocato prima che diventi cortissimo.',
+    ],
+    esempio:
+      'Sei al bottone con 8 big blind e J-8 dello stesso seme: la tabella spinge. Gli avversari devono chiamare con mani forti, e quando passano incassi 1,5 big blind senza showdown, quasi un quinto del tuo stack.',
+    guida: {
+      testo: 'la guida al push/fold negli Spin & Go',
+      href: '/guide/push-fold-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella del bottone a 8 big blind',
+      href: '/tabelle/spin-and-go-btn-8bb',
+    },
+    correlati: ['stack', 'deep-stack', 'push-fold', 'open-shove'],
+    aggiornata: '2026-09-30',
+  },
+  // ---- Ondata 2, lotto 2: preflop e posizioni (30/09/2026) ----
+  {
+    slug: 'posizione',
+    termine: 'Posizione',
+    varianti: ['in posizione', 'fuori posizione', 'IP', 'OOP'],
+    query: 'posizione poker',
+    titolo: 'Posizione nel poker: cosa vuol dire in e fuori posizione',
+    definizione:
+      'La posizione è il posto al tavolo rispetto al bottone, che decide l’ordine di parola: chi parla per ultimo dopo il flop gioca «in posizione».',
+    spiegazione: [
+      'Parlare per ultimi è un vantaggio perché si decide sapendo già cosa hanno fatto gli altri: se hanno passato, se hanno puntato e quanto. Per questo si dice che si gioca «in posizione» (IP) quando si agisce dopo l’avversario e «fuori posizione» (OOP) quando si agisce prima. Dal flop in poi il bottone parla sempre per ultimo e lo small blind sempre per primo.',
+      'La posizione allarga o stringe i range. Negli Spin & Go a tre, con 25 big blind, il bottone apre con il min-raise circa il 39% delle mani; il big blind, che dopo il flop giocherà fuori posizione ma ha già un big blind nel piatto, difende contro quel rilancio circa tre mani su quattro. Due numeri diversi per la stessa mano: il bottone ha la posizione, il big blind il prezzo.',
+      'Con stack cortissimi la posizione conta meno, perché dopo un all-in preflop non restano altre decisioni da prendere.',
+    ],
+    esempio:
+      'Bottone con 25 big blind: J-9 dello stesso seme si apre, K-4 spaiati si passa. Se invece è il bottone ad aprire e tu sei big blind con K-4 spaiati, la tabella chiama quasi sempre: paghi un solo big blind per vedere il flop, anche se lo giocherai fuori posizione.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella del bottone a 25 big blind',
+      href: '/tabelle/spin-and-go-btn-25bb',
+    },
+    correlati: ['button', 'small-blind', 'big-blind', 'utg'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: '3-bet',
+    termine: '3-bet',
+    varianti: ['3bet', 'three bet', 'controrilancio', '3bettare'],
+    query: '3 bet poker significato',
+    titolo: '3-bet nel poker: significato e quando si fa',
+    definizione:
+      'Il 3-bet è il primo rilancio sopra un rilancio: si chiama così perché preflop è la terza puntata del giro, dopo il big blind e l’apertura.',
+    spiegazione: [
+      'Preflop il conteggio parte dal big blind, che vale come prima puntata; il rilancio di apertura è la seconda, il rilancio sopra quel rilancio la terza, cioè il 3-bet. Un rilancio ulteriore è il 4-bet. Dopo il flop il conteggio riparte: la prima puntata è una bet, il rilancio è un raise, il rilancio sopra il raise è di nuovo un 3-bet.',
+      'Negli Spin & Go il 3-bet ha quasi sempre una forma sola: l’all-in. Con 20 big blind, quando il bottone apre con il min-raise, lo small blind rilancia il 19% delle mani, e in 16 casi su 100 lo fa andando all-in; il rilancio piccolo resta sotto il 3%. Il motivo è lo stack: un 3-bet a 5 big blind seguito da un fold costerebbe un quarto delle fiche.',
+      'Il 3-bet serve a due cose: far pagare le mani forti e togliere il piatto a chi apre largo. Chi non fa mai 3-bet diventa facile da leggere, e chi apre dal bottone lo sfrutta allargando le aperture.',
+    ],
+    esempio:
+      'Il bottone apre a 2 big blind, sei small blind con 20 big blind e A-5 dello stesso seme. La tabella va all-in: l’asso rende meno probabile che l’avversario abbia le mani con cui chiamare, e quando passa incassi 3,5 big blind senza vedere il flop.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    strumento: {
+      testo: 'le tabelle preflop GTO, con il ramo dei rilanci per ogni profondità',
+      href: '/tabelle',
+    },
+    correlati: ['raise', 'open-raise', 'squeeze', 'min-raise'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: '4-bet',
+    termine: '4-bet',
+    varianti: ['4bet', 'four bet'],
+    query: '4bet poker',
+    titolo: '4-bet nel poker: significato e range negli Spin & Go',
+    definizione:
+      'Il 4-bet è il rilancio sopra un 3-bet: la quarta puntata del giro preflop, contando il big blind come prima.',
+    spiegazione: [
+      'La sequenza è: big blind, apertura, 3-bet, 4-bet. Chi riceve un 3-bet dopo aver aperto ha tre scelte: passare, chiamare o rilanciare ancora, e quel rilancio è il 4-bet. Nei cash game a stack profondi il 4-bet ha una misura precisa e lascia spazio a un ulteriore rilancio; nei tornei a stack corti coincide quasi sempre con l’all-in.',
+      'Negli Spin & Go è così. Con 25 big blind il bottone apre con il min-raise, lo small blind fa 3-bet a 6 big blind e il big blind passa: la strategia di equilibrio del bottone passa il 53% delle volte, chiama il 23% e va all-in con il 24%. Il 4-bet è l’all-in: con 6 big blind già messi dall’avversario e 25 di stack, un rilancio più piccolo impegnerebbe comunque metà delle fiche.',
+      'Il range di 4-bet contiene le mani forti, che vogliono essere chiamate, e alcune mani con un asso, che rendono meno probabili le mani migliori dell’avversario e vincono spesso il piatto subito.',
+    ],
+    esempio:
+      'Bottone con 25 big blind e A-K spaiati: hai aperto a 2 e lo small blind rilancia a 6. La tabella va all-in sempre: A-K è troppo forte per passare, e chiamando lasceresti all’avversario la possibilità di vedere il flop con meno rischio.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    strumento: {
+      testo: 'le tabelle preflop GTO, con i rami del 3-bet e del 4-bet',
+      href: '/tabelle',
+    },
+    correlati: ['3-bet', 'all-in', 'raise', 'squeeze'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'cold-call',
+    termine: 'Cold call',
+    varianti: ['cold calling', 'chiamata a freddo'],
+    query: 'cold call significato',
+    titolo: 'Cold call nel poker: significato e quando evitarlo',
+    definizione:
+      'Il cold call è la chiamata di un rilancio fatta come prima decisione della mano, a freddo: senza aver aperto né messo altre fiche volontarie nel piatto.',
+    spiegazione: [
+      'La differenza è con il call di chi ha già agito: se apri e un avversario rilancia, chiamare non è un cold call, perché hai già investito. Il cold call puro è quello di chi riceve un rilancio come prima decisione. Il rischio tipico è restare schiacciati: chi ha aperto può ancora rilanciare, e chi parla dopo può fare uno squeeze sopra entrambi.',
+      'Negli Spin & Go a tre il caso tipico è lo small blind contro l’apertura del bottone, con il big blind ancora da parlare. La strategia di equilibrio lo evita quasi del tutto: con 20 big blind lo small blind chiama il min-raise del bottone con meno dell’1% delle mani, e sceglie fra fold e 3-bet. Il big blind, che parla per ultimo e ha già un big blind nel piatto, chiama invece spesso: è una difesa, non un cold call.',
+      'Il cold call ha senso quando nessuno può più rilanciare dietro e il prezzo è buono; con giocatori ancora da parlare lo è di rado.',
+    ],
+    esempio:
+      'Il bottone apre a 2 big blind, sei small blind con 20 big blind e 7-6 dello stesso seme. Chiamare sembra economico, ma il big blind può ancora rilanciare e dopo il flop parleresti per primo: la tabella passa quasi sempre.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    strumento: {
+      testo: 'le tabelle preflop GTO dello small blind contro l’apertura',
+      href: '/tabelle',
+    },
+    correlati: ['call', '3-bet', 'squeeze', 'posizione'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'suited',
+    termine: 'Suited e offsuit',
+    varianti: ['suited', 'offsuit', 'dello stesso seme', 'spaiate'],
+    query: 'suited poker significato',
+    titolo: 'Suited e offsuit nel poker: significato e quanto contano',
+    definizione:
+      'Suited indica due carte iniziali dello stesso seme, offsuit di semi diversi: nelle tabelle si scrivono con una «s» o una «o», come AKs e AKo.',
+    spiegazione: [
+      'Le 1.326 combinazioni di carte iniziali si raggruppano in 169 mani: 13 coppie, 78 mani suited e 78 offsuit. Ogni mano suited ha 4 combinazioni, una per seme; ogni offsuit ne ha 12. Per questo, pur occupando lo stesso numero di caselle nella griglia 13×13, le mani suited capitano tre volte meno spesso delle offsuit corrispondenti.',
+      'Essere dello stesso seme vale qualche punto di equity, soprattutto per la possibilità di fare colore: A-5 dello stesso seme contro K-Q spaiati vince circa il 61% delle volte, A-5 spaiati il 58%. Tre punti che spostano molte mani marginali da una parte all’altra del confine fra giocare e passare.',
+      'Nella griglia delle tabelle le mani suited stanno sopra la diagonale delle coppie e le offsuit sotto: è la convenzione di tutti i solver.',
+    ],
+    esempio:
+      'Nella tabella del bottone a 25 big blind J-9 dello stesso seme si apre sempre, mentre mani spaiate come Q-7 o K-4 si passano: sul confine fra giocare e passare il seme fa la differenza.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella del bottone a 25 big blind',
+      href: '/tabelle/spin-and-go-btn-25bb',
+    },
+    correlati: ['range', 'equity', 'pocket-pair', 'kicker'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'pocket-pair',
+    termine: 'Pocket pair',
+    varianti: ['coppia servita', 'coppia in mano', 'pocket'],
+    query: 'pocket pair poker',
+    titolo: 'Pocket pair nel poker: la coppia servita e come giocarla',
+    definizione:
+      'Una pocket pair, o coppia servita, è formata da due carte iniziali dello stesso valore, da 2-2 ad A-A: capita circa una volta ogni 17 mani.',
+    spiegazione: [
+      'Le coppie servite sono 13, ciascuna con 6 combinazioni: 78 su 1.326, cioè il 5,9% delle mani. Nelle tabelle stanno sulla diagonale della griglia. Sono mani particolari per due motivi: partono già con una coppia, e quando arriva una terza carta dello stesso valore formano un set, uno dei punti più nascosti del poker. La probabilità di fare set al flop è dell’11,8%, circa una volta su otto e mezzo.',
+      'Negli Spin & Go le coppie contano soprattutto preflop, dove gli scontri all-in sono frequenti: una coppia bassa contro due carte più alte è un coin flip (2-2 contro A-K spaiati vince il 53%), una coppia contro una coppia più bassa vince circa l’81% delle volte. Per questo nel push/fold si spingono e si chiamano quasi tutte, anche le più basse.',
+      'Con stack profondi le coppie piccole si giocano soprattutto per il set, a patto di poter vincere abbastanza quando arriva: è il discorso delle implied odds.',
+    ],
+    esempio:
+      'In heads-up a 10 big blind l’avversario va all-in e tu hai 2-2 di big blind: la tabella chiama. Contro le carte alte sei in coin flip, e il piatto già presente rende giusto chiamare anche con un 50%.',
+    guida: {
+      testo: 'la guida al push/fold negli Spin & Go',
+      href: '/guide/push-fold-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella del big blind contro l’all-in in heads-up a 10 big blind',
+      href: '/tabelle/heads-up-bb-10bb-vs-push',
+    },
+    correlati: ['coin-flip', 'trips', 'suited', 'range'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'steal',
+    termine: 'Steal',
+    varianti: ['rubare i bui', 'blind steal', 'furto dei bui'],
+    query: 'steal poker',
+    titolo: 'Steal nel poker: cosa vuol dire rubare i bui',
+    definizione:
+      'Lo steal è un rilancio fatto dalle ultime posizioni, anche con una mano mediocre, per vincere subito i bui quando tutti prima hanno passato.',
+    spiegazione: [
+      'Quando il gioco arriva al bottone o allo small blind senza che nessuno sia entrato, nel piatto ci sono solo i bui e restano uno o due avversari, costretti a giocare fuori posizione o con mani casuali. Un rilancio in quel momento vince spesso senza combattere: è il furto dei bui. Non richiede una mano forte, perché buona parte del valore viene dai fold degli avversari.',
+      'Negli Spin & Go a tre ogni apertura del bottone è in pratica uno steal: ci sono solo due avversari, entrambi nei bui. Con 25 big blind il bottone apre il 39% delle mani; con 10 big blind lo small blind, dopo il fold del bottone, gioca più di metà delle mani contro il solo big blind. Numeri impensabili al tavolo pieno, che hanno senso proprio perché i bui da rubare sono lì.',
+      'Chi difende i bui risponde allargando le chiamate e i 3-bet: un bottone che ruba troppo trova un big blind che non passa più.',
+    ],
+    esempio:
+      'Il bottone passa e tu, small blind con 10 big blind, hai Q-5 dello stesso seme. È uno steal da manuale: la tabella va all-in, e il big blind deve passare la maggior parte delle sue mani.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella dello small blind a 10 big blind dopo il fold del bottone',
+      href: '/tabelle/spin-and-go-sb-10bb-dopo-fold',
+    },
+    correlati: ['open-raise', 'big-blind', 'fold-equity', 'button'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'button',
+    termine: 'Button',
+    varianti: ['bottone', 'dealer', 'BTN'],
+    query: 'button poker',
+    titolo: 'Button nel poker: significato del bottone e perché conta',
+    definizione:
+      'Il button, o bottone, è il segnalino che indica il mazziere di turno: chi lo ha parla per ultimo dopo il flop, la posizione migliore del tavolo.',
+    spiegazione: [
+      'Online nessuno distribuisce davvero le carte, ma il bottone resta: si sposta di un posto a ogni mano e stabilisce chi mette i bui, i due giocatori alla sua sinistra, e l’ordine di parola. Prima del flop parla per primo chi siede alla sinistra del big blind; dopo il flop parla sempre per ultimo il bottone.',
+      'Negli Spin & Go a tre il bottone è anche il primo a parlare prima del flop, perché dopo di lui ci sono solo i due bui. È la posizione da cui si apre di più: con 25 big blind la strategia di equilibrio rilancia il 39% delle mani, con 8 big blind va all-in con il 34%. In heads-up il bottone coincide con lo small blind.',
+      'Il vantaggio del bottone è l’informazione: dopo il flop decide sapendo già cosa hanno fatto gli altri due.',
+    ],
+    esempio:
+      'Hai il bottone con 25 big blind e J-9 dello stesso seme: la tabella apre a 2 big blind. Con K-4 spaiati, dallo stesso posto, passa: nemmeno la posizione migliore rende giocabile ogni mano.',
+    guida: {
+      testo: 'la guida su come si gioca uno Spin & Go',
+      href: '/guide/come-giocare-spin-and-go',
+    },
+    strumento: {
+      testo: 'la tabella del bottone a 25 big blind',
+      href: '/tabelle/spin-and-go-btn-25bb',
+    },
+    correlati: ['posizione', 'small-blind', 'big-blind', 'steal'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'cutoff',
+    termine: 'Cutoff',
+    varianti: ['cut-off', 'CO'],
+    query: 'cutoff significato poker',
+    titolo: 'Cutoff nel poker: significato e posizione al tavolo',
+    definizione:
+      'Il cutoff è il posto immediatamente a destra del bottone: l’ultimo a parlare prima del bottone e la seconda posizione migliore al tavolo.',
+    spiegazione: [
+      'Il nome viene dall’idea di «tagliare fuori» il bottone: aprendo dal cutoff si toglie al bottone la possibilità di essere il primo a rubare i bui. Al tavolo pieno, andando verso sinistra dalla prima posizione, si incontrano UTG, le posizioni centrali, hijack, cutoff e bottone; il cutoff apre molte più mani delle posizioni iniziali, perché dopo di lui restano solo bottone e bui.',
+      'Negli Spin & Go il cutoff non esiste: a tre giocatori ci sono solo bottone, small blind e big blind, e il bottone è già il primo a parlare. Il termine si incontra nei tornei multi-tavolo, nei sit and go a sei o nove giocatori e nel cash game; chi arriva da quei formati deve ricordare che a tre il bottone apre più largo di un cutoff al tavolo pieno, perché ha davanti soltanto i due bui.',
+      'In una partita a quattro giocatori il cutoff coincide con la prima posizione a parlare.',
+    ],
+    esempio:
+      'A un tavolo da sei, con tutti i giocatori prima di te che hanno passato, sei al cutoff: restano bottone e bui. Una mano come K-T spaiati è un’apertura normale da qui, mentre da UTG sarebbe spesso un fold.',
+    guida: {
+      testo: 'il confronto fra Spin & Go e sit and go',
+      href: '/guide/spin-and-go-vs-sit-and-go',
+    },
+    correlati: ['button', 'utg', 'posizione', 'open-raise'],
+    aggiornata: '2026-09-30',
+  },
+  // ---- Ondata 2, lotto 3: dopo il flop (30/09/2026) ----
+  {
+    slug: 'flop',
+    termine: 'Flop',
+    varianti: ['floppare', 'il flop'],
+    query: 'flop poker significato',
+    titolo: 'Flop nel poker: significato e cosa cambia dopo il flop',
+    definizione:
+      'Il flop sono le prime tre carte comuni scoperte sul tavolo, tutte insieme, dopo il primo giro di puntate: da lì in poi si gioca «postflop».',
+    spiegazione: [
+      'Una mano di Texas Hold’em ha quattro giri di puntate: preflop, flop, turn e river. Il flop è il momento in cui la mano cambia natura: dalle due carte private si passa a combinazioni di cinque, e la maggior parte delle mani non migliora. Una mano non accoppiata fa almeno una coppia al flop solo il 32% delle volte; due carte dello stesso seme trovano un progetto di colore l’11% delle volte e il colore fatto meno dell’1%. «Floppare» qualcosa vuol dire proprio centrarlo sul flop.',
+      'Negli Spin & Go molte mani non arrivano al flop: con stack corti si decidono all-in prima. Quando ci si arriva, di solito è in due, dopo un min-raise del bottone chiamato dal big blind, con uno stack pari a circa cinque volte il piatto a 25 big blind e sotto le tre volte a 15. Sono piatti in cui una sola puntata può già mettere in gioco tutto.',
+      'Per questo, dopo il flop, contano più i conti sullo stack rimasto che le linee lunghe dei cash game.',
+    ],
+    esempio:
+      'Hai 7-6 dello stesso seme di big blind e chiami il rilancio del bottone; il flop è 8-5-2 con due carte del tuo seme. Hai fatto un progetto di scala e uno di colore insieme: su un flop del genere si è molto più spesso favoriti di quanto sembri a guardare le sole carte alte.',
+    guida: {
+      testo: 'perché uno Spin & Go si decide prima del flop',
+      href: '/guide/perche-il-3max-hyper-turbo-si-decide-preflop',
+    },
+    correlati: ['c-bet', 'check-raise', 'flush-draw', 'gutshot'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'donk-bet',
+    termine: 'Donk bet',
+    varianti: ['donkare', 'lead', 'puntata in uscita'],
+    query: 'donk bet poker significato',
+    titolo: 'Donk bet nel poker: significato e quando ha senso',
+    definizione:
+      'La donk bet è la puntata di chi parla per primo, fuori posizione, verso il giocatore che ha rilanciato nel giro precedente, invece di lasciargli l’iniziativa.',
+    spiegazione: [
+      'La sequenza normale vuole che chi ha rilanciato preflop sia il primo a puntare dopo il flop, con la continuation bet, mentre chi ha chiamato passa. La donk bet rompe questo ordine: chi ha chiamato punta subito, «in uscita». Il nome viene da «donkey», il giocatore inesperto, perché un tempo era considerata un errore da principianti.',
+      'I solver hanno riabilitato la donk bet in situazioni precise: sui flop che favoriscono il range di chi ha chiamato, come carte basse e collegate che il bottone difficilmente ha, puntare per primi con una parte delle mani ha senso. Negli Spin & Go capita soprattutto al big blind, che difende molte mani basse contro il min-raise del bottone e trova spesso flop che le colpiscono.',
+      'Resta una puntata da usare con criterio: fatta su ogni flop, con qualunque mano, torna a essere l’errore da cui ha preso il nome.',
+    ],
+    esempio:
+      'Il bottone rilancia, tu chiami dal big blind con 6-5 e il flop è 7-4-3: hai una scala fatta, e il flop colpisce molto di più le mani basse del big blind che quelle alte del bottone. Puntare subito, invece di aspettare la sua continuation bet, fa entrare denaro nel piatto su un flop che ti è favorevole.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    correlati: ['c-bet', 'posizione', 'check-raise', 'flop'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'float',
+    termine: 'Float',
+    varianti: ['floatare', 'floating'],
+    query: 'float poker',
+    titolo: 'Float nel poker: significato e quando chiamare in posizione',
+    definizione:
+      'Il float è la chiamata di una puntata, di solito in posizione e con una mano debole, per prendere il piatto più avanti quando l’avversario mostra debolezza.',
+    spiegazione: [
+      'L’idea è semplice: chi ha rilanciato preflop punta spesso il flop per inerzia, con la continuation bet, anche senza avere niente. Chiamando in posizione, senza una mano ma con qualche possibilità di migliorare, si «galleggia» fino al turn: se l’avversario passa, una puntata porta via il piatto. Il float sfrutta l’informazione che dà il parlare per ultimi.',
+      'Funziona quando due condizioni sono vere: l’avversario punta il flop troppo spesso e rinuncia al turn, e gli stack sono abbastanza profondi da lasciare spazio a un’altra puntata. Negli Spin & Go la seconda condizione manca spesso: con poche big blind rimaste dopo il flop, la chiamata impegna già una parte grande dello stack, e il bluff successivo diventa un all-in.',
+      'Un float con qualche out, come un progetto di scala o due carte più alte del board, è molto più solido di uno fatto col nulla.',
+    ],
+    esempio:
+      'Il big blind rilancia il tuo limp in heads-up e punta un terzo del piatto sul flop K-7-2; tu hai 9-8 e sei in posizione. Chiami: se al turn passa, una puntata spesso basta a vincere, e se arriva un 10 o un 6 hai anche un progetto di scala.',
+    guida: {
+      testo: 'la guida al testa a testa negli Spin & Go',
+      href: '/guide/heads-up-spin-and-go',
+    },
+    correlati: ['c-bet', 'posizione', 'bluff', 'call'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'overbet',
+    termine: 'Overbet',
+    varianti: ['overbettare', 'puntata oltre il piatto'],
+    query: 'overbet poker',
+    titolo: 'Overbet nel poker: quando puntare più del piatto',
+    definizione:
+      'L’overbet è una puntata più grande del piatto, per esempio 12 big blind in un piatto da 8: si usa con un range fatto di mani fortissime e di bluff.',
+    spiegazione: [
+      'La misura normale di una puntata va da un terzo al piatto intero. Oltre il piatto si parla di overbet. Ha senso quando chi punta ha un range polarizzato, cioè fatto di mani molto forti e di bluff, e l’avversario ha soprattutto mani medie: con le mani forti si fa pagare di più, con i bluff si fa passare più spesso, perché chiamare un overbet richiede di avere ragione più di metà delle volte.',
+      'Un overbet del doppio del piatto chiede all’avversario il 40% di equity per chiamare, contro il 33% di una puntata al piatto e il 25% di mezzo piatto. Negli Spin & Go l’overbet coincide spesso con l’all-in: con uno stack pari a una o due volte il piatto, puntare tutto è già un overbet, e la domanda diventa se conviene impegnare le fiche subito o in due tempi.',
+      'Con un range che contiene molte mani medie l’overbet è un errore: le mani che vogliono essere chiamate vengono passate, e quelle migliori chiamano.',
+    ],
+    esempio:
+      'Sul river il piatto vale 8 big blind e ti restano 12 big blind. Hai il colore massimo, oppure niente: andare all-in è un overbet di una volta e mezza il piatto, e all’avversario con una coppia chiede di aver ragione almeno il 38% delle volte per chiamare.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    correlati: ['value-bet', 'bluff', 'pot-odds', 'nuts'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'backdoor',
+    termine: 'Backdoor',
+    varianti: ['runner-runner', 'backdoor draw', 'progetto backdoor'],
+    query: 'backdoor poker significato',
+    titolo: 'Backdoor nel poker: significato e quanto vale',
+    definizione:
+      'Un progetto backdoor ha bisogno di due carte buone, al turn e al river, per completarsi: per esempio tre carte di cuori al flop che puntano a un colore.',
+    spiegazione: [
+      'Un progetto normale, come quattro carte a colore, si completa con una sola carta. Un progetto backdoor ne richiede due di fila, ed è per questo che si chiama anche «runner-runner». Da solo vale poco: un colore backdoor arriva circa il 4% delle volte fra turn e river. Ma si somma al resto della mano, e a volte decide se una chiamata al flop è giusta o no.',
+      'L’esempio chiarisce quanto conta. A-K di cuori contro Q-Q su un flop 9-5-2 con un solo cuore vince il 30% delle volte grazie alle due carte alte e ai due progetti backdoor; con due cuori sul flop, cioè un progetto di colore vero, sale al 55%. Negli Spin & Go, dove al flop gli stack sono corti, i punti di equity dei backdoor spostano spesso una mano dal fold al call di un all-in.',
+      'Il backdoor migliora anche il gioco al turn: se la prima carta arriva, il progetto diventa normale e si ha una ragione in più per continuare.',
+    ],
+    esempio:
+      'Hai A-J di picche sul flop K-8-3 con una sola picche. Il colore è lontano, ma un turn di picche ti darebbe nove carte buone per il river, e un 10 o una Q ti aprirebbe un progetto di scala: due backdoor che rendono la mano meno morta di quanto sembri.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    correlati: ['flush-draw', 'gutshot', 'equity', 'outs'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'blocker',
+    termine: 'Blocker',
+    varianti: ['bloccante', 'blocco', 'card removal'],
+    query: 'blocker nel poker',
+    titolo: 'Blocker nel poker: significato ed esempi pratici',
+    definizione:
+      'Un blocker è una carta in mano tua che rende meno probabili certe mani dell’avversario, perché quella carta lui non può averla.',
+    spiegazione: [
+      'Il principio è la rimozione delle carte: ogni carta che hai in mano non è nel mazzo e nemmeno nelle mani altrui. Con un asso in mano le combinazioni di A-A possibili per l’avversario scendono da 6 a 3 e quelle di A-K da 16 a 12. Non si vede la sua mano, ma si sa con certezza che certe mani sono diventate più rare.',
+      'I blocker servono soprattutto a scegliere quali mani usare per un bluff o per una spinta. Negli Spin & Go è evidente nel push/fold: una mano come A-5, che da sola vale poco, è spesso un all-in migliore di mani più belle, perché l’asso riduce proprio le mani con cui l’avversario chiamerebbe. Allo stesso modo, sul river, un bluff funziona meglio se si tengono carte che rendono meno probabili le chiamate forti dell’avversario.',
+      'Il blocker non trasforma una mano cattiva in una buona: sposta la scelta quando due opzioni sono vicine.',
+    ],
+    esempio:
+      'Il bottone apre e sei small blind con 20 big blind: la tabella va all-in con A-5 dello stesso seme. La mano non è forte, ma l’asso rende meno probabili le mani con cui il bottone chiamerebbe, come A-A, A-K o A-Q, e aumenta le volte in cui passa.',
+    guida: {
+      testo: 'la guida al push/fold negli Spin & Go',
+      href: '/guide/push-fold-spin-and-go',
+    },
+    correlati: ['bluff', 'range', 'equity', 'nuts'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'spr',
+    termine: 'SPR',
+    varianti: ['stack to pot ratio', 'rapporto stack-piatto'],
+    query: 'spr poker',
+    titolo: 'SPR nel poker: il rapporto fra stack e piatto',
+    definizione:
+      'L’SPR è il rapporto fra lo stack effettivo e il piatto all’inizio del flop: dice quante puntate restano prima dell’all-in e quanto impegnarsi con una mano.',
+    spiegazione: [
+      'Si calcola dividendo lo stack più corto fra i giocatori coinvolti per il piatto al flop. Con 23 big blind di stack e un piatto di 4,5 l’SPR è circa 5; con 13 big blind e lo stesso piatto è sotto 3. Più l’SPR è basso, meno decisioni restano: con un SPR di 1 o 2 una coppia buona è quasi sempre una mano da giocare fino in fondo, con un SPR di 10 la stessa coppia può essere in difficoltà.',
+      'Negli Spin & Go l’SPR è basso quasi sempre. Dopo un min-raise del bottone chiamato dal big blind, con 25 big blind di partenza, si vede il flop con un SPR intorno a 5; con 15 big blind scende sotto 3. È il motivo per cui, dopo il flop, molte scelte si riducono a una domanda: questa mano vale tutto lo stack o no?',
+      'L’SPR aiuta a pianificare prima: sapendolo già al preflop, si capisce quali mani reggono un impegno totale e quali no.',
+    ],
+    esempio:
+      'Chiami il rilancio del bottone dal big blind con 15 big blind: al flop il piatto vale 4,5 e ti restano 13, un SPR di circa 3. Con la coppia massima su un flop secco, qui non si pensa a come controllare il piatto: si pensa a come mettere dentro tutto lo stack.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    correlati: ['stack', 'deep-stack', 'short-stack', 'pot-odds'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'outs',
+    termine: 'Outs',
+    varianti: ['out', 'carte buone', 'regola del 2 e del 4'],
+    query: 'outs poker',
+    titolo: 'Outs nel poker: cosa sono e come si contano',
+    definizione:
+      'Gli outs sono le carte ancora nel mazzo che migliorano la tua mano fino a farla diventare, con buona probabilità, la migliore.',
+    spiegazione: [
+      'Un progetto di colore al flop ha 9 outs, le carte rimaste di quel seme; un progetto di scala aperto ne ha 8; una scala a incastro, il gutshot, ne ha 4. Contarli serve a stimare la probabilità di migliorare: dal flop al river un progetto di colore si completa il 35% delle volte, uno di scala aperta il 31%, un gutshot il 16%.',
+      'La regola pratica è quella del 2 e del 4: moltiplicando gli outs per 4 si ottiene circa la probabilità di migliorare fra turn e river, moltiplicandoli per 2 quella di migliorare con la sola carta successiva. Con 9 outs, 36% e 18%: numeri vicini a quelli esatti, 35% e 19%. Negli Spin & Go, dove al flop gli stack sono corti e un call spesso vale un all-in, la regola del 4 è quella che serve.',
+      'Non tutti gli outs sono puliti: una carta che completa il tuo colore ma accoppia il board può dare un full all’avversario. Nel dubbio si contano per difetto.',
+    ],
+    esempio:
+      'Hai 9-8 contro A-A e il flop è J-7-2: per la scala 7-8-9-10-J ti serve un 10, cioè 4 outs, circa il 16% fra turn e river. Contando anche i progetti backdoor l’equity reale sale al 20%: comunque troppo poco per chiamare un all-in grosso.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    correlati: ['gutshot', 'flush-draw', 'pot-odds', 'equity'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'implied-odds',
+    termine: 'Implied odds',
+    varianti: ['quote implicite', 'odds implicite'],
+    query: 'implied odds poker',
+    titolo: 'Implied odds nel poker: significato e quando contano',
+    definizione:
+      'Le implied odds sono le quote di piatto che tengono conto anche delle fiche che si potranno vincere dopo, se il progetto arriva, oltre a quelle già in mezzo.',
+    spiegazione: [
+      'Le pot odds guardano solo il piatto presente: quanto costa chiamare rispetto a quanto si può vincere adesso. A volte una chiamata sembra cattiva con quei numeri e diventa buona pensando al seguito: se il progetto arriva, l’avversario pagherà altre puntate. La differenza fra le due quote sono le implied odds. È il ragionamento con cui si chiama con una coppia bassa sperando nel set, che arriva al flop meno di una volta su otto.',
+      'Le implied odds dipendono dallo stack: servono fiche dietro da vincere. È qui che gli Spin & Go cambiano tutto: con 10-15 big blind non c’è quasi niente da vincere dopo, e una chiamata giustificata solo dal «se arriva, lo pago tutto» non regge. Per questo i range di call nel push/fold si basano sull’equity immediata, non sulle speranze future.',
+      'Esiste anche il rovescio, le reverse implied odds: quando si migliora ma con la mano sbagliata, e si finisce per pagare di più a chi ha il punto più alto.',
+    ],
+    esempio:
+      'Con 100 big blind di stack, chiamare un rilancio da 3 big blind con 5-5 per cercare il set ha senso: quando arriva, puoi vincere molte volte quei 3 big blind. Con 12 big blind di stack lo stesso ragionamento non regge, perché anche vincendo tutto non si recupera il costo delle volte in cui il set non arriva.',
+    guida: {
+      testo: 'la guida al push/fold negli Spin & Go',
+      href: '/guide/push-fold-spin-and-go',
+    },
+    correlati: ['pot-odds', 'outs', 'deep-stack', 'equity'],
+    aggiornata: '2026-09-30',
+  },
+  // ---- Ondata 2, lotto 4: mani, stack e torneo (30/09/2026) ----
+  {
+    slug: 'set',
+    termine: 'Set',
+    varianti: ['tris con la coppia servita', 'set mining'],
+    query: 'set poker significato',
+    titolo: 'Set nel poker: significato e differenza con i trips',
+    definizione:
+      'Il set è un tris fatto con una coppia servita più una carta uguale sul board: per esempio 7-7 in mano e un 7 al flop.',
+    spiegazione: [
+      'Set e trips sono entrambi un tris, ma nascono in modo diverso. Il set usa due carte proprie e una comune; i trips una carta propria e due comuni, cioè una coppia già sul board. La differenza conta: il set è quasi invisibile, perché sul tavolo c’è una sola carta di quel valore, mentre con i trips la coppia sul board mette in allarme tutti.',
+      'Con una coppia servita si fa set al flop l’11,8% delle volte, circa una su otto e mezzo. Quando capita, di solito si è molto avanti: 7-7 contro K-K su un flop 7-4-2 vince il 91% delle volte. Negli Spin & Go il set arriva spesso in piatti già grandi rispetto agli stack, e il problema non è tanto come farsi pagare quanto non spaventare l’avversario prima che abbia messo dentro le fiche.',
+      'Il «set mining», chiamare con una coppia bassa solo per cercare il set, richiede stack profondi: con poche big blind la vincita quando arriva non ripaga le volte in cui non arriva.',
+    ],
+    esempio:
+      'Chiami dal big blind con 7-7 e il flop è 7-4-2 di semi diversi. Il bottone ha rilanciato preflop e probabilmente punterà: lasciarlo puntare per primo, invece di uscire tu, spesso fa entrare più fiche nel piatto.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    correlati: ['trips', 'pocket-pair', 'implied-odds', 'flop'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'overpair',
+    termine: 'Overpair',
+    varianti: ['over pair', 'coppia sopra il board'],
+    query: 'poker overpair che significa',
+    titolo: 'Overpair nel poker: significato e quanto è forte',
+    definizione:
+      'Un’overpair è una coppia servita più alta di tutte le carte del board: per esempio Q-Q su un flop J-8-3.',
+    spiegazione: [
+      'È una delle mani più comode da giocare dopo il flop: batte ogni mano che ha fatto una coppia sul board, compresa la coppia massima con il kicker migliore. Q-Q su J-8-3 contro A-J vince circa l’80% delle volte. La sua debolezza sono i punti che la superano: doppie coppie, set, scale, e le carte più alte che possono arrivare al turn e al river.',
+      'Negli Spin & Go, con stack che al flop valgono poche volte il piatto, un’overpair è quasi sempre una mano da giocare fino all’all-in. La domanda non è se impegnarsi ma come mettere dentro le fiche nel modo che fa pagare di più: puntare subito su un board con progetti, lasciare spazio all’avversario su un board secco.',
+      'Più il board è coordinato, più l’overpair perde valore: J-10-9 dello stesso seme fa scale e colori che una coppia di donne non batte.',
+    ],
+    esempio:
+      'Hai Q-Q, 15 big blind di stack, e il flop è J-8-3 di semi diversi dopo il tuo rilancio chiamato. Con un piatto di 4,5 big blind e 13 di stack, l’overpair va giocata per tutto lo stack: la puntata e l’all-in sono solo il modo di arrivarci.',
+    guida: {
+      testo: 'la guida alla strategia degli Spin & Go',
+      href: '/guide/strategia-spin-and-go',
+    },
+    correlati: ['pocket-pair', 'kicker', 'set', 'spr'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'effective-stack',
+    termine: 'Stack effettivo',
+    varianti: ['effective stack', 'stack effettivi'],
+    query: 'effective stack poker',
+    titolo: 'Stack effettivo nel poker: cos’è e perché conta',
+    definizione:
+      'Lo stack effettivo è il più piccolo fra gli stack dei giocatori coinvolti in una mano: è il massimo che si può vincere o perdere contro di loro.',
+    spiegazione: [
+      'Se hai 30 big blind e il tuo avversario ne ha 8, la mano fra voi vale al massimo 8 big blind a testa: le tue 22 in più non possono entrare in gioco. Per questo tutte le decisioni si prendono sullo stack effettivo, non sul proprio. Un giocatore con molte fiche che affronta uno corto gioca, di fatto, a stack corto.',
+      'Negli Spin & Go è il numero che sceglie la tabella giusta. Le tabelle preflop sono costruite per profondità: la profondità da guardare è lo stack effettivo fra te e chi può ancora giocare contro di te. Quando gli stack sono molto diversi, per esempio un giocatore corto e due profondi, serve una tabella asimmetrica, perché ogni coppia di giocatori ha il suo stack effettivo.',
+      'Lo stack effettivo cambia durante la mano: se uno dei giocatori esce, si ricalcola sugli altri.',
+    ],
+    esempio:
+      'Sei al bottone con 25 big blind, lo small blind ne ha 25 e il big blind appena 6. Contro lo small blind la mano vale fino a 25 big blind, contro il big blind al massimo 6: se lo small blind passa, fra te e il big blind si gioca uno scontro a 6 big blind, anche se tu hai quattro volte le sue fiche.',
+    strumento: {
+      testo: 'le tabelle preflop GTO, anche nei formati in cui un giocatore è più corto degli altri',
+      href: '/tabelle',
+    },
+    correlati: ['stack', 'short-stack', 'deep-stack', 'push-fold'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'chip-leader',
+    termine: 'Chip leader',
+    varianti: ['chipleader', 'capoclassifica in fiche'],
+    query: 'chip leader poker',
+    titolo: 'Chip leader nel poker: significato e come si gioca',
+    definizione:
+      'Il chip leader è il giocatore con più fiche al tavolo o nel torneo in un certo momento.',
+    spiegazione: [
+      'Essere in testa al conteggio delle fiche dà due vantaggi: si può perdere un piatto senza essere eliminati, e si può coprire chiunque, cioè andare all-in sapendo che l’avversario rischia tutto e tu no. Nei tornei con molti premi questo si traduce in pressione: chi è corto deve evitare gli scontri per non uscire prima di un premio più alto, e il chip leader lo sfrutta.',
+      'Negli Spin & Go la pressione è molto minore. Con i moltiplicatori più comuni vince tutto il primo, e il secondo e il terzo posto valgono zero: chi è corto non ha un premio da proteggere, quindi non passa per paura. Il chip leader ha più fiche, e quindi più probabilità di vincere, ma non può contare sulla prudenza altrui come in un sit and go classico.',
+      'Resta vero che le fiche in più danno margine: si può rinunciare a una spinta marginale senza che lo stack diventi troppo corto.',
+    ],
+    esempio:
+      'Con 40 big blind contro due avversari da 5, in un sit and go che paga i primi due, i due corti eviterebbero di giocare fra loro e con te. In uno Spin & Go che paga solo il primo non hanno motivo di aspettare: ti spingeranno contro con range larghi, e tu dovrai chiamare più spesso.',
+    guida: {
+      testo: 'la guida all’ICM negli Spin & Go',
+      href: '/guide/icm-spin-and-go',
+    },
+    correlati: ['stack', 'icm', 'chip', 'sit-and-go'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'chip-ev',
+    termine: 'Chip EV',
+    varianti: ['cEV', 'EV in fiche', 'chipEV'],
+    query: 'chip ev poker',
+    titolo: 'Chip EV nel poker: cos’è e quando coincide col valore reale',
+    definizione:
+      'Il chip EV è il valore atteso di una decisione misurato in fiche, senza tradurlo in denaro: quante fiche si guadagnano o si perdono in media.',
+    spiegazione: [
+      'In un cash game fiche e denaro sono la stessa cosa. In un torneo no: il valore di uno stack dipende dai premi, e raddoppiare le fiche non raddoppia sempre il valore in euro. Il chip EV guarda solo le fiche; l’EV in denaro, calcolato con modelli come l’ICM, guarda i premi. Quando i due divergono, una decisione può essere giusta in fiche e sbagliata in soldi.',
+      'Negli Spin & Go, con i moltiplicatori più comuni, vince tutto il primo: in quel caso il valore di uno stack è proporzionale alle fiche, e chip EV e EV in denaro coincidono. È la ragione per cui le tabelle degli Spin & Go si calcolano in fiche, mentre nei sit and go con più premi servono i calcoli ICM. Con i moltiplicatori rari che pagano più posti la differenza torna, ma pesa poco sul totale.',
+      'Nei programmi di tracciamento la stessa sigla indica anche la curva «in EV», che toglie la fortuna delle mani all-in.',
+    ],
+    esempio:
+      'Un all-in al bottone vale +0,4 big blind in fiche secondo la tabella. In uno Spin & Go che paga solo il primo è anche la scelta migliore in denaro; in un sit and go che paga tre posti, vicino alla bolla, la stessa spinta potrebbe costare soldi pur guadagnando fiche.',
+    guida: {
+      testo: 'la guida all’ICM negli Spin & Go',
+      href: '/guide/icm-spin-and-go',
+    },
+    correlati: ['ev', 'icm', 'chip', 'varianza'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'bubble',
+    termine: 'Bolla (bubble)',
+    varianti: ['bubble', 'bolla', 'bubble boy', 'essere in bolla'],
+    query: 'bubble poker',
+    titolo: 'Bolla nel poker: cos’è la bubble e come si gioca',
+    definizione:
+      'La bolla è il momento di un torneo in cui manca una sola eliminazione per entrare nei premi: chi esce in bolla, il «bubble boy», non vince nulla.',
+    spiegazione: [
+      'Vicino alla bolla il valore delle fiche cambia: perdere tutto costa più di quanto valga raddoppiare, perché chi resta in gioco un’altra eliminazione entra comunque a premio. Per questo gli stack medi e corti stringono il gioco, e chi ha molte fiche li mette sotto pressione. È il terreno classico dei calcoli ICM.',
+      'Negli Spin & Go la bolla, nella maggior parte delle partite, non esiste: con i moltiplicatori più comuni paga solo il primo, e il secondo posto vale quanto il terzo. Esistono però moltiplicatori che pagano due posti, e lì la bolla c’è fin dalla prima mano, perché si parte già in tre. Riconoscere quale situazione si sta giocando cambia le chiamate: senza bolla si chiama per equity, con la bolla bisogna chiamare più stretto.',
+      'Il termine si usa anche per il satellite, dove la bolla separa chi vince il biglietto da chi non vince niente.',
+    ],
+    esempio:
+      'In un sit and go a sei che paga due posti, a quattro giocatori rimasti la bolla è lontana; a tre è arrivata, e una chiamata marginale di un all-in va evitata anche se in fiche è giusta. In uno Spin & Go che paga solo il primo, la stessa chiamata si fa.',
+    guida: {
+      testo: 'la guida all’ICM negli Spin & Go',
+      href: '/guide/icm-spin-and-go',
+    },
+    correlati: ['icm', 'itm', 'sit-and-go', 'chip-ev'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'bad-beat',
+    termine: 'Bad beat',
+    varianti: ['brutta sconfitta', 'suckout'],
+    query: 'bad beat significato',
+    titolo: 'Bad beat nel poker: significato e come gestirlo',
+    definizione:
+      'Un bad beat è una mano persa da netti favoriti, di solito con le fiche già tutte in mezzo, per una carta arrivata al turn o al river.',
+    spiegazione: [
+      'Il bad beat classico è un all-in preflop con A-A contro 7-2 spaiati, che la mano peggiore vince circa il 13% delle volte, oppure un set battuto al river da un colore. Non è un errore di chi perde: la decisione era giusta, il risultato no. Nel lungo periodo chi mette le fiche dentro da favorito vince, ma nel breve i bad beat arrivano, e a grappoli.',
+      'Negli Spin & Go se ne vedono molti, per una ragione strutturale: si gioca tanto, a stack corti, e una grande parte dei piatti si decide all-in preflop, dove anche le mani migliori perdono spesso. A-A contro K-K vince circa l’81%: una volta su cinque perde. Per questo è utile guardare i propri risultati in EV, che mostrano quanto si sarebbe vinto con la sola matematica delle mani all-in.',
+      'Il rischio vero non è il bad beat ma la reazione: il tilt che porta a giocare peggio le mani successive.',
+    ],
+    esempio:
+      'Vai all-in con A-A e vieni chiamato da K-K: sei avanti circa 81 a 19. Il board porta un re al river e perdi. La giocata era perfetta; su cinque mani così, in media, se ne perde una.',
+    guida: {
+      testo: 'la guida alla varianza negli Spin & Go',
+      href: '/guide/varianza-spin-and-go',
+    },
+    strumento: {
+      testo: 'il replayer, per rivedere la mano e l’equity al momento dell’all-in',
+      href: '/replayer',
+    },
+    correlati: ['cooler', 'tilt', 'varianza', 'equity'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'slowroll',
+    termine: 'Slowroll',
+    varianti: ['slow roll', 'slowrollare'],
+    query: 'slowroll poker significato',
+    titolo: 'Slowroll nel poker: significato e perché è scorretto',
+    definizione:
+      'Lo slowroll è il gesto di tardare apposta a mostrare o chiamare con una mano vincente, lasciando credere all’avversario di aver vinto.',
+    spiegazione: [
+      'Succede soprattutto al river o dopo un all-in: il giocatore con la mano migliore aspetta, finge di pensarci, oppure mostra prima la carta meno importante, mentre l’altro crede già di aver preso il piatto. Non viola le regole del gioco, ma è considerato uno dei comportamenti più scorretti al tavolo, perché serve solo a umiliare l’avversario.',
+      'Online lo slowroll prende la forma del tempo: lasciar scorrere tutto il timer prima di chiamare un all-in con le nuts. Negli Spin & Go, dove le decisioni sono veloci e la maggior parte delle mani finisce all-in, capita più di rado, ma quando capita si nota. La regola di cortesia è semplice: con la mano migliore si chiama e si mostra subito.',
+      'Diverso è pensare davvero a una decisione difficile: prendersi il tempo per una chiamata incerta è normale e non è uno slowroll.',
+    ],
+    esempio:
+      'L’avversario va all-in al river e tu hai la scala massima. Aspetti trenta secondi con il timer che scorre prima di chiamare, poi chiami: il risultato non cambia, ma è uno slowroll. Chiamare subito è la regola non scritta di ogni tavolo.',
+    correlati: ['nuts', 'muck', 'tilt', 'call'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'hijack',
+    termine: 'Hijack',
+    varianti: ['HJ', 'hi-jack'],
+    query: 'hijack significato',
+    titolo: 'Hijack nel poker: significato e posizione al tavolo',
+    definizione:
+      'L’hijack è il posto immediatamente a destra del cutoff, due posti prima del bottone: la prima delle posizioni finali di un tavolo da sei o più.',
+    spiegazione: [
+      'Il nome richiama il «dirottamento»: aprendo dall’hijack si toglie l’iniziativa al cutoff e al bottone, che sono le posizioni da cui si ruba di più. Al tavolo da sei le posizioni sono UTG, hijack, cutoff, bottone e i due bui; al tavolo da nove l’hijack è preceduto da UTG e dalle posizioni centrali. Dall’hijack si apre più largo che dalle prime posizioni, ma meno che dal cutoff, perché dietro restano tre giocatori prima dei bui.',
+      'Negli Spin & Go, a tre giocatori, l’hijack non esiste: c’è solo il bottone, con i due bui. Il termine torna utile a chi gioca anche tornei multi-tavolo o cash game, e serve a leggere materiali di strategia scritti per tavoli pieni.',
+      'Contare le posizioni dal bottone verso destra è il modo più sicuro per non confonderle: bottone, cutoff, hijack.',
+    ],
+    esempio:
+      'Al tavolo da sei tutti passano fino a te, che sei in hijack con A-9 spaiati: davanti hai cutoff, bottone e bui. Aprire è normale; con la stessa mano da UTG, con cinque giocatori ancora da parlare, spesso si passa.',
+    correlati: ['cutoff', 'button', 'utg', 'posizione'],
+    aggiornata: '2026-09-30',
+  },
+  // ---- Ondata 2, lotto 5: giocatori e strumenti (30/09/2026) ----
+  {
+    slug: 'nit',
+    termine: 'Nit',
+    varianti: ['nitty', 'rock', 'giocatore chiuso'],
+    query: 'nit poker significato',
+    titolo: 'Nit nel poker: significato e come si gioca contro',
+    definizione:
+      'Nit è il giocatore molto stretto, che entra in pochissimi piatti e solo con mani forti: il contrario del giocatore largo e aggressivo.',
+    spiegazione: [
+      'Il nit si riconosce dai numeri: un VPIP basso, cioè una piccola percentuale di mani giocate volontariamente, e rilanci che arrivano quasi solo con le mani migliori. Il suo gioco è prevedibile: quando entra in un piatto ha quasi sempre qualcosa, e quando punta forte ha spesso il meglio.',
+      'Negli Spin & Go giocare da nit è un errore costoso. La struttura hyper turbo alza i bui ogni pochi minuti, e chi aspetta le mani buone li vede sparire dal proprio stack mentre gli avversari rubano. Con 10 big blind dal bottone la strategia di equilibrio gioca più di un terzo delle mani; un nit che ne gioca la metà di quelle arriva al testa a testa con uno stack troppo corto per avere scelta.',
+      'Contro un nit si fa il contrario: si rubano i suoi bui senza sosta e si passa quando rilancia, perché il suo range di rilancio è fatto quasi solo di mani forti.',
+    ],
+    esempio:
+      'Lo small blind passa quasi sempre e rilancia solo con coppie alte e assi forti. Dal bottone lo attacchi con aperture larghe, e quando una volta ti rilancia all-in con 10 big blind lasci perdere anche A-10: contro il suo range sei dietro.',
+    guida: {
+      testo: 'la guida agli errori più comuni negli Spin & Go',
+      href: '/guide/errori-comuni-spin-and-go',
+    },
+    correlati: ['vpip', 'pfr', 'exploit', 'reg'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'calling-station',
+    termine: 'Calling station',
+    varianti: ['station', 'giocatore che chiama tutto'],
+    query: 'calling station poker significato',
+    titolo: 'Calling station nel poker: significato e come batterla',
+    definizione:
+      'La calling station è il giocatore che chiama troppo e rilancia poco: vede il piatto fino alla fine con mani medie o deboli, raramente passa.',
+    spiegazione: [
+      'Il nome dice tutto: una «stazione» dove ogni puntata si ferma a chiamare. La calling station non bluffa quasi mai e non ama rilanciare, ma odia passare: con una coppia bassa o un progetto qualsiasi resta nella mano fino al river. Contro di lei il bluff non funziona, perché nessuna puntata la fa passare.',
+      'La risposta è semplice da dire e difficile da fare: niente bluff, e puntate di valore più grandi e più frequenti, anche con mani che contro altri giocatori si giocherebbero con cautela. Negli Spin & Go, dove molti piatti finiscono all-in preflop, questo significa soprattutto allargare le spinte di valore contro chi chiama troppo e stringere quelle fatte per far passare.',
+      'È l’esempio più chiaro di gioco di sfruttamento: si abbandona l’equilibrio perché l’avversario lo abbandona per primo.',
+    ],
+    esempio:
+      'Sul river hai la coppia massima con un kicker medio e l’avversario ha chiamato su ogni strada. Contro un giocatore normale una puntata piccola basterebbe; contro una calling station punti forte, perché chiamerà comunque con mani peggiori.',
+    guida: {
+      testo: 'la guida agli errori più comuni negli Spin & Go',
+      href: '/guide/errori-comuni-spin-and-go',
+    },
+    correlati: ['exploit', 'value-bet', 'bluff', 'fish'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'fish',
+    termine: 'Fish',
+    varianti: ['pesce', 'giocatore ricreativo', 'donk'],
+    query: 'fish nel poker significato',
+    titolo: 'Fish nel poker: significato e da dove viene',
+    definizione:
+      'Fish, «pesce», è il nome gergale del giocatore debole o occasionale, che commette errori di strategia e al tavolo perde più di quanto dovrebbe.',
+    spiegazione: [
+      'Il gergo del poker è pieno di animali: il fish è il pesce che gli squali mangiano, e il termine indica chi gioca senza una strategia solida, spesso per divertimento. Non descrive una persona ma uno stile: chiamare troppo, giocare troppe mani, non adattarsi agli stack. Chiunque, all’inizio, è stato il pesce di qualche tavolo.',
+      'Negli Spin & Go il campo è misto: accanto ai giocatori regolari, che giocano molte partite e studiano, ci sono molti giocatori occasionali. Riconoscere gli errori tipici, come la chiamata troppo larga di un all-in o la spinta troppo stretta, è ciò che permette di adattare le proprie scelte a chi si ha davanti invece di giocare sempre allo stesso modo.',
+      'Il nome di questa scuola gioca proprio su questa parola: da pesce si parte, e con lo studio si smette di esserlo.',
+    ],
+    esempio:
+      'Un avversario chiama all-in con K-3 spaiati dopo aver passato per venti mani di fila. Non è necessariamente un pesce: può essere tilt, stanchezza o un errore isolato. Un giudizio si dà sulle tendenze di molte mani, non su una sola.',
+    guida: {
+      testo: 'la guida agli errori più comuni negli Spin & Go',
+      href: '/guide/errori-comuni-spin-and-go',
+    },
+    correlati: ['reg', 'calling-station', 'exploit', 'tilt'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'leak',
+    termine: 'Leak',
+    varianti: ['falla', 'leak finder', 'errore ricorrente'],
+    query: 'leak poker',
+    titolo: 'Leak nel poker: cos’è e come trovare i propri errori',
+    definizione:
+      'Un leak è un errore ricorrente nel proprio gioco, una «falla» da cui escono fiche mano dopo mano, spesso senza che il giocatore se ne accorga.',
+    spiegazione: [
+      'Un singolo errore capita a tutti; un leak è un errore che si ripete sempre nello stesso punto: chiamare troppo gli all-in dal big blind, non difendere lo small blind, passare troppo in heads-up. Preso da solo costa poco, ma moltiplicato per migliaia di mani diventa la differenza fra un risultato positivo e uno negativo.',
+      'Negli Spin & Go i leak più frequenti stanno nel preflop, perché è lì che si prendono quasi tutte le decisioni: un range di spinta troppo stretto a 8 big blind, o un range di chiamata troppo largo contro l’all-in del bottone. Si trovano confrontando le proprie scelte con le tabelle e guardando le statistiche per posizione e profondità nel proprio storico.',
+      'Trovare un leak è metà del lavoro: l’altra metà è allenarsi finché la scelta corretta diventa automatica.',
+    ],
+    esempio:
+      'Dal proprio storico emerge che, di small blind contro la spinta del bottone a 10 big blind, si chiama quasi il doppio delle mani indicate dalla tabella, che ne chiama circa una su cinque. È un leak preciso, con una causa precisa, e si corregge con l’allenamento su quella sola situazione.',
+    guida: {
+      testo: 'la guida agli errori più comuni negli Spin & Go',
+      href: '/guide/errori-comuni-spin-and-go',
+    },
+    strumento: {
+      testo: 'l’allenamento sulle tabelle, filtrando posizione e profondità',
+      href: '/allenamento',
+    },
+    correlati: ['exploit', 'hud', 'tilt', 'range'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'tracker',
+    termine: 'Tracker',
+    varianti: ['software di tracciamento', 'database delle mani'],
+    query: 'tracker poker',
+    titolo: 'Tracker nel poker: cos’è e cosa misura',
+    definizione:
+      'Un tracker è un programma che importa le mani giocate online in un database e ne ricava statistiche sul proprio gioco e su quello degli avversari.',
+    spiegazione: [
+      'Il tracker legge gli storici delle mani che il programma della sala salva sul computer, le archivia e le rende interrogabili: quante mani si giocano da ogni posizione, con che frequenza si va all-in, quanto si vince in una situazione precisa. Molti tracker mostrano anche un HUD, cioè le statistiche degli avversari sovrapposte al tavolo durante il gioco.',
+      'Negli Spin & Go il tracker serve soprattutto allo studio dopo la sessione: le partite sono veloci e gli avversari cambiano di continuo, quindi le statistiche su un singolo avversario si accumulano lentamente. Quello che rende è il proprio database: i risultati in EV, le decisioni per profondità e posizione, i report su situazioni come la difesa del big blind contro la spinta dello small blind.',
+      'Prima di usarne uno conviene verificare le regole della sala su programmi di supporto e HUD, che cambiano da una piattaforma all’altra.',
+    ],
+    esempio:
+      'Filtri nel tracker le mani giocate da small blind a 8-12 big blind dopo il fold del bottone e confronti le spinte con la tabella: scopri di passare troppe mani con un asso debole. È un’informazione che dieci sessioni «a sensazione» non danno.',
+    guida: {
+      testo: 'la guida a tracker e HUD per gli Spin & Go',
+      href: '/guide/tracker-hud-spin-and-go',
+    },
+    strumento: {
+      testo: 'la libreria dei documenti, con filtri e report per il tracker',
+      href: '/docs',
+    },
+    correlati: ['hud', 'hand-history', 'vpip', 'leak'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'hand-history',
+    termine: 'Hand history',
+    varianti: ['storico delle mani', 'HH', 'history'],
+    query: 'hand history poker',
+    titolo: 'Hand history nel poker: cos’è e come si usa',
+    definizione:
+      'La hand history è il registro testuale di una mano giocata online: posti, stack, carte, azioni e risultato, scritti dal programma della sala.',
+    spiegazione: [
+      'Ogni sala salva le mani in file di testo, con un formato proprio: chi era seduto dove, quante fiche aveva, chi ha fatto cosa in ogni giro, quali carte sono uscite e chi ha vinto. Sono i file che leggono i tracker e i replayer, e sono la materia prima di qualunque revisione seria del proprio gioco.',
+      'Negli Spin & Go la hand history è particolarmente utile per due cose: rivedere le mani decisive, spesso gli all-in del testa a testa, e calcolare l’equity al momento in cui le fiche sono entrate. Una mano persa da favoriti e una persa da sfavoriti fanno lo stesso male, ma dicono cose opposte sul proprio gioco.',
+      'Condividere una mano con un coach o con altri giocatori è il modo più rapido per ricevere un parere: basta la history, senza bisogno di raccontarla a memoria.',
+    ],
+    esempio:
+      'Carichi la history dell’ultimo Spin & Go nel replayer e rivedi l’all-in finale: avevi A-9 spaiati contro K-Q spaiati, e il replayer mostra che eri avanti con circa il 58% di equity. La mano è andata male, la decisione no.',
+    guida: {
+      testo: 'la guida a tracker e HUD per gli Spin & Go',
+      href: '/guide/tracker-hud-spin-and-go',
+    },
+    strumento: {
+      testo: 'il replayer delle mani, che legge le history e calcola l’equity',
+      href: '/replayer',
+    },
+    correlati: ['tracker', 'hud', 'equity', 'bad-beat'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'rng',
+    termine: 'RNG',
+    varianti: ['random number generator', 'generatore di numeri casuali'],
+    query: 'rng poker',
+    titolo: 'RNG nel poker: cos’è il generatore di numeri casuali',
+    definizione:
+      'L’RNG, generatore di numeri casuali, è il software che mescola il mazzo nel poker online e, negli Spin & Go, estrae il moltiplicatore del montepremi.',
+    spiegazione: [
+      'Online non esiste un mazziere: l’ordine delle carte lo decide un programma che produce sequenze imprevedibili. Da lui dipendono le carte distribuite e, nei formati a montepremi variabile come gli Spin & Go, l’estrazione del moltiplicatore prima della partita. La casualità del generatore è uno dei requisiti che le piattaforme autorizzate devono rispettare e documentare.',
+      'Quasi ogni sospetto di «gioco truccato» chiama in causa l’RNG, e quasi sempre il problema è un altro: la distribuzione dei moltiplicatori è molto sbilanciata, e la memoria ricorda le mani perse meglio di quelle vinte. Un campione di qualche centinaio di partite oscilla molto più di quanto l’intuito si aspetti, e sembra sospetto anche quando è perfettamente normale.',
+      'Il modo onesto di rispondere al sospetto non è fidarsi né diffidare: è contare, sul proprio storico, e confrontare con quello che la probabilità prevede.',
+    ],
+    esempio:
+      'Dopo 300 partite senza un moltiplicatore alto viene naturale pensare a un RNG storto. Ma se quel moltiplicatore esce, per esempio, una volta ogni mille partite, non vederlo in 300 è il risultato più probabile, non un’anomalia.',
+    guida: {
+      testo: 'la guida sugli Spin & Go truccati e su cosa dicono i numeri',
+      href: '/guide/spin-and-go-truccati',
+    },
+    strumento: {
+      testo: 'il simulatore di varianza',
+      href: '/simulatore-varianza',
+    },
+    correlati: ['moltiplicatore', 'varianza', 'downswing', 'bad-beat'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'rebuy',
+    termine: 'Rebuy e add-on',
+    varianti: ['rebuy', 'add-on', 'add on', 'riacquisto'],
+    query: 'rebuy poker significato',
+    titolo: 'Rebuy e add-on nel poker: significato e differenze',
+    definizione:
+      'Il rebuy è il riacquisto di fiche in un torneo dopo averle perse; l’add-on è un acquisto extra, di solito unico, aperto a tutti a fine periodo di rebuy.',
+    spiegazione: [
+      'Nei tornei con rebuy, per un periodo iniziale stabilito, chi perde lo stack o scende sotto una soglia può ricomprare fiche pagando di nuovo il buy-in. Alla fine di quel periodo arriva l’add-on: una quantità di fiche in più che tutti possono acquistare una volta sola. Sono formati che fanno crescere il montepremi, ma anche la spesa effettiva di chi li gioca: il buy-in vero è la somma di tutti gli acquisti.',
+      'Negli Spin & Go non esistono né rebuy né add-on: si paga un buy-in, si ricevono le fiche iniziali e chi le perde è fuori. Anche per questo il calcolo dei risultati è semplice, un buy-in per partita, mentre nei tornei con rebuy il ROI va calcolato sulla spesa reale e non sul prezzo di iscrizione.',
+      'Chi viene da quei tornei deve disabituarsi al gioco molto largo della fase di rebuy: negli Spin & Go ogni stack perso è definitivo.',
+    ],
+    esempio:
+      'Un torneo da 10 euro con rebuy e add-on: se si fanno due rebuy e l’add-on, il costo reale è di 40 euro. Chi confronta quel torneo con quattro Spin & Go da 10 euro deve usare 40, non 10.',
+    guida: {
+      testo: 'il confronto fra Spin & Go e sit and go',
+      href: '/guide/spin-and-go-vs-sit-and-go',
+    },
+    correlati: ['buy-in', 'mtt', 'roi', 'sit-and-go'],
+    aggiornata: '2026-09-30',
+  },
+  {
+    slug: 'straddle',
+    termine: 'Straddle',
+    varianti: ['buio volontario', 'straddlare'],
+    query: 'straddle poker significato',
+    titolo: 'Straddle nel poker: significato e perché non c’è nei tornei',
+    definizione:
+      'Lo straddle è un buio volontario, di solito il doppio del big blind, messo prima di vedere le carte dal giocatore alla sinistra del big blind.',
+    spiegazione: [
+      'Chi fa straddle paga in anticipo una puntata più alta del big blind e in cambio ottiene di parlare per ultimo nel primo giro, come fosse un terzo buio. Il risultato è un piatto più grande fin dall’inizio e stack effettivi più corti rispetto ai bui. È un’usanza dei cash game dal vivo, ammessa o meno a seconda della sala.',
+      'Nei tornei, e quindi negli Spin & Go, lo straddle non esiste: i bui sono fissati dalla struttura e nessuno può aggiungerne. Conta però l’idea che c’è dietro: più il piatto iniziale è grande rispetto agli stack, più conviene giocare largo e aggressivo per prenderlo. È lo stesso principio per cui, con l’ante, i range degli Spin & Go si allargano.',
+      'Dal punto di vista matematico lo straddle è quasi sempre una scelta in perdita per chi lo mette: paga di più alla cieca e parla presto nei giri successivi.',
+    ],
+    esempio:
+      'In un cash game con bui da 1 e 2 euro, il giocatore alla sinistra del big blind mette 4 euro prima delle carte: è lo straddle. Da quel momento chi vuole giocare deve pagare almeno 4 euro, e lui parlerà per ultimo prima del flop.',
+    correlati: ['big-blind', 'ante', 'blind', 'posizione'],
+    aggiornata: '2026-09-30',
   },
   // ⚠️ FINE VOCI — le nuove si aggiungono SOPRA questa riga.
 ];
