@@ -3052,6 +3052,12 @@ export interface ProspettoStakato {
   altroCent: number;
   totaleCent: number;
   quotaScuolaCent: number;
+  /**
+   * La sua parte del totale (dal 07/10/2026): la compone il SERVER come resto
+   * di `totale − quotaScuola`, così le due quote sommano il totale al
+   * centesimo. Si mostra solo con `totaleCent ≥ 0`, come la quota della scuola.
+   */
+  quotaGiocatoreCent: number;
   risultatoCent: number;
   aRecuperoCent: number;
   daRegolareCent: number;

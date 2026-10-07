@@ -97,6 +97,14 @@
               <dt class="is-totale">Totale del mese</dt>
               <dd class="is-totale"><strong>{{ eur(st.totaleCent) }}</strong></dd>
               @if (st.totaleCent >= 0) {
+                <!-- ⚠️ La propria quota PRIMA di quella della scuola: «Meno
+                     quanto tratteniamo» si sottrae alla quota della scuola e
+                     deve restarle subito sotto. Mancava fino al 07/10/2026. -->
+                <dt>
+                  La tua quota
+                  <span class="nota">{{ pct(10000 - st.dealScuolaBp) }}</span>
+                </dt>
+                <dd><strong>{{ eur(st.quotaGiocatoreCent) }}</strong></dd>
                 <dt>
                   Quota della scuola
                   <span class="nota">{{ pct(st.dealScuolaBp) }}</span>

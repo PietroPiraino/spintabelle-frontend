@@ -71,6 +71,50 @@ describe('AccountConteggiComponent', () => {
     expect(t).toMatch(/\b45(,00)?%/);
   });
 
+  /**
+   * La propria quota del pool (07/10/2026): i giocatori leggevano quella
+   * della scuola e non la loro. Numeri veri di Rossana: totale 131,59, al 65%
+   * 85,53, al 35% 46,06. ⚠️ Sta PRIMA della quota della scuola, perché «Meno
+   * quanto tratteniamo» si sottrae a quella; e a make-up pieno sparisce con lei.
+   */
+  it('staking: la propria quota accanto a quella della scuola, e mai in un mese in perdita', async () => {
+    const stakato = {
+      nome: 'Rossana',
+      dealScuolaBp: 3500,
+      backCent: 23_059,
+      trattenutoCent: 2809,
+      poolEvCent: -6800,
+      diffCent: -700,
+      feeCent: -2500,
+      altroCent: 100,
+      totaleCent: 13_159,
+      quotaScuolaCent: 4606,
+      quotaGiocatoreCent: 8553,
+      risultatoCent: 1797,
+      aRecuperoCent: 0,
+      daRegolareCent: 1797,
+    };
+    const mese: ProspettoMese = { ...prospettoMadRoxKO[0], rakeback: undefined, stakato };
+    const ctx = await apri(ok([mese]));
+    const voci = [...ctx.el.querySelectorAll('dl.cnt__righe dt')].map((d) => d.textContent ?? '');
+    const iTua = voci.findIndex((v) => v.includes('La tua quota'));
+    const iScuola = voci.findIndex((v) => v.includes('Quota della scuola'));
+    expect(iTua).toBeGreaterThanOrEqual(0);
+    expect(voci[iTua]).toMatch(/65(,00)?%/);
+    expect(iTua).toBeLessThan(iScuola);
+    expect(voci[iScuola + 1]).toContain('Meno quanto tratteniamo');
+    const dd = ctx.el.querySelectorAll('dl.cnt__righe dd')[iTua];
+    expect(dd.textContent).toMatch(/85,53/);
+
+    const perdita: ProspettoMese = {
+      ...mese,
+      stakato: { ...stakato, totaleCent: -16_941, quotaScuolaCent: -5929, quotaGiocatoreCent: -11_012, risultatoCent: -16_941, aRecuperoCent: -16_941, daRegolareCent: 0 },
+    };
+    const ctx2 = await apri(ok([perdita]));
+    expect(ctx2.testo()).not.toContain('La tua quota');
+    expect(ctx2.testo()).not.toContain('Quota della scuola');
+  });
+
   it('i due canali per una rettifica: l’email del Titolare e Discord', async () => {
     const ctx = await apri(ok(prospettoMadRoxKO));
     expect(ctx.el.querySelector('a[href^="mailto:"]')).not.toBeNull();
