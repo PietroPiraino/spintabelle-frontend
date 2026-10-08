@@ -2,6 +2,8 @@
 // stringhe da copiare. Il resto riusa admin-shared.scss e i globali.
 // ⚠️ Colori solo da _tokens.scss (tre temi): niente valori hardcoded.
 
+@use '../soglie' as s;
+
 // Copia di `.shop-thumb` (admin-shop.component.scss): quel file è
 // component-scoped e da qui non è raggiungibile. Stesse misure di proposito —
 // il linguaggio visivo del pannello resta uno solo.
@@ -175,5 +177,175 @@
 
   .aff-panel {
     width: 100%;
+  }
+}
+
+// ── Affiliati attivi: accrediti mensili di punti ─────────────────────────────
+// ⚠️ Prima di toccare questa scheda: `gdpr/dpia-affiliazioni-punti.md`.
+
+.aff-gruppo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  // In un contenitore a `gap` i margini a mano non si fondono, si SOMMANO.
+  > * {
+    margin: 0;
+  }
+}
+
+.aff-gruppo__testa {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  .aff-thumb {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.aff-gruppo__nome {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+// ⚠️ Un `h3` nudo eredita la scala globale (fino a 24px e un margine che lo
+// stacca dalla propria tabella): qui è il titolo di un gruppo, non di una
+// sezione.
+.aff-gruppo__titolo {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.aff-gruppo__piede {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.aff-gruppo__riepilogo {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+// ⚠️ I 44px vanno DICHIARATI: un `.btn--sm` nudo sta sui 38px.
+.aff-gruppo__btn,
+.aff-conferma .btn {
+  min-height: 44px;
+}
+
+// Conferma in linea (cambio di mese, accredito) e banda d'errore con
+// «Riprova»: testo e comandi sulla stessa riga finché ci stanno.
+.aff-conferma {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.aff-conferma__azioni {
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+// ── Il campo dei punti dentro la cella ──
+// ⚠️ SECONDA copia della ricetta `.cm__cella` dei Conteggi mensili
+// (`admin-conteggi-mensili.component.scss`): alla terza si promuove in
+// `admin-table.scss`, prima che diventi la storia già pagata delle cinque
+// pastiglie di stato. Le ragioni di ogni riga sono scritte per esteso là; qui
+// le tre che contano.
+.aff-punti__campo {
+  // `.input` è la primitiva dei form PUBBLICI (54,5px): `min-height` da solo
+  // non la stringe, servono padding e carattere — o la riga supera i 46px.
+  min-height: 44px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.875rem;
+  // Il rientro negativo vale ESATTAMENTE il padding verticale della cella.
+  margin-block: -0.3rem;
+  width: 7.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  background: transparent;
+
+  // Sotto i 560px torna a 16px: iOS ingrandisce la pagina sul fuoco di un
+  // campo più piccolo, e da quello zoom non si torna indietro.
+  @media (max-width: s.$bp-modale-piena) {
+    font-size: 16px;
+  }
+
+  // `--glow-cyan` col rientro negativo si disegnerebbe sopra le righe vicine.
+  &:focus {
+    box-shadow: none;
+    outline: 2px solid var(--neon-cyan);
+    outline-offset: -2px;
+  }
+
+  &.is-error {
+    border-color: var(--danger);
+  }
+}
+
+// ⚠️ Su UNA riga, in linea: un `.admin-table__sub` è `display: block` e in un
+// `<td>` nudo eredita l'interlinea del body — la riga salirebbe a 54px contro
+// il tetto di 46 della sonda (precedente scritto nei Conteggi mensili).
+.aff-punti__fatto {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  .admin-table__sub {
+    display: inline;
+    margin-left: 0.35rem;
+  }
+}
+
+// Il motivo per cui una riga non si accredita: una riga sola con l'ellissi e il
+// testo intero nel `title` (la convenzione del pannello), che sotto i 720px va
+// a capo — il `title` col dito non si apre.
+.aff-punti__motivo {
+  display: inline-block;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25;
+  vertical-align: middle;
+  text-align: left;
+}
+
+// L'username dichiarato: un identificativo lungo e senza spazi non va a capo
+// (misurato: 37 caratteri valevano 303px e la tabella sfondava di 44px a
+// 1100). Ellissi e `title`; la selezione (`user-select: all` di `.aff-user`)
+// copia comunque la stringa intera, che è quella da cercare nel report.
+.aff-punti__user {
+  display: inline-block;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25;
+  vertical-align: middle;
+}
+
+@media (max-width: s.$bp-tabella-blocchi) {
+  .aff-punti__campo {
+    margin-block: 0;
+  }
+
+  // Sotto i 720px il `title` col dito non si apre: il testo va a capo per
+  // intero, anche dentro una stringa senza spazi.
+  .aff-punti__motivo,
+  .aff-punti__user {
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }

@@ -9,8 +9,11 @@ import { FormGroup } from '@angular/forms';
 import { environment } from '../../../../environments/environment';
 import {
   AffiliationAdmin,
+  GruppoSalaPunti,
   Paginated,
   PokerRoomAdmin,
+  PuntiMeseAffiliati,
+  RigaPuntiAffiliato,
 } from '../../../core/models/api.models';
 import { AdminAffiliationsComponent } from './admin-affiliations.component';
 
@@ -50,6 +53,7 @@ const roomOf = (id: string, ordine = 100): PokerRoomAdmin => ({
   identifierCaseSensitive: false,
   active: false,
   supportaCodice: false,
+  escludiDaPuntiMensili: false,
 });
 
 const pageOf = <T>(items: T[], total: number): Paginated<T> => ({
@@ -64,7 +68,15 @@ const pageOf = <T>(items: T[], total: number): Paginated<T> => ({
 interface Testable {
   form: FormGroup;
   selectedLogo: WritableSignal<File | null>;
-  setView(v: 'richieste' | 'sale'): void;
+  setView(v: 'richieste' | 'sale' | 'attivi'): void;
+  scriviBozza(g: GruppoSalaPunti, r: RigaPuntiAffiliato, v: string): void;
+  bozza(r: RigaPuntiAffiliato): string;
+  chiediAccredito(g: GruppoSalaPunti): void;
+  confermaAccredito(g: GruppoSalaPunti): void;
+  scegliMese(m: string): void;
+  confermaCambioMese(): void;
+  confermaSala: WritableSignal<string | null>;
+  meseInAttesa: WritableSignal<string | null>;
   submitRoom(): void;
   approve(a: AffiliationAdmin, note: string): void;
   onLogoChange(event: Event): void;
@@ -271,5 +283,271 @@ describe('AdminAffiliationsComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Ordine non salvato.',
     );
+  });
+
+  it("sale: l'esclusione dagli accrediti mensili viaggia nel multipart, spenta per default", async () => {
+    await flushBoot();
+    comp.setView('sale');
+    http.expectOne(isRooms).flush(pageOf<PokerRoomAdmin>([], 0));
+    await fixture.whenStable();
+
+    fillRoomForm();
+    comp.submitRoom();
+    const post = http.expectOne(
+      (r) => r.url === `${API}/admin/affiliations/rooms` && r.method === 'POST',
+    );
+    // ⚠️ Senza la riga in `toFormData` il campo non arriverebbe mai: il flag
+    // resterebbe al valore di prima, in silenzio.
+    expect((post.request.body as FormData).get('escludiDaPuntiMensili')).toBe(
+      'false',
+    );
+    post.flush(roomOf('r1'));
+    await fixture.whenStable();
+    http.expectOne(isRooms).flush(pageOf([roomOf('r1')], 1));
+    await fixture.whenStable();
+
+    fillRoomForm();
+    comp.form.patchValue({ slug: 'sala-due', escludiDaPuntiMensili: true });
+    comp.submitRoom();
+    const post2 = http.expectOne(
+      (r) => r.url === `${API}/admin/affiliations/rooms` && r.method === 'POST',
+    );
+    expect((post2.request.body as FormData).get('escludiDaPuntiMensili')).toBe(
+      'true',
+    );
+    post2.flush(roomOf('r2'));
+    await fixture.whenStable();
+    http.expectOne(isRooms).flush(pageOf([roomOf('r1'), roomOf('r2')], 2));
+    await fixture.whenStable();
+  });
+
+  // ── Affiliati attivi: accrediti mensili di punti ──────────────────────────
+  // ⚠️ Prima di cambiare un'asserzione qui: `gdpr/dpia-affiliazioni-punti.md`.
+
+  describe('Affiliati attivi', () => {
+    const isPunti = (r: { url: string; method: string }) =>
+      r.url === `${API}/admin/affiliations/punti` && r.method === 'GET';
+    const isAccredito = (r: { url: string; method: string }) =>
+      r.url === `${API}/admin/affiliations/punti` && r.method === 'POST';
+
+    const rigaOf = (
+      id: string,
+      extra: Partial<RigaPuntiAffiliato> = {},
+    ): RigaPuntiAffiliato => ({
+      affiliationId: id,
+      userId: `u-${id}`,
+      nickname: `Nick${id}`,
+      email: `${id}@esempio.it`,
+      roomUsername: `User${id}`,
+      tracciatoDal: '2026-05-01T10:00:00.000Z',
+      status: 'APPROVATO',
+      ...extra,
+    });
+    const gruppoOf = (
+      roomId: string,
+      name: string,
+      righe: RigaPuntiAffiliato[],
+      extra: Partial<GruppoSalaPunti> = {},
+    ): GruppoSalaPunti => ({
+      roomId,
+      name,
+      esclusa: false,
+      righe,
+      tracciati: righe.length,
+      accreditati: 0,
+      puntiAccreditati: 0,
+      ...extra,
+    });
+    const vistaOf = (
+      gruppi: GruppoSalaPunti[],
+      mese = '2026-09',
+    ): PuntiMeseAffiliati => ({
+      mese,
+      etichetta: mese === '2026-09' ? 'settembre 2026' : 'agosto 2026',
+      mesi: [
+        { mese: '2026-09', etichetta: 'settembre 2026' },
+        { mese: '2026-08', etichetta: 'agosto 2026' },
+      ],
+      gruppi,
+      troncato: false,
+    });
+
+    const sisal = () =>
+      gruppoOf('sisal', 'Sisal', [
+        rigaOf('a1', {
+          giaAccreditati: { punti: 1200, at: '2026-10-05T09:00:00.000Z' },
+        }),
+        rigaOf('a2'),
+        rigaOf('a3'),
+      ]);
+    const snai = () => gruppoOf('snai', 'Snai', [rigaOf('b1')]);
+
+    const apri = async (vista: PuntiMeseAffiliati) => {
+      await flushBoot();
+      comp.setView('attivi');
+      const req = http.expectOne(isPunti);
+      // Il primo caricamento non nomina il mese: la finestra la decide il
+      // server, nel fuso di Roma, non l'orologio del browser.
+      expect(req.request.params.has('mese')).toBe(false);
+      req.flush(vista);
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+
+    const testo = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    it("all'avvio non si legge niente degli accrediti (la scheda è pigra)", async () => {
+      await flushBoot();
+      expect(http.match(isPunti).length).toBe(0);
+    });
+
+    it('la terza scheda mostra le sale con gli affiliati, non il catalogo', async () => {
+      const v = vistaOf([sisal(), snai()]);
+      await apri(v);
+      expect(testo()).toContain('Sisal');
+      expect(testo()).toContain('Snai');
+      expect(testo()).toContain('Usera2');
+      // ⚠️ Con il vecchio `@else` sarebbe caduta nel ramo del catalogo.
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[aria-label="Crea una nuova poker room"]')).toBeNull();
+      // la riga già accreditata non ha il campo: porta i punti
+      expect(testo()).toMatch(/1[.,]?200/);
+    });
+
+    it('?vista=attivi apre la scheda e carica una volta sola', async () => {
+      fixture.componentRef.setInput('vista', 'attivi');
+      await flushBoot();
+      http.expectOne(isPunti).flush(vistaOf([sisal()]));
+      await fixture.whenStable();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(http.match(isPunti).length).toBe(0);
+    });
+
+    it("l'accredito manda SOLO le righe compilate di quella sala, coi punti all'italiana", async () => {
+      const v = vistaOf([sisal(), snai()]);
+      await apri(v);
+      const [gSisal, gSnai] = v.gruppi;
+
+      comp.scriviBozza(gSisal, gSisal.righe[2], '3.000');
+      comp.scriviBozza(gSnai, gSnai.righe[0], '500');
+      comp.chiediAccredito(gSisal);
+      fixture.detectChanges();
+      // La conferma dice il totale prima di partire.
+      expect(testo()).toMatch(/Accredito\s+3[.,]?000\s+punti a 1 iscritto di Sisal/);
+      expect(http.match(isAccredito).length).toBe(0);
+
+      comp.confermaAccredito(gSisal);
+      const post = http.expectOne(isAccredito);
+      expect(post.request.body).toEqual({
+        mese: '2026-09',
+        roomId: 'sisal',
+        righe: [{ affiliationId: 'a3', punti: 3000 }],
+      });
+      const dopo = vistaOf([
+        gruppoOf('sisal', 'Sisal', [
+          sisal().righe[0],
+          rigaOf('a2'),
+          rigaOf('a3', {
+            giaAccreditati: { punti: 3000, at: '2026-10-08T10:00:00.000Z' },
+          }),
+        ]),
+        snai(),
+      ]);
+      post.flush({ esito: { accreditate: 1, punti: 3000, saltate: 0 }, vista: dopo });
+      await fixture.whenStable();
+
+      // ⚠️ Le bozze vivono fuori dalla vista: quanto scritto su Snai resta.
+      expect(comp.bozza(gSnai.righe[0])).toBe('500');
+      expect(comp.confermaSala()).toBeNull();
+    });
+
+    it('un valore che non è un numero di punti ferma l’accredito e segna il campo', async () => {
+      const v = vistaOf([sisal()]);
+      await apri(v);
+      const g = v.gruppi[0];
+      comp.scriviBozza(g, g.righe[1], '3,5');
+      comp.chiediAccredito(g);
+      fixture.detectChanges();
+
+      expect(comp.confermaSala()).toBeNull();
+      expect(testo()).toContain('non contiene un numero di punti valido');
+      const campo = (fixture.nativeElement as HTMLElement).querySelector(
+        'input[aria-invalid="true"]',
+      );
+      expect(campo).not.toBeNull();
+    });
+
+    it('sull’errore la conferma si disarma e il mese si rilegge', async () => {
+      const v = vistaOf([sisal()]);
+      await apri(v);
+      const g = v.gruppi[0];
+      comp.scriviBozza(g, g.righe[1], '100');
+      comp.chiediAccredito(g);
+      comp.confermaAccredito(g);
+      http
+        .expectOne(isAccredito)
+        .flush(
+          { message: 'L’accredito si è fermato su NickA2.' },
+          { status: 500, statusText: 'Server Error' },
+        );
+      await fixture.whenStable();
+
+      // Un lotto fermato a metà deve mostrare quali righe sono già passate.
+      const rilettura = http.expectOne(isPunti);
+      expect(rilettura.request.params.get('mese')).toBe('2026-09');
+      rilettura.flush(v);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(comp.confermaSala()).toBeNull();
+      expect(testo()).toContain('L’accredito si è fermato su NickA2.');
+      // la bozza resta: correggere non vuol dire riscrivere tutto
+      expect(comp.bozza(g.righe[1])).toBe('100');
+    });
+
+    it('una sala esclusa non ha campi e non ha il pulsante', async () => {
+      const esclusa = gruppoOf('lotto', 'Lottomatica', [
+        rigaOf('c1', { motivoEsclusione: 'Sala esclusa dagli accrediti mensili.' }),
+      ], { esclusa: true });
+      await apri(vistaOf([esclusa]));
+      const el = fixture.nativeElement as HTMLElement;
+      const sezione = el.querySelector('section.aff-gruppo')!;
+      expect(sezione.querySelector('input')).toBeNull();
+      expect(
+        sezione.querySelector('[aria-label^="Accredita i punti di"]'),
+      ).toBeNull();
+      expect(sezione.textContent).toContain('esclusa dagli accrediti mensili');
+    });
+
+    it('cambiare mese con dei numeri scritti chiede conferma prima di buttarli', async () => {
+      const v = vistaOf([sisal()]);
+      await apri(v);
+      const g = v.gruppi[0];
+      comp.scriviBozza(g, g.righe[1], '700');
+
+      comp.scegliMese('2026-08');
+      expect(http.match(isPunti).length).toBe(0);
+      expect(comp.meseInAttesa()).toBe('2026-08');
+
+      comp.confermaCambioMese();
+      const req = http.expectOne(isPunti);
+      expect(req.request.params.get('mese')).toBe('2026-08');
+      req.flush(vistaOf([sisal()], '2026-08'));
+      await fixture.whenStable();
+      expect(comp.bozza(g.righe[1])).toBe('');
+    });
+
+    it('ogni campo nomina la propria riga (aria-label diversi)', async () => {
+      await apri(vistaOf([sisal()]));
+      const etichette = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll(
+          'input[inputmode="numeric"]',
+        ),
+      ).map((i) => i.getAttribute('aria-label'));
+      expect(etichette.length).toBe(2);
+      expect(new Set(etichette).size).toBe(2);
+      expect(etichette[0]).toContain('settembre 2026');
+    });
   });
 });

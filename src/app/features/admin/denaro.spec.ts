@@ -6,6 +6,7 @@ import {
   formattaEurBreve,
   formattaFrazione,
   formattaIntero,
+  parsePuntiInteri,
 } from './denaro';
 
 /**
@@ -56,5 +57,38 @@ describe('denaro — le unità che non si incrociano', () => {
     expect(formattaIntero(150000)).toMatch(/^150\.?000$/);
     expect(formattaIntero(7)).toBe('7');
     expect(formattaIntero(2.6)).toBe('3');
+  });
+});
+
+/**
+ * I punti scritti a mano nella scheda «Affiliati attivi». ⚠️ Il caso che conta
+ * è il primo: un `type="number"` leggerebbe «3.000» come 3, e l'accredito
+ * partirebbe con tremila punti in meno senza che nessuno lo veda.
+ */
+describe('parsePuntiInteri', () => {
+  const MAX = 1_000_000;
+
+  it('accetta le forme italiane delle migliaia', () => {
+    expect(parsePuntiInteri('3.000', MAX)).toBe(3000);
+    expect(parsePuntiInteri('3000', MAX)).toBe(3000);
+    expect(parsePuntiInteri(' 3 000 ', MAX)).toBe(3000);
+    expect(parsePuntiInteri('3 000', MAX)).toBe(3000);
+    expect(parsePuntiInteri('1.000.000', MAX)).toBe(1_000_000);
+    expect(parsePuntiInteri('7', MAX)).toBe(7);
+  });
+
+  it('rifiuta invece di indovinare', () => {
+    expect(parsePuntiInteri('1.25', MAX)).toBeNull();
+    expect(parsePuntiInteri('3,5', MAX)).toBeNull();
+    expect(parsePuntiInteri('3.00', MAX)).toBeNull();
+    expect(parsePuntiInteri('-500', MAX)).toBeNull();
+    expect(parsePuntiInteri('0', MAX)).toBeNull();
+    expect(parsePuntiInteri('1e3', MAX)).toBeNull();
+    expect(parsePuntiInteri('0x10', MAX)).toBeNull();
+    expect(parsePuntiInteri('', MAX)).toBeNull();
+  });
+
+  it('rifiuta oltre il massimo', () => {
+    expect(parsePuntiInteri('1.000.001', MAX)).toBeNull();
   });
 });

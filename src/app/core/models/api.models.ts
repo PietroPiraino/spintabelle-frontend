@@ -2124,6 +2124,12 @@ export interface PokerRoomAdmin extends PokerRoom {
    * ovunque: verso la sala non parte alcun codice nostro.
    */
   supportaCodice: boolean;
+  /**
+   * La sala è fuori dagli accrediti mensili di punti (scheda «Affiliati
+   * attivi»): il caso Lottomatica, i cui giocatori possono già prendere punti
+   * dal conteggio del rakeback. ⚠️ Solo nella vista ADMIN, mai nella vetrina.
+   */
+  escludiDaPuntiMensili: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -2156,6 +2162,66 @@ export interface PokerRoomPayload {
   ordine?: number;
   /** ⚠️ assente = false: una sala si pubblica di proposito, non salvandola */
   active?: boolean;
+  /** Fuori dagli accrediti mensili di punti (assente = inclusa). */
+  escludiDaPuntiMensili?: boolean;
+}
+
+// ── Accrediti mensili di punti agli affiliati (scheda «Affiliati attivi») ──
+//
+// ⚠️ Prima di toccare questi tipi: `gdpr/dpia-affiliazioni-punti.md`. Nessun
+// campo per rake, volumi o importi, e nessuno va aggiunto: i punti li scrive
+// una persona riga per riga.
+
+/** Una riga tracciata nel mese scelto. */
+export interface RigaPuntiAffiliato {
+  affiliationId: string;
+  userId: string;
+  /** Letti dall'account VIVO. */
+  nickname?: string;
+  email?: string;
+  /** L'username dichiarato: è ciò che si confronta col report della sala. */
+  roomUsername?: string;
+  tracciatoDal?: string;
+  status: AffiliationStatus;
+  /** Già accreditata per il mese: punti e data. */
+  giaAccreditati?: { punti: number; at: string };
+  /** Perché non si può accreditare (sala esclusa, account cancellato…). */
+  motivoEsclusione?: string;
+}
+
+/** Le righe di una sala. */
+export interface GruppoSalaPunti {
+  roomId: string;
+  name: string;
+  network?: string;
+  logoUrl?: string;
+  esclusa: boolean;
+  righe: RigaPuntiAffiliato[];
+  tracciati: number;
+  accreditati: number;
+  puntiAccreditati: number;
+}
+
+/** `GET /admin/affiliations/punti?mese=`. */
+export interface PuntiMeseAffiliati {
+  mese: string;
+  etichetta: string;
+  /** I mesi accreditabili (chiusi), dal più recente. */
+  mesi: { mese: string; etichetta: string }[];
+  gruppi: GruppoSalaPunti[];
+  troncato: boolean;
+}
+
+/** `POST /admin/affiliations/punti`: una sala, un mese. */
+export interface AccreditaPuntiPayload {
+  mese: string;
+  roomId: string;
+  righe: { affiliationId: string; punti: number }[];
+}
+
+export interface AccreditaPuntiEsito {
+  esito: { accreditate: number; punti: number; saltate: number };
+  vista: PuntiMeseAffiliati;
 }
 
 /** Modifica sala: tutto facoltativo, `slug` escluso (il backend lo rifiuta). */

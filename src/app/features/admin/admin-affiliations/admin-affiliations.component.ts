@@ -3,8 +3,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
+  input,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
@@ -23,12 +26,15 @@ import {
 import {
   AFFILIATION_STATUSES,
   AffiliationAdmin,
+  GruppoSalaPunti,
   AffiliationStatus,
   IdentifierFormat,
   Paginated,
   PokerRoomAdmin,
   PokerRoomPayload,
   PokerRoomUpdatePayload,
+  PuntiMeseAffiliati,
+  RigaPuntiAffiliato,
 } from '../../../core/models/api.models';
 import { AffiliationsService } from '../../../core/services/affiliations.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
@@ -44,6 +50,7 @@ import {
 } from '../../../shared/ui/schede/schede.component';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { TonoStato } from '../admin-stato';
+import { formattaIntero, parsePuntiInteri } from '../denaro';
 
 /** Elementi per pagina (pager classico, come iscritti/lezioni/negozio). */
 const PAGE_SIZE = 25;
@@ -92,7 +99,27 @@ const IDENTIFIER_FORMATS: IdentifierFormat[] = [
  */
 const ORDER_STEP = 10;
 
-type AffiliationsView = 'richieste' | 'sale';
+/**
+ * Le sotto-sezioni, in un posto solo: le schede le elencano e `?vista=` le
+ * valida con `isVista` — un valore che arriva dall'URL è una stringa come le
+ * altre, e un cast la farebbe diventare una scheda che nessun ramo rende.
+ */
+const VISTE = ['richieste', 'sale', 'attivi'] as const;
+type AffiliationsView = (typeof VISTE)[number];
+const isVista = (v: string | undefined): v is AffiliationsView =>
+  v !== undefined && (VISTE as readonly string[]).includes(v);
+
+/** Stessi limiti del backend (`PUNTI_RIGA_MAX`, = `AdjustPointsDto`). */
+const PUNTI_RIGA_MAX = 1_000_000;
+
+/** Lo stato di quanto scritto nei campi punti di una sala. */
+interface RiepilogoSala {
+  /** Righe compilate con un numero valido. */
+  righe: number;
+  punti: number;
+  /** Righe compilate con qualcosa che non è un numero di punti. */
+  errori: number;
+}
 
 /** Pannello inline aperto su una riga (uno alla volta, idioma di admin-users). */
 type RowAction = 'approva' | 'rifiuta' | 'revoca' | 'nota';
@@ -150,13 +177,99 @@ export class AdminAffiliationsComponent {
   protected readonly ritardoAttribuzione =
     "Se la registrazione non risulta ancora, l'attribuzione può richiedere fino a 48 ore.";
 
-  /** Sotto-vista attiva: coda delle richieste o catalogo delle sale. */
+  /** Sotto-vista attiva: coda, affiliati attivi (accrediti) o catalogo delle sale. */
   protected readonly view = signal<AffiliationsView>('richieste');
   protected readonly sottoSezioni: readonly VoceScheda<AffiliationsView>[] =
     [
     { valore: 'richieste', etichetta: 'Richieste' },
+    { valore: 'attivi', etichetta: 'Affiliati attivi' },
     { valore: 'sale', etichetta: 'Poker room' },
   ];
+  /** `?vista=attivi` apre direttamente quella scheda (`withComponentInputBinding`). */
+  readonly vistaIniziale = input<string | undefined>(undefined, {
+    alias: 'vista',
+  });
+
+  // ── Affiliati attivi: accrediti mensili di punti ──
+  //
+  // ⚠️⚠️ Prima di toccare questa parte: `gdpr/dpia-affiliazioni-punti.md`. Le
+  // sue condizioni vivono anche qui: i punti li SCRIVE l'admin riga per riga
+  // (nessun campo per rake o volumi, nessun suggerimento calcolato), ogni
+  // accredito passa da una conferma, e niente di questa scheda esce dal
+  // pannello.
+
+  protected readonly puntiVista = signal<PuntiMeseAffiliati | null>(null);
+  protected readonly puntiLoading = signal(false);
+  protected readonly puntiError = signal<string | null>(null);
+  /**
+   * Ordine delle letture: vince l'ULTIMA RICHIESTA, non l'ultima risposta —
+   * due cambi di mese ravvicinati non devono lasciare a schermo il primo.
+   */
+  private puntiSeq = 0;
+  /**
+   * Il mese mostrato. `null` finché il server non ha detto quale: il primo
+   * caricamento chiede «il mese scorso» senza nominarlo, perché la finestra la
+   * decide il server nel fuso di Roma, non l'orologio del browser.
+   */
+  protected readonly mese = signal<string | null>(null);
+  /**
+   * I punti scritti, riga per riga (chiave `affiliationId`), come TESTO.
+   *
+   * ⚠️ In un signal a parte e non dentro `puntiVista`: dopo l'accredito di una
+   * sala il mese si rilegge, e con le bozze dentro la vista si perderebbero i
+   * numeri già scritti sulle ALTRE sale.
+   */
+  protected readonly bozze = signal<Readonly<Record<string, string>>>({});
+  /** Sala con la conferma armata (`roomId`). */
+  protected readonly confermaSala = signal<string | null>(null);
+  /** Sala il cui accredito è in volo: blocca tutto il resto. */
+  protected readonly accreditando = signal<string | null>(null);
+  /** Errore di una sala, stampato DENTRO il suo gruppo. */
+  protected readonly erroreSala = signal<{ roomId: string; msg: string } | null>(
+    null,
+  );
+  /** Mese chiesto mentre ci sono numeri scritti: aspetta la conferma. */
+  protected readonly meseInAttesa = signal<string | null>(null);
+
+  protected readonly vociMesi = computed<readonly VoceFiltro<string>[]>(
+    () =>
+      this.puntiVista()?.mesi.map((m) => ({
+        valore: m.mese,
+        etichetta: m.etichetta,
+      })) ?? [],
+  );
+  protected readonly ciSonoBozze = computed(() =>
+    Object.values(this.bozze()).some((v) => v.trim() !== ''),
+  );
+  /** Etichetta del mese in attesa, per la conferma del cambio. */
+  protected readonly etichettaMeseInAttesa = computed(() => {
+    const m = this.meseInAttesa();
+    return this.puntiVista()?.mesi.find((x) => x.mese === m)?.etichetta ?? m;
+  });
+  /**
+   * Il riepilogo di ogni sala da quanto scritto: quante righe, quanti punti,
+   * quante righe con un valore che non è un numero di punti.
+   */
+  protected readonly riepiloghi = computed(() => {
+    const b = this.bozze();
+    const out = new Map<string, RiepilogoSala>();
+    for (const g of this.puntiVista()?.gruppi ?? []) {
+      const r: RiepilogoSala = { righe: 0, punti: 0, errori: 0 };
+      for (const riga of g.righe) {
+        if (!this.accreditabile(g, riga)) continue;
+        const testo = (b[riga.affiliationId] ?? '').trim();
+        if (!testo) continue;
+        const n = parsePuntiInteri(testo, PUNTI_RIGA_MAX);
+        if (n === null) r.errori += 1;
+        else {
+          r.righe += 1;
+          r.punti += n;
+        }
+      }
+      out.set(g.roomId, r);
+    }
+    return out;
+  });
 
   // ── Richieste ──
 
@@ -289,6 +402,8 @@ export class AdminAffiliationsComponent {
     ordine: [100 as number | null, [Validators.min(0), Validators.max(9999)]],
     // ⚠️ NASCE SPENTA: una sala si pubblica di proposito, mai salvandola.
     active: [false],
+    // Fuori dagli accrediti mensili di punti (il caso Lottomatica).
+    escludiDaPuntiMensili: [false],
   });
 
   /** La modale della sala: `null` chiusa, `''` creazione, id modifica. */
@@ -326,9 +441,17 @@ export class AdminAffiliationsComponent {
       });
     this.loadRequests();
     this.loadPending();
+
+    // ⚠️ `isVista` e non un cast; e `untracked` perché `setView` legge
+    // `view()`: tracciato, l'effect ripartirebbe a ogni cambio di scheda e
+    // riporterebbe l'admin su quella dell'URL.
+    effect(() => {
+      const v = this.vistaIniziale();
+      if (isVista(v)) untracked(() => this.setView(v));
+    });
   }
 
-  // ── Switch vista (il catalogo si carica alla prima apertura) ──
+  // ── Switch vista (catalogo e affiliati si caricano alla prima apertura) ──
 
   protected setView(v: AffiliationsView): void {
     if (this.view() === v) return;
@@ -339,6 +462,12 @@ export class AdminAffiliationsComponent {
     this.moveFeedback.set(null);
     this.moveError.set(null);
     if (v === 'sale' && !this.roomPage()) this.loadRooms();
+    // ⚠️ Mai all'avvio: la scheda che si apre è quella delle richieste, e una
+    // lettura in più a ogni ingresso nel pannello sarebbe lavoro buttato (la
+    // spec lo pinna con `http.verify()`).
+    if (v === 'attivi' && !this.puntiVista() && !this.puntiLoading()) {
+      this.caricaPunti();
+    }
   }
 
   /**
@@ -706,6 +835,7 @@ export class AdminAffiliationsComponent {
       consenteAccountEsistenti: r.consenteAccountEsistenti,
       ordine: r.ordine,
       active: r.active,
+      escludiDaPuntiMensili: r.escludiDaPuntiMensili,
     });
     // ⚠️ La baseline DOPO il patch, o la modale nasce già sporca.
     this.baseline.set(JSON.stringify(this.form.getRawValue()));
@@ -724,6 +854,7 @@ export class AdminAffiliationsComponent {
       ordine: 100,
       // ⚠️ Anche il reset riparte da spenta: la sala si pubblica di proposito.
       active: false,
+      escludiDaPuntiMensili: false,
     });
     this.roomError.set(null);
   }
@@ -781,6 +912,7 @@ export class AdminAffiliationsComponent {
       consenteAccountEsistenti: raw.consenteAccountEsistenti,
       ordine: raw.ordine ?? undefined,
       active: raw.active,
+      escludiDaPuntiMensili: raw.escludiDaPuntiMensili,
     };
 
     this.saving.set(true);
@@ -882,6 +1014,193 @@ export class AdminAffiliationsComponent {
       },
       error: (err: unknown) =>
         this.roomError.set(apiErrorMessage(err, 'Eliminazione non riuscita.')),
+    });
+  }
+
+  // ───────────────────────────── AFFILIATI ATTIVI ─────────────────────────────
+
+  private caricaPunti(mese?: string): void {
+    const seq = ++this.puntiSeq;
+    this.puntiLoading.set(true);
+    this.puntiError.set(null);
+    this.api.puntiMese(mese).subscribe({
+      next: (v) => {
+        if (seq !== this.puntiSeq) return;
+        this.puntiVista.set(v);
+        this.mese.set(v.mese);
+        this.puntiLoading.set(false);
+      },
+      error: (err: unknown) => {
+        if (seq !== this.puntiSeq) return;
+        this.puntiLoading.set(false);
+        this.puntiError.set(
+          apiErrorMessage(err, 'Caricamento degli affiliati non riuscito.'),
+        );
+      },
+    });
+  }
+
+  /** «Riprova» della banda d'errore: rifà la sola lettura del mese. */
+  protected riprovaPunti(): void {
+    this.caricaPunti(this.mese() ?? undefined);
+  }
+
+  /**
+   * Cambio di mese. ⚠️ Con dei numeri già scritti chiede conferma invece di
+   * buttarli: `app-filtro` è controllato, quindi finché non si conferma resta
+   * selezionato il mese di prima — il selettore non mente su cosa si vede.
+   */
+  protected scegliMese(m: string): void {
+    if (m === this.mese() || this.accreditando()) return;
+    if (this.ciSonoBozze()) {
+      this.meseInAttesa.set(m);
+      return;
+    }
+    this.applicaMese(m);
+  }
+
+  protected confermaCambioMese(): void {
+    const m = this.meseInAttesa();
+    if (m) this.applicaMese(m);
+  }
+
+  protected annullaCambioMese(): void {
+    this.meseInAttesa.set(null);
+  }
+
+  private applicaMese(m: string): void {
+    this.meseInAttesa.set(null);
+    this.bozze.set({});
+    this.confermaSala.set(null);
+    this.erroreSala.set(null);
+    this.caricaPunti(m);
+  }
+
+  /** Una riga a cui si possono scrivere punti in questo mese. */
+  protected accreditabile(g: GruppoSalaPunti, r: RigaPuntiAffiliato): boolean {
+    return !g.esclusa && !r.giaAccreditati && !r.motivoEsclusione;
+  }
+
+  protected bozza(r: RigaPuntiAffiliato): string {
+    return this.bozze()[r.affiliationId] ?? '';
+  }
+
+  /** Un valore scritto che non è un numero di punti: il campo si segna. */
+  protected bozzaNonValida(r: RigaPuntiAffiliato): boolean {
+    const testo = this.bozza(r).trim();
+    return !!testo && parsePuntiInteri(testo, PUNTI_RIGA_MAX) === null;
+  }
+
+  protected scriviBozza(
+    g: GruppoSalaPunti,
+    r: RigaPuntiAffiliato,
+    valore: string,
+  ): void {
+    this.bozze.update((b) => ({ ...b, [r.affiliationId]: valore }));
+    // ⚠️ La conferma armata nomina un totale: se il totale cambia, quella
+    // frase mente. Si disarma e si richiede.
+    if (this.confermaSala() === g.roomId) this.confermaSala.set(null);
+    if (this.erroreSala()?.roomId === g.roomId) this.erroreSala.set(null);
+  }
+
+  protected riepilogo(g: GruppoSalaPunti): RiepilogoSala {
+    return this.riepiloghi().get(g.roomId) ?? { righe: 0, punti: 0, errori: 0 };
+  }
+
+  protected chi(r: RigaPuntiAffiliato): string {
+    return r.nickname || r.email || 'Account cancellato';
+  }
+
+  protected punti(n: number): string {
+    return formattaIntero(n);
+  }
+
+  /** Primo tempo dell'accredito: controlla e arma la conferma. */
+  protected chiediAccredito(g: GruppoSalaPunti): void {
+    if (this.accreditando()) return;
+    const r = this.riepilogo(g);
+    if (r.errori > 0) {
+      this.erroreSala.set({
+        roomId: g.roomId,
+        msg:
+          r.errori === 1
+            ? 'Una riga non contiene un numero di punti valido: correggila, o svuotala per saltarla.'
+            : `${r.errori} righe non contengono un numero di punti valido: correggile, o svuotale per saltarle.`,
+      });
+      return;
+    }
+    if (r.righe === 0) {
+      this.erroreSala.set({
+        roomId: g.roomId,
+        msg: 'Scrivi i punti di almeno una riga.',
+      });
+      return;
+    }
+    this.erroreSala.set(null);
+    this.confermaSala.set(g.roomId);
+  }
+
+  protected annullaAccredito(): void {
+    this.confermaSala.set(null);
+  }
+
+  /**
+   * Secondo tempo: l'accredito vero.
+   *
+   * Sul successo il mese torna RILETTO dalla risposta (il server ha appena
+   * scritto le annotazioni) e si svuotano solo le bozze delle righe spedite;
+   * l'esito va in un toast, che qui si vede perché nessuna modale è aperta.
+   * Sull'errore la conferma si DISARMA (premere di nuovo lo stesso pulsante
+   * non cambierebbe niente) e il mese si rilegge comunque: un lotto fermato a
+   * metà deve mostrare quali righe sono già passate.
+   */
+  protected confermaAccredito(g: GruppoSalaPunti): void {
+    const mese = this.mese();
+    if (!mese || this.accreditando()) return;
+    const b = this.bozze();
+    const righe: { affiliationId: string; punti: number }[] = [];
+    for (const r of g.righe) {
+      if (!this.accreditabile(g, r)) continue;
+      const n = parsePuntiInteri(b[r.affiliationId] ?? '', PUNTI_RIGA_MAX);
+      if (n !== null) righe.push({ affiliationId: r.affiliationId, punti: n });
+    }
+    if (!righe.length) return;
+
+    this.accreditando.set(g.roomId);
+    this.erroreSala.set(null);
+    this.api.accreditaPunti({ mese, roomId: g.roomId, righe }).subscribe({
+      next: (res) => {
+        this.accreditando.set(null);
+        this.confermaSala.set(null);
+        this.puntiSeq++;
+        this.puntiVista.set(res.vista);
+        this.mese.set(res.vista.mese);
+        const spedite = new Set(righe.map((x) => x.affiliationId));
+        this.bozze.update((prima) =>
+          Object.fromEntries(
+            Object.entries(prima).filter(([id]) => !spedite.has(id)),
+          ),
+        );
+        const { accreditate, punti, saltate } = res.esito;
+        const chi = accreditate === 1 ? 'iscritto' : 'iscritti';
+        const salto = !saltate
+          ? ''
+          : saltate === 1
+            ? ' Una riga saltata: già accreditata o non più tracciata.'
+            : ` ${saltate} righe saltate: già accreditate o non più tracciate.`;
+        this.toast.success(
+          `${this.punti(punti)} punti accreditati a ${accreditate} ${chi} di ${g.name} per ${res.vista.etichetta}.${salto}`,
+        );
+      },
+      error: (err: unknown) => {
+        this.accreditando.set(null);
+        this.confermaSala.set(null);
+        this.erroreSala.set({
+          roomId: g.roomId,
+          msg: apiErrorMessage(err, 'Accredito non riuscito.'),
+        });
+        this.caricaPunti(mese);
+      },
     });
   }
 

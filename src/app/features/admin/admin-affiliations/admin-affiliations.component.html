@@ -19,7 +19,12 @@
   [attr.aria-labelledby]="sch.idSchedaAttiva()"
 >
 
-@if (view() === 'richieste') {
+<!--
+  ⚠️ `@switch` e non `@if/@else`: con un `@else` ogni scheda nuova cadrebbe nel
+  ramo del catalogo, cioè «Affiliati attivi» mostrerebbe le Poker room.
+-->
+@switch (view()) {
+@case ('richieste') {
   <!-- ─────────────────────────── RICHIESTE ─────────────────────────── -->
   <div class="admin-list">
     <div class="spread">
@@ -319,7 +324,269 @@
       }
     }
   </div>
-} @else {
+}
+@case ('attivi') {
+  <!-- ─────────────────────── AFFILIATI ATTIVI ─────────────────────── -->
+  <!--
+    ⚠️⚠️ Prima di toccare questo blocco: `gdpr/dpia-affiliazioni-punti.md`.
+    I punti li SCRIVE l'admin dopo aver letto il report della sala: nessun
+    campo per rake o volumi, nessun suggerimento calcolato accanto al campo,
+    e ogni accredito passa da una conferma che dice il totale.
+  -->
+  <div class="admin-users">
+    <div class="admin-barra">
+      <h2 class="admin-barra__titolo">Affiliati attivi</h2>
+      @if (vociMesi().length) {
+        <app-filtro
+          etichetta="Mese da accreditare"
+          [voci]="vociMesi()"
+          [scelto]="mese() ?? ''"
+          [inerte]="puntiLoading() || accreditando() !== null"
+          (scegli)="scegliMese($event)"
+        />
+      }
+    </div>
+
+    <p class="admin-nota">
+      I tracciati di ogni sala per il mese scelto. Leggi il report della sala,
+      scrivi i punti di ciascuno e accredita una sala alla volta: il sito non
+      conserva il report né quanto si è giocato, solo il mese e i punti
+      accreditati (per 12 mesi), così lo stesso mese non si accredita due volte.
+      Nel registro punti dell'iscritto il movimento compare come «Accredito
+      punti BFF di …», senza il nome della sala. Chi è stato revocato dopo la
+      fine del mese si accredita dalla sua scheda in Iscritti.
+    </p>
+
+    @if (meseInAttesa()) {
+      <div class="form-feedback is-info aff-conferma" role="alert">
+        <span>
+          Hai scritto dei punti per {{ puntiVista()?.etichetta }} che non sono
+          ancora stati accreditati: passando a {{ etichettaMeseInAttesa() }} si
+          perdono.
+        </span>
+        <span class="row aff-conferma__azioni">
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            (click)="annullaCambioMese()"
+          >
+            Resta su {{ puntiVista()?.etichetta }}
+          </button>
+          <button
+            type="button"
+            class="btn btn--danger btn--sm"
+            (click)="confermaCambioMese()"
+          >
+            Cambia mese
+          </button>
+        </span>
+      </div>
+    }
+
+    @if (puntiError()) {
+      <div class="form-feedback is-error aff-conferma" role="alert">
+        <span>{{ puntiError() }}</span>
+        <button
+          type="button"
+          class="btn btn--ghost btn--sm"
+          (click)="riprovaPunti()"
+        >
+          Riprova
+        </button>
+      </div>
+    }
+
+    @if (puntiLoading() && !puntiVista()) {
+      <div class="spinner" role="status" aria-label="Caricamento degli affiliati"></div>
+    }
+
+    @if (puntiVista(); as v) {
+      @if (v.troncato) {
+        <p class="form-feedback is-error" role="alert">
+          L'elenco è stato troncato: ci sono più righe di quante questa scheda
+          ne mostri. Scrivici prima di accreditare.
+        </p>
+      }
+      @if (!v.gruppi.length) {
+        <p class="admin-nota">
+          Nessun affiliato tracciato, e nessun accredito per {{ v.etichetta }}.
+        </p>
+      }
+
+      @for (g of v.gruppi; track g.roomId) {
+        <section class="aff-gruppo" [attr.aria-labelledby]="'aff-g-' + g.roomId">
+          <div class="aff-gruppo__testa">
+            @if (g.logoUrl) {
+              <img class="aff-thumb" [src]="g.logoUrl" alt="" />
+            } @else {
+              <span class="aff-thumb aff-thumb--empty" aria-hidden="true"></span>
+            }
+            <div class="aff-gruppo__nome">
+              <h3 class="aff-gruppo__titolo" [id]="'aff-g-' + g.roomId">
+                {{ g.name }}
+              </h3>
+              <span class="admin-item__meta">
+                {{ g.tracciati }} {{ g.tracciati === 1 ? 'tracciato' : 'tracciati' }}
+                · {{ g.accreditati }}
+                {{ g.accreditati === 1 ? 'accreditato' : 'accreditati' }} per
+                {{ v.etichetta }}@if (g.puntiAccreditati) {
+                  · {{ punti(g.puntiAccreditati) }} punti
+                }
+              </span>
+            </div>
+            @if (g.esclusa) {
+              <span class="badge">Esclusa dagli accrediti mensili</span>
+            }
+          </div>
+
+          @if (g.esclusa) {
+            <p class="admin-nota">
+              Questa sala è esclusa dagli accrediti mensili: le righe si vedono
+              ma non si accreditano da qui. Si cambia nella scheda Poker room,
+              modificando la sala.
+            </p>
+          }
+
+          <p class="admin-nota admin-table__nota-mobile">
+            La data da cui ciascuno è tracciato si vede da uno schermo più largo.
+          </p>
+          <div class="admin-table__scroll">
+            <table class="admin-table admin-table--etichettata aff-punti">
+              <caption class="visually-hidden">
+                Affiliati di {{ g.name }} per {{ v.etichetta }}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="admin-table__c-primo">Iscritto</th>
+                  <th scope="col">Username in sala</th>
+                  <th scope="col" class="admin-table__solo-largo">Tracciato dal</th>
+                  <th scope="col" class="admin-table__c-ultimo is-num">Punti</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of g.righe; track r.affiliationId) {
+                  <tr>
+                    <th scope="row" class="admin-table__c-primo">
+                      <span class="admin-table__ident">
+                        <span class="admin-table__ident-riga">
+                          <strong [title]="chi(r)">{{ chi(r) }}</strong>
+                        </span>
+                        @if (r.email && r.nickname) {
+                          <span class="admin-table__sub" [title]="r.email">{{ r.email }}</span>
+                        }
+                      </span>
+                    </th>
+                    <td data-etichetta="Username">
+                      @if (r.roomUsername) {
+                        <!-- ⚠️ Il tetto sta sull'elemento INTERNO: un username
+                             lungo e senza spazi non va a capo, e su un <td>
+                             il tetto lascerebbe uscire il testo. -->
+                        <code class="aff-user aff-punti__user" [title]="r.roomUsername">{{ r.roomUsername }}</code>
+                      } @else {
+                        <span class="is-vuota">—</span>
+                      }
+                    </td>
+                    <td class="admin-table__solo-largo">
+                      @if (r.tracciatoDal) {
+                        {{ r.tracciatoDal | date: 'dd MMM yyyy' }}
+                      } @else {
+                        <span class="is-vuota">—</span>
+                      }
+                    </td>
+                    <td class="admin-table__c-ultimo is-num" data-etichetta="Punti">
+                      @if (r.giaAccreditati; as fatto) {
+                        <span class="aff-punti__fatto">
+                          {{ punti(fatto.punti) }}
+                          <span class="admin-table__sub">
+                            accreditati il {{ fatto.at | date: 'dd/MM' }}
+                          </span>
+                        </span>
+                      } @else if (accreditabile(g, r)) {
+                        <input
+                          type="text"
+                          inputmode="numeric"
+                          autocomplete="off"
+                          class="input aff-punti__campo"
+                          [class.is-error]="bozzaNonValida(r)"
+                          [attr.aria-invalid]="bozzaNonValida(r)"
+                          [attr.aria-label]="'Punti per ' + chi(r) + ' — ' + v.etichetta"
+                          placeholder="—"
+                          [value]="bozza(r)"
+                          [disabled]="accreditando() !== null"
+                          (input)="scriviBozza(g, r, $any($event.target).value)"
+                        />
+                      } @else {
+                        <span class="admin-table__sub aff-punti__motivo" [title]="r.motivoEsclusione ?? ''">
+                          {{ r.motivoEsclusione }}
+                        </span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (!g.esclusa) {
+            @if (erroreSala()?.roomId === g.roomId) {
+              <div class="form-feedback is-error" role="alert">
+                {{ erroreSala()!.msg }}
+              </div>
+            }
+            <div class="aff-gruppo__piede">
+              @if (confermaSala() === g.roomId) {
+                <span class="aff-gruppo__riepilogo" role="status">
+                  Accredito <strong>{{ punti(riepilogo(g).punti) }}</strong> punti a
+                  {{ riepilogo(g).righe }}
+                  {{ riepilogo(g).righe === 1 ? 'iscritto' : 'iscritti' }} di
+                  {{ g.name }} per {{ v.etichetta }}.
+                </span>
+                <span class="row aff-conferma__azioni">
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm aff-gruppo__btn"
+                    [disabled]="accreditando() !== null"
+                    (click)="annullaAccredito()"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--sm aff-gruppo__btn"
+                    [disabled]="accreditando() !== null"
+                    (click)="confermaAccredito(g)"
+                  >
+                    {{ accreditando() === g.roomId ? 'Accredito…' : 'Accredita davvero' }}
+                  </button>
+                </span>
+              } @else {
+                <span class="aff-gruppo__riepilogo">
+                  @if (riepilogo(g).righe) {
+                    {{ riepilogo(g).righe }}
+                    {{ riepilogo(g).righe === 1 ? 'riga' : 'righe' }} ·
+                    {{ punti(riepilogo(g).punti) }} punti
+                  } @else {
+                    Nessun punto scritto
+                  }
+                </span>
+                <button
+                  type="button"
+                  class="btn btn--primary btn--sm aff-gruppo__btn"
+                  [disabled]="accreditando() !== null"
+                  [attr.aria-label]="'Accredita i punti di ' + g.name + ' per ' + v.etichetta"
+                  (click)="chiediAccredito(g)"
+                >
+                  Accredita
+                </button>
+              }
+            </div>
+          }
+        </section>
+      }
+    }
+  </div>
+}
+@case ('sale') {
   <!-- ───────────────────────────── SALE ───────────────────────────── -->
   <div class="admin-users">
     <div class="admin-barra">
@@ -417,6 +684,9 @@
                   @if (r.supportaCodice) {
                     <span class="badge badge--live">Il link usa &#123;ref&#125;</span>
                   }
+                  @if (r.escludiDaPuntiMensili) {
+                    <span class="badge">Esclusa dagli accrediti mensili</span>
+                  }
                 </div>
                 <span class="admin-item__meta">
                   {{ r.slug }}@if (r.network) { · {{ r.network }} } · ordine {{ r.ordine }}
@@ -471,6 +741,7 @@
         }
       }
   </div>
+}
 }
 </div>
 
@@ -740,6 +1011,22 @@
         <p class="admin-news__hint">
           Una sala nuova nasce spenta: si pubblica spuntando questa casella, mai
           salvandola.
+        </p>
+
+        <label class="row admin-panel__check" style="gap: 0.4rem">
+          <input
+            type="checkbox"
+            formControlName="escludiDaPuntiMensili"
+            aria-describedby="aff-escludi-aiuto"
+          />
+          <span>Esclusa dagli accrediti mensili dei punti</span>
+        </label>
+        <p class="admin-news__hint" id="aff-escludi-aiuto">
+          Spuntala per una sala i cui giocatori ricevono già i punti per altra
+          via — per esempio dal conteggio del rakeback, come può succedere su
+          Lottomatica. Le sue righe restano visibili in «Affiliati attivi» ma
+          non si accreditano da lì. Il sito non confronta mai le due liste: la
+          scelta è tua, sala per sala.
         </p>
 
         <div class="field">

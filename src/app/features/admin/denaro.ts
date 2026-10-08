@@ -187,3 +187,31 @@ export function formattaDelta(puntiPercentuali: number): string {
 export function formattaIntero(n: number): string {
   return new Intl.NumberFormat('it-IT', { maximumFractionDigits: 0 }).format(n);
 }
+
+/**
+ * Punti BFF scritti a mano, all'italiana: «3000», «3.000», «3 000». Un intero
+ * positivo fino a `max`, oppure `null` se la stringa non è un numero di punti.
+ *
+ * ⚠️ Il campo è `type="text" inputmode="numeric"` e non `type="number"`, e
+ * questa funzione è il perché: un input numerico legge «3.000» come **3** — il
+ * punto è il decimale per il browser e il separatore delle migliaia per chi
+ * scrive in italiano —, cioè accrediterebbe tre punti al posto di tremila senza
+ * che nessuno se ne accorga prima di aver confermato.
+ *
+ * ⚠️ Un punto è ammesso SOLO come separatore delle migliaia, a gruppi di tre
+ * cifre: «1.25» e «3,5» si rifiutano invece di indovinare. I punti sono interi,
+ * e su un accredito l'ambiguità si risolve chiedendo, non scegliendo.
+ */
+export function parsePuntiInteri(raw: string, max: number): number | null {
+  // Spazi normali, non separabili e stretti (U+00A0, U+202F: quelli che il
+  // formato italiano mette fra le migliaia, e che arrivano incollando).
+  const testo = raw.trim().replace(/[\s  ]/g, '');
+  if (!testo) return null;
+  const forma = testo.includes('.')
+    ? /^\d{1,3}(\.\d{3})+$/.test(testo)
+    : /^\d+$/.test(testo);
+  if (!forma) return null;
+  const n = Number(testo.replace(/\./g, ''));
+  if (!Number.isSafeInteger(n) || n < 1 || n > max) return null;
+  return n;
+}

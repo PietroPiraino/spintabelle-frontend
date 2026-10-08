@@ -3,6 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AccreditaPuntiEsito,
+  AccreditaPuntiPayload,
   AffiliationAdmin,
   AffiliationIdentifierPayload,
   AffiliationRequestPayload,
@@ -18,6 +20,7 @@ import {
   PokerRoomRemoved,
   PokerRoomUpdatePayload,
   PokerRoomUpdated,
+  PuntiMeseAffiliati,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -235,6 +238,25 @@ export class AffiliationsService {
     );
   }
 
+  // ── Admin: accrediti mensili di punti (scheda «Affiliati attivi») ──
+
+  /** Le righe tracciate di un mese chiuso (assente = il mese scorso), per sala. */
+  puntiMese(mese?: string): Observable<PuntiMeseAffiliati> {
+    const params = mese ? new HttpParams().set('mese', mese) : undefined;
+    return this.http.get<PuntiMeseAffiliati>(
+      `${API}/admin/affiliations/punti`,
+      { params },
+    );
+  }
+
+  /** Accredita i punti di UNA sala per UN mese; risponde col mese riletto. */
+  accreditaPunti(body: AccreditaPuntiPayload): Observable<AccreditaPuntiEsito> {
+    return this.http.post<AccreditaPuntiEsito>(
+      `${API}/admin/affiliations/punti`,
+      body,
+    );
+  }
+
   forUser(userId: string): Observable<AffiliationAdmin[]> {
     return this.http.get<AffiliationAdmin[]>(
       `${API}/admin/users/${userId}/affiliations`,
@@ -348,6 +370,10 @@ export class AffiliationsService {
     set('consenteAccountEsistenti', payload.consenteAccountEsistenti);
     set('ordine', payload.ordine);
     set('active', payload.active);
+    // ⚠️ Ogni campo nuovo del payload va scritto ANCHE qui: un campo saltato
+    // non arriva al server e nessun errore lo dice (il flag si salverebbe sempre
+    // al valore di prima).
+    set('escludiDaPuntiMensili', payload.escludiDaPuntiMensili);
     if (logo) fd.set('logo', logo, logo.name);
     return fd;
   }

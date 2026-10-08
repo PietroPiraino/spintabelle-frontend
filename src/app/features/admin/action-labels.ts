@@ -32,6 +32,10 @@ export const ACTION_LABELS: Record<string, string> = {
   'revoke-affiliation': 'Affiliazione revocata',
   'note-affiliation': 'Nota interna affiliazione',
   'resend-affiliation': 'Email affiliazione reinviata',
+  // ⚠️ Mancava dal 07/09/2026: il backend la scrive a ogni inserimento
+  // retroattivo, e il tab Log stampava lo slug grezzo.
+  'manual-affiliation': 'Affiliazione registrata a mano',
+  'credit-affiliation-points': 'Punti mensili accreditati agli affiliati',
   'create-poker-room': 'Sala creata',
   'update-poker-room': 'Sala modificata',
   'delete-poker-room': 'Sala eliminata',
