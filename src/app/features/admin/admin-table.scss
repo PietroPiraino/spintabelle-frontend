@@ -544,9 +544,13 @@
   vertical-align: bottom;
 }
 
+// ⚠️ `inline` e non `inline-block`: un blocco in linea è ATOMICO, e l'ellissi
+// del corpo non lo può tagliare a metà — lo username lungo veniva troncato a
+// filo, senza i puntini, cioè come un testo che finisce lì. Il margine
+// verticale che l'`inline-block` portava lo dà già l'interlinea della cella.
 .admin-table__chip {
-  display: inline-block;
-  margin: 0.1rem 0.3rem 0.1rem 0;
+  display: inline;
+  margin-right: 0.3rem;
   font-size: 0.78rem;
   color: var(--text-muted);
 
@@ -646,5 +650,24 @@
 @media (min-width: #{s.$bp-tabella-blocchi + 1}) and (max-width: 1200px) {
   .admin-table__ident {
     max-width: 20rem;
+  }
+
+  // ⚠️ La cella a più valori prende lo spazio CHE RESTA, invece di un tetto
+  // fisso. Misurato su `/admin/iscritti` a 1100px con uno username di sala da
+  // 37 caratteri: «Sale» restava ai suoi 18rem e la tabella sfondava di 102px
+  // (134 con un'email da 37 caratteri sulla stessa pagina). Un tetto più basso
+  // non bastava a nessuna misura: con l'identità al suo tetto restano ~120px, e
+  // un numero scelto per quel caso taglierebbe le sale anche quando lo spazio
+  // c'è. `max-width: 0` azzera il minimo della colonna, `width: 100%` le dà
+  // tutto l'avanzo, e il corpo — ora un blocco — si taglia sulla cella col
+  // `title` di sempre. Solo in questa fascia: sopra i 1200 lo spazio avanza, e
+  // sotto i 720 la cella è `__solo-largo`, cioè non c'è.
+  .admin-table__multi {
+    width: 100%;
+    max-width: 0;
+  }
+
+  .admin-table__multi-corpo {
+    display: block;
   }
 }
