@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   ElementRef,
   inject,
@@ -114,7 +115,35 @@ export class LiveRoomComponent implements OnDestroy {
   protected readonly recordingAvviabile = signal(true);
   protected readonly recElapsed = signal(''); // durata REC (mm:ss / h:mm:ss)
   protected readonly recAnnounce = signal(''); // annuncio sr-only avvio/stop REC
-  protected readonly endingLive = signal(false); // "Termina live" in corso
+  protected readonly endingLive = signal(false); // "Chiudi la live per tutti" in corso
+  /**
+   * Può chiudere la live per tutti (e riaprirla)? Lo dice il server nel token,
+   * ed è più stretto di `role`: un COACH ospite modera ma non chiude. Nasce
+   * dall'incidente del 12/10/2026, quando la sala è stata chiusa mentre due
+   * persone avevano quel pulsante.
+   */
+  protected readonly puoChiudere = signal(false);
+  protected readonly riaprendo = signal(false); // "Riapri la sala" in corso
+  /** Quanti ALTRI sono in sala (chi guarda escluso): il numero delle conferme. */
+  protected readonly altri = computed(() =>
+    Math.max(0, this.participants() - 1),
+  );
+  /** Seconda riga della conferma di chiusura: chi resta fuori, e la registrazione. */
+  protected readonly dettaglioChiusura = computed(() => {
+    const n = this.altri();
+    const chi =
+      n === 0
+        ? 'In sala non c’è nessun altro'
+        : n === 1
+          ? '1 persona verrà disconnessa'
+          : `${n} persone verranno disconnesse`;
+    const rec = this.recording()
+      ? n === 0
+        ? ', e la registrazione si fermerà'
+        : ' e la registrazione si fermerà'
+      : '';
+    return `${chi}${rec}.`;
+  });
   // inline-confirm azioni distruttive (chiave attiva, es. 'muteAll'/'endLive'/'kick:<id>') o null
   protected readonly confirming = signal<string | null>(null);
   protected readonly recPending = signal(false); // avvio/stop registrazione in corso
@@ -203,6 +232,10 @@ export class LiveRoomComponent implements OnDestroy {
         this.liveApi.getRoomToken(id, this.consentGiven),
       );
       this.role.set(tok.role);
+      // Ripiego per la finestra del deploy: un backend più vecchio non manda il
+      // campo, e allora chiude chi è coach (la regola di prima). Togliere il
+      // ripiego quando il backend nuovo è in produzione da qualche giorno.
+      this.puoChiudere.set(tok.puoChiudere ?? tok.role === 'coach');
       this.recordingEnabled.set(tok.recordingEnabled);
       this.recordingAvviabile.set(tok.recordingAvviabile ?? true);
       const LK = await this.loadLiveKit();
@@ -1137,22 +1170,84 @@ export class LiveRoomComponent implements OnDestroy {
     );
   }
 
-  /** Coach: termina la live per tutti (chiude la stanza), poi torna alla lista. */
+  /**
+   * Chiude la live per tutti (la stanza si cancella).
+   *
+   * ⚠️ Dopo il successo chi ha chiuso RESTA sulla schermata «terminata» e non
+   * torna alla lista: lì trova «Riapri la sala». Se l'ha chiusa per errore,
+   * rimediare costa un clic invece di una sessione nuova (12/10/2026).
+   */
   protected doEndLive(): void {
     this.cancelConfirm();
     if (this.endingLive()) return;
     this.endingLive.set(true);
     this.liveApi.endLive(this.id()).subscribe({
-      next: () => void this.router.navigate(['/live']),
-      error: () => {
+      next: () => {
         this.endingLive.set(false);
-        this.toast.error('Impossibile terminare la live.');
+        this.state.set('ended');
+      },
+      error: (err: unknown) => {
+        this.endingLive.set(false);
+        this.toast.error(apiErrorMessage(err, 'Impossibile chiudere la live.'));
       },
     });
   }
 
+  /**
+   * «Esci dalla sala». Esce subito, tranne in un caso: chi potrebbe chiudere la
+   * live e lascia altri dentro riceve una conferma che lo dice. È l'errore
+   * opposto a quello del 12/10/2026 — il coach che a fine lezione esce invece
+   * di chiudere, e lascia sala (e registrazione) aperte.
+   */
+  protected esci(): void {
+    if (this.state() === 'connected' && this.puoChiudere() && this.altri() > 0) {
+      this.askConfirm('esci');
+      return;
+    }
+    this.leave();
+  }
+
   protected leave(): void {
     void this.router.navigate(['/live']);
+  }
+
+  /**
+   * Riapre la sala chiusa, poi rientra. 409 vuol dire che qualcun altro l'ha già
+   * riaperta: si rientra lo stesso.
+   */
+  protected riapriSala(): void {
+    if (this.riaprendo()) return;
+    this.riaprendo.set(true);
+    this.liveApi.reopenLive(this.id()).subscribe({
+      next: () => this.ricarica(),
+      error: (err: unknown) => {
+        if ((err as HttpErrorResponse)?.status === 409) {
+          this.ricarica();
+          return;
+        }
+        this.riaprendo.set(false);
+        this.toast.error(apiErrorMessage(err, 'Impossibile riaprire la sala.'));
+      },
+    });
+  }
+
+  /** Rientra in una sala riaperta (o scopre che è ancora chiusa). */
+  protected rientra(): void {
+    this.ricarica();
+  }
+
+  /**
+   * Rientrare = ricaricare la pagina della sala, non riconnettere sul posto.
+   *
+   * ⚠️ Scelta deliberata: dopo una disconnessione questa schermata tiene molto
+   * stato (riquadri video, mani alzate, Krisp applicato una volta sola, ascoltatori
+   * della stanza vecchia), e una riconnessione sul posto andrebbe provata con
+   * LiveKit vero — che qui non si può. Il prezzo: su una sessione registrata il
+   * consenso viene richiesto di nuovo. Metodo a sé perché le spec lo
+   * sostituiscono: un `reload` vero ricaricherebbe il runner dei test.
+   */
+  protected ricarica(): void {
+    this.doc.defaultView?.location.reload();
   }
 
   ngOnDestroy(): void {

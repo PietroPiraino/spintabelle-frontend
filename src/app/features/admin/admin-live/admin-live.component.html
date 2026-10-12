@@ -317,7 +317,7 @@
         <div class="field">
           <p class="field-hint">
             Sala on-site: l'accesso avviene dentro il sito (nessun link da
-            incollare). Il coach sei tu (o un altro admin che entra).
+            incollare). Ogni admin e ogni coach che entra modera la sala.
           </p>
           <label class="field" style="flex-direction: row; align-items: center; gap: 0.5rem">
             <input type="checkbox" formControlName="recordingEnabled" />
@@ -327,10 +327,84 @@
             </span>
           </label>
         </div>
+
+        <!-- ⚠️ Chi conduce decide chi può CHIUDERE la sala per tutti (oltre agli
+             admin): un coach ospite modera ma non chiude (12/10/2026). Per una
+             lezione condotta da un COACH va indicato, o a fine lezione la sala
+             la chiude solo un admin. -->
+        <div class="field">
+          <label for="hostUserId">Conduce</label>
+          <select
+            id="hostUserId"
+            class="input"
+            formControlName="hostUserId"
+            aria-describedby="hostUserId-aiuto"
+          >
+            <option value="">Nessuno — la chiudono solo gli admin</option>
+            @if (conduttoreFuoriElenco()) {
+              <option [value]="form.controls.hostUserId.value">
+                Utente non più fra admin e coach
+              </option>
+            }
+            @for (c of conduttori() ?? []; track c.id) {
+              <option [value]="c.id">{{ c.etichetta }}</option>
+            }
+          </select>
+          <p id="hostUserId-aiuto" class="field-hint">
+            Chi conduce può chiudere e riaprire la sala; gli admin possono
+            sempre. Per una lezione tenuta da un coach, indicalo qui.
+            @if (conduttoriErrore()) {
+              <strong>Elenco di admin e coach non caricato: riapri la modale per riprovare.</strong>
+            }
+          </p>
+        </div>
       }
       </form>
 
       @if (sessioneAperta(); as s) {
+        <!-- Aperta di default: se una live chiusa si apre in modifica, quasi
+             sempre è per riaprirla. -->
+        @if (s.mode === 'LIVEKIT' && s.ended) {
+          <details class="admin-modale__sez" open>
+            <summary class="admin-modale__sum">Riapri la sala</summary>
+            <div class="admin-modale__corpo">
+              <p class="admin-nota">
+                Questa live è stata chiusa. Riaprendola, chi ha accesso può
+                rientrare dalla pagina delle live.
+                @if (s.recordingEnabled) {
+                  La registrazione non riparte: la sessione ne tiene una sola.
+                }
+              </p>
+              <div class="row admin-panel__actions">
+                @if (confermaRiapri()) {
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--sm"
+                    [disabled]="riaprendo()"
+                    (click)="riapri(s)"
+                  >
+                    {{ riaprendo() ? 'Riapro…' : 'Confermo, riapri' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="confermaRiapri.set(false)"
+                  >
+                    Annulla
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--sm"
+                    (click)="confermaRiapri.set(true)"
+                  >
+                    Riapri la sala
+                  </button>
+                }
+              </div>
+            </div>
+          </details>
+        }
         <details class="admin-modale__sez admin-modale__sez--rischio">
           <summary class="admin-modale__sum">Elimina la sessione</summary>
           <div class="admin-modale__corpo">

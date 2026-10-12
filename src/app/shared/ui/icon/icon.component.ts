@@ -22,6 +22,9 @@ export const ICON_NAMES = [
   'maximize',
   'users',
   'log-out',
+  // «Chiudi la live per tutti»: NON `log-out`, che è l'icona di uscita e
+  // faceva leggere quel comando come «esco io» (incidente del 12/10/2026).
+  'power',
   'record',
   'square',
   'radio',
@@ -196,6 +199,10 @@ export type IconName = (typeof ICON_NAMES)[number];
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
         <polyline points="16 17 21 12 16 7" />
         <line x1="21" x2="9" y1="12" y2="12" />
+      }
+      @case ('power') {
+        <path d="M12 2v10" />
+        <path d="M18.4 6.6a9 9 0 1 1-12.77.04" />
       }
       @case ('record') {
         <circle cx="12" cy="12" r="6" fill="currentColor" stroke="none" />

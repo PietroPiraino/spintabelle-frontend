@@ -686,6 +686,8 @@ export interface LiveSession {
   recordedLessonId?: string;
   /** LIVEKIT, solo admin: messaggio d'errore dell'ultima registrazione fallita */
   recordingError?: string;
+  /** solo admin: chi conduce (id utente), per precompilare il form */
+  hostUserId?: string;
   createdAt?: string;
 }
 
@@ -701,8 +703,11 @@ export interface LiveSessionPayload {
   mode?: LiveMode;
   /** richiesto solo se mode === EXTERNAL */
   joinUrl?: string;
-  /** coach esplicito (opzionale): id utente. Se assente, qualsiasi ADMIN è coach */
-  hostUserId?: string;
+  /**
+   * Chi conduce (id utente): può chiudere e riaprire la sala, oltre agli admin.
+   * `null` in modifica lo TOGLIE; assente lo lascia com'è.
+   */
+  hostUserId?: string | null;
   /** abilita la registrazione su questa sessione (richiede consenso all'ingresso) */
   recordingEnabled?: boolean;
 }
@@ -822,6 +827,12 @@ export interface LiveRoomToken {
    * Opzionale: un backend più vecchio non lo manda, e allora vale `true`.
    */
   recordingAvviabile?: boolean;
+  /**
+   * Può chiudere la live per tutti (e riaprirla)? Più stretto di `role`: un
+   * COACH ospite è `coach` ma non chiude (decisione owner del 12/10/2026).
+   * Opzionale: un backend più vecchio non lo manda, e allora vale `role === 'coach'`.
+   */
+  puoChiudere?: boolean;
 }
 
 /** Nota di rettifica pubblicata in calce a un articolo (§4.4). */

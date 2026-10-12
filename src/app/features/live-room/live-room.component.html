@@ -2,7 +2,36 @@
   <div class="container">
     <h1 class="sr-only">Sala live</h1>
     <div class="live-room__top">
-      <a routerLink="/live" class="btn btn--ghost btn--sm">← Torna alle live</a>
+      <!-- L'uscita è di TUTTI e sta sempre qui, ben visibile. Fino al 12/10/2026
+           era un piccolo link grigio «← Torna alle live», e l'unico comando
+           evidente con l'icona di uscita era «Termina» — che chiude la live per
+           tutti. -->
+      @if (isConfirming('esci')) {
+        <span
+          class="live-room__confirm live-room__confirm--frase"
+          role="group"
+          aria-label="Conferma uscita"
+        >
+          <span class="live-room__confirm-label">
+            Esci solo tu?
+            <span class="live-room__confirm-dettaglio">
+              La live resta aperta per
+              {{ altri() === 1 ? '1 altra persona' : altri() + ' altre persone' }}.
+            </span>
+          </span>
+          <button type="button" class="btn btn--sm btn--primary" (click)="leave()">
+            Esci
+          </button>
+          <button type="button" class="btn btn--sm btn--ghost" (click)="cancelConfirm()">
+            Annulla
+          </button>
+        </span>
+      } @else {
+        <button type="button" class="btn btn--ghost live-room__esci" (click)="esci()">
+          <app-icon name="arrow-left" [size]="18" />
+          {{ state() === 'connected' ? 'Esci dalla sala' : 'Torna alle live' }}
+        </button>
+      }
       @if (state() === 'connected') {
         <div class="live-room__top-right">
           <span class="live-room__count" aria-live="polite">
@@ -84,16 +113,31 @@
                 Muta tutti
               </button>
             }
+          }
+          <!-- Chiudere la live per tutti: solo chi conduce e gli admin (un COACH
+               ospite modera ma non chiude). ⚠️ Icona `power` e MAI `log-out`:
+               con l'icona di uscita il comando si leggeva come «esco io».
+               «Annulla» resta l'ULTIMO: la conferma prende il posto del
+               pulsante, e un doppio clic finisce su «Annulla», non sulla
+               chiusura. -->
+          @if (puoChiudere()) {
             @if (isConfirming('endLive')) {
-              <span class="live-room__confirm">
-                <span class="live-room__confirm-label">Terminare la live?</span>
+              <span
+                class="live-room__confirm live-room__confirm--frase"
+                role="group"
+                aria-label="Conferma chiusura della live"
+              >
+                <span class="live-room__confirm-label">
+                  Chiudere la live per tutti?
+                  <span class="live-room__confirm-dettaglio">{{ dettaglioChiusura() }}</span>
+                </span>
                 <button
                   type="button"
                   class="btn btn--sm btn--danger"
                   [disabled]="endingLive()"
                   (click)="doEndLive()"
                 >
-                  {{ endingLive() ? 'Termino…' : 'Conferma' }}
+                  {{ endingLive() ? 'Chiudo…' : 'Chiudi per tutti' }}
                 </button>
                 <button
                   type="button"
@@ -109,8 +153,8 @@
                 class="btn btn--sm btn--danger"
                 (click)="askConfirm('endLive')"
               >
-                <app-icon name="log-out" [size]="16" />
-                Termina
+                <app-icon name="power" [size]="16" />
+                Chiudi la live per tutti
               </button>
             }
           }
@@ -153,7 +197,34 @@
         <div class="empty-state">
           <app-icon class="empty-state__icona" name="hand" [size]="32" />
           <p>La live è terminata. Grazie per aver partecipato!</p>
-          <a routerLink="/live" class="btn btn--primary">Torna alle live</a>
+          <!-- Prima di questi due rami l'unico rimedio a una chiusura per
+               errore era creare una sessione nuova (12/10/2026). -->
+          @if (puoChiudere()) {
+            <p class="live-room__ended-nota">
+              Se l’hai chiusa per errore puoi riaprirla: chi era in sala potrà rientrare.
+            </p>
+            <div class="live-room__consent-actions">
+              <button
+                type="button"
+                class="btn btn--primary"
+                [disabled]="riaprendo()"
+                (click)="riapriSala()"
+              >
+                {{ riaprendo() ? 'Riapro…' : 'Riapri la sala' }}
+              </button>
+              <a routerLink="/live" class="btn btn--ghost">Torna alle live</a>
+            </div>
+          } @else {
+            <p class="live-room__ended-nota">
+              Se il coach riapre la sala, puoi rientrare da qui.
+            </p>
+            <div class="live-room__consent-actions">
+              <a routerLink="/live" class="btn btn--primary">Torna alle live</a>
+              <button type="button" class="btn btn--ghost" (click)="rientra()">
+                Rientra
+              </button>
+            </div>
+          }
         </div>
       }
       @case ('consent') {

@@ -45,7 +45,39 @@ const buttonWith = (el: HTMLElement, text: string): HTMLButtonElement =>
     b.textContent?.includes(text),
   )!;
 
-const isList = (r: { url: string }) => r.url === `${API}/live`;
+const isList = (r: { url: string; method?: string }) =>
+  r.url === `${API}/live` && r.method !== 'POST';
+
+/** Admin e coach finti per il campo «Conduce». */
+const STAFF = {
+  ADMIN: [
+    { id: 'u-exi', email: 'exi@bff.it', nickname: 'Exivezzz2323', role: 'ADMIN' },
+  ],
+  COACH: [
+    { id: 'u-velo', email: 'velo@bff.it', nickname: 'Velenoso1983', role: 'COACH' },
+    { id: 'u-jin', email: 'jin@bff.it', nickname: 'Jinwoosung', role: 'COACH' },
+  ],
+};
+
+/**
+ * Risponde alle due letture di admin e coach che l'apertura del form fa (una
+ * per ruolo). Nessuna richiesta in sospeso = nessuna risposta: l'elenco si
+ * carica una volta sola.
+ */
+function serviConduttori(http: HttpTestingController): void {
+  for (const req of http.match((r) => r.url === `${API}/admin/users`)) {
+    const role = req.request.params.get('role') as 'ADMIN' | 'COACH';
+    const items = STAFF[role];
+    req.flush({
+      items,
+      total: items.length,
+      page: 1,
+      limit: 100,
+      totalPages: 1,
+      affiliazioniPerUtente: {},
+    });
+  }
+}
 
 /** Monta il componente e risolve la prima lettura dell'elenco. */
 async function bootstrap(sessions: LiveSession[]): Promise<{
@@ -299,6 +331,17 @@ describe('AdminLiveComponent — programmazione di una sessione', () => {
     el.querySelector<HTMLButtonElement>(
       '[aria-label="Crea una nuova sessione live"]',
     )!.click();
+    serviConduttori(http);
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  /** La matita di una riga, per nome accessibile. */
+  async function apriModifica(titolo: string): Promise<void> {
+    el.querySelector<HTMLButtonElement>(
+      `[aria-label="Modifica ${titolo}"]`,
+    )!.click();
+    serviConduttori(http);
     await fixture.whenStable();
     fixture.detectChanges();
   }
@@ -350,11 +393,7 @@ describe('AdminLiveComponent — programmazione di una sessione', () => {
   });
 
   it('la modifica di una sessione Esterna carica il suo mode e il suo link (il default non la tocca)', async () => {
-    el.querySelector<HTMLButtonElement>(
-      '[aria-label="Modifica Q&A su Discord"]',
-    )!.click();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    await apriModifica('Q&A su Discord');
 
     expect(comp.form.controls.mode.value).toBe('EXTERNAL');
     const joinUrl = el.querySelector<HTMLInputElement>('#joinUrl');
@@ -370,11 +409,7 @@ describe('AdminLiveComponent — programmazione di una sessione', () => {
     // sul default e sui validatori del link: se uno dei due dimenticasse di
     // togliere `required` dopo una modifica a una EXTERNAL, il form nuovo
     // sarebbe invalido su un campo invisibile.
-    el.querySelector<HTMLButtonElement>(
-      '[aria-label="Modifica Q&A su Discord"]',
-    )!.click();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    await apriModifica('Q&A su Discord');
     expect(comp.form.controls.mode.value).toBe('EXTERNAL');
 
     // l'«Annulla» del PIEDE della modale (quello della sezione «Elimina» è
@@ -392,5 +427,149 @@ describe('AdminLiveComponent — programmazione di una sessione', () => {
     comp.form.controls.title.setValue('Review mani 50bb');
     comp.form.controls.startsAt.setValue('2026-09-24T20:00');
     expect(comp.form.valid).toBe(true);
+  });
+});
+
+describe('AdminLiveComponent — chi conduce e riapertura (12/10/2026)', () => {
+  let fixture: ComponentFixture<AdminLiveComponent>;
+  let http: HttpTestingController;
+  let el: HTMLElement;
+  let comp: FormTestabile;
+
+  /** Live chiusa (registrata) e live in programma condotta da un coach. */
+  const chiusa = readySession({
+    id: 's3',
+    title: 'Exivezzz • Scelte al river',
+    ended: true,
+  });
+  const condotta = readySession({
+    id: 's4',
+    title: 'Velenoso1983 • Mental game',
+    startsAt: '2099-10-14T20:00:00.000Z',
+    recordingEnabled: false,
+    recordingState: 'NONE',
+    hostUserId: 'u-velo',
+  });
+
+  beforeEach(async () => {
+    ({ fixture, http, el } = await bootstrap([chiusa, condotta]));
+    comp = fixture.componentInstance as unknown as FormTestabile;
+  });
+
+  afterEach(() => http.verify());
+
+  async function apri(selettore: string): Promise<void> {
+    el.querySelector<HTMLButtonElement>(selettore)!.click();
+    serviConduttori(http);
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  const opzioni = () =>
+    Array.from(
+      el.querySelectorAll<HTMLOptionElement>('#hostUserId option'),
+    ).map((o) => o.textContent?.trim());
+
+  /** Invia il form col pulsante del piede (che sta FUORI dal <form>). */
+  async function salva(): Promise<void> {
+    el.querySelector<HTMLButtonElement>('button[form="live-form"]')!.click();
+    await fixture.whenStable();
+  }
+
+  it('«Conduce» elenca admin e coach in ordine, con «Nessuno» per primo', async () => {
+    await apri('[aria-label="Crea una nuova sessione live"]');
+    expect(opzioni()).toEqual([
+      'Nessuno — la chiudono solo gli admin',
+      'Exivezzz2323 · admin',
+      'Jinwoosung · coach',
+      'Velenoso1983 · coach',
+    ]);
+  });
+
+  it('creando con un coach scelto, il payload porta il suo id', async () => {
+    await apri('[aria-label="Crea una nuova sessione live"]');
+    comp.form.controls.title.setValue('Mental game');
+    comp.form.controls.startsAt.setValue('2099-10-21T22:00');
+    const select = el.querySelector<HTMLSelectElement>('#hostUserId')!;
+    select.value = 'u-velo';
+    select.dispatchEvent(new Event('change'));
+    await salva();
+    const req = http.expectOne(
+      (r) => r.method === 'POST' && r.url === `${API}/live`,
+    );
+    expect((req.request.body as { hostUserId?: string }).hostUserId).toBe(
+      'u-velo',
+    );
+    req.flush({ id: 'nuova' });
+    http.expectOne(isList).flush([chiusa, condotta]);
+  });
+
+  it('creando con «Nessuno» il campo non si manda affatto', async () => {
+    await apri('[aria-label="Crea una nuova sessione live"]');
+    comp.form.controls.title.setValue('Live senza conduttore');
+    comp.form.controls.startsAt.setValue('2099-10-21T22:00');
+    await salva();
+    const req = http.expectOne(
+      (r) => r.method === 'POST' && r.url === `${API}/live`,
+    );
+    expect(
+      (req.request.body as { hostUserId?: string }).hostUserId,
+    ).toBeUndefined();
+    req.flush({ id: 'nuova' });
+    http.expectOne(isList).flush([chiusa, condotta]);
+  });
+
+  it('in modifica la tendina mostra chi conduce, e «Nessuno» manda null (che lo TOGLIE)', async () => {
+    await apri(`[aria-label="Modifica ${condotta.title}"]`);
+    const select = el.querySelector<HTMLSelectElement>('#hostUserId')!;
+    expect(select.value).toBe('u-velo');
+
+    select.value = '';
+    select.dispatchEvent(new Event('change'));
+    await salva();
+    const req = http.expectOne(
+      (r) => r.method === 'PATCH' && r.url === `${API}/live/s4`,
+    );
+    // ⚠️ null e non '': `@IsMongoId` rifiuterebbe la stringa vuota con un 400
+    expect((req.request.body as { hostUserId?: unknown }).hostUserId).toBeNull();
+    req.flush({ id: 's4' });
+    http.expectOne(isList).flush([chiusa, condotta]);
+  });
+
+  it('un conduttore fuori dall’elenco di admin e coach non si legge come «nessuno»', async () => {
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    const promosso = readySession({
+      id: 's5',
+      title: 'Live con ospite',
+      startsAt: '2099-10-14T20:00:00.000Z',
+      hostUserId: 'u-ex-coach',
+    });
+    ({ fixture, http, el } = await bootstrap([promosso]));
+    await apri(`[aria-label="Modifica ${promosso.title}"]`);
+    expect(opzioni()).toContain('Utente non più fra admin e coach');
+    expect(el.querySelector<HTMLSelectElement>('#hostUserId')!.value).toBe(
+      'u-ex-coach',
+    );
+  });
+
+  it('una live CHIUSA offre «Riapri la sala»: conferma, POST, la modale si chiude', async () => {
+    await apri(`[aria-label="Modifica ${chiusa.title}"]`);
+    buttonWith(el, 'Riapri la sala').click();
+    fixture.detectChanges();
+    buttonWith(el, 'Confermo, riapri').click();
+    http
+      .expectOne((r) => r.method === 'POST' && r.url === `${API}/live/s3/reopen`)
+      .flush({ ok: true });
+    http.expectOne(isList).flush([{ ...chiusa, ended: false }, condotta]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('#hostUserId')).toBeNull();
+    expect(el.textContent).toContain('Sala riaperta');
+  });
+
+  it('una live NON chiusa non mostra «Riapri la sala»', async () => {
+    await apri(`[aria-label="Modifica ${condotta.title}"]`);
+    expect(buttonWith(el, 'Riapri la sala')).toBeUndefined();
   });
 });

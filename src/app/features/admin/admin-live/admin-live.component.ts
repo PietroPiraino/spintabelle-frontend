@@ -9,6 +9,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import {
   LESSON_CATEGORIES,
   LESSON_CATEGORY_LABELS,
@@ -18,6 +19,7 @@ import {
   LiveSession,
   LiveSessionPayload,
 } from '../../../core/models/api.models';
+import { AdminUsersService } from '../../../core/services/admin-users.service';
 import { LessonsService } from '../../../core/services/lessons.service';
 import { LiveService } from '../../../core/services/live.service';
 import { TagPickerComponent } from '../../../shared/ui/tag-picker/tag-picker.component';
@@ -54,8 +56,51 @@ export class AdminLiveComponent {
   private readonly fb = inject(FormBuilder);
   private readonly liveApi = inject(LiveService);
   private readonly lessonsApi = inject(LessonsService);
+  private readonly usersApi = inject(AdminUsersService);
 
   protected readonly sessions = signal<LiveSession[] | null>(null);
+
+  /**
+   * Chi può condurre una live: admin e coach, per il campo «Conduce».
+   * `null` = non ancora caricato; si carica alla prima apertura del form.
+   */
+  protected readonly conduttori = signal<
+    { id: string; etichetta: string }[] | null
+  >(null);
+  protected readonly conduttoriErrore = signal(false);
+
+  /**
+   * Il conduttore attuale non è fra admin e coach (un utente promosso per una
+   * sessione, o un ruolo cambiato dopo): senza un'opzione sua, la tendina lo
+   * mostrerebbe vuoto — cioè direbbe «nessuno» su una sessione che ce l'ha.
+   */
+  protected readonly conduttoreFuoriElenco = computed(() => {
+    const id = (this.valori() as { hostUserId?: string }).hostUserId;
+    const elenco = this.conduttori();
+    return !!id && !!elenco && !elenco.some((c) => c.id === id);
+  });
+
+  private caricaConduttori(): void {
+    if (this.conduttori() !== null) return;
+    this.conduttoriErrore.set(false);
+    // Due chiamate perché il filtro per ruolo ne accetta uno solo; sono una
+    // manciata di persone, e il limite largo evita di perderne una a pagina 2.
+    forkJoin([
+      this.usersApi.list({ role: 'ADMIN', limit: 100 }),
+      this.usersApi.list({ role: 'COACH', limit: 100 }),
+    ]).subscribe({
+      next: ([admin, coach]) =>
+        this.conduttori.set(
+          [...admin.items, ...coach.items]
+            .map((u) => ({
+              id: u.id,
+              etichetta: `${u.nickname || u.email} · ${u.role === 'ADMIN' ? 'admin' : 'coach'}`,
+            }))
+            .sort((a, b) => a.etichetta.localeCompare(b.etichetta, 'it')),
+        ),
+      error: () => this.conduttoriErrore.set(true),
+    });
+  }
   protected readonly listLoading = signal(false);
   protected readonly listError = signal<string | null>(null);
 
@@ -153,6 +198,10 @@ export class AdminLiveComponent {
     // vecchi): questo form manda sempre `mode`, quindi il default vive qui.
     mode: ['LIVEKIT' as LiveMode, Validators.required],
     recordingEnabled: [false],
+    // Chi conduce (id utente, '' = nessuno): può chiudere e riaprire la sala
+    // oltre agli admin. ⚠️ Per una lezione condotta da un COACH va indicato, o
+    // a fine lezione la sala la chiude solo un admin (12/10/2026).
+    hostUserId: [''],
     // ⚠️ I validatori di joinUrl DEVONO concordare col default di `mode` qui
     // sopra: LIVEKIT lo ignora, quindi nasce senza; required + pattern glieli
     // mette `setJoinUrlValidators` quando si sceglie EXTERNAL. Con
@@ -205,11 +254,13 @@ export class AdminLiveComponent {
       durationMin: 60,
       mode: 'LIVEKIT',
       recordingEnabled: false,
+      hostUserId: '',
     });
     this.setJoinUrlValidators('LIVEKIT');
     this.error.set(null);
     this.feedback.set(null);
     this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.caricaConduttori();
     this.formAperto.set('');
   }
 
@@ -271,17 +322,21 @@ export class AdminLiveComponent {
       mode: session.mode,
       recordingEnabled: session.recordingEnabled ?? false,
       joinUrl: session.joinUrl ?? '',
+      hostUserId: session.hostUserId ?? '',
     });
     this.setJoinUrlValidators(session.mode);
     // ⚠️ La baseline si scrive DOPO il patch, o la modale nasce già sporca e
     // il primo Escape chiede conferma senza che si sia digitato nulla.
     this.baseline.set(JSON.stringify(this.form.getRawValue()));
+    this.confermaRiapri.set(false);
+    this.caricaConduttori();
     this.formAperto.set(session.id);
   }
 
   protected cancelEdit(): void {
     this.formAperto.set(null);
     this.confermaElimina.set(false);
+    this.confermaRiapri.set(false);
     this.editingId.set(null);
     // Stesso default di `creaNuova`: On-site (owner, 16/09/2026). La coppia
     // «mode + validatori di joinUrl» si resetta INSIEME in ogni ripristino:
@@ -292,6 +347,7 @@ export class AdminLiveComponent {
       durationMin: 60,
       mode: 'LIVEKIT',
       recordingEnabled: false,
+      hostUserId: '',
     });
     this.setJoinUrlValidators('LIVEKIT');
     this.error.set(null);
@@ -321,8 +377,13 @@ export class AdminLiveComponent {
       // registrazione solo per LIVEKIT
       recordingEnabled: v.mode === 'LIVEKIT' ? v.recordingEnabled : undefined,
     };
-
     const id = this.editingId();
+    // Chi conduce, solo per la sala on-site. «Nessuno» in creazione non si
+    // manda; in modifica si manda `null`, che lo TOGLIE (l'assenza lo
+    // lascerebbe com'era). Mai `''`: `@IsMongoId` la rifiuterebbe con un 400.
+    if (v.mode === 'LIVEKIT')
+      payload.hostUserId = v.hostUserId || (id ? null : undefined);
+
     const request$ = id
       ? this.liveApi.update(id, payload)
       : this.liveApi.create(payload);
@@ -365,6 +426,36 @@ export class AdminLiveComponent {
       error: (err: unknown) => {
         this.saving.set(false);
         this.error.set(apiErrorMessage(err, 'Eliminazione non riuscita.'));
+      },
+    });
+  }
+
+  /**
+   * Riapre una live chiusa (anche per errore): il rientro torna possibile.
+   * Prima di questo comando l'unico rimedio era creare una sessione nuova, con
+   * presenze e registrazione divise su due sessioni (12/10/2026).
+   */
+  protected readonly confermaRiapri = signal(false);
+  protected readonly riaprendo = signal(false);
+
+  protected riapri(session: LiveSession): void {
+    if (this.riaprendo()) return;
+    this.confermaRiapri.set(false);
+    this.riaprendo.set(true);
+    this.error.set(null);
+    this.liveApi.reopenLive(session.id).subscribe({
+      next: () => {
+        this.riaprendo.set(false);
+        // Prima si chiude, poi si scrive: la banda vive nella PAGINA.
+        this.cancelEdit();
+        this.feedback.set(
+          `Sala riaperta: «${session.title}». Chi ha accesso può rientrare dalla pagina delle live.`,
+        );
+        this.load();
+      },
+      error: (err: unknown) => {
+        this.riaprendo.set(false);
+        this.error.set(apiErrorMessage(err, 'Riapertura non riuscita.'));
       },
     });
   }

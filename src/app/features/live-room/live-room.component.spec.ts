@@ -1,7 +1,7 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { LiveService } from '../../core/services/live.service';
 import { LIVEKIT_LOADER } from '../../shared/sdk/livekit-loader';
@@ -337,6 +337,188 @@ describe('LiveRoomComponent', () => {
         'mario',
         'Zoe',
       ]);
+    });
+  });
+
+  describe('uscire, chiudere per tutti, riaprire (incidente del 12/10/2026)', () => {
+    type SalaProbe = {
+      state: { (): string; set: (s: string) => void };
+      participants: { set: (n: number) => void };
+      recording: { set: (b: boolean) => void };
+      ricarica: () => void;
+    };
+
+    /** Entra in sala col token indicato, con `presenti` persone dentro (sé compreso). */
+    async function entra(
+      tokenOver: Record<string, unknown>,
+      presenti = 1,
+      extra: Record<string, jasmine.Spy> = {},
+    ) {
+      const tok = jasmine.createSpy('getRoomToken').and.returnValue(
+        of({ token: 't', url: 'wss://x.livekit.cloud', ...tokenOver }),
+      );
+      configure(tok, extra);
+      const router = TestBed.inject(Router);
+      const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+      const fixture = create();
+      await flush();
+      const probe = fixture.componentInstance as unknown as SalaProbe;
+      probe.participants.set(presenti);
+      const ricarica = spyOn(probe, 'ricarica');
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      return { fixture, el, probe, navigate, ricarica };
+    }
+
+    const bottone = (el: HTMLElement, testo: RegExp) =>
+      Array.from(el.querySelectorAll('button')).find((b) =>
+        testo.test(b.textContent ?? ''),
+      );
+    const chiudi = (el: HTMLElement) => bottone(el, /Chiudi la live per tutti/);
+
+    it('⚠️ un COACH ospite modera ma NON vede «Chiudi la live per tutti»', async () => {
+      const { el } = await entra({ role: 'coach', puoChiudere: false }, 5);
+      expect(chiudi(el)).toBeUndefined();
+      expect(bottone(el, /Muta tutti/)).toBeDefined();
+      // e nemmeno il vecchio «Termina» con l'icona di uscita
+      expect(bottone(el, /^\s*Termina\s*$/)).toBeUndefined();
+    });
+
+    it('chi può chiudere lo vede; il backend vecchio (campo assente) lo dà al coach', async () => {
+      const conduce = await entra({ role: 'coach', puoChiudere: true });
+      expect(chiudi(conduce.el)).toBeDefined();
+      conduce.fixture.destroy();
+      TestBed.resetTestingModule();
+
+      const vecchio = await entra({ role: 'coach' });
+      expect(chiudi(vecchio.el)).toBeDefined();
+    });
+
+    it('la conferma conta chi resta fuori, e «Annulla» è l’ultimo pulsante', async () => {
+      const { el, fixture, probe } = await entra(
+        { role: 'coach', puoChiudere: true },
+        5,
+      );
+      probe.recording.set(true);
+      chiudi(el)!.click();
+      fixture.detectChanges();
+      const gruppo = el.querySelector(
+        '[aria-label="Conferma chiusura della live"]',
+      )!;
+      expect(gruppo.textContent).toContain('Chiudere la live per tutti?');
+      expect(gruppo.textContent).toContain(
+        '4 persone verranno disconnesse e la registrazione si fermerà.',
+      );
+      // La conferma prende il posto del pulsante: un doppio clic deve finire
+      // su «Annulla», non sulla chiusura.
+      const bottoni = gruppo.querySelectorAll('button');
+      expect(bottoni[bottoni.length - 1].textContent?.trim()).toBe('Annulla');
+      fixture.destroy();
+    });
+
+    it('chiudere chiama il server e RESTA sulla schermata finale con «Riapri la sala»', async () => {
+      const endLive = jasmine.createSpy('endLive').and.returnValue(of({}));
+      const { el, fixture, probe, navigate } = await entra(
+        { role: 'coach', puoChiudere: true },
+        3,
+        { endLive },
+      );
+      chiudi(el)!.click();
+      fixture.detectChanges();
+      bottone(el, /Chiudi per tutti/)!.click();
+      fixture.detectChanges();
+      expect(endLive).toHaveBeenCalledWith('sess-1');
+      expect(probe.state()).toBe('ended');
+      expect(navigate).not.toHaveBeenCalled();
+      expect(bottone(el, /Riapri la sala/)).toBeDefined();
+    });
+
+    it('uno studente esce subito, senza conferme', async () => {
+      const { el, fixture, navigate } = await entra({ role: 'audience' }, 6);
+      bottone(el, /Esci dalla sala/)!.click();
+      fixture.detectChanges();
+      expect(navigate).toHaveBeenCalledWith(['/live']);
+      expect(el.querySelector('[aria-label="Conferma uscita"]')).toBeNull();
+    });
+
+    it('chi può chiudere e lascia altri dentro riceve una conferma che lo dice', async () => {
+      const { el, fixture, navigate } = await entra(
+        { role: 'coach', puoChiudere: true },
+        5,
+      );
+      bottone(el, /Esci dalla sala/)!.click();
+      fixture.detectChanges();
+      const gruppo = el.querySelector('[aria-label="Conferma uscita"]')!;
+      expect(gruppo.textContent).toContain('Esci solo tu?');
+      expect(gruppo.textContent).toContain('4 altre persone');
+      expect(navigate).not.toHaveBeenCalled();
+      bottone(el, /^\s*Esci\s*$/)!.click();
+      expect(navigate).toHaveBeenCalledWith(['/live']);
+    });
+
+    it('chi può chiudere ed è solo in sala esce subito', async () => {
+      const { el, navigate } = await entra({ role: 'coach', puoChiudere: true }, 1);
+      bottone(el, /Esci dalla sala/)!.click();
+      expect(navigate).toHaveBeenCalledWith(['/live']);
+    });
+
+    it('schermata finale: lo studente ha «Rientra», che ricarica la sala', async () => {
+      const { el, fixture, probe, ricarica } = await entra({ role: 'audience' });
+      probe.state.set('ended');
+      fixture.detectChanges();
+      expect(bottone(el, /Riapri la sala/)).toBeUndefined();
+      bottone(el, /Rientra/)!.click();
+      expect(ricarica).toHaveBeenCalled();
+    });
+
+    it('«Riapri la sala» riapre e rientra; un 409 (già riaperta) rientra lo stesso', async () => {
+      const reopenLive = jasmine.createSpy('reopenLive').and.returnValue(of({}));
+      const ok = await entra(
+        { role: 'coach', puoChiudere: true },
+        1,
+        { reopenLive },
+      );
+      ok.probe.state.set('ended');
+      ok.fixture.detectChanges();
+      bottone(ok.el, /Riapri la sala/)!.click();
+      expect(reopenLive).toHaveBeenCalledWith('sess-1');
+      expect(ok.ricarica).toHaveBeenCalled();
+      ok.fixture.destroy();
+      TestBed.resetTestingModule();
+
+      const gia = jasmine
+        .createSpy('reopenLive')
+        .and.returnValue(
+          throwError(() => new HttpErrorResponse({ status: 409 })),
+        );
+      const conflitto = await entra(
+        { role: 'coach', puoChiudere: true },
+        1,
+        { reopenLive: gia },
+      );
+      conflitto.probe.state.set('ended');
+      conflitto.fixture.detectChanges();
+      bottone(conflitto.el, /Riapri la sala/)!.click();
+      expect(conflitto.ricarica).toHaveBeenCalled();
+    });
+
+    it('un altro errore alla riapertura NON ricarica', async () => {
+      const reopenLive = jasmine
+        .createSpy('reopenLive')
+        .and.returnValue(
+          throwError(() => new HttpErrorResponse({ status: 500 })),
+        );
+      const { el, fixture, probe, ricarica } = await entra(
+        { role: 'coach', puoChiudere: true },
+        1,
+        { reopenLive },
+      );
+      probe.state.set('ended');
+      fixture.detectChanges();
+      bottone(el, /Riapri la sala/)!.click();
+      fixture.detectChanges();
+      expect(ricarica).not.toHaveBeenCalled();
+      expect(bottone(el, /Riapri la sala/)).toBeDefined();
     });
   });
 });

@@ -79,9 +79,14 @@ export class LiveService {
     return this.http.post(`${API}/live/${id}/mute-all`, {});
   }
 
-  /** Coach: termina la live (chiude la stanza per tutti). */
+  /** Chi conduce o un admin: chiude la live per tutti (la stanza si cancella). */
   endLive(id: string): Observable<unknown> {
     return this.http.post(`${API}/live/${id}/end`, {});
+  }
+
+  /** Chi conduce o un admin: riapre una live chiusa (409 se è già aperta). */
+  reopenLive(id: string): Observable<unknown> {
+    return this.http.post(`${API}/live/${id}/reopen`, {});
   }
 
   /** Coach: avvia la registrazione della sessione. */

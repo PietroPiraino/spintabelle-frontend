@@ -77,6 +77,10 @@ export const ACTION_LABELS: Record<string, string> = {
   // storico: NON è una rettifica di un importo, che il registro vieta.
   'attribute-staking-wallet': 'Portafoglio attribuito a un movimento',
   'note-staking': 'Nota interna staking',
+  // Lezioni live (dal 12/10/2026): chi ha chiuso o riaperto la sala per tutti.
+  // L'autore può essere anche un COACH che conduce, non solo un admin.
+  'end-live': 'Live chiusa per tutti',
+  'reopen-live': 'Live riaperta',
   'create-news-source': 'Fonte news aggiunta',
   'update-news-source': 'Fonte news modificata',
   'delete-news-source': 'Fonte news rimossa',
