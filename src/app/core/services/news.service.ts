@@ -12,7 +12,10 @@ import {
   NewsPausaSettings,
   NewsPayload,
   NewsPendingCount,
+  NewsScartoMotivo,
   Paginated,
+  QualitaRedazione,
+  SchedeDiArticolo,
 } from '../models/api.models';
 
 const API = environment.API_URL;
@@ -110,9 +113,31 @@ export class NewsService {
    * Il testo resta in archivio — nota + corpo sono il materiale con cui si
    * correggono i prompt.
    */
-  reject(id: string, note: string): Observable<NewsAdmin> {
+  reject(
+    id: string,
+    note: string,
+    /** Il motivo strutturato (dal 17/10/2026): si manda solo se scelto. */
+    motivo?: NewsScartoMotivo,
+  ): Observable<NewsAdmin> {
     return this.http.post<NewsAdmin>(`${API}/admin/news/${id}/reject`, {
       note,
+      ...(motivo ? { motivo } : {}),
+    });
+  }
+
+  /**
+   * Le schede dei fatti su cui il modello ha scritto (dal 17/10/2026), per il
+   * pannello «Fatti usati dalla penna» della card. Si chiedono all'apertura del
+   * pannello, non con la coda: nominano persone e pesano.
+   */
+  schede(id: string): Observable<SchedeDiArticolo> {
+    return this.http.get<SchedeDiArticolo>(`${API}/admin/news/${id}/schede`);
+  }
+
+  /** La striscia «Qualità»: le bozze IA degli ultimi `giorni`, per modello e prompt. */
+  qualita(giorni = 30): Observable<QualitaRedazione> {
+    return this.http.get<QualitaRedazione>(`${API}/admin/news/qualita`, {
+      params: new HttpParams().set('giorni', giorni),
     });
   }
 

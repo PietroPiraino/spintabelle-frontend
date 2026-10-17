@@ -1187,8 +1187,90 @@ export interface NewsAdmin {
   imageSource: NewsImageSource;
   imageCredit?: string;
   imageLicense?: string;
+  /**
+   * Della prima stesura (dal 17/10/2026) la coda porta solo le parti leggere:
+   * i tre testi li toglie il server. Assente sui pezzi scritti a mano e su
+   * quelli generati prima del 17/10/2026.
+   */
+  bozzaOriginale?: {
+    motivoCategoria?: string;
+    modello?: string;
+    promptVersion?: string;
+  };
+  /** Il motivo strutturato di uno scarto umano (dal 17/10/2026). */
+  motivoScarto?: NewsScartoMotivo;
+  /** Quanto è costata la bozza, in micro-euro. */
+  aiCostoMicroEur?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/**
+ * I motivi di scarto (`NEWS_SCARTO_MOTIVI` lato backend, alla lettera). Le
+ * etichette e l'ordine del menu stanno in `admin-redazione/motivi-scarto.ts`.
+ */
+export type NewsScartoMotivo =
+  | 'FATTO_ERRATO'
+  | 'DATO_NON_VERIFICABILE'
+  | 'NON_NOTIZIA'
+  | 'DOPPIONE'
+  | 'SCRITTURA'
+  | 'CONFORMITA'
+  | 'FUORI_TEMPO'
+  | 'ALTRO';
+
+/**
+ * Una scheda dei fatti come la mostra la card (`GET /admin/news/:id/schede`).
+ * ⚠️ Specchio di `SchedaFattiModello` del backend, nelle sole parti che la card
+ * stampa: tutto opzionale, perché è Mixed lato server e un campo può mancare.
+ */
+export interface SchedaRevisione {
+  testata: string;
+  url: string;
+  pubblicatoIl: string | null;
+  modello: string;
+  fatti: {
+    sintesi?: string;
+    evento?: string;
+    luogo?: string;
+    dataFatto?: string;
+    persone?: { nome?: string; nickname?: string; ruolo?: string; piazzamento?: number | null }[];
+    importi?: { tipo?: string; valore?: number; valuta?: string; aChi?: string }[];
+    numeri?: { etichetta?: string; valore?: number }[];
+    fatti?: string[];
+    citazioni?: { testo?: string; autore?: string }[];
+  };
+}
+
+/** La risposta di `GET /admin/news/:id/schede`. */
+export interface SchedeDiArticolo {
+  motivoCategoria: string | null;
+  modello: string | null;
+  promptVersion: string | null;
+  schede: SchedaRevisione[];
+}
+
+/** Una riga della striscia «Qualità» (`GET /admin/news/qualita`). */
+export interface GruppoQualita {
+  aiModel: string;
+  prompt: string;
+  bozze: number;
+  pubblicate: number;
+  pubblicateIntatte: number;
+  quotaMediaCorpo: number | null;
+  titoliCambiati: number;
+  scartateDallaRedazione: number;
+  scartateDalCancello: number;
+  scadute: number;
+  inCoda: number;
+  perMotivo: { motivo: NewsScartoMotivo; quante: number }[];
+  costoMedioMicroEur: number | null;
+}
+
+export interface QualitaRedazione {
+  giorni: number;
+  dal: string;
+  gruppi: GruppoQualita[];
 }
 
 /**

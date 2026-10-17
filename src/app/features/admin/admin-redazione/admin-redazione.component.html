@@ -245,6 +245,76 @@
         </p>
       }
 
+      <!--
+        3-bis. I FATTI su cui il modello ha scritto (dal 17/10/2026). Chiuso di
+        partenza e caricato solo all'apertura: le schede nominano persone e
+        pesano, e la maggior parte delle decisioni non le richiede. ⚠️ `open`
+        è pilotato dal signal: la card resta nel DOM cambiando articolo, e un
+        pannello lasciato aperto mostrerebbe i fatti del pezzo precedente.
+      -->
+      <details
+        class="rz__block rz__schede"
+        [open]="schedeAperte()"
+        (toggle)="onToggleSchede($event, a._id)"
+      >
+        <summary class="rz__sum">Fatti usati dalla penna</summary>
+        @if (schede(); as s) {
+          @if (s.id === a._id) {
+            @switch (s.stato) {
+              @case ('carico') {
+                <p class="admin-nota" role="status">Carico le schede…</p>
+              }
+              @case ('errore') {
+                <p class="admin-nota" role="alert">
+                  Le schede non si sono caricate.
+                  <button type="button" class="btn btn--ghost btn--sm rz__btn" (click)="caricaSchede(a._id)">
+                    Riprova
+                  </button>
+                </p>
+              }
+              @case ('ok') {
+                @if (s.dati?.motivoCategoria; as m) {
+                  <p class="admin-nota">Categoria scelta perché: {{ m }}</p>
+                }
+                @if (!s.dati?.schede?.length) {
+                  <p class="admin-nota">
+                    Nessuna scheda conservata: scadono coi 45 giorni dell'articolo da
+                    cui nascono, e i pezzi generati prima del 17 ottobre 2026 non le
+                    hanno.
+                  </p>
+                }
+                @for (sc of s.dati?.schede ?? []; track $index) {
+                  <div class="rz__scheda">
+                    <p class="rz__scheda-testa">
+                      <a [href]="sc.url" target="_blank" rel="noopener">{{ sc.testata }}</a>
+                    </p>
+                    @if (sc.fatti.sintesi) {
+                      <p>{{ sc.fatti.sintesi }}</p>
+                    }
+                    @if (sc.fatti.persone?.length) {
+                      <p class="admin-nota">Persone: {{ persone(sc) }}</p>
+                    }
+                    @if (sc.fatti.importi?.length) {
+                      <p class="admin-nota">Importi: {{ importi(sc) }}</p>
+                    }
+                    @if (sc.fatti.numeri?.length) {
+                      <p class="admin-nota">Numeri: {{ numeri(sc) }}</p>
+                    }
+                    @if (sc.fatti.fatti?.length) {
+                      <ul class="rz__scheda-fatti">
+                        @for (f of sc.fatti.fatti; track $index) {
+                          <li>{{ f }}</li>
+                        }
+                      </ul>
+                    }
+                  </div>
+                }
+              }
+            }
+          }
+        }
+      </details>
+
       <!-- 4. Corpo: si legge quello che leggerà il lettore. -->
       <section class="rz__block rz__corpo">
         <h3 class="rz__h3">Testo</h3>
@@ -274,12 +344,25 @@
       <div class="rz__bar">
         @if (isConfirming('scarta')) {
           <div class="rz__scarta">
+            <!--
+              Il motivo STRUTTURATO (dal 17/10/2026): facoltativo, e la nota resta
+              obbligatoria. È ciò che si conta nella striscia «Qualità».
+              ⚠️ `[selected]` sull'opzione e non `[value]` sul select: con le
+              opzioni nate da un @for il secondo perde la scelta (CLAUDE.md).
+            -->
+            <label class="visually-hidden" for="rz-motivo">Motivo dello scarto</label>
+            <select id="rz-motivo" class="input" (change)="onMotivo($event)">
+              <option value="" [selected]="motivoScarto() === ''">Perché? (facoltativo, si conta)</option>
+              @for (m of motiviScarto; track m.valore) {
+                <option [value]="m.valore" [selected]="motivoScarto() === m.valore">{{ m.etichetta }}</option>
+              }
+            </select>
             <input
               type="text"
               class="input"
               maxlength="2000"
-              placeholder="Motivo dello scarto (obbligatorio)"
-              aria-label="Motivo dello scarto, obbligatorio"
+              placeholder="Nota dello scarto (obbligatoria)"
+              aria-label="Nota dello scarto, obbligatoria"
               [value]="notaScarto()"
               (input)="onNota($event)"
             />
@@ -350,4 +433,60 @@
       </p>
     </article>
   }
+
+  <!--
+    QUALITÀ DELLA REDAZIONE (dal 17/10/2026) — la misura con cui si giudica un
+    cambio di modello o di prompt: una riga per coppia modello · versione del
+    prompt, sulle bozze degli ultimi 30 giorni. In fondo e richiusa: qui si
+    decide una card, la misura si guarda ogni tanto.
+    ⚠️ Una media senza dati è un trattino, non uno zero: «non misurato» non è
+    «perfetto». E la quota corretta esiste solo per le bozze pubblicate dopo il
+    17/10/2026, che sono le prime con la prima stesura conservata.
+  -->
+  <details class="rz__qualita">
+    <summary class="rz__sum">Qualità della redazione · ultimi 30 giorni</summary>
+    @if (erroreQualita(); as e) {
+      <p class="admin-nota" role="alert">
+        {{ e }}
+        <button type="button" class="btn btn--ghost btn--sm rz__btn" (click)="riprovaQualita()">Riprova</button>
+      </p>
+    } @else if (!qualita()) {
+      <p class="admin-nota" role="status">Carico la misura…</p>
+    } @else if (!qualita()!.gruppi.length) {
+      <p class="admin-nota">Nessuna bozza generata negli ultimi 30 giorni.</p>
+    } @else {
+      @for (g of qualita()!.gruppi; track g.aiModel + g.prompt) {
+        <div class="rz__qualita-gruppo">
+          <p class="admin-totali">
+            <span class="admin-totali__voce">Bozze <strong>{{ g.bozze }}</strong></span>
+            <span class="admin-totali__voce">Pubblicate <strong>{{ g.pubblicate }}</strong></span>
+            <span class="admin-totali__voce">
+              Senza toccare il corpo <strong>{{ g.pubblicateIntatte }}</strong>
+            </span>
+            <span class="admin-totali__voce">
+              Corpo corretto in media <strong>{{ percento(g.quotaMediaCorpo) }}</strong>
+            </span>
+            <span class="admin-totali__voce">
+              Scartate <strong>{{ g.scartateDallaRedazione }}</strong>
+            </span>
+            <span class="admin-totali__voce">
+              Bocciate dal cancello <strong>{{ g.scartateDalCancello }}</strong>
+            </span>
+            <span class="admin-totali__voce">
+              Costo medio <strong>{{ euroDaMicro(g.costoMedioMicroEur) }}</strong>
+            </span>
+            <span class="admin-totali__ambito">{{ g.aiModel }} · {{ g.prompt }}</span>
+          </p>
+          @if (g.perMotivo.length) {
+            <p class="admin-nota">
+              Motivi degli scarti:
+              @for (m of g.perMotivo; track m.motivo; let ultimo = $last) {
+                {{ etichettaMotivo(m.motivo) }} {{ m.quante }}@if (!ultimo) { · }
+              }
+            </p>
+          }
+        </div>
+      }
+    }
+  </details>
 </div>

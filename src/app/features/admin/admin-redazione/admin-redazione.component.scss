@@ -386,3 +386,50 @@
     width: 100%;
   }
 }
+
+// ── Fatti usati dalla penna e qualità della redazione (dal 17/10/2026) ──────
+//
+// I due pannelli richiudibili. ⚠️ Il `summary` dichiara i 44px: è l'unico
+// bersaglio che apre il pannello, e un summary nudo sta sui 24.
+.rz__sum {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.rz__scheda {
+  margin-top: 0.8rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+
+  p {
+    margin: 0.25rem 0 0;
+  }
+}
+
+.rz__scheda-testa {
+  font-weight: 600;
+}
+
+.rz__scheda-fatti {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.rz__qualita {
+  margin-top: 1.6rem;
+}
+
+.rz__qualita-gruppo {
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--line);
+}

@@ -154,7 +154,14 @@ describe('AdminRedazioneComponent', () => {
     comp = fixture.componentInstance as unknown as Testable;
   });
 
-  afterEach(() => http.verify());
+  // ⚠️ La striscia «Qualità» (dal 17/10/2026) si chiede all'avvio e dopo ogni
+  // decisione: le prove che non la guardano la smaltiscono qui, prima della
+  // verifica, così una richiesta INATTESA d'altro genere resta un errore.
+  const isQualita = (r: { url: string }) => r.url === `${API}/admin/news/qualita`;
+  afterEach(() => {
+    for (const q of http.match(isQualita)) q.flush({ giorni: 30, dal: '', gruppi: [] });
+    http.verify();
+  });
 
   it('chiede la coda da decidere: status esplicito, una pagina sola', async () => {
     const req = http.expectOne(isCoda);
@@ -756,5 +763,128 @@ describe('AdminRedazioneComponent', () => {
     await flushBoot([newsOf('a1')], lontano.toISOString());
 
     expect(testo()).toContain(String(lontano.getFullYear()));
+  });
+});
+
+describe('AdminRedazioneComponent — la misura della qualità (dal 17/10/2026)', () => {
+  let fixture: ComponentFixture<AdminRedazioneComponent>;
+  let http: HttpTestingController;
+  const isCoda = (r: { url: string }) => r.url === `${API}/admin/news`;
+  const isQualita = (r: { url: string }) => r.url === `${API}/admin/news/qualita`;
+  const el = () => fixture.nativeElement as HTMLElement;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AdminRedazioneComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AdminPendingService, useValue: { refresh: jasmine.createSpy('refresh') } },
+        { provide: MARKED_LOADER, useValue: () => Promise.resolve(renderer) },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(AdminRedazioneComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    for (const q of http.match(isQualita)) q.flush({ giorni: 30, dal: '', gruppi: [] });
+    http.verify();
+  });
+
+  const avvia = async (items: NewsAdmin[]) => {
+    http.expectOne(isCoda).flush(codaOf(items));
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+
+  it('lo scarto manda il motivo scelto accanto alla nota', async () => {
+    await avvia([newsOf('a1')]);
+    el().querySelector<HTMLButtonElement>('.rz__bar .btn--danger')!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const select = el().querySelector<HTMLSelectElement>('#rz-motivo')!;
+    select.value = 'DOPPIONE';
+    select.dispatchEvent(new Event('change'));
+    const nota = el().querySelector<HTMLInputElement>('.rz__scarta input')!;
+    nota.value = 'già uscito ieri';
+    nota.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    el().querySelector<HTMLButtonElement>('.rz__bar .btn--danger-solid')!.click();
+    const post = http.expectOne(`${API}/admin/news/a1/reject`);
+    expect(post.request.body).toEqual({ note: 'già uscito ieri', motivo: 'DOPPIONE' });
+    post.flush(newsOf('a1', { status: 'SCARTATO' }));
+    http.expectOne(isCoda).flush(codaOf([]));
+    await fixture.whenStable();
+  });
+
+  it('le schede si chiedono SOLO aprendo il pannello, e si stampano', async () => {
+    await avvia([newsOf('a1')]);
+    http.expectNone(`${API}/admin/news/a1/schede`);
+    const details = el().querySelector<HTMLDetailsElement>('details.rz__schede')!;
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+    await fixture.whenStable();
+    http.expectOne(`${API}/admin/news/a1/schede`).flush({
+      motivoCategoria: 'torneo dal vivo',
+      modello: 'claude-sonnet-5-5',
+      promptVersion: 'bozza-2026-10-17.1',
+      schede: [
+        {
+          testata: 'Assopoker',
+          url: 'https://assopoker.com/x',
+          pubblicatoIl: null,
+          modello: 'claude-haiku-4-5-20251001',
+          fatti: {
+            sintesi: 'Il Main Event chiude a 2.500 iscritti',
+            persone: [{ nickname: 'fishkiller', ruolo: 'VINCITORE', piazzamento: 1 }],
+          },
+        },
+      ],
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const testo = details.textContent ?? '';
+    expect(testo).toContain('torneo dal vivo');
+    expect(testo).toContain('Assopoker');
+    expect(testo).toContain('Il Main Event chiude a 2.500 iscritti');
+    expect(testo).toContain('fishkiller (vincitore, 1°)');
+  });
+
+  it('la striscia «Qualità» stampa le cifre, e un trattino dove non c’è misura', async () => {
+    await avvia([newsOf('a1')]);
+    http.expectOne(isQualita).flush({
+      giorni: 30,
+      dal: '2026-09-17T00:00:00.000Z',
+      gruppi: [
+        {
+          aiModel: 'claude-sonnet-5-5',
+          prompt: 'bozza-2026-10-17.1',
+          bozze: 12,
+          pubblicate: 8,
+          pubblicateIntatte: 3,
+          quotaMediaCorpo: null,
+          titoliCambiati: 2,
+          scartateDallaRedazione: 3,
+          scartateDalCancello: 1,
+          scadute: 0,
+          inCoda: 0,
+          perMotivo: [{ motivo: 'FATTO_ERRATO', quante: 2 }],
+          costoMedioMicroEur: 41_000,
+        },
+      ],
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const testo = (el().querySelector('.rz__qualita')?.textContent ?? '').replace(/\s+/g, ' ');
+    expect(testo).toContain('Bozze 12');
+    expect(testo).toContain('Corpo corretto in media —');
+    expect(testo).toContain('Fatto sbagliato 2');
+    expect(testo).toMatch(/Costo medio 0,041\s€/);
+    expect(testo).toContain('claude-sonnet-5-5 · bozza-2026-10-17.1');
   });
 });

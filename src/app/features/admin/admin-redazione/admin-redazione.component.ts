@@ -14,8 +14,13 @@ import {
   NewsAdmin,
   NewsApprovePayload,
   NewsCategory,
+  NewsScartoMotivo,
   CodaRedazione,
+  QualitaRedazione,
+  SchedaRevisione,
+  SchedeDiArticolo,
 } from '../../../core/models/api.models';
+import { MOTIVI_SCARTO, etichettaMotivo } from './motivi-scarto';
 import { PAUSA_MAX_GIORNI } from '../../../core/news.constants';
 import { AdminPendingService } from '../../../core/services/admin-pending.service';
 import { NewsService } from '../../../core/services/news.service';
@@ -250,6 +255,7 @@ export class AdminRedazioneComponent {
 
   constructor() {
     this.carica();
+    this.caricaQualita();
     const t = setInterval(() => this.adesso.set(Date.now()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(t));
   }
@@ -439,6 +445,32 @@ export class AdminRedazioneComponent {
     return Number.isNaN(fino) ? '' : GIORNO.format(fino);
   });
 
+  // ── Misura della qualità (dal 17/10/2026) ──
+
+  /** Il menu del motivo di scarto, nell'ordine del backend. */
+  protected readonly motiviScarto = MOTIVI_SCARTO;
+  /** Il motivo scelto per lo scarto: '' = non scelto (si manda solo la nota). */
+  protected readonly motivoScarto = signal<NewsScartoMotivo | ''>('');
+
+  /**
+   * Il pannello «Fatti usati dalla penna». ⚠️ `open` è PILOTATO da questo
+   * signal: la card resta la stessa nel DOM passando a un altro articolo, e un
+   * `<details>` lasciato aperto mostrerebbe le schede del pezzo precedente.
+   * `azzeraBozze` lo richiude.
+   */
+  protected readonly schedeAperte = signal(false);
+  protected readonly schede = signal<{
+    id: string;
+    stato: 'carico' | 'ok' | 'errore';
+    dati: SchedeDiArticolo | null;
+  } | null>(null);
+
+  /** La striscia «Qualità» in fondo alla sezione: `null` finché non arriva. */
+  protected readonly qualita = signal<QualitaRedazione | null>(null);
+  protected readonly erroreQualita = signal<string | null>(null);
+
+  protected readonly etichettaMotivo = etichettaMotivo;
+
   protected readonly notaValida = computed(
     () => this.notaScarto().trim().length >= NOTA_MIN,
   );
@@ -506,7 +538,94 @@ export class AdminRedazioneComponent {
   private azzeraBozze(): void {
     this.titoloBozza.set(null);
     this.notaScarto.set('');
+    this.motivoScarto.set('');
     this.confirming.set(null);
+    this.schedeAperte.set(false);
+  }
+
+  /** Apre o chiude il pannello delle schede; le chiede al primo «apri» di ogni articolo. */
+  protected onToggleSchede(ev: Event, id: string): void {
+    const aperto = (ev.target as HTMLDetailsElement).open;
+    this.schedeAperte.set(aperto);
+    if (!aperto) return;
+    const s = this.schede();
+    if (s && s.id === id && s.stato !== 'errore') return;
+    this.caricaSchede(id);
+  }
+
+  protected caricaSchede(id: string): void {
+    this.schede.set({ id, stato: 'carico', dati: null });
+    this.api.schede(id).subscribe({
+      next: (dati) => {
+        // ⚠️ Una risposta lenta per un articolo già lasciato non si applica.
+        if (this.schede()?.id !== id) return;
+        this.schede.set({ id, stato: 'ok', dati });
+      },
+      error: () => {
+        if (this.schede()?.id !== id) return;
+        this.schede.set({ id, stato: 'errore', dati: null });
+      },
+    });
+  }
+
+  protected onMotivo(ev: Event): void {
+    this.motivoScarto.set((ev.target as HTMLSelectElement).value as NewsScartoMotivo | '');
+  }
+
+  private caricaQualita(): void {
+    this.erroreQualita.set(null);
+    this.api.qualita(30).subscribe({
+      next: (q) => this.qualita.set(q),
+      error: (err: unknown) =>
+        this.erroreQualita.set(
+          apiErrorMessage(err, 'La misura della qualità non è disponibile.'),
+        ),
+    });
+  }
+
+  protected riprovaQualita(): void {
+    this.caricaQualita();
+  }
+
+  /** Le persone della scheda in una riga: «nickname (ruolo, 1°)». */
+  protected persone(sc: SchedaRevisione): string {
+    return (sc.fatti.persone ?? [])
+      .map((p) => {
+        const nome = p.nickname || p.nome || '?';
+        const dettagli = [p.ruolo?.toLowerCase(), p.piazzamento ? `${p.piazzamento}°` : '']
+          .filter(Boolean)
+          .join(', ');
+        return dettagli ? `${nome} (${dettagli})` : nome;
+      })
+      .join(' · ');
+  }
+
+  /** Gli importi, come li ha letti l'estrattore: «montepremi 2.431.000 EUR». */
+  protected importi(sc: SchedaRevisione): string {
+    return (sc.fatti.importi ?? [])
+      .map((i) =>
+        [i.tipo?.toLowerCase(), i.valore?.toLocaleString('it-IT'), i.valuta, i.aChi ? `a ${i.aChi}` : '']
+          .filter(Boolean)
+          .join(' '),
+      )
+      .join(' · ');
+  }
+
+  protected numeri(sc: SchedaRevisione): string {
+    return (sc.fatti.numeri ?? [])
+      .map((n) => `${n.etichetta ?? ''} ${n.valore?.toLocaleString('it-IT') ?? ''}`.trim())
+      .join(' · ');
+  }
+
+  /** «12%» da una quota 0..1. */
+  protected percento(x: number | null): string {
+    return x === null ? '—' : `${Math.round(x * 100)}%`;
+  }
+
+  /** «0,041 €» da micro-euro: tre decimali, il costo di una bozza è di centesimi. */
+  protected euroDaMicro(x: number | null): string {
+    if (x === null) return '—';
+    return `${(x / 1_000_000).toLocaleString('it-IT', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} €`;
   }
 
   // ── Navigazione fra le card ──
@@ -608,7 +727,12 @@ export class AdminRedazioneComponent {
     if (!a) return;
     const nota = this.notaScarto().trim();
     if (nota.length < NOTA_MIN) return;
-    this.esegui('scarta', this.api.reject(a._id, nota), 'Articolo scartato.');
+    const motivo = this.motivoScarto() || undefined;
+    this.esegui(
+      'scarta',
+      this.api.reject(a._id, nota, motivo),
+      'Articolo scartato.',
+    );
   }
 
   /**
@@ -635,6 +759,8 @@ export class AdminRedazioneComponent {
         // e continua a contare un articolo appena deciso.
         this.pending.refresh(true);
         this.carica();
+        // La misura cambia con ogni decisione: si rilegge anche lei.
+        this.caricaQualita();
       },
       error: (err: unknown) => {
         this.azione.set(null);
