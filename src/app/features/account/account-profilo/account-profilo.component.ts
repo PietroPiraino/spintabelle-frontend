@@ -64,6 +64,8 @@ export class AccountProfiloComponent {
 
   protected readonly user = this.auth.user;
   protected readonly verified = computed(() => this.user()?.verified ?? false);
+  /** Solo chi approva gli articoli vede (e invia) la firma di revisione. */
+  protected readonly isAdmin = this.auth.isAdmin;
 
   /** Chi ha conteggi o è in staking legge che quelle righe si anonimizzano. */
   protected readonly anonimizzaNonCancella = computed(
@@ -104,6 +106,18 @@ export class AccountProfiloComponent {
         Validators.pattern(/^$|^[\p{L}\p{N}][\p{L}\p{N} '’._-]{1,31}$/u),
       ],
     ],
+    /**
+     * La firma di revisione degli articoli scritti con l'IA (solo ADMIN): il
+     * nome che la pagina pubblica stampa accanto a «verificato e approvato da».
+     * Specchio della regex del DTO del backend; la stringa vuota cancella.
+     */
+    nomePubblicoRedazione: [
+      '',
+      [
+        Validators.maxLength(60),
+        Validators.pattern(/^$|^[\p{L}\p{N}][\p{L}\p{N} '’._-]{1,59}$/u),
+      ],
+    ],
   });
   protected readonly profileSaving = signal(false);
   protected readonly profileError = signal<string | null>(null);
@@ -122,6 +136,7 @@ export class AccountProfiloComponent {
       email: u?.email ?? '',
       nickname: u?.nickname ?? '',
       nomeSala: u?.nomeSala ?? '',
+      nomePubblicoRedazione: u?.nomePubblicoRedazione ?? '',
     });
     this.notifyNewLessons.set(u?.notifyNewLessons ?? true);
   }
@@ -160,8 +175,12 @@ export class AccountProfiloComponent {
     this.profileMsg.set(null);
     this.confermaEmail.set(null);
 
-    const { email, nickname, nomeSala } = this.profileForm.getRawValue();
-    this.auth.updateProfile({ email, nickname, nomeSala }).subscribe({
+    const { email, nickname, nomeSala, nomePubblicoRedazione } =
+      this.profileForm.getRawValue();
+    // ⚠️ La firma parte SOLO per un ADMIN: per gli altri il campo non è a
+    // schermo, e mandarlo vuoto sarebbe un campo in più su ogni salvataggio.
+    const firma = this.isAdmin() ? { nomePubblicoRedazione } : {};
+    this.auth.updateProfile({ email, nickname, nomeSala, ...firma }).subscribe({
       next: (user) => {
         this.profileSaving.set(false);
         // Il form si riallinea al valore NORMALIZZATO (il server salva
@@ -170,6 +189,7 @@ export class AccountProfiloComponent {
           email: user.email,
           nickname: user.nickname ?? '',
           nomeSala: user.nomeSala ?? '',
+          nomePubblicoRedazione: user.nomePubblicoRedazione ?? '',
         });
         // ⚠️ Il messaggio si sceglie confrontando le email, non su
         // `verified`: un non verificato che cambia solo il nickname leggeva

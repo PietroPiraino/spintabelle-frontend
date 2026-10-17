@@ -178,6 +178,8 @@ export class AuthService {
     notifyNewLessons?: boolean;
     /** Il nome in sala: stringa vuota = cancella (il server fa `$unset`). */
     nomeSala?: string;
+    /** La firma di revisione (solo ADMIN): stringa vuota = cancella. */
+    nomePubblicoRedazione?: string;
   }): Observable<User> {
     return this.http
       .patch<User>(`${API}/account/profile`, patch)

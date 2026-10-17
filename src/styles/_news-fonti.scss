@@ -1,0 +1,71 @@
+// «Fonti» e credito della copertina, in coda e in testa all'articolo (`/news/<slug>/`)
+//
+// ⚠️ GLOBALI, per la stessa ragione di `_news-guide.scss` e `_news-share.scss`:
+// la pagina di un articolo ha due stesure, quella composta all'edge da
+// `functions/lib/render-news.mjs` e quella del componente Angular. Un foglio di
+// componente è compilato con l'incapsulamento e l'HTML dell'edge
+// quell'attributo non ce l'ha: messe lì, queste regole non toccherebbero mai la
+// stesura che leggono un crawler e chi non esegue il JavaScript — che è proprio
+// quella in cui citare la fonte conta di più.
+
+.news-fonti {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+// Stesso registro di `.news-guide__label`: un'etichetta, non un titolo, e
+// `--text` (non il rame) per l'AA sotto i 14px in Ghiaccio e Tramonto.
+.news-fonti__label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.news-fonti__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+// ⚠️ I 44px sono DICHIARATI, come in «Per approfondire»: un collegamento di
+// testo su una riga sta sui 26px.
+.news-fonti__list a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.25rem 0;
+  color: var(--copper-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  overflow-wrap: anywhere;
+  transition: color var(--t-fast);
+
+  &:hover {
+    color: var(--copper-500);
+  }
+}
+
+// La copertina con il suo credito. La figura non aggiunge margini (il reset
+// globale li azzera) e la didascalia sta sotto, piccola e smorzata: è
+// un'attribuzione, non contenuto.
+.news-detail__figura {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.news-detail__credito {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}

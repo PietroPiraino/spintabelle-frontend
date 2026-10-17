@@ -46,8 +46,20 @@
           <h1>{{ news()!.title }}</h1>
         </header>
 
+        <!--
+          Una foto LICENZIATA porta autore e licenza sotto, dentro una figura;
+          ogni altra copertina resta un'immagine nuda, come prima. Stessa forma
+          della resa all'edge (`copertinaHtml`).
+        -->
         @if (news()!.coverImageUrl; as cover) {
-          <img class="news-detail__cover" [src]="cover" alt="" />
+          @if (creditoCopertina(); as credito) {
+            <figure class="news-detail__figura">
+              <img class="news-detail__cover" [src]="cover" alt="" />
+              <figcaption class="news-detail__credito">{{ credito }}</figcaption>
+            </figure>
+          } @else {
+            <img class="news-detail__cover" [src]="cover" alt="" />
+          }
         }
 
         <!--
@@ -80,6 +92,25 @@
         @if (etichettaIa(); as ia) {
           <!-- prettier-ignore -->
           <p class="news-detail__ia">{{ ia.apertura }}<a [routerLink]="rottaPolicy">{{ ia.ancora }}</a>{{ ia.chiusura }}</p>
+        }
+
+        <!--
+          FONTI — la promessa della policy editoriale («in fondo l'elenco delle
+          fonti utilizzate, con il collegamento»). Nello stesso punto della resa
+          all'edge, e con la stessa funzione (`features/news/fonti.ts`, copiata in
+          `functions/lib/fonti.mjs`). ⚠️ `rel="nofollow noopener"`: si cita una
+          testata, non si spinge una pagina piena di banner di sale (art. 9).
+          ⚠️ Stili GLOBALI (`src/styles/_news-fonti.scss`), come «Per approfondire».
+        -->
+        @if (fonti().length) {
+          <aside class="news-fonti">
+            <p class="news-fonti__label">Fonti</p>
+            <ul class="news-fonti__list">
+              @for (f of fonti(); track f.url) {
+                <li><a [href]="f.url" target="_blank" rel="nofollow noopener">{{ f.etichetta }}</a></li>
+              }
+            </ul>
+          </aside>
         }
 
         <!--

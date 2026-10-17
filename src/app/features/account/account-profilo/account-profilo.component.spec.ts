@@ -342,3 +342,40 @@ describe('AccountProfiloComponent — elimina account', () => {
     expect(navigate).toHaveBeenCalledWith('/');
   });
 });
+
+describe('AccountProfiloComponent — la firma di revisione (solo ADMIN)', () => {
+  it('chi non è ADMIN non vede il campo, e il salvataggio non lo manda', async () => {
+    const ctx = await apri();
+    expect(ctx.el.querySelector('#nomePubblicoRedazione')).toBeNull();
+    digita(input(ctx, 'nickname'), 'NuovoNick');
+    bottone(ctx, 'Salva modifiche').click();
+    await ctx.stabilizza();
+    const [patch] = ctx.auth.updateProfile.calls.mostRecent().args as [Record<string, unknown>];
+    expect('nomePubblicoRedazione' in patch).toBeFalse();
+  });
+
+  it('un ADMIN la vede, con l’aiuto che dice dove compare', async () => {
+    const ctx = await apri({ auth: authStub(utente({ role: 'ADMIN' as Role })) });
+    expect(input(ctx, 'nomePubblicoRedazione')).not.toBeNull();
+    const aiuto = ctx.el.querySelector('#firma-aiuto')!.textContent ?? '';
+    expect(aiuto).toContain('verificato e approvato da');
+    expect(aiuto).toContain('pubblico');
+  });
+
+  it('un ADMIN la salva col resto del profilo', async () => {
+    const ctx = await apri({ auth: authStub(utente({ role: 'ADMIN' as Role })) });
+    digita(input(ctx, 'nomePubblicoRedazione'), 'Pietro Piraino');
+    bottone(ctx, 'Salva modifiche').click();
+    await ctx.stabilizza();
+    expect(ctx.auth.updateProfile).toHaveBeenCalledWith(
+      jasmine.objectContaining({ nomePubblicoRedazione: 'Pietro Piraino' }),
+    );
+  });
+
+  it('il valore salvato riappare nel campo all’apertura', async () => {
+    const ctx = await apri({
+      auth: authStub(utente({ role: 'ADMIN' as Role, nomePubblicoRedazione: 'Pietro Piraino' })),
+    });
+    expect(input(ctx, 'nomePubblicoRedazione').value).toBe('Pietro Piraino');
+  });
+});

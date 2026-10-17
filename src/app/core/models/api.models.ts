@@ -30,6 +30,12 @@ export interface User {
    * `null` = non impostato → in sala compare il nickname.
    */
   nomeSala?: string | null;
+  /**
+   * La firma con cui un ADMIN approva gli articoli scritti con l'IA (dal
+   * 17/10/2026): la pagina pubblica la stampa accanto a «verificato e approvato
+   * da». `null` = non impostata. Assente da un backend più vecchio.
+   */
+  nomePubblicoRedazione?: string | null;
   role: Role;
   verified: boolean;
   /** scadenza abbonamento (ISO) se tier attivo; null/assente per USER e ADMIN */
@@ -850,15 +856,12 @@ export interface NewsRettifica {
  * Un campo obbligatorio qui non farebbe fallire niente a compilazione — è solo un
  * tipo — ma farebbe scrivere codice che dà per certo un valore che può mancare.
  *
- * ⚠️ `revisionatoDaNome` è l'UNICO campo di questa interfaccia che l'API **non
- * espone ancora**: la proiezione pubblica del backend (`CAMPI_PUBBLICI`) porta
- * `autore`, `publishedAt`, `rettifiche`, `ultimaRettificaAt` e `aiGeneratedAt`,
- * ma di `revisionatoDa` tiene fuori sia l'ObjectId sia il nome — ed è giusto
- * così: la coda non deve trapelare. Finché quel nome non arriva, l'etichetta IA
- * **non si rende** (vedi `news-detail.component.ts`), il che oggi non si vede
- * perché nessun articolo ha `aiGeneratedAt`. Diventa visibile il giorno in cui la
- * pipeline pubblica il primo pezzo: è un **prerequisito di P4**, non un dettaglio
- * di tipizzazione.
+ * ⚠️ `revisionatoDaNome`: fino al 17/10/2026 l'API **non** lo esponeva, e
+ * l'etichetta IA non si è resa su nessuno dei pezzi pubblicati dalla pipeline
+ * dal 22/08/2026 — la promessa della policy editoriale è mancata per otto
+ * settimane, in silenzio. Ora il backend fotografa il nome all'approvazione
+ * (`User.nomePubblicoRedazione`) e lo mette in `CAMPI_PUBBLICI`; `revisionatoDa`
+ * (l'ObjectId) resta fuori, perché la coda non deve trapelare.
  */
 export interface News {
   _id: string;
@@ -918,8 +921,23 @@ export interface News {
   autore?: string;
   /** Quando il pezzo è stato generato con l'ausilio dell'IA (interruttore dell'etichetta). */
   aiGeneratedAt?: string;
-  /** Nome del revisore umano — vedi l'avviso sull'interfaccia. */
+  /**
+   * Nome pubblico di chi ha approvato il pezzo, fotografato dal backend
+   * all'approvazione (dal 17/10/2026 in `CAMPI_PUBBLICI`). Opzionale: i pezzi
+   * scritti a mano non ce l'hanno, e senza di esso l'etichetta IA non si rende.
+   */
   revisionatoDaNome?: string;
+  /**
+   * Gli indirizzi delle fonti e, **in parallelo** per posizione, i nomi delle
+   * testate. Il blocco «Fonti» li appaia con `features/news/fonti.ts`.
+   * Opzionali: un articolo scritto a mano può non averne.
+   */
+  sourceUrls?: string[];
+  sourceOutlets?: string[];
+  /** Da dove viene la copertina in pagina: pilota credito ed etichette. */
+  imageSource?: NewsImageSource;
+  imageCredit?: string;
+  imageLicense?: string;
   /** Note di rettifica, in ordine di pubblicazione. */
   rettifiche?: NewsRettifica[];
   /** Data dell'ultima rettifica: pilota `dateModified` (D45), mai `updatedAt`. */

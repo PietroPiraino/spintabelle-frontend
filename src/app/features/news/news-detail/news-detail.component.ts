@@ -21,6 +21,7 @@ import { SeoService } from '../../../core/services/seo.service';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { MarkdownComponent } from '../../../shared/ui/markdown/markdown.component';
 import { guideCorrelate } from '../../guides/guide-links';
+import { fontiDiArticolo } from '../fonti';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 
 /**
@@ -75,14 +76,12 @@ const SITE = 'https://bestfishforever.it';
  *   renderer — è **voluta**: le ragioni per esteso in `core/news.constants.ts`,
  *   e non vanno appiattite unendo le due frasi.
  *
- * ⚠️ COSA MANCA ANCORA QUI, ED È UN PREREQUISITO DI P4 (non un backlog): **l'elenco
- * delle fonti** (`sourceUrls`/`sourceOutlets`, già nella proiezione pubblica del
- * backend) non è reso né qui né all'edge. La policy editoriale pubblicata promette
- * che un articolo derivato da fonti le elenchi in fondo — oggi è scritta «da questa
- * policy in avanti» proprio perché quella resa non c'è. Il giorno in cui la pipeline
- * pubblica il primo pezzo derivato, l'elenco deve già esserci **in entrambi i
- * renderer**, come byline e note di rettifica: è contenuto della pagina, e una fonte
- * che compare solo dopo l'idratazione, per un motore, non esiste.
+ * ⚠️ **L'elenco delle fonti** (`sourceUrls`/`sourceOutlets`) era un prerequisito di
+ * P4 rimasto indietro: la pipeline ha pubblicato dal 22/08/2026 e nessuna resa lo
+ * stampava fino al 17/10/2026, contro la policy editoriale. Ora sta **in entrambi i
+ * renderer** (`fonti()` qui, `fontiHtml` all'edge), con la stessa funzione copiata
+ * (`features/news/fonti.ts` ↔ `functions/lib/fonti.mjs`): è contenuto della
+ * pagina, e una fonte che compare solo dopo l'idratazione, per un motore, non esiste.
  */
 @Component({
   selector: 'app-news-detail',
@@ -216,12 +215,34 @@ export class NewsDetailComponent {
    * proprio perché questa etichetta è volontaria (§4.3): la sua assenza è
    * cosmetica, un nome sbagliato no.
    *
-   * ⚠️ CONSEGUENZA OPERATIVA, DA NON SCOPRIRE A COSE FATTE: oggi l'API pubblica
-   * **non** espone il nome del revisore (vedi `News.revisionatoDaNome` in
-   * `api.models.ts`). Oggi non si vede, perché nessun articolo ha
-   * `aiGeneratedAt`; il giorno in cui la pipeline pubblica il primo pezzo,
-   * l'etichetta resterebbe muta. È un prerequisito di P4, non un dettaglio.
+   * ⚠️ È ESATTAMENTE CIÒ CHE È SUCCESSO: dal 22/08 al 17/10/2026 l'API non
+   * esponeva il nome del revisore, e questa etichetta è rimasta muta su ogni
+   * pezzo della pipeline. Ora il backend lo fotografa all'approvazione
+   * (`revisionatoDaNome`, vedi `api.models.ts`).
    */
+  /**
+   * Le fonti in fondo all'articolo — la promessa della policy editoriale.
+   * Stessa funzione (copiata) della resa all'edge: `features/news/fonti.ts`.
+   */
+  protected readonly fonti = computed(() => {
+    const n = this.news();
+    return n ? fontiDiArticolo(n.sourceUrls, n.sourceOutlets) : [];
+  });
+
+  /**
+   * Autore e licenza sotto una foto LICENZIATA, come all'edge
+   * (`copertinaHtml` in `functions/lib/render-news.mjs`). `null` per ogni altra
+   * copertina: quelle restano un'immagine nuda.
+   */
+  protected readonly creditoCopertina = computed(() => {
+    const n = this.news();
+    if (!n?.coverImageUrl || n.imageSource !== 'LICENZIATA') return null;
+    const credito = (n.imageCredit ?? '').trim();
+    const licenza = (n.imageLicense ?? '').trim();
+    const testo = [credito && `Foto: ${credito}`, licenza].filter(Boolean).join(' · ');
+    return testo || null;
+  });
+
   protected readonly etichettaIa = computed(() => {
     const n = this.news();
     if (!n?.aiGeneratedAt) return null;

@@ -118,6 +118,42 @@
       }
     </div>
 
+    <!--
+      FIRMA DI REVISIONE — solo per chi approva gli articoli. È il nome che la
+      pagina di un articolo scritto con l'ausilio dell'IA stampa accanto a
+      «verificato e approvato da»: la policy editoriale lo promette, e il
+      backend rifiuta di approvare un pezzo del genere finché manca.
+    -->
+    @if (isAdmin()) {
+      <div class="field">
+        <label for="nomePubblicoRedazione">Nome pubblico in redazione</label>
+        <input
+          id="nomePubblicoRedazione"
+          type="text"
+          class="input"
+          formControlName="nomePubblicoRedazione"
+          maxlength="60"
+          autocomplete="name"
+          placeholder="es. Mario Rossi"
+          [attr.aria-invalid]="profileForm.controls.nomePubblicoRedazione.touched && profileForm.controls.nomePubblicoRedazione.invalid ? 'true' : null"
+          [attr.aria-describedby]="profileForm.controls.nomePubblicoRedazione.touched && profileForm.controls.nomePubblicoRedazione.invalid ? 'firma-errore' : 'firma-aiuto'"
+          [class.is-invalid]="profileForm.controls.nomePubblicoRedazione.touched && profileForm.controls.nomePubblicoRedazione.invalid"
+        />
+        <span id="firma-aiuto" class="nota">
+          Compare in fondo a ogni articolo scritto con l'ausilio dell'intelligenza
+          artificiale che approvi: «verificato e approvato da
+          <strong>{{ profileForm.controls.nomePubblicoRedazione.value.trim() || '…' }}</strong>
+          prima della pubblicazione». È pubblico e indicizzabile. Senza, quegli
+          articoli non si possono approvare.
+        </span>
+        @if (profileForm.controls.nomePubblicoRedazione.touched && profileForm.controls.nomePubblicoRedazione.invalid) {
+          <span id="firma-errore" class="field-error">
+            2–60 caratteri: lettere, numeri, spazi, apostrofi, punti e trattini.
+          </span>
+        }
+      </div>
+    }
+
     @if (confermaEmail(); as nuova) {
       <div id="conferma-email" class="conferma conferma--attesa" tabindex="-1" role="group" aria-label="Conferma del nuovo indirizzo email">
         <p>Confermi <strong>{{ nuova }}</strong> come nuova email?</p>

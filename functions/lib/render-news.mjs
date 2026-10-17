@@ -37,6 +37,7 @@
 // divergere c'e' un ⚠️ sulla riga, e i punti numerici (il taglio dell'estratto,
 // le stringhe dell'indice) sono fissati dal test.
 
+import { fontiDiArticolo } from './fonti.mjs';
 import { guideCorrelate } from './guide-links.mjs';
 import { renderMarkdown } from './markdown.mjs';
 
@@ -534,6 +535,60 @@ function approfondimentiHtml(articolo) {
 }
 
 /**
+ * «Fonti»: l'elenco degli articoli da cui il pezzo ha preso i fatti.
+ *
+ * ⚠️ E' UNA PROMESSA PUBBLICATA, non un ornamento: la policy editoriale e la
+ * pagina `/redazione` dicono che un articolo derivato elenca in fondo le sue
+ * fonti, col collegamento. Fino al 17/10/2026 nessuna delle due rese lo faceva.
+ * E qui conta piu' che di la': e' la stesura che legge un crawler, e una fonte
+ * citata solo dopo l'idratazione, per un motore, non esiste.
+ *
+ * ⚠️ `rel="nofollow noopener"`: le pagine delle testate di settore sono piene di
+ * banner di sale da gioco, e passare valore a quei collegamenti si potrebbe
+ * leggere come promozione indiretta (art. 9 DL 87/2018). Si cita, non si spinge.
+ *
+ * ⚠️ NIENTE ICONE, per la stessa ragione di «Per approfondire»: la prova conta
+ * gli `<svg>` dentro `<main>`.
+ */
+function fontiHtml(articolo) {
+  const voci = fontiDiArticolo(articolo?.sourceUrls, articolo?.sourceOutlets);
+  if (!voci.length) return '';
+  return [
+    '<aside class="news-fonti">',
+    '<p class="news-fonti__label">Fonti</p>',
+    '<ul class="news-fonti__list">',
+    ...voci.map(
+      (v) =>
+        `<li><a href="${escapeHtml(v.url)}" target="_blank" rel="nofollow noopener">${escapeHtml(v.etichetta)}</a></li>`,
+    ),
+    '</ul>',
+    '</aside>',
+  ].join('\n');
+}
+
+/**
+ * La copertina in pagina. Una foto LICENZIATA porta sotto autore e licenza:
+ * la policy editoriale lo promette, e fino al 17/10/2026 non si stampava.
+ * ⚠️ Solo `LICENZIATA` va nella figura: le copertine storiche restano un
+ * `<img>` nudo, come prima, per non cambiare l'aspetto di pagine già indicizzate
+ * senza ragione. La Fase 4 aggiungera' qui il ramo dell'illustrazione IA.
+ */
+function copertinaHtml(dati, copertina) {
+  if (!copertina) return '';
+  const img = `<img class="news-detail__cover" src="${escapeHtml(copertina)}" alt="">`;
+  const credito = String(dati.imageCredit ?? '').trim();
+  const licenza = String(dati.imageLicense ?? '').trim();
+  if (dati.imageSource !== 'LICENZIATA' || (!credito && !licenza)) return img;
+  const testo = [credito && `Foto: ${credito}`, licenza].filter(Boolean).join(' · ');
+  return [
+    '<figure class="news-detail__figura">',
+    img,
+    `<figcaption class="news-detail__credito">${escapeHtml(testo)}</figcaption>`,
+    '</figure>',
+  ].join('\n');
+}
+
+/**
  * Il blocco di condivisione, ultimo figlio dell'`<article>`.
  *
  * ⚠️ DENTRO L'ARTICOLO E NON FUORI: `max-width` e `gap` della colonna di lettura
@@ -634,9 +689,7 @@ export function renderArticolo(scheletro, articolo, chiave) {
     '</p>',
     `<h1>${escapeHtml(titolo || 'News')}</h1>`,
     '</header>',
-    copertina
-      ? `<img class="news-detail__cover" src="${escapeHtml(copertina)}" alt="">`
-      : '',
+    copertinaHtml(dati, copertina),
     // Note di rettifica PRIMA del corpo: una correzione che il lettore trova
     // solo dopo aver letto l'articolo sbagliato non e' una correzione.
     rettificheHtml(note),
@@ -644,6 +697,9 @@ export function renderArticolo(scheletro, articolo, chiave) {
     // configurazione di `markdown.mjs`, che SCARTA l'HTML grezzo del Markdown —
     // fuori da Angular non c'e' nessun sanitizer di `[innerHTML]`.
     `<div class="prose">${renderMarkdown(dati.body)}</div>`,
+    // Le fonti subito dopo il testo che le usa, prima di ogni invito ad andare
+    // altrove: e' la stessa posizione del componente Angular.
+    fontiHtml(dati),
     // ⚠️ FRA IL CORPO E LA CONDIVISIONE, e l'ordine e' quello del componente
     // Angular: prima si finisce di leggere, poi il passo successivo, poi
     // l'invito a condividere. Sopra il corpo sarebbe un'uscita offerta a chi non

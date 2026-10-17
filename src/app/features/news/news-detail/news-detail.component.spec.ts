@@ -316,6 +316,54 @@ describe('NewsDetailComponent', () => {
     ).toBeNull();
   });
 
+  // ---- Fonti e credito della copertina (17/10/2026) ---------------------
+
+  it('elenca le fonti in fondo, una riga per articolo, con rel nofollow', () => {
+    const f = monta({
+      sourceUrls: ['https://www.assopoker.com/a', 'https://somuchpoker.com/b'],
+      sourceOutlets: ['Assopoker', 'Somuchpoker'],
+    });
+    const root = f.nativeElement as HTMLElement;
+    const link = Array.from(root.querySelectorAll('.news-fonti__list a'));
+    expect(link.map((a) => a.textContent?.trim())).toEqual(['Assopoker', 'Somuchpoker']);
+    expect(link[0].getAttribute('href')).toBe('https://www.assopoker.com/a');
+    for (const a of link) {
+      expect(a.getAttribute('rel')).toBe('nofollow noopener');
+      expect(a.getAttribute('target')).toBe('_blank');
+    }
+    // Dopo il testo che le usa: la promessa è «in fondo».
+    const corpo = root.querySelector('app-markdown')!;
+    const fonti = root.querySelector('.news-fonti')!;
+    expect(corpo.compareDocumentPosition(fonti) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .withContext('le fonti devono seguire il corpo')
+      .toBeTruthy();
+  });
+
+  it('senza fonti non stampa un blocco vuoto', () => {
+    const f = monta();
+    expect((f.nativeElement as HTMLElement).querySelector('.news-fonti')).toBeNull();
+  });
+
+  it('una foto LICENZIATA porta autore e licenza in una didascalia', () => {
+    const f = monta({
+      coverImageUrl: 'https://cdn.bestfishforever.it/news/foto.jpg',
+      imageSource: 'LICENZIATA',
+      imageCredit: 'Mario Rossi',
+      imageLicense: 'CC BY 4.0',
+    });
+    const cap = (f.nativeElement as HTMLElement).querySelector(
+      'figure.news-detail__figura figcaption.news-detail__credito',
+    );
+    expect(cap?.textContent?.trim()).toBe('Foto: Mario Rossi · CC BY 4.0');
+  });
+
+  it('una copertina non licenziata resta un\'immagine senza didascalia', () => {
+    const f = monta({ coverImageUrl: 'https://cdn.bestfishforever.it/news/foto.jpg' });
+    const root = f.nativeElement as HTMLElement;
+    expect(root.querySelector('img.news-detail__cover')).not.toBeNull();
+    expect(root.querySelector('figure')).toBeNull();
+  });
+
   // ---- Etichetta IA (§4.3) ----------------------------------------------
 
   it('rende l\'etichetta IA con il nome del REVISORE e il rimando alla policy', () => {

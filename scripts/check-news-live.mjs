@@ -74,6 +74,7 @@
 // Esiti: 0 tutto verde · 1 deriva trovata · 0 + avviso se il controllo non e'
 // eseguibile (API muta, nessun articolo): stessa filosofia delle altre guardie.
 
+import { fontiDiArticolo } from '../functions/lib/fonti.mjs';
 import { guideCorrelate } from '../functions/lib/guide-links.mjs';
 import { sommarioOEstratto } from '../functions/lib/render-news.mjs';
 import { hasNoindex } from './lib/csr-noindex.mjs';
@@ -513,6 +514,60 @@ async function sonda() {
               'servita a 200 e /guide/<slug>/, quella nuda si prende un 308.',
           );
     }
+
+    // ---- «Fonti»: la promessa della policy editoriale (dal 17/10/2026) -----
+    //
+    // ⚠️ QUARTA SUPERFICIE SOLO-EDGE da sorvegliare qui: la policy promette che
+    // un articolo derivato elenca in fondo le sue fonti, ed e' proprio la
+    // stesura dell'edge — quella dei crawler — a doverle avere. Per otto
+    // settimane non le ha stampate nessuna delle due rese, e nessuna guardia lo
+    // ha visto. Gli attesi si calcolano dal record dell'API con la STESSA
+    // funzione della Function (`functions/lib/fonti.mjs`).
+    const fontiAttese = fontiDiArticolo(rec.sourceUrls, rec.sourceOutlets);
+    const bloccoFonti =
+      (dentroMain(html).match(/<aside class="news-fonti">([\s\S]*?)<\/aside>/i) || [])[1] ?? null;
+    if (fontiAttese.length && bloccoFonti === null) {
+      nota(
+        `${urlArticolo} — l'API dichiara ${fontiAttese.length} fonti ma la pagina non ha il ` +
+          'blocco «Fonti» (<aside class="news-fonti">). Il sospetto e\' una Function ' +
+          "all'edge piu' VECCHIA del repo: functions/ sta fuori da dist/, e il componente " +
+          "Angular disegna il blocco all'idratazione — a occhio non si vede nulla.",
+      );
+    } else if (!fontiAttese.length && bloccoFonti !== null) {
+      nota(`${urlArticolo} — blocco «Fonti» stampato su un articolo senza fonti.`);
+    } else if (bloccoFonti !== null) {
+      const href = [...bloccoFonti.matchAll(/href="([^"]+)"/g)].map((m) =>
+        m[1].replace(/&amp;/g, '&'),
+      );
+      const attesi = fontiAttese.map((f) => f.url);
+      if (href.join(' ') !== attesi.join(' '))
+        nota(
+          `${urlArticolo} — le fonti in pagina [${href.join(', ')}] non sono quelle ` +
+            `dell'API [${attesi.join(', ')}]: le due copie di fontiDiArticolo divergono, ` +
+            "oppure in produzione gira una Function piu' vecchia.",
+        );
+      const senzaNofollow = [...bloccoFonti.matchAll(/<a [^>]+>/g)].filter(
+        (m) => !/rel="nofollow noopener"/.test(m[0]),
+      ).length;
+      if (senzaNofollow)
+        nota(
+          `${urlArticolo} — ${senzaNofollow} link a una fonte senza rel="nofollow noopener": ` +
+            'le pagine delle testate portano banner di sale, e si cita senza spingere (art. 9).',
+        );
+    }
+
+    // ⚠️ L'etichetta IA vive solo in Angular, quindi qui non si vede in pagina:
+    // si controlla che il DATO ci sia. Un pezzo IA senza firma rende un'etichetta
+    // muta — la promessa mancata dal 22/08 al 17/10/2026. Il rimedio: il revisore
+    // imposta il nome in Account › Profilo e approva un pezzo qualunque, e la
+    // firma si propaga da sola ai suoi articoli IA gia' pubblicati.
+    if (rec.aiGeneratedAt && !String(rec.revisionatoDaNome ?? '').trim())
+      nota(
+        `${urlArticolo} — articolo scritto con l'IA senza la firma del revisore ` +
+          '(revisionatoDaNome): la nota «verificato e approvato da …» non si rende. ' +
+          'Imposta il nome in Account › Profilo e approva un articolo: la firma si ' +
+          'propaga ai pezzi gia\' pubblicati.',
+      );
 
     // Le due date dei dati strutturati. ⚠️ `dateModified` NON e' `updatedAt`
     // (D45): con `updatedAt` qualunque salvataggio dell'admin — un refuso, un
