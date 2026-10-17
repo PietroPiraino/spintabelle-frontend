@@ -276,6 +276,57 @@
                 @if (s.dati?.motivoCategoria; as m) {
                   <p class="admin-nota">Categoria scelta perché: {{ m }}</p>
                 }
+                @if (s.dati?.revisioneAutomatica; as rv) {
+                  @if (rv.eseguita || rv.problemiPrima > 0) {
+                    <p class="admin-nota rz__revisione">Revisione automatica — {{ rv.motivo }}</p>
+                  }
+                }
+                @if (s.dati?.verificaFatti; as v) {
+                  <div class="rz__scheda rz__verifica">
+                    <p class="rz__scheda-testa">Verifica dei fatti</p>
+                    @if (v.esitoModello !== 'ESEGUITA') {
+                      <p class="admin-nota">
+                        Verifica col modello {{ v.esitoModello === 'SALTATA' ? 'non eseguita' : 'non riuscita' }}{{
+                          v.motivo ? ' (' + v.motivo + ')' : ''
+                        }}: cifre, date e nomi li ha controllati solo il confronto automatico.
+                      </p>
+                    }
+                    @if (v.rilievi.length) {
+                      <ul class="rz__scheda-fatti">
+                        @for (r of v.rilievi; track $index) {
+                          <li>{{ r.frase }}</li>
+                        }
+                      </ul>
+                    }
+                    @if (scoperte(v).length) {
+                      <ul class="rz__affermazioni">
+                        @for (af of scoperte(v); track $index) {
+                          <li class="rz__affermazione">
+                            <span class="admin-stato" [attr.data-tono]="tonoAffermazione(af.esito)">{{
+                              etichettaAffermazione(af.esito)
+                            }}</span>
+                            <span>«{{ af.passaggio }}»{{ af.nota ? ' — ' + af.nota : '' }}</span>
+                          </li>
+                        }
+                      </ul>
+                    }
+                    @if (v.esitoModello === 'ESEGUITA' && !v.rilievi.length && !scoperte(v).length) {
+                      <p class="admin-nota">Ogni affermazione controllata ha un riscontro nelle schede.</p>
+                    }
+                    @if (supportate(v).length) {
+                      <details class="rz__supportate">
+                        <summary class="rz__sum">
+                          {{ supportate(v).length }} {{ supportate(v).length === 1 ? 'affermazione' : 'affermazioni' }} con riscontro
+                        </summary>
+                        <ul class="rz__scheda-fatti">
+                          @for (af of supportate(v); track $index) {
+                            <li>«{{ af.passaggio }}»</li>
+                          }
+                        </ul>
+                      </details>
+                    }
+                  </div>
+                }
                 @if (!s.dati?.schede?.length) {
                   <p class="admin-nota">
                     Nessuna scheda conservata: scadono coi 45 giorni dell'articolo da

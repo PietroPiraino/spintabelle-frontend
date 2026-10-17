@@ -855,6 +855,57 @@ describe('AdminRedazioneComponent — la misura della qualità (dal 17/10/2026)'
     expect(testo).toContain('fishkiller (vincitore, 1°)');
   });
 
+  it('il pannello mostra la verifica dei fatti: prima le contraddette, le confermate in una tendina', async () => {
+    await avvia([newsOf('a1')]);
+    const details = el().querySelector<HTMLDetailsElement>('details.rz__schede')!;
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+    await fixture.whenStable();
+    http.expectOne(`${API}/admin/news/a1/schede`).flush({
+      motivoCategoria: null,
+      modello: 'claude-opus-5-5',
+      promptVersion: 'bozza-2026-10-17.1 · verifica:verifica-2026-10-17.1',
+      schede: [],
+      verificaFatti: {
+        at: '2026-10-17T10:00:00.000Z',
+        promptVersione: 'verifica-2026-10-17.1',
+        esitoModello: 'ESEGUITA',
+        modello: 'claude-sonnet-5-5',
+        affermazioni: [
+          { passaggio: 'il torinese', esito: 'NON_SUPPORTATA', schede: [], nota: 'nessuna scheda dice la città' },
+          { passaggio: '1.204 iscritti', esito: 'SUPPORTATA', schede: [1], nota: '' },
+          { passaggio: '84.300 euro', esito: 'CONTRADDETTA', schede: [1], nota: 'la scheda dice 187.500' },
+        ],
+        rilievi: [
+          { tipo: 'NUMERO', dove: 'sommario', passaggio: '1.212', frase: '«1.212» (sommario): nessuna scheda riporta questa cifra.' },
+        ],
+      },
+      revisioneAutomatica: {
+        eseguita: true,
+        accettata: false,
+        motivo: 'Scartata: i rilievi non sono diminuiti (4 → 4). Resta la prima stesura.',
+        problemiPrima: 4,
+        problemiDopo: 4,
+      },
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const testo = details.textContent ?? '';
+    expect(testo).toContain('Verifica dei fatti');
+    expect(testo).toContain('«1.212» (sommario)');
+    expect(testo).toContain('Revisione automatica — Scartata');
+    const voci = Array.from(details.querySelectorAll('.rz__affermazione'));
+    // La contraddetta per prima, anche se il modello l'ha messa per ultima.
+    expect(voci[0].textContent).toContain('84.300 euro');
+    expect(voci[0].querySelector('.admin-stato')?.getAttribute('data-tono')).toBe('allarme');
+    expect(voci[1].textContent).toContain('il torinese');
+    expect(voci).toHaveSize(2);
+    // La confermata non sta fra i rilievi: è nella tendina.
+    expect(details.querySelector('.rz__supportate summary')?.textContent).toContain(
+      '1 affermazione con riscontro',
+    );
+  });
+
   it('la striscia «Qualità» stampa le cifre, e un trattino dove non c’è misura', async () => {
     await avvia([newsOf('a1')]);
     http.expectOne(isQualita).flush({

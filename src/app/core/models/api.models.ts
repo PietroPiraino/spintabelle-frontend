@@ -1248,6 +1248,42 @@ export interface SchedeDiArticolo {
   modello: string | null;
   promptVersion: string | null;
   schede: SchedaRevisione[];
+  /** Il rapporto della verifica dei fatti (dal 17/10/2026); `null` sui pezzi anteriori. */
+  verificaFatti?: VerificaFatti | null;
+  revisioneAutomatica?: RevisioneAutomatica | null;
+}
+
+export type EsitoAffermazione = 'SUPPORTATA' | 'NON_SUPPORTATA' | 'CONTRADDETTA';
+
+/** Un'affermazione dell'articolo, confrontata con le schede dal verificatore. */
+export interface AffermazioneVerificata {
+  passaggio: string;
+  esito: EsitoAffermazione;
+  /** Il numero delle schede nell'ordine dato alla penna: NON quello del pannello. */
+  schede: number[];
+  nota: string;
+}
+
+/** La verifica dei fatti del testo deposto (fase 3). */
+export interface VerificaFatti {
+  at: string;
+  promptVersione: string;
+  esitoModello: 'ESEGUITA' | 'SALTATA' | 'FALLITA';
+  modello?: string;
+  motivo?: string;
+  affermazioni: AffermazioneVerificata[];
+  /** I rilievi del confronto automatico (cifre, date, nomi, forma). */
+  rilievi: { tipo: string; dove: string; passaggio: string; frase: string }[];
+}
+
+/** La seconda stesura automatica, se c'è stata. */
+export interface RevisioneAutomatica {
+  eseguita: boolean;
+  accettata: boolean;
+  motivo: string;
+  problemiPrima: number;
+  problemiDopo?: number;
+  modello?: string;
 }
 
 /** Una riga della striscia «Qualità» (`GET /admin/news/qualita`). */

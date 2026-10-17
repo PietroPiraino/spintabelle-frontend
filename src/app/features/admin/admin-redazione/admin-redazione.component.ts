@@ -10,6 +10,8 @@ import {
 import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import {
+  AffermazioneVerificata,
+  EsitoAffermazione,
   NEWS_CATEGORY_LABELS,
   NewsAdmin,
   NewsApprovePayload,
@@ -19,7 +21,9 @@ import {
   QualitaRedazione,
   SchedaRevisione,
   SchedeDiArticolo,
+  VerificaFatti,
 } from '../../../core/models/api.models';
+import type { TonoStato } from '../admin-stato';
 import { MOTIVI_SCARTO, etichettaMotivo } from './motivi-scarto';
 import { PAUSA_MAX_GIORNI } from '../../../core/news.constants';
 import { AdminPendingService } from '../../../core/services/admin-pending.service';
@@ -615,6 +619,45 @@ export class AdminRedazioneComponent {
     return (sc.fatti.numeri ?? [])
       .map((n) => `${n.etichetta ?? ''} ${n.valore?.toLocaleString('it-IT') ?? ''}`.trim())
       .join(' · ');
+  }
+
+  /**
+   * Le affermazioni senza riscontro, le contraddette per prime: sono quelle da
+   * controllare sulla fonte. ⚠️ Si ordina qui e non ci si fida dell'ordine del
+   * modello: il prompt lo chiede, ma una richiesta non è una garanzia.
+   */
+  protected scoperte(v: VerificaFatti): AffermazioneVerificata[] {
+    const peso = (e: EsitoAffermazione) => (e === 'CONTRADDETTA' ? 0 : 1);
+    return v.affermazioni
+      .filter((a) => a.esito !== 'SUPPORTATA')
+      .sort((a, b) => peso(a.esito) - peso(b.esito));
+  }
+
+  protected supportate(v: VerificaFatti): AffermazioneVerificata[] {
+    return v.affermazioni.filter((a) => a.esito === 'SUPPORTATA');
+  }
+
+  protected etichettaAffermazione(e: EsitoAffermazione): string {
+    switch (e) {
+      case 'SUPPORTATA':
+        return 'Con riscontro';
+      case 'NON_SUPPORTATA':
+        return 'Senza riscontro';
+      case 'CONTRADDETTA':
+        return 'Contraddetta';
+    }
+  }
+
+  /** Senza riscontro = da guardare; contraddetta = le schede dicono altro. */
+  protected tonoAffermazione(e: EsitoAffermazione): TonoStato {
+    switch (e) {
+      case 'SUPPORTATA':
+        return 'ok';
+      case 'NON_SUPPORTATA':
+        return 'attesa';
+      case 'CONTRADDETTA':
+        return 'allarme';
+    }
   }
 
   /** «12%» da una quota 0..1. */

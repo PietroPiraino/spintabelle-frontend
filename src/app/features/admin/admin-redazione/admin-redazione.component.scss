@@ -425,6 +425,31 @@
   font-size: 0.9rem;
 }
 
+// La verifica dei fatti (dal 17/10/2026): sta sopra le schede, perché è la
+// parte da leggere per prima. Le affermazioni senza riscontro portano la
+// pastiglia condivisa `.admin-stato` (mai una copia locale: lo vieta
+// `pastiglia-stato.test.mjs`), quelle confermate stanno in una tendina.
+.rz__affermazioni {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.rz__affermazione {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.rz__supportate {
+  margin-top: 0.5rem;
+}
+
 .rz__qualita {
   margin-top: 1.6rem;
 }
