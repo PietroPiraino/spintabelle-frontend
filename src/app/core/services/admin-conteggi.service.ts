@@ -169,6 +169,21 @@ export class AdminConteggiService {
     );
   }
 
+  /** Regola il rimborso di una riga scalandolo dal roll, senza bonifico. */
+  scalaDalRoll(rigaId: string): Observable<DettaglioMese> {
+    return this.http.post<DettaglioMese>(
+      `${API}/admin/conteggi/stakati/righe/${rigaId}/scala-dal-roll`,
+      {},
+    );
+  }
+
+  /** Disfa lo scalo: sul registro si scrive il movimento opposto. */
+  annullaScalaDalRoll(rigaId: string): Observable<DettaglioMese> {
+    return this.http.delete<DettaglioMese>(
+      `${API}/admin/conteggi/stakati/righe/${rigaId}/scala-dal-roll`,
+    );
+  }
+
   // ── Anagrafiche ──────────────────────────────────────────────────────────
 
   listStakati(): Observable<Stakato[]> {

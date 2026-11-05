@@ -340,8 +340,10 @@ export class AdminConteggiMensiliComponent {
    * che c'è.
    */
   protected readonly tascheIncassiStakati = computed<string | null>(() => {
+    // ⚠️ Uno scalo dal roll non è un incasso: non si è mosso denaro.
     const righe = (this.dett()?.stakati ?? []).filter(
-      (r) => (r.regolatoCent ?? 0) !== 0 && r.regolatoCassa,
+      (r) =>
+        (r.regolatoCent ?? 0) !== 0 && r.regolatoCassa && !r.regolatoDalRoll,
     );
     if (!righe.length) return null;
     const nomi = [...new Set(righe.map((r) => cassaLabel(r.regolatoCassa!)))];
@@ -386,6 +388,16 @@ export class AdminConteggiMensiliComponent {
   /** Quelle gia' registrate: l'elenco in cui sta la via di ritorno. */
   protected readonly regolate = computed(() =>
     (this.dett()?.stakati ?? []).filter((r) => r.regolatoCent !== undefined),
+  );
+
+  /**
+   * Le righe il cui movimento sul registro non corrisponde più ai numeri.
+   *
+   * ⚠️ Si nominano sopra la tabella: la pastiglia sulla riga dice che qualcosa
+   * non torna, e da sola non dice né quanto né che basta premere il comando.
+   */
+  protected readonly stakatiDisallineati = computed(() =>
+    (this.dett()?.stakati ?? []).filter((r) => r.disallineato),
   );
 
   /**
@@ -1409,7 +1421,7 @@ export class AdminConteggiMensiliComponent {
     const n = d.stakati.length;
     const daReg = d.stakati.filter((r) => !r.registrato && r.aRecuperoCent !== 0)
       .length;
-    const base = `su ${n} stakato${n === 1 ? '' : 'i'} di ${d.mese.etichetta}`;
+    const base = `su ${n} ${n === 1 ? 'stakato' : 'stakati'} di ${d.mese.etichetta}`;
     return daReg
       ? `${base}, ${daReg} da portare sul registro staking`
       : base;
@@ -1592,7 +1604,11 @@ export class AdminConteggiMensiliComponent {
       next: (nuovo) => {
         this.salvando.set(false);
         this.applica(nuovo);
-        this.toast.success(`Conteggio di ${r.nome} portato sul registro.`);
+        this.toast.success(
+          r.disallineato
+            ? `Registro di ${r.nome} riallineato.`
+            : `Conteggio di ${r.nome} portato sul registro.`,
+        );
       },
       error: (err) => {
         this.salvando.set(false);
@@ -2171,12 +2187,47 @@ export class AdminConteggiMensiliComponent {
     });
   }
 
-  /** Disfa una registrazione: lo zero è il comando di cancellazione. */
-  protected annullaRegolazione(id: string): void {
+  /**
+   * Regola un rimborso scalandolo dal roll: nessun bonifico, il roll scende.
+   *
+   * ⚠️ La cifra e la tasca le decide il server, come in «Porta sul registro»: qui
+   * non si digita niente, perché non è arrivato né partito denaro da quadrare.
+   */
+  protected scalaDalRoll(r: RigaStakato): void {
+    this.salvando.set(true);
+    this.erroreRegolazioni.set(null);
+    this.api.scalaDalRoll(r.id).subscribe({
+      next: (nuovo) => {
+        this.salvando.set(false);
+        this.applica(nuovo);
+        this.toast.success(
+          `${formattaCent(Math.abs(r.daRegolareCent))} scalati dal roll di ${r.nome}.`,
+        );
+      },
+      error: (err) => {
+        this.salvando.set(false);
+        this.erroreRegolazioni.set(
+          apiErrorMessage(err, 'Non riesco a scalare il rimborso dal roll.'),
+        );
+      },
+    });
+  }
+
+  /**
+   * Disfa una registrazione: lo zero è il comando di cancellazione.
+   *
+   * ⚠️ Uno scalo dal roll passa da un'altra rotta: ha scritto un movimento sul
+   * registro, e va disfatto scrivendo quello opposto.
+   */
+  protected annullaRegolazione(r: RigaStakato): void {
     const m = this.mese();
     if (!m) return;
+    const id = r.id;
     this.salvando.set(true);
-    this.api.regolaStakati(m.id, [{ id, regolatoCent: 0 }]).subscribe({
+    const richiesta = r.regolatoDalRoll
+      ? this.api.annullaScalaDalRoll(id)
+      : this.api.regolaStakati(m.id, [{ id, regolatoCent: 0 }]);
+    richiesta.subscribe({
       next: (nuovo) => {
         this.salvando.set(false);
         this.conferma.set(null);

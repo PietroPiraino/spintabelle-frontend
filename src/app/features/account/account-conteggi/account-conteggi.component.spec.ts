@@ -88,11 +88,14 @@ describe('AccountConteggiComponent', () => {
       feeCent: -2500,
       altroCent: 100,
       totaleCent: 13_159,
+      daDividereCent: 13_159,
       quotaScuolaCent: 4606,
       quotaGiocatoreCent: 8553,
       risultatoCent: 1797,
+      makeUpPieno: false,
       aRecuperoCent: 0,
       daRegolareCent: 1797,
+      rimborsoDalRoll: false,
     };
     const mese: ProspettoMese = { ...prospettoMadRoxKO[0], rakeback: undefined, stakato };
     const ctx = await apri(ok([mese]));
@@ -113,6 +116,98 @@ describe('AccountConteggiComponent', () => {
     const ctx2 = await apri(ok([perdita]));
     expect(ctx2.testo()).not.toContain('La tua quota');
     expect(ctx2.testo()).not.toContain('Quota della scuola');
+  });
+
+  /**
+   * Il make-up pieno, da ottobre 2026: il caso vero di Gaz_18. ⚠️ L'ordine è il
+   * conto: prima si chiude il debito, poi si divide ciò che avanza.
+   */
+  describe('staking col make-up pieno', () => {
+    const gaz = {
+      nome: 'Gaz_18',
+      dealScuolaBp: 3500,
+      backCent: 6629,
+      trattenutoCent: 2129,
+      poolEvCent: 5200,
+      diffCent: -100,
+      feeCent: 0,
+      altroCent: 300,
+      totaleCent: 12_029,
+      daDividereCent: 4329,
+      quotaScuolaCent: 1515,
+      quotaGiocatoreCent: 2814,
+      risultatoCent: -614,
+      makeUpPieno: true,
+      aRecuperoCent: 7700,
+      daRegolareCent: -614,
+      rimborsoDalRoll: false,
+    };
+    const mese = (stakato: Partial<typeof gaz>): ProspettoMese => ({
+      ...prospettoMadRoxKO[0],
+      rakeback: undefined,
+      stakato: { ...gaz, ...stakato },
+    });
+    const voci = (ctx: Ctx<AccountConteggiComponent>) =>
+      [...ctx.el.querySelectorAll('dl.cnt__righe dt')].map((d) => d.textContent ?? '');
+
+    it('prima il debito, poi la divisione, poi il ticket', async () => {
+      const ctx = await apri(ok([mese({})]));
+      const v = voci(ctx);
+      const i = (testo: string) => v.findIndex((x) => x.includes(testo));
+      expect(i('A recupero del debito EV')).toBeGreaterThanOrEqual(0);
+      expect(i('A recupero del debito EV')).toBeLessThan(i('Resta da dividere'));
+      expect(i('Resta da dividere')).toBeLessThan(i('La tua quota'));
+      expect(i('Quota della scuola')).toBeLessThan(i('Meno quanto tratteniamo'));
+      expect(ctx.testo()).toContain('Ti rimborsiamo');
+      expect(ctx.testo()).not.toContain('A compensazione');
+      expect(ctx.testo()).not.toContain('con bonifico');
+    });
+
+    it('dice che il rimborso è stato scalato dal roll, anche nel riassunto', async () => {
+      const ctx = await apri(ok([mese({ rimborsoDalRoll: true })]));
+      expect(ctx.testo()).toContain('Scalato dal tuo roll');
+      expect(ctx.testo()).not.toContain('Ti rimborsiamo');
+    });
+
+    it('sotto il debito non c’è niente da dividere, e il ticket torna a lui', async () => {
+      const ctx = await apri(
+        ok([
+          mese({
+            totaleCent: 5000,
+            daDividereCent: 0,
+            quotaScuolaCent: 0,
+            quotaGiocatoreCent: 0,
+            risultatoCent: -2129,
+            aRecuperoCent: 5000,
+            daRegolareCent: -2129,
+          }),
+        ]),
+      );
+      expect(ctx.testo()).not.toContain('La tua quota');
+      expect(ctx.testo()).not.toContain('Resta da dividere');
+      expect(ctx.testo()).toContain('Back non accreditata in ticket');
+      expect(ctx.testo()).toMatch(/21,29/);
+    });
+
+    it('un mese in perdita resta debito, e il ticket torna a lui', async () => {
+      const ctx = await apri(
+        ok([
+          mese({
+            totaleCent: -7700,
+            daDividereCent: 0,
+            quotaScuolaCent: 0,
+            quotaGiocatoreCent: 0,
+            risultatoCent: -2850,
+            trattenutoCent: 2850,
+            aRecuperoCent: -7700,
+            daRegolareCent: -2850,
+          }),
+        ]),
+      );
+      expect(ctx.testo()).toContain('Perdita del mese');
+      expect(ctx.testo()).toContain('Back non accreditata in ticket');
+      expect(ctx.testo()).toMatch(/28,50/);
+    });
   });
 
   it('i due canali per una rettifica: l’email del Titolare e Discord', async () => {

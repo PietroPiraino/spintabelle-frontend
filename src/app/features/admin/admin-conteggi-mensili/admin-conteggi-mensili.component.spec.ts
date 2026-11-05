@@ -335,13 +335,163 @@ describe('AdminConteggiMensiliComponent', () => {
     altroCent: 100,
     debitoEvCent: 0,
     totaleCent: 13_159,
+    daDividereCent: 13_159,
     quotaScuolaCent: 4_606,
     risultatoCent: 1_797,
+    makeUpPieno: false,
     aRecuperoCent: 0,
+    aRecuperoAttesoCent: 0,
     daRegolareCent: 1_797,
     registrato: false,
     disallineato: false,
     ...over,
+  });
+
+  describe('il make-up pieno e «Scala dal roll»', () => {
+    /** Il caso vero di Gaz_18 a ottobre 2026, con la regola nuova. */
+    const gaz = (over: Partial<RigaStakato> = {}): RigaStakato =>
+      rigaStakato({
+        id: 'rg',
+        stakatoId: 'sg',
+        nome: 'Gaz_18',
+        rakeLettoCent: 13_258,
+        backCent: 6629,
+        trattenutoCent: 2129,
+        poolEvCent: 5200,
+        diffCent: -100,
+        feeCent: 0,
+        altroCent: 300,
+        debitoEvCent: -7700,
+        totaleCent: 12_029,
+        daDividereCent: 4329,
+        quotaScuolaCent: 1515,
+        risultatoCent: -614,
+        makeUpPieno: true,
+        aRecuperoCent: 7700,
+        aRecuperoAttesoCent: 7700,
+        daRegolareCent: -614,
+        registrato: true,
+        rollScalabile: { cassa: 'PIETRO', saldoFondiCent: 15_000 },
+        ...over,
+      });
+
+    const apri = async (riga: RigaStakato) => {
+      await avvia(dettaglio([], { stakati: [riga] }));
+      fixture.componentInstance['vista'].set('stakati');
+      await stabilizza();
+      return fixture.nativeElement as HTMLElement;
+    };
+    const comandoRoll = (el: HTMLElement) =>
+      el.querySelector<HTMLButtonElement>('.cm__azione-riga');
+
+    it('scala il rimborso dal roll con un clic, senza digitare niente', async () => {
+      const el = await apri(gaz());
+      const b = comandoRoll(el)!;
+      expect(b.textContent).toContain('Scala dal roll');
+      // ⚠️ Il nome accessibile dice quanto e di chi.
+      expect(b.getAttribute('aria-label')).toMatch(/Scala 6,14.*dal roll di Gaz_18/);
+      expect(b.title).toMatch(/150,00.*143,86/);
+      b.click();
+      const req = http.expectOne(
+        `${API}/admin/conteggi/stakati/righe/rg/scala-dal-roll`,
+      );
+      expect(req.request.method).toBe('POST');
+      req.flush(
+        dettaglio([], {
+          stakati: [
+            gaz({
+              rollScalabile: undefined,
+              regolatoCent: -614,
+              regolatoCassa: 'PIETRO',
+              regolatoDalRoll: true,
+            }),
+          ],
+        }),
+      );
+      await stabilizza();
+      const t = el.textContent ?? '';
+      expect(t).toContain('Scalato dal roll');
+      expect(t).toContain('scalati dal roll');
+      expect(comandoRoll(el)).toBeNull();
+    });
+
+    it('«non sempre»: senza un roll che copra, il comando non c’è e resta il bonifico', async () => {
+      const el = await apri(gaz({ rollScalabile: undefined }));
+      expect(comandoRoll(el)).toBeNull();
+      expect(el.querySelector('#reg-rg')).not.toBeNull();
+    });
+
+    it('dice la ragione di un errore, accanto ai campi', async () => {
+      const el = await apri(gaz());
+      comandoRoll(el)!.click();
+      http
+        .expectOne(`${API}/admin/conteggi/stakati/righe/rg/scala-dal-roll`)
+        .flush(
+          { message: 'Il roll di questo giocatore non copre il rimborso.' },
+          { status: 400, statusText: 'Bad Request' },
+        );
+      await stabilizza();
+      expect(el.textContent).toContain('non copre il rimborso');
+    });
+
+    it('uno scalo si disfa con la sua rotta, e un bonifico con lo zero', async () => {
+      const el = await apri(
+        gaz({
+          rollScalabile: undefined,
+          regolatoCent: -614,
+          regolatoCassa: 'PIETRO',
+          regolatoDalRoll: true,
+        }),
+      );
+      const trova = (testo: string) =>
+        [...el.querySelectorAll<HTMLButtonElement>('.cm__regolate button')].find(
+          (x) => x.textContent?.includes(testo),
+        )!;
+      trova('Annulla').click();
+      await stabilizza();
+      trova('Annulla davvero').click();
+      const req = http.expectOne(
+        `${API}/admin/conteggi/stakati/righe/rg/scala-dal-roll`,
+      );
+      expect(req.request.method).toBe('DELETE');
+      http.expectNone(`${API}/admin/conteggi/mesi/m1/regolazioni`);
+      req.flush(dettaglio([], { stakati: [gaz()] }));
+      await stabilizza();
+    });
+
+    it('la riga che non corrisponde dice quanto e offre il comando', async () => {
+      const el = await apri(
+        gaz({ aRecuperoCent: 2081, disallineato: true, rollScalabile: undefined }),
+      );
+      const avviso = el.querySelector('.cm__manca')?.textContent ?? '';
+      expect(avviso).toContain('Gaz_18');
+      expect(avviso).toMatch(/20,81/);
+      expect(avviso).toMatch(/77,00/);
+      const riallinea = el.querySelector<HTMLButtonElement>(
+        '[aria-label="Riallinea il registro staking di Gaz_18"]',
+      )!;
+      riallinea.click();
+      const req = http.expectOne(
+        `${API}/admin/conteggi/stakati/righe/rg/registra`,
+      );
+      expect(req.request.method).toBe('POST');
+      req.flush(dettaglio([], { stakati: [gaz()] }));
+      await stabilizza();
+      expect(el.querySelector('.cm__manca')).toBeNull();
+    });
+
+    it('a mese chiuso una riga disallineata non offre un comando che darebbe 409', async () => {
+      await avvia(
+        dettaglio([], {
+          mese: mese({ stato: 'CHIUSO', riepilogoCongelato: true }),
+          stakati: [gaz({ aRecuperoCent: 2081, disallineato: true })],
+        }),
+      );
+      fixture.componentInstance['vista'].set('stakati');
+      await stabilizza();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[aria-label^="Riallinea"]')).toBeNull();
+    });
   });
 
   describe('la scheda di una riga stakato', () => {
@@ -1106,9 +1256,12 @@ describe('AdminConteggiMensiliComponent', () => {
       altroCent: 100,
       debitoEvCent: 0,
       totaleCent: 13_159,
+      daDividereCent: 13_159,
       quotaScuolaCent: 4606,
       risultatoCent: 1797,
+      makeUpPieno: false,
       aRecuperoCent: 0,
+      aRecuperoAttesoCent: 0,
       daRegolareCent: 1797,
       registrato: false,
       disallineato: false,
@@ -1174,9 +1327,12 @@ describe('AdminConteggiMensiliComponent', () => {
       altroCent: 0,
       debitoEvCent: -200,
       totaleCent: 7059,
+      daDividereCent: 7059,
       quotaScuolaCent: 2471,
       risultatoCent: -338,
+      makeUpPieno: false,
       aRecuperoCent: 200,
+      aRecuperoAttesoCent: 200,
       daRegolareCent: -138,
       registrato: false,
       disallineato: false,
@@ -1871,9 +2027,12 @@ describe('AdminConteggiMensiliComponent', () => {
       altroCent: 100,
       debitoEvCent: 0,
       totaleCent: -10_100,
+      daDividereCent: -10_100,
       quotaScuolaCent: -3535,
       risultatoCent: -3535,
+      makeUpPieno: false,
       aRecuperoCent: -3535,
+      aRecuperoAttesoCent: -3535,
       daRegolareCent: 0,
       registrato: false,
       disallineato: false,

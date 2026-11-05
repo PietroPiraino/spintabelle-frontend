@@ -1280,13 +1280,28 @@
             I quattro numeri del pool si copiano <strong>col segno</strong>, come
             si leggono sul pool. La back e quello che la scuola trattiene
             arrivano da soli dalla tabella del rakeback: non si ridigitano.
-            Una cifra <strong>negativa</strong> in «Da bonificare» è un
-            <strong>rimborso</strong> che devi tu al giocatore (la tua quota è
-            sotto il ticket già trattenuto): si scala prima dal suo debito EV,
-            il resto glielo mandi con un bonifico da Pietro. Un mese in perdita
-            va invece per intero sul registro EV (make-up pieno) e non muove
-            cassa.
+            Il totale del mese chiude <strong>prima il debito EV</strong>, e il
+            deal si applica solo a ciò che avanza. Un mese in perdita va per
+            intero sul registro EV. Una cifra <strong>negativa</strong> in
+            «Da bonificare» è un <strong>rimborso</strong> che devi tu al
+            giocatore: la tua quota è sotto il ticket già trattenuto, e la
+            differenza è sua. Si regola più sotto, riga per riga.
           </p>
+
+          <!-- ⚠️ Nomina la cifra e la riga: «Non corrisponde» sulla pastiglia dice
+               che qualcosa non torna, non quanto né che basta un comando. -->
+          @if (d.mese.stato === 'APERTO' && stakatiDisallineati().length) {
+            <div class="cm__manca">
+              <p class="admin-nota">
+                @for (r of stakatiDisallineati(); track r.id) {
+                  <strong>{{ r.nome }}</strong>: sul registro ci sono
+                  {{ eur(r.aRecuperoCent) }}, i numeri di adesso dicono
+                  {{ eur(r.aRecuperoAttesoCent) }}.
+                }
+                Premi la spunta sulla riga per scrivere la differenza.
+              </p>
+            </div>
+          }
 
           <!--
             ⚠️⚠️ L'avviso che mancava del tutto. Con la colonna del rakeback
@@ -1394,40 +1409,39 @@
                       <span class="admin-table__ident">
                         <span class="admin-table__ident-riga">
                           <strong [title]="r.nome">{{ r.nome }}</strong>
+                          <!--
+                            ⚠️⚠️ UNA PASTIGLIA SOLA, la più urgente. Questa cella
+                            ha un tetto di 13rem: con due pastiglie lunghe il NOME
+                            sparisce, e a 390px va a capo lettera per lettera
+                            (trovato guardando la pagina, nessun test lo vede).
+                            Che il movimento sia sul registro lo dice già
+                            l'assenza della spunta in fondo alla riga, e che sia
+                            un rimborso il colore della cifra.
+                          -->
                           @if (r.disallineato) {
-                            <!-- ⚠️ Riaperto il mese, i numeri sono cambiati e
-                                 il movimento gia' scritto non corrisponde piu':
-                                 si DICE, invece di lasciar divergere due cifre
-                                 di denaro in silenzio. -->
+                            <!-- ⚠️ Il movimento già scritto non corrisponde più
+                                 ai numeri: si DICE, invece di lasciar divergere
+                                 due cifre di denaro in silenzio. -->
                             <span class="admin-stato" data-tono="allarme">
                               Non corrisponde
+                            </span>
+                          } @else if (r.regolatoCent !== undefined) {
+                            <!-- ⚠️ `!== undefined` e non `r.regolatoCent`: lo zero
+                                 non è un valore salvato, l'assenza sì. La cifra e
+                                 la tasca stanno nel sotto-testo. -->
+                            <span class="admin-stato" data-tono="concluso">
+                              {{ r.regolatoDalRoll ? 'Scalato dal roll' : r.regolatoCent < 0 ? 'Rimborsato' : 'Incassato' }}
+                            </span>
+                          } @else if (r.daRegolareCent < 0) {
+                            <!-- ⚠️ Il verso del denaro si DICE: un numero col meno
+                                 in una colonna «Da bonificare» si legge come un
+                                 errore di battitura. -->
+                            <span class="admin-stato" data-tono="attesa">
+                              Rimborso
                             </span>
                           } @else if (r.registrato) {
                             <span class="admin-stato" data-tono="ok">
                               Registrato
-                            </span>
-                          }
-                          @if (r.daRegolareCent < 0) {
-                            <!-- ⚠️ Il verso del denaro si DICE: un numero col
-                                 meno in una colonna chiamata «Da bonificare»
-                                 si legge come un errore di battitura. -->
-                            <span class="admin-stato" data-tono="attesa">
-                              Rimborso
-                            </span>
-                          }
-                          @if (r.regolatoCent !== undefined) {
-                            <!--
-                              ⚠️ Un BADGE e non una colonna: con dieci colonne
-                              questa tabella sfonda già a 1100px, che è la
-                              fascia più stretta del pannello (la sidebar è
-                              ancora affiancata). La cifra e la tasca stanno
-                              nel sotto-testo, dove non allargano niente.
-                              ⚠️ `!== undefined` e non `r.regolatoCent`: una
-                              riga può essere stata regolata per l'intero
-                              dovuto e restare comunque una riga registrata.
-                            -->
-                            <span class="admin-stato" data-tono="concluso">
-                              {{ r.regolatoCent < 0 ? 'Rimborsato' : 'Incassato' }}
                             </span>
                           }
                         </span>
@@ -1446,7 +1460,9 @@
                                 ? 'dal conto ' + r.contoUsername
                                 : 'dal conto rakeback'
                           }}
-                          @if (r.regolatoCent !== undefined) {
+                          @if (r.regolatoDalRoll) {
+                            · {{ eur(abs(r.regolatoCent!)) }} dal roll
+                          } @else if (r.regolatoCent !== undefined) {
                             · {{ eur(abs(r.regolatoCent)) }}
                             {{ r.regolatoCent < 0 ? 'da' : 'a' }}
                             {{ r.regolatoCassa ? cassaLabel(r.regolatoCassa) : '—' }}
@@ -1543,12 +1559,12 @@
                       <strong [class.cm__rimborso]="r.daRegolareCent < 0">{{ eur(r.daRegolareCent) }}</strong>
                     </td>
                     <td class="admin-table__c-ultimo">
-                      @if (d.mese.stato === 'APERTO' && r.aRecuperoCent !== 0 && !r.registrato) {
+                      @if (d.mese.stato === 'APERTO' && (r.disallineato || (r.aRecuperoCent !== 0 && !r.registrato))) {
                         <button
                           type="button"
                           class="admin-ico"
-                          [attr.aria-label]="'Porta il conteggio di ' + r.nome + ' sul registro staking'"
-                          title="Porta sul registro staking"
+                          [attr.aria-label]="r.disallineato ? 'Riallinea il registro staking di ' + r.nome : 'Porta il conteggio di ' + r.nome + ' sul registro staking'"
+                          [title]="r.disallineato ? 'Riallinea il registro staking' : 'Porta sul registro staking'"
                           [disabled]="salvando()"
                           (click)="registraStakato(r)"
                         >
@@ -1628,6 +1644,9 @@
                 Su un <strong>rimborso</strong> la cifra si scrive
                 <strong>positiva</strong> come le altre — il verso lo dice già
                 la riga, e la cassa scelta è quella da cui il bonifico esce.
+                Se il roll lo copre puoi evitare il bonifico con
+                <strong>«Scala dal roll»</strong>: non si muove denaro, la scuola
+                tiene la cifra e il roll erogato scende di altrettanto.
               </p>
 
               <div class="admin-table__scroll">
@@ -1643,6 +1662,7 @@
                       <th scope="col" class="is-num admin-table__solo-largo">
                         Il dovuto
                       </th>
+                      <th scope="col">Senza bonifico</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1714,6 +1734,27 @@
                           {{ eur(abs(r.daRegolareCent)) }}
                           {{ r.daRegolareCent < 0 ? 'da mandare' : 'da ricevere' }}
                         </td>
+                        <!--
+                          ⚠️ Compare solo se si può: il roll copre il rimborso e
+                          viene da una tasca sola. Altrimenti resta il bonifico,
+                          e il trattino dice che qui non c'è niente da fare.
+                        -->
+                        <td data-etichetta="Senza bonifico">
+                          @if (r.rollScalabile; as roll) {
+                            <button
+                              type="button"
+                              class="btn btn--sm btn--ghost cm__azione-riga"
+                              [attr.aria-label]="'Scala ' + eur(abs(r.daRegolareCent)) + ' dal roll di ' + r.nome"
+                              [title]="'Roll da ' + eur(roll.saldoFondiCent) + ' a ' + eur(roll.saldoFondiCent + r.daRegolareCent) + ', su ' + cassaLabel(roll.cassa)"
+                              [disabled]="salvando()"
+                              (click)="scalaDalRoll(r)"
+                            >
+                              Scala dal roll
+                            </button>
+                          } @else {
+                            —
+                          }
+                        </td>
                       </tr>
                     }
                   </tbody>
@@ -1753,8 +1794,12 @@
                     <span>
                       <strong>{{ r.nome }}</strong> ·
                       {{ eur(abs(r.regolatoCent!)) }}
-                      {{ r.regolatoCent! < 0 ? 'rimborsati da' : 'incassati su' }}
-                      {{ r.regolatoCassa ? cassaLabel(r.regolatoCassa) : '—' }}
+                      @if (r.regolatoDalRoll) {
+                        scalati dal roll
+                      } @else {
+                        {{ r.regolatoCent! < 0 ? 'rimborsati da' : 'incassati su' }}
+                        {{ r.regolatoCassa ? cassaLabel(r.regolatoCassa) : '—' }}
+                      }
                     </span>
                     <!--
                       ⚠️ La via di ritorno esiste perché una riga segnata per
@@ -1768,7 +1813,7 @@
                           type="button"
                           class="btn btn--sm btn--danger"
                           [disabled]="salvando()"
-                          (click)="annullaRegolazione(r.id)"
+                          (click)="annullaRegolazione(r)"
                         >
                           Annulla davvero
                         </button>
@@ -4147,8 +4192,20 @@
             <dd class="cm__somma" [class.is-perdita]="r.totaleCent < 0">
               {{ eur(r.totaleCent) }}
             </dd>
+            <!-- ⚠️ L'ordine è il conto: prima si chiude il debito, poi si divide
+                 ciò che avanza, e il ticket è un anticipo sulla quota. -->
+            @if (r.makeUpPieno && r.aRecuperoAttesoCent !== 0) {
+              <dt>{{ r.totaleCent < 0 ? 'Perdita, sul registro EV' : 'A recupero del debito EV' }}</dt>
+              <dd>{{ eur(r.aRecuperoAttesoCent) }}</dd>
+              <dt>Resta da dividere</dt>
+              <dd>{{ eur(r.daDividereCent) }}</dd>
+            }
             <dt>Quota della scuola</dt>
             <dd>{{ eur(r.quotaScuolaCent) }}</dd>
+            @if (r.makeUpPieno && r.trattenutoCent !== 0) {
+              <dt>Meno il trattenuto</dt>
+              <dd>{{ eur(-r.trattenutoCent) }}</dd>
+            }
             <dt class="cm__margine">
               {{ r.daRegolareCent < 0 ? 'Da rimborsargli' : 'Deve bonificare' }}
             </dt>

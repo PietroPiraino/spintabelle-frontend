@@ -478,7 +478,8 @@
     }
   }
 
-  .cm__cella {
+  .cm__cella,
+  .cm__azione-riga {
     max-width: none;
     width: 100%;
     text-align: left;
@@ -487,6 +488,19 @@
     // campo sale sopra l'etichetta della riga.
     margin-block: 0;
   }
+
+  .cm__azione-riga {
+    text-align: center;
+  }
+}
+
+// Un comando con la parola dentro una riga di tabella. Stessa ricetta di
+// `.cm__cella`: 44px di bersaglio, e il rientro negativo che vale il padding
+// verticale della cella, o la riga salirebbe oltre il tetto di 46px.
+.cm__azione-riga {
+  min-height: 44px;
+  margin-block: -0.3rem;
+  white-space: nowrap;
 }
 
 /**

@@ -3264,16 +3264,21 @@ export interface ProspettoStakato {
   feeCent: number;
   altroCent: number;
   totaleCent: number;
+  /** Quanto del totale si divide col deal, dopo aver chiuso il debito EV. */
+  daDividereCent: number;
   quotaScuolaCent: number;
   /**
-   * La sua parte del totale (dal 07/10/2026): la compone il SERVER come resto
-   * di `totale − quotaScuola`, così le due quote sommano il totale al
-   * centesimo. Si mostra solo con `totaleCent ≥ 0`, come la quota della scuola.
+   * La sua parte di `daDividereCent` (dal 07/10/2026): la compone il SERVER come
+   * resto, così le due quote sommano il diviso al centesimo.
    */
   quotaGiocatoreCent: number;
   risultatoCent: number;
+  /** Il make-up pieno vale da ottobre 2026: i mesi prima si leggono come allora. */
+  makeUpPieno: boolean;
   aRecuperoCent: number;
   daRegolareCent: number;
+  /** Il rimborso è stato scalato dal roll invece che bonificato. */
+  rimborsoDalRoll: boolean;
 }
 
 export interface ProspettoMese {
@@ -3375,20 +3380,25 @@ export interface RigaStakato {
   /** Il debito EV a oggi, dal registro staking. Sempre ≤ 0. */
   debitoEvCent: number;
   totaleCent: number;
+  /** Quanto del totale si divide col deal, dopo aver chiuso il debito EV. */
+  daDividereCent: number;
   quotaScuolaCent: number;
   risultatoCent: number;
+  /** Il make-up pieno vale da ottobre 2026: i mesi prima si leggono come allora. */
+  makeUpPieno: boolean;
   /**
    * Quanto passa dal registro EV, col segno del REGISTRO: positivo riduce un
-   * debito (un recupero pagato da lui, o una compensazione in cui è la scuola
-   * a scalare ciò che gli deve), negativo è un mese in perdita che ne crea uno
-   * nuovo (make-up pieno: l'intera perdita).
+   * debito, negativo è un mese in perdita che ne crea uno nuovo (l'intera
+   * perdita). Su una riga registrata è il fatto scritto.
    */
   aRecuperoCent: number;
+  /** Quanto dovrebbe passarne secondo i numeri di adesso. */
+  aRecuperoAttesoCent: number;
   /**
-   * La cassa: positiva = il giocatore bonifica; ⚠️ NEGATIVA = è la scuola
-   * a rimborsarlo. ⚠️ **Da quale tasca lo dice `regolatoCassa`**, non una
-   * convenzione: fino all'11/09/2026 si assumeva «bonifico da Pietro» e la sua
-   * cassa si muoveva d'ufficio. Zero in un mese in perdita.
+   * La cassa: positiva = il giocatore bonifica; ⚠️ NEGATIVA = la scuola gli deve
+   * quella cifra, con un bonifico o scalandola dal roll. ⚠️ **Da quale tasca lo
+   * dice `regolatoCassa`**, non una convenzione: fino all'11/09/2026 si assumeva
+   * «bonifico da Pietro» e la sua cassa si muoveva d'ufficio.
    */
   daRegolareCent: number;
   /**
@@ -3402,6 +3412,13 @@ export interface RigaStakato {
   regolatoCent?: number;
   /** In quale tasca è finito (o da quale è uscito, se è un rimborso). */
   regolatoCassa?: Cassa;
+  /** Il rimborso è stato scalato dal roll invece che bonificato. */
+  regolatoDalRoll?: boolean;
+  /**
+   * Presente solo se il rimborso ancora aperto si può scalare dal roll: il roll
+   * lo copre tutto e viene da una tasca sola. Altrimenti resta il bonifico.
+   */
+  rollScalabile?: { cassa: Cassa; saldoFondiCent: number };
   registrato: boolean;
   /** Registrato, ma con un importo che non corrisponde più al ricalcolo. */
   disallineato: boolean;

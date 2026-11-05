@@ -105,7 +105,12 @@ export class AccountConteggiComponent {
       const st = m.stakato;
       out.push(
         st.daRegolareCent < 0
-          ? { etichetta: 'Ti rimborsiamo', valore: this.eur(-st.daRegolareCent) }
+          ? {
+              etichetta: st.rimborsoDalRoll
+                ? 'Scalato dal tuo roll'
+                : 'Ti rimborsiamo',
+              valore: this.eur(-st.daRegolareCent),
+            }
           : { etichetta: 'Da bonificare', valore: this.eur(st.daRegolareCent) },
       );
     }

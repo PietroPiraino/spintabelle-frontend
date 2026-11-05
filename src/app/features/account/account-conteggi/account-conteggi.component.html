@@ -96,44 +96,93 @@
               <dd>{{ eur(st.altroCent) }}</dd>
               <dt class="is-totale">Totale del mese</dt>
               <dd class="is-totale"><strong>{{ eur(st.totaleCent) }}</strong></dd>
-              @if (st.totaleCent >= 0) {
-                <!-- ⚠️ La propria quota PRIMA di quella della scuola: «Meno
-                     quanto tratteniamo» si sottrae alla quota della scuola e
-                     deve restarle subito sotto. Mancava fino al 07/10/2026. -->
-                <dt>
-                  La tua quota
-                  <span class="nota">{{ pct(10000 - st.dealScuolaBp) }}</span>
-                </dt>
-                <dd><strong>{{ eur(st.quotaGiocatoreCent) }}</strong></dd>
-                <dt>
-                  Quota della scuola
-                  <span class="nota">{{ pct(st.dealScuolaBp) }}</span>
-                </dt>
-                <dd>{{ eur(st.quotaScuolaCent) }}</dd>
-                <dt>
-                  Meno quanto tratteniamo
-                  <span class="nota">la parte di back che non ti accreditiamo in ticket</span>
-                </dt>
-                <dd>− {{ eur(st.trattenutoCent) }}</dd>
-              }
-              @if (st.aRecuperoCent !== 0) {
-                <dt>
-                  @if (st.totaleCent < 0) {
-                    Perdita del mese
-                    <span class="nota">sul registro EV (make-up)</span>
-                  } @else if (st.risultatoCent < 0) {
-                    A compensazione
-                    <span class="nota">scalato dal tuo debito EV</span>
-                  } @else {
-                    A recupero dello scarto EV
+              @if (st.makeUpPieno) {
+                <!-- ⚠️ L'ordine è il conto: prima si chiude il debito, poi si
+                     divide ciò che avanza. Le quote prima del recupero farebbero
+                     cercare una sottrazione. -->
+                @if (st.aRecuperoCent !== 0) {
+                  <dt>
+                    @if (st.totaleCent < 0) {
+                      Perdita del mese
+                      <span class="nota">sul registro EV (make-up)</span>
+                    } @else {
+                      A recupero del debito EV
+                    }
+                  </dt>
+                  <dd>{{ eur(st.aRecuperoCent) }}</dd>
+                }
+                @if (st.daDividereCent > 0) {
+                  @if (st.aRecuperoCent !== 0) {
+                    <dt>Resta da dividere</dt>
+                    <dd>{{ eur(st.daDividereCent) }}</dd>
                   }
-                </dt>
-                <dd>{{ eur(st.aRecuperoCent) }}</dd>
+                  <dt>
+                    La tua quota
+                    <span class="nota">{{ pct(10000 - st.dealScuolaBp) }}</span>
+                  </dt>
+                  <dd><strong>{{ eur(st.quotaGiocatoreCent) }}</strong></dd>
+                  <dt>
+                    Quota della scuola
+                    <span class="nota">{{ pct(st.dealScuolaBp) }}</span>
+                  </dt>
+                  <dd>{{ eur(st.quotaScuolaCent) }}</dd>
+                }
+                @if (st.trattenutoCent !== 0) {
+                  @if (st.daDividereCent > 0 || st.trattenutoCent < 0) {
+                    <dt>
+                      Meno quanto tratteniamo
+                      <span class="nota">la parte di back che non ti accreditiamo in ticket</span>
+                    </dt>
+                    <dd>− {{ eur(st.trattenutoCent) }}</dd>
+                  } @else {
+                    <dt>
+                      Back non accreditata in ticket
+                      <span class="nota">senza una quota da cui scalarla, torna a te</span>
+                    </dt>
+                    <dd>{{ eur(st.trattenutoCent) }}</dd>
+                  }
+                }
+              } @else {
+                @if (st.totaleCent >= 0) {
+                  <!-- ⚠️ La propria quota PRIMA di quella della scuola: «Meno
+                       quanto tratteniamo» si sottrae alla quota della scuola e
+                       deve restarle subito sotto. Mancava fino al 07/10/2026. -->
+                  <dt>
+                    La tua quota
+                    <span class="nota">{{ pct(10000 - st.dealScuolaBp) }}</span>
+                  </dt>
+                  <dd><strong>{{ eur(st.quotaGiocatoreCent) }}</strong></dd>
+                  <dt>
+                    Quota della scuola
+                    <span class="nota">{{ pct(st.dealScuolaBp) }}</span>
+                  </dt>
+                  <dd>{{ eur(st.quotaScuolaCent) }}</dd>
+                  <dt>
+                    Meno quanto tratteniamo
+                    <span class="nota">la parte di back che non ti accreditiamo in ticket</span>
+                  </dt>
+                  <dd>− {{ eur(st.trattenutoCent) }}</dd>
+                }
+                @if (st.aRecuperoCent !== 0) {
+                  <dt>
+                    @if (st.totaleCent < 0) {
+                      Perdita del mese
+                      <span class="nota">sul registro EV (make-up)</span>
+                    } @else if (st.risultatoCent < 0) {
+                      A compensazione
+                      <span class="nota">scalato dal tuo debito EV</span>
+                    } @else {
+                      A recupero dello scarto EV
+                    }
+                  </dt>
+                  <dd>{{ eur(st.aRecuperoCent) }}</dd>
+                }
               }
               <!-- ⚠️ Negativa = è la scuola a rimborsare: si dice con le
-                   parole, non col meno davanti a «da bonificare». -->
+                   parole, non col meno davanti a «da bonificare». Il modo lo dice
+                   solo se è già deciso. -->
               @if (st.daRegolareCent < 0) {
-                <dt class="is-totale">Ti rimborsiamo con bonifico</dt>
+                <dt class="is-totale">{{ st.rimborsoDalRoll ? 'Scalato dal tuo roll' : 'Ti rimborsiamo' }}</dt>
                 <dd class="is-totale"><strong>{{ eur(-st.daRegolareCent) }}</strong></dd>
               } @else {
                 <dt class="is-totale">Da bonificare</dt>
