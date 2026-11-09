@@ -1,13 +1,16 @@
 // Cattura frame-accurate del reel animato (HTML timeline -> PNG sequenza).
+// Uso: node reel-capture.mjs [html assoluto] [cartella dei frame]
+// Senza argomenti: presentation/reel-video.html -> presentation/reel-frames/.
 import { chromium } from 'playwright';
 import { mkdirSync, rmSync } from 'node:fs';
-const OUT = 'C:/Projects/poker-ranges/presentation/reel-frames/';
+const HTML = (process.argv[2] ?? 'C:/Projects/poker-ranges/presentation/reel-video.html').replaceAll('\\', '/');
+const OUT = (process.argv[3] ?? 'C:/Projects/poker-ranges/presentation/reel-frames').replaceAll('\\', '/').replace(/\/?$/, '/');
 try { rmSync(OUT, { recursive: true, force: true }); } catch {}
 mkdirSync(OUT, { recursive: true });
 const fps = 30;
 const browser = await chromium.launch({ args: ['--force-color-profile=srgb'] });
 const page = await browser.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
-await page.goto('file:///C:/Projects/poker-ranges/presentation/reel-video.html', { waitUntil: 'networkidle', timeout: 60000 });
+await page.goto('file:///' + HTML, { waitUntil: 'networkidle', timeout: 60000 });
 await page.evaluate(() => document.fonts.ready);
 const dur = await page.evaluate(() => window.__DURATION);
 const n = Math.ceil(dur * fps);
