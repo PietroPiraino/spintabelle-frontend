@@ -292,3 +292,152 @@
 .aw-mia__conferma {
   gap: 0.5rem;
 }
+
+.aw-mia__card {
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+// ── La rosa finale (sola lettura) ───────────────────────────────────────────
+.aw-rosa {
+  width: 100%;
+  text-align: left;
+}
+
+.aw-rosa__gruppo {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 1.2rem 0 0.6rem;
+  text-align: left;
+  width: 100%;
+}
+
+.aw-rosa__elenco {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.aw-rosa__voce {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--line);
+
+  &:first-child {
+    border-top: 0;
+  }
+}
+
+.aw-rosa__nome {
+  font-weight: 700;
+}
+
+.aw-rosa__finalisti {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.aw-rosa__nick {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.92rem;
+}
+
+.aw-rosa__vuota {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+// ── Il voto ─────────────────────────────────────────────────────────────────
+.aw-voto {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: left;
+}
+
+.aw-voto__cat {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem 1rem;
+  margin: 0;
+  min-width: 0;
+
+  legend {
+    padding: 0 0.3rem;
+    font-weight: 700;
+  }
+
+  &:disabled {
+    opacity: 0.75;
+  }
+}
+
+.aw-voto__nota {
+  margin: 0 0 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.aw-voto__scelte {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr));
+  gap: 0.5rem;
+}
+
+// ⚠️ L'etichetta intera è il bersaglio: 44px dichiarati, perché un radio nudo
+// sta sui 16px e col dito si sbaglia categoria.
+.aw-voto__scelta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+
+  input {
+    flex: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+    accent-color: var(--copper-500);
+  }
+
+  // ⚠️ Lo stato scelto raddoppia il bordo con un `inset`, non ne cambia lo
+  // spessore: la scatola non si sposta (idioma dei filtri attivi).
+  &.is-scelta {
+    border-color: var(--copper-500);
+    box-shadow: inset 0 0 0 1px var(--copper-500);
+    background: color-mix(in srgb, var(--copper-500) 7%, var(--surface-1));
+  }
+
+  &:has(input:focus-visible) {
+    outline: 2px solid var(--copper-500);
+    outline-offset: 2px;
+  }
+}
+
+.aw-voto__scelta--nessuno span {
+  color: var(--text-muted);
+}
+
+.aw-voto__stato {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}

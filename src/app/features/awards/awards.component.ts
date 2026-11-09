@@ -9,6 +9,7 @@ import {
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import {
@@ -16,14 +17,21 @@ import {
   AwardsCategoria,
   AwardsFase,
   AwardsMio,
+  CardFormato,
+  CategoriaPubblica,
   DateAwards,
   EdizioneAwards,
   PropostaAwards,
+  VotoAwards,
 } from '../../core/models/awards.models';
 import { AuthService } from '../../core/services/auth.service';
 import { AwardsService } from '../../core/services/awards.service';
 import { SeoService } from '../../core/services/seo.service';
 import { apiErrorMessage } from '../../core/utils/http-error';
+import {
+  messaggioErroreBlob,
+  scaricaBlob,
+} from '../../core/utils/scarica-blob';
 import { HeroCardsComponent } from '../../shared/ui/hero-cards/hero-cards.component';
 import { ToastService } from '../../shared/ui/toast/toast.service';
 import {
@@ -36,6 +44,8 @@ import {
 } from './awards.data';
 
 type Bozza = Partial<Record<AwardsCategoria, string>>;
+/** Il voto per categoria: l'id del finalista scelto, `''` = nessun voto. */
+type VotiMappa = Partial<Record<AwardsCategoria, string>>;
 
 /** Una categoria in cui l'utente è candidato e può ritirarsi. */
 interface MiaCategoria {
@@ -44,6 +54,8 @@ interface MiaCategoria {
   nickname: string;
   categoria: AwardsCategoria;
   etichetta: string;
+  /** In rosa in questa categoria: con la rosa pubblicata, ha le card. */
+  finalista: boolean;
 }
 
 /** Un passo del calendario: la fase che lo accende e le sue date. */
@@ -84,7 +96,7 @@ export function giornoAwards(iso: string, conAnno = false): string {
  */
 @Component({
   selector: 'app-awards',
-  imports: [RouterLink, HeroCardsComponent],
+  imports: [RouterLink, NgTemplateOutlet, HeroCardsComponent],
   templateUrl: './awards.component.html',
   styleUrl: './awards.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -197,6 +209,23 @@ export class AwardsComponent {
     return this.categorie.filter((c) => c.formato === formato);
   }
 
+  // ── La rosa finale (pubblica) ─────────────────────────────────────────────
+
+  /** Le categorie come le dà l'API: finalisti `null` finché la rosa non esce. */
+  private readonly categoriePubbliche = computed<CategoriaPubblica[]>(() => {
+    const e = this.edizione();
+    return e?.disponibile ? e.categorie : [];
+  });
+
+  protected readonly rosaPubblicata = computed(() =>
+    this.categoriePubbliche().some((c) => c.finalisti !== null),
+  );
+
+  /** La rosa di un gruppo, nell'ordine delle categorie. */
+  protected rosaDi(formato: CategoriaAwards['formato']): CategoriaPubblica[] {
+    return this.categoriePubbliche().filter((c) => c.formato === formato);
+  }
+
   protected giorno(iso: string, conAnno = false): string {
     return giornoAwards(iso, conAnno);
   }
@@ -227,6 +256,40 @@ export class AwardsComponent {
   /** Le proposte sono già state caricate per questo utente. */
   private caricatoPer: string | null = null;
 
+  // ── I voti dell'iscritto ──────────────────────────────────────────────────
+
+  /** `null` = non ancora caricati (come le proposte). */
+  protected readonly votiSalvati = signal<VotiMappa | null>(null);
+  protected readonly bozzaVoti = signal<VotiMappa>({});
+  /** Categorie col voto annullato dallo staff: non si cambiano. */
+  protected readonly annullati = signal<ReadonlySet<AwardsCategoria>>(
+    new Set(),
+  );
+  protected readonly salvandoVoti = signal(false);
+  protected readonly erroreVoti = signal<string | null>(null);
+
+  private readonly votiModificati = computed<AwardsCategoria[]>(() => {
+    const salvati = this.votiSalvati() ?? {};
+    const bozza = this.bozzaVoti();
+    const bloccate = this.annullati();
+    return AWARDS_CATEGORIE.filter(
+      (c) => !bloccate.has(c) && (bozza[c] ?? '') !== (salvati[c] ?? ''),
+    );
+  });
+
+  protected readonly votiSporchi = computed(
+    () => this.votiModificati().length > 0,
+  );
+  protected readonly quantiVoti = computed(
+    () => Object.values(this.votiSalvati() ?? {}).filter((v) => !!v).length,
+  );
+  /** Le categorie con almeno un finalista: le sole in cui si vota. */
+  protected readonly categorieVotabili = computed(
+    () =>
+      this.categoriePubbliche().filter((c) => (c.finalisti ?? []).length > 0)
+        .length,
+  );
+
   // ── La candidatura dell'iscritto ──────────────────────────────────────────
 
   private readonly candidature = signal<AwardsMio['candidature']>([]);
@@ -245,13 +308,22 @@ export class AwardsComponent {
           nickname: cand.nickname,
           categoria: k.categoria,
           etichetta: etichette.get(k.categoria) ?? k.categoria,
+          finalista: k.finalista,
         })),
     );
   });
 
+  /** Almeno una categoria in rosa: allora la nota sulle card ha senso. */
+  protected readonly haCard = computed(() =>
+    this.mieCategorie().some((c) => c.finalista),
+  );
+
   protected readonly confermaRitiro = signal<string | null>(null);
   protected readonly ritirando = signal(false);
   protected readonly erroreRitiro = signal<string | null>(null);
+  /** La card in preparazione (`chiave:formato`), e il suo errore. */
+  protected readonly cardInVolo = signal<string | null>(null);
+  protected readonly erroreCard = signal<string | null>(null);
 
   constructor() {
     this.seo.setJsonLd('ld-awards-faq', {
@@ -275,26 +347,107 @@ export class AwardsComponent {
         this.caricatoPer = null;
         this.salvate.set(null);
         this.bozza.set({});
+        this.votiSalvati.set(null);
+        this.bozzaVoti.set({});
+        this.annullati.set(new Set());
         this.candidature.set([]);
         return;
       }
       if (this.caricatoPer === user.id) return;
       this.caricatoPer = user.id;
-      untracked(() => this.caricaProposte());
+      untracked(() => this.caricaMio());
     });
   }
 
-  protected caricaProposte(): void {
+  /** Proposte, voti e candidature dell'iscritto: una chiamata sola. */
+  protected caricaMio(): void {
     this.erroreCaricamento.set(null);
     this.api.mio().subscribe({
       next: (mio) => {
         this.applicaSalvate(mio.proposte);
+        this.applicaVoti(mio.voti);
         this.candidature.set(mio.candidature);
       },
       error: (err: unknown) =>
         this.erroreCaricamento.set(
-          apiErrorMessage(err, 'Non siamo riusciti a leggere le tue proposte.'),
+          apiErrorMessage(
+            err,
+            'Non siamo riusciti a leggere la tua partecipazione.',
+          ),
         ),
+    });
+  }
+
+  private applicaVoti(voti: VotoAwards[]): void {
+    const mappa: VotiMappa = {};
+    const bloccate = new Set<AwardsCategoria>();
+    for (const v of voti) {
+      mappa[v.categoria] = v.candidatoId;
+      if (v.annullato) bloccate.add(v.categoria);
+    }
+    this.votiSalvati.set(mappa);
+    this.bozzaVoti.set({ ...mappa });
+    this.annullati.set(bloccate);
+  }
+
+  protected scegliVoto(categoria: AwardsCategoria, candidatoId: string): void {
+    this.bozzaVoti.update((b) => ({ ...b, [categoria]: candidatoId }));
+    this.erroreVoti.set(null);
+  }
+
+  /**
+   * Manda solo le categorie cambiate; «Nessun voto» toglie il voto. ⚠️ Il
+   * messaggio del server si stampa così com'è: dice quale categoria e perché
+   * (rosa non pubblicata, finalista ritirato, voto annullato).
+   */
+  protected salvaVoti(): void {
+    const cambiate = this.votiModificati();
+    if (cambiate.length === 0 || this.salvandoVoti()) return;
+    const bozza = this.bozzaVoti();
+    this.salvandoVoti.set(true);
+    this.erroreVoti.set(null);
+    this.api
+      .salvaVoti(
+        cambiate.map((categoria) => ({
+          categoria,
+          candidatoId: bozza[categoria] ?? '',
+        })),
+      )
+      .subscribe({
+        next: (voti) => {
+          this.salvandoVoti.set(false);
+          this.applicaVoti(voti);
+          this.toast.success('Voti salvati.');
+        },
+        error: (err: unknown) => {
+          this.salvandoVoti.set(false);
+          this.erroreVoti.set(
+            apiErrorMessage(err, 'Non siamo riusciti a salvare i voti.'),
+          );
+        },
+      });
+  }
+
+  /**
+   * La card del finalista, come file. ⚠️ L'errore si legge dal corpo del Blob:
+   * il 409 dice perché (rosa non ancora pubblicata, categoria ritirata).
+   */
+  protected scaricaCard(c: MiaCategoria, formato: CardFormato): void {
+    if (this.cardInVolo()) return;
+    this.cardInVolo.set(`${c.chiave}:${formato}`);
+    this.erroreCard.set(null);
+    this.api.card(c.candidatoId, c.categoria, formato).subscribe({
+      next: (blob) => {
+        this.cardInVolo.set(null);
+        scaricaBlob(blob, `awards-2026-${c.categoria}-${formato}.png`);
+      },
+      error: (err: unknown) => {
+        this.cardInVolo.set(null);
+        void messaggioErroreBlob(
+          err,
+          'Non siamo riusciti a preparare la card.',
+        ).then((m) => this.erroreCard.set(m));
+      },
     });
   }
 

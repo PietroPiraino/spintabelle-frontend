@@ -197,6 +197,337 @@
       </div>
     }
 
+    @case ('rosa') {
+      <div class="admin-users">
+        <div class="admin-barra">
+          <h2 class="admin-barra__titolo">Rosa finale</h2>
+          @if (rosa(); as r) {
+            @if (r.pubblicataAt) {
+              <span class="admin-stato" data-tono="ok"
+                >Pubblicata il {{ r.pubblicataAt | date: 'd MMM, HH:mm' }}</span
+              >
+            } @else {
+              <span class="admin-stato" data-tono="attesa">Non pubblicata</span>
+            }
+          }
+        </div>
+        <p class="admin-nota">
+          Da 3 a 5 finalisti per categoria, scelti fra chi ha accettato. Una
+          categoria senza finalisti quest'anno non si assegna; una con uno o due
+          blocca la pubblicazione. La rosa si cambia fino all'apertura del voto:
+          pubblicandola, i nickname dei finalisti vanno sulla pagina pubblica.
+        </p>
+
+        @if (erroreRosa(); as e) {
+          <div class="form-feedback is-error aw-ad__errore" role="alert">
+            <span>{{ e }}</span>
+            <button type="button" class="btn btn--ghost btn--sm" (click)="caricaRosa()">
+              Riprova
+            </button>
+          </div>
+        }
+
+        @if (rosa(); as r) {
+          @if (!r.modificabile) {
+            <p class="admin-nota" role="status">
+              Il voto è aperto o chiuso: la rosa non si cambia più. Chi deve uscire
+              si ritira, o lo togli dai premi dalla scheda nei Candidati.
+            </p>
+          }
+          @for (cat of r.categorie; track cat.categoria) {
+            <details class="admin-piega" [open]="cat.accettati.length > 0">
+              <summary class="admin-piega__sum">
+                <span>{{ cat.etichetta }}</span>
+                <span class="admin-stato" [attr.data-tono]="tonoRosa(cat.esito)">{{
+                  esitoRosa(cat.esito, cat.finalisti)
+                }}</span>
+              </summary>
+              <div class="admin-piega__corpo">
+                @if (cat.accettati.length === 0) {
+                  <p class="admin-nota">Nessuno ha accettato in questa categoria.</p>
+                } @else {
+                  <div class="admin-table__scroll">
+                    <table class="admin-table admin-table--etichettata">
+                      <caption class="visually-hidden">
+                        {{ cat.etichetta }}: chi ha accettato, e chi è in rosa
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col" class="admin-table__c-primo">Candidato</th>
+                          <th scope="col">In rosa</th>
+                          <th scope="col" class="admin-table__c-ultimo">Card</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (a of cat.accettati; track a.id) {
+                          <tr>
+                            <th scope="row" class="admin-table__c-primo">
+                              <span class="admin-table__ident">
+                                <span class="admin-table__ident-riga">
+                                  <strong [title]="a.nickname">{{ a.nickname }}</strong>
+                                </span>
+                              </span>
+                            </th>
+                            <td data-etichetta="In rosa">
+                              <label class="row admin-panel__check aw-ad__finalista">
+                                <input
+                                  type="checkbox"
+                                  [checked]="a.finalista"
+                                  [disabled]="!r.modificabile || finalistaInVolo() !== null"
+                                  (change)="impostaFinalista(cat, a, $event)"
+                                />
+                                <span>Finalista</span>
+                              </label>
+                            </td>
+                            <td class="admin-table__c-ultimo">
+                              @if (a.finalista) {
+                                <span class="row aw-ad__card">
+                                  <button
+                                    type="button"
+                                    class="btn btn--ghost btn--sm"
+                                    [disabled]="cardInVolo() !== null"
+                                    [attr.aria-label]="'Card per i post di ' + a.nickname"
+                                    (click)="scaricaCard(a.id, cat.categoria, 'post')"
+                                  >
+                                    <app-icon name="download" [size]="16" /> Post
+                                  </button>
+                                  <button
+                                    type="button"
+                                    class="btn btn--ghost btn--sm"
+                                    [disabled]="cardInVolo() !== null"
+                                    [attr.aria-label]="'Card per le storie di ' + a.nickname"
+                                    (click)="scaricaCard(a.id, cat.categoria, 'storia')"
+                                  >
+                                    <app-icon name="download" [size]="16" /> Storia
+                                  </button>
+                                </span>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              </div>
+            </details>
+          }
+
+          @if (!r.pubblicataAt) {
+            <section class="aw-ad__pubblica" aria-labelledby="aw-pubblica-titolo">
+              <h3 id="aw-pubblica-titolo" class="aw-ad__sottotitolo">Pubblica la rosa</h3>
+              @if (rosaBloccata().length > 0) {
+                <p class="admin-nota">
+                  Da sistemare prima di pubblicare:
+                  @for (c of rosaBloccata(); track c.categoria; let ultimo = $last) {
+                    {{ c.etichetta }} ({{ c.finalisti }}){{ ultimo ? '.' : ',' }}
+                  }
+                </p>
+              } @else if (rosaVuota()) {
+                <p class="admin-nota">Nessuna categoria ha ancora finalisti.</p>
+              }
+              @if (confermaPubblica()) {
+                <div class="aw-ad__conferma" role="group" aria-label="Conferma la pubblicazione">
+                  <p>
+                    Pubblichi la rosa? I nickname dei finalisti vanno sulla pagina
+                    pubblica e nei motori di ricerca, e la rosa non si ripubblica.
+                  </p>
+                  <div class="row admin-panel__actions">
+                    <button
+                      type="button"
+                      class="btn btn--primary"
+                      [disabled]="pubblicando()"
+                      (click)="pubblica()"
+                    >
+                      {{ pubblicando() ? 'Pubblicazione…' : 'Sì, pubblica' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn--ghost"
+                      [disabled]="pubblicando()"
+                      (click)="confermaPubblica.set(false)"
+                    >
+                      Annulla
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  [disabled]="rosaBloccata().length > 0 || rosaVuota()"
+                  (click)="confermaPubblica.set(true)"
+                >
+                  Pubblica la rosa finale
+                </button>
+              }
+            </section>
+          }
+        } @else if (!erroreRosa()) {
+          <div class="spinner" role="status" aria-label="Caricamento della rosa"></div>
+        }
+      </div>
+    }
+
+    @case ('voti') {
+      <div class="admin-users">
+        <div class="admin-barra">
+          <h2 class="admin-barra__titolo">Voti</h2>
+          @if (voti(); as v) {
+            <span class="admin-barra__conta">aggiornati alle {{ v.generatoIl | date: 'HH:mm' }}</span>
+          }
+          <button
+            type="button"
+            class="admin-ico"
+            aria-label="Aggiorna i voti"
+            title="Aggiorna"
+            (click)="caricaVoti()"
+          >
+            <app-icon name="refresh" [size]="18" />
+          </button>
+        </div>
+        <p class="admin-nota">
+          I conteggi sono riservati: non vanno pubblicati né detti in diretta,
+          nemmeno dopo la premiazione, dove si annunciano solo i vincitori. I
+          votanti si guardano solo per il controllo antifrode.
+        </p>
+
+        @if (erroreVoti(); as e) {
+          <div class="form-feedback is-error aw-ad__errore" role="alert">
+            <span>{{ e }}</span>
+            <button type="button" class="btn btn--ghost btn--sm" (click)="caricaVoti()">
+              Riprova
+            </button>
+          </div>
+        }
+
+        @if (voti(); as v) {
+          <div class="admin-kpi-griglia">
+            <div class="card admin-kpi">
+              <span class="admin-kpi__etichetta">Votanti</span>
+              <span class="admin-kpi__valore">{{ v.votanti }}</span>
+              <span class="admin-kpi__nota">persone con almeno un voto</span>
+            </div>
+            <div class="card admin-kpi">
+              <span class="admin-kpi__etichetta">Voti validi</span>
+              <span class="admin-kpi__valore">{{ v.votiValidi }}</span>
+              <span class="admin-kpi__nota">{{ v.votiAnnullati }} annullati</span>
+            </div>
+            <div class="card admin-kpi">
+              <span class="admin-kpi__etichetta">Account nuovi</span>
+              <span class="admin-kpi__valore">{{ v.votantiNuovi }}</span>
+              <span class="admin-kpi__nota">
+                votanti iscritti dopo l'apertura del voto ({{ v.votoDal | date: 'd MMM' }})
+              </span>
+            </div>
+          </div>
+
+          @if (v.domini.length > 0) {
+            <details class="admin-piega">
+              <summary class="admin-piega__sum">
+                <span>Domini email dei votanti</span>
+                <span class="admin-item__meta">{{
+                  v.domini.length === 1 ? 'un dominio' : 'i ' + v.domini.length + ' più frequenti'
+                }}</span>
+              </summary>
+              <div class="admin-piega__corpo">
+                <div class="admin-table__scroll">
+                  <table class="admin-table admin-table--etichettata">
+                    <caption class="visually-hidden">Votanti per dominio email</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col" class="admin-table__c-primo">Dominio</th>
+                        <th scope="col" class="is-num">Votanti</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (d of v.domini; track d.dominio) {
+                        <tr>
+                          <th scope="row" class="admin-table__c-primo">{{ d.dominio }}</th>
+                          <td class="is-num" data-etichetta="Votanti">{{ d.votanti }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </details>
+          }
+
+          @for (cat of v.categorie; track cat.categoria) {
+            @if (cat.finalisti.length > 0 || cat.annullati > 0 || cat.fuoriRosa > 0) {
+              <details class="admin-piega" open>
+                <summary class="admin-piega__sum">
+                  <span>{{ cat.etichetta }}</span>
+                  <span class="admin-item__meta">
+                    {{ cat.voti }} {{ cat.voti === 1 ? 'voto' : 'voti' }}
+                    @if (cat.annullati > 0) {
+                      · {{ cat.annullati }} annullati
+                    }
+                  </span>
+                </summary>
+                <div class="admin-piega__corpo">
+                  @if (cat.fuoriRosa > 0) {
+                    <p class="form-feedback is-error" role="alert">
+                      {{ cat.fuoriRosa }} voti per chi in rosa non è più: non dovrebbero
+                      esistere, perché ritiro e rimozione li cancellano. Avvisa chi
+                      mantiene il sito.
+                    </p>
+                  }
+                  <div class="admin-table__scroll">
+                    <table class="admin-table admin-table--etichettata">
+                      <caption class="visually-hidden">
+                        {{ cat.etichetta }}: voti per finalista
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col" class="admin-table__c-primo">Finalista</th>
+                          <th scope="col" class="is-num">Voti</th>
+                          <th scope="col" class="is-num">Da account nuovi</th>
+                          <th scope="col" class="admin-table__c-ultimo">
+                            <span class="visually-hidden">Votanti</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (f of cat.finalisti; track f.id) {
+                          <tr>
+                            <th scope="row" class="admin-table__c-primo">
+                              <span class="admin-table__ident">
+                                <span class="admin-table__ident-riga">
+                                  <strong [title]="f.nickname">{{ f.nickname }}</strong>
+                                </span>
+                              </span>
+                            </th>
+                            <td class="is-num" data-etichetta="Voti">{{ f.voti }}</td>
+                            <td class="is-num" data-etichetta="Da account nuovi">{{ f.daNuoviAccount }}</td>
+                            <td class="admin-table__c-ultimo">
+                              <button
+                                type="button"
+                                class="admin-ico"
+                                aria-haspopup="dialog"
+                                [attr.aria-label]="'Votanti di ' + f.nickname + ' in ' + cat.etichetta"
+                                title="Votanti"
+                                (click)="apriVotanti(cat, f)"
+                              >
+                                <app-icon name="eye" [size]="18" />
+                              </button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </details>
+            }
+          }
+        } @else if (!erroreVoti()) {
+          <div class="spinner" role="status" aria-label="Caricamento dei voti"></div>
+        }
+      </div>
+    }
+
     @case ('edizione') {
       <div class="admin-users">
         <div class="admin-barra">
@@ -243,13 +574,26 @@
         }
 
         <section class="aw-ad__email" aria-labelledby="aw-email-titolo">
-          <h3 id="aw-email-titolo" class="aw-ad__sottotitolo">
-            Email agli iscritti — proposte aperte
-          </h3>
+          <h3 id="aw-email-titolo" class="aw-ad__sottotitolo">Email agli iscritti</h3>
           <p class="admin-nota">
             La ricevono gli iscritti con l'indirizzo confermato che non hanno spento
-            gli avvisi email. Manda prima una prova: arriva solo a te e non conta.
+            gli avvisi email. Ogni email ha il suo testo e si manda nella sua fase.
+            Manda prima una prova: arriva solo a te e non conta.
           </p>
+          <label class="field aw-ad__campo aw-ad__quale">
+            <span>Quale email</span>
+            <select
+              class="input"
+              [disabled]="invioInVolo() !== null"
+              (change)="scegliAnnuncio($event)"
+            >
+              @for (t of annunci; track t) {
+                <option [value]="t" [selected]="t === tipoAnnuncio()">
+                  {{ etichettaAnnuncio(t) }}
+                </option>
+              }
+            </select>
+          </label>
           @if (annuncio(); as a) {
             <div class="admin-kpi-griglia">
               <div class="card admin-kpi">
@@ -611,3 +955,102 @@
     </div>
   </div>
 </ng-template>
+
+@if (votantiDi(); as vd) {
+  <app-modal
+    [titolo]="'Votanti di ' + vd.finalista.nickname"
+    [sottotitolo]="vd.categoria.etichetta"
+    [sporco]="annullaId() !== null && motivo().trim().length > 0"
+    [salvando]="annullando()"
+    (chiusa)="chiudiVotanti()"
+  >
+    <div class="admin-modale">
+      <div class="admin-modale__corpo">
+        <p class="admin-nota">
+          Annullare è definitivo: il voto non conta più e il votante non può
+          rifarlo in questa categoria. Il motivo resta nel registro azioni.
+        </p>
+        @if (erroreVotanti(); as e) {
+          <p class="form-feedback is-error" role="alert">{{ e }}</p>
+        }
+        @if (votanti(); as l) {
+          @if (l.length === 0) {
+            <p class="admin-nota">Nessun voto per questo finalista.</p>
+          } @else {
+            <ul class="aw-ad__votanti">
+              @for (x of l; track x.votoId) {
+                <li class="aw-ad__votante">
+                  <span class="aw-ad__chi">
+                    <strong>{{ x.account ? x.account.nickname || 'Senza nickname' : 'Account cancellato' }}</strong>
+                    <span class="admin-item__meta">
+                      @if (x.account) {
+                        {{ x.account.email }}
+                        @if (x.account.iscrittoIl) {
+                          · iscritto il {{ x.account.iscrittoIl | date: 'd MMM y' }}
+                        }
+                      }
+                      @if (x.votatoIl) {
+                        · votato il {{ x.votatoIl | date: 'd MMM, HH:mm' }}
+                      }
+                    </span>
+                  </span>
+                  @if (x.annullato) {
+                    <span class="aw-ad__annullato">
+                      <span class="admin-stato" data-tono="neutro">Annullato</span>
+                      <span class="admin-item__meta">{{ x.annullato.motivo }}</span>
+                    </span>
+                  } @else if (annullaId() === x.votoId) {
+                    <div class="aw-ad__annulla">
+                      <label class="field">
+                        <span>Motivo (resta nel registro)</span>
+                        <input
+                          class="input"
+                          type="text"
+                          maxlength="300"
+                          [value]="motivo()"
+                          (input)="scriviMotivo($event)"
+                        />
+                      </label>
+                      <div class="row">
+                        <button
+                          type="button"
+                          class="btn btn--danger btn--sm"
+                          [disabled]="motivo().trim().length < 3 || annullando()"
+                          (click)="annulla()"
+                        >
+                          {{ annullando() ? 'Annullamento…' : 'Annulla il voto' }}
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn--ghost btn--sm"
+                          [disabled]="annullando()"
+                          (click)="annullaId.set(null)"
+                        >
+                          Lascia com'è
+                        </button>
+                      </div>
+                    </div>
+                  } @else {
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      [disabled]="annullaId() !== null"
+                      (click)="chiediAnnulla(x)"
+                    >
+                      Annulla…
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        } @else if (!erroreVotanti()) {
+          <div class="spinner" role="status" aria-label="Caricamento dei votanti"></div>
+        }
+      </div>
+    </div>
+    <div class="row admin-panel__actions" moPiede>
+      <button type="button" class="btn btn--ghost" (click)="chiudiVotanti()">Chiudi</button>
+    </div>
+  </app-modal>
+}

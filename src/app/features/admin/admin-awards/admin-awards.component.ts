@@ -7,21 +7,34 @@ import {
   signal,
 } from '@angular/core';
 import {
+  ANNUNCI_AWARDS,
   AWARDS_CATEGORIE,
   AnnuncioAwards,
   AwardsCategoria,
   AwardsFase,
   CandidatoAdmin,
+  CardFormato,
+  CategoriaRosa,
   CategoriaSpoglio,
+  CategoriaVoti,
   DateAwards,
   EdizioneAwardsAdmin,
+  EsitoRosa,
+  FinalistaVoti,
+  RiepilogoVoti,
+  RosaAdmin,
   StatoAnnuncio,
   StatoCandidatura,
   StatoInvito,
   VoceSpoglio,
+  Votante,
 } from '../../../core/models/awards.models';
 import { AwardsService } from '../../../core/services/awards.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import {
+  messaggioErroreBlob,
+  scaricaBlob,
+} from '../../../core/utils/scarica-blob';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { ModalComponent } from '../../../shared/ui/modal/modal.component';
 import {
@@ -32,7 +45,7 @@ import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { CATEGORIE_AWARDS } from '../../awards/awards.data';
 import { TonoStato } from '../admin-stato';
 
-type Vista = 'proposte' | 'candidati' | 'edizione';
+type Vista = 'proposte' | 'candidati' | 'rosa' | 'voti' | 'edizione';
 type CampoData = keyof DateAwards;
 
 const CAMPI_DATA: readonly { campo: CampoData; etichetta: string }[] = [
@@ -107,6 +120,40 @@ function tonoInvito(s: StatoInvito): TonoStato {
   }
 }
 
+function etichettaEsitoRosa(e: EsitoRosa, n: number): string {
+  switch (e) {
+    case 'OK':
+      return `${n} finalisti`;
+    case 'NON_ASSEGNATA':
+      return 'Non assegnata';
+    case 'POCHI':
+      return n === 1 ? '1 finalista: pochi' : `${n} finalisti: pochi`;
+    case 'TROPPI':
+      return `${n} finalisti: troppi`;
+  }
+}
+
+function tonoEsitoRosa(e: EsitoRosa): TonoStato {
+  switch (e) {
+    case 'OK':
+      return 'ok';
+    case 'NON_ASSEGNATA':
+      return 'spento';
+    case 'POCHI':
+    case 'TROPPI':
+      return 'allarme';
+  }
+}
+
+export function etichettaAnnuncio(t: AnnuncioAwards): string {
+  switch (t) {
+    case 'proposte-aperte':
+      return 'Sono aperte le proposte';
+    case 'voto-aperto':
+      return 'Il voto è aperto';
+  }
+}
+
 function etichettaFase(f: AwardsFase): string {
   switch (f) {
     case 'PRIMA':
@@ -165,6 +212,8 @@ export class AdminAwardsComponent {
   protected readonly schede: readonly VoceScheda<Vista>[] = [
     { valore: 'proposte', etichetta: 'Proposte' },
     { valore: 'candidati', etichetta: 'Candidati' },
+    { valore: 'rosa', etichetta: 'Rosa finale' },
+    { valore: 'voti', etichetta: 'Voti' },
     { valore: 'edizione', etichetta: 'Edizione' },
   ];
   protected readonly vista = signal<Vista>('proposte');
@@ -210,8 +259,14 @@ export class AdminAwardsComponent {
     // Lo stato dell'email si legge entrando nella scheda: conta gli iscritti,
     // e chi apre il pannello per lo spoglio non ne ha bisogno.
     if (v === 'edizione' && !this.annuncio() && !this.caricandoAnnuncio()) {
+      // A voto aperto l'email che serve è quella del voto.
+      if (this.edizione()?.fase === 'VOTO') this.tipoAnnuncio.set('voto-aperto');
       this.caricaAnnuncio();
     }
+    // Rosa e voti si leggono entrando (e si rileggono a ogni ingresso: sono
+    // numeri che cambiano mentre il pannello resta aperto).
+    if (v === 'rosa') this.caricaRosa();
+    if (v === 'voti') this.caricaVoti();
   }
 
   // ── Etichette ─────────────────────────────────────────────────────────────
@@ -221,6 +276,10 @@ export class AdminAwardsComponent {
   protected statoInvito = etichettaInvito;
   protected tonoInvito = tonoInvito;
   protected fase = etichettaFase;
+  protected esitoRosa = etichettaEsitoRosa;
+  protected tonoRosa = tonoEsitoRosa;
+  protected etichettaAnnuncio = etichettaAnnuncio;
+  protected readonly annunci = ANNUNCI_AWARDS;
 
   protected riassunto(c: CandidatoAdmin): string {
     const conta = (s: StatoCandidatura) =>
@@ -294,8 +353,8 @@ export class AdminAwardsComponent {
 
   // ── Email agli iscritti ──────────────────────────────────────────────────
 
-  /** L'unica email di questo lotto; la tupla del backend ne prevede altre. */
-  protected readonly tipoAnnuncio: AnnuncioAwards = 'proposte-aperte';
+  /** Quale email: ognuna ha il suo testo, la sua fase e il suo cursore. */
+  protected readonly tipoAnnuncio = signal<AnnuncioAwards>('proposte-aperte');
   protected readonly annuncio = signal<StatoAnnuncio | null>(null);
   protected readonly caricandoAnnuncio = signal(false);
   protected readonly erroreAnnuncio = signal<string | null>(null);
@@ -320,7 +379,7 @@ export class AdminAwardsComponent {
   protected caricaAnnuncio(): void {
     this.caricandoAnnuncio.set(true);
     this.erroreAnnuncio.set(null);
-    this.api.statoAnnuncio(this.tipoAnnuncio).subscribe({
+    this.api.statoAnnuncio(this.tipoAnnuncio()).subscribe({
       next: (a) => {
         this.caricandoAnnuncio.set(false);
         this.annuncio.set(a);
@@ -334,6 +393,16 @@ export class AdminAwardsComponent {
     });
   }
 
+  protected scegliAnnuncio(event: Event): void {
+    const t = (event.target as HTMLSelectElement).value as AnnuncioAwards;
+    if (t === this.tipoAnnuncio()) return;
+    this.tipoAnnuncio.set(t);
+    this.annuncio.set(null);
+    this.esitoAnnuncio.set(null);
+    this.confermaInvio.set(false);
+    this.caricaAnnuncio();
+  }
+
   protected scriviQuante(event: Event): void {
     const n = Math.floor(Number((event.target as HTMLInputElement).value));
     this.quanteEmail.set(Number.isFinite(n) ? Math.min(1000, Math.max(1, n)) : 1);
@@ -344,7 +413,7 @@ export class AdminAwardsComponent {
     if (this.invioInVolo()) return;
     this.invioInVolo.set('prova');
     this.esitoAnnuncio.set(null);
-    this.api.inviaAnnuncio(this.tipoAnnuncio, { prova: true }).subscribe({
+    this.api.inviaAnnuncio(this.tipoAnnuncio(), { prova: true }).subscribe({
       next: (es) => {
         this.invioInVolo.set(null);
         this.annuncio.set(es.stato);
@@ -378,7 +447,7 @@ export class AdminAwardsComponent {
     this.invioInVolo.set('invio');
     this.esitoAnnuncio.set(null);
     this.api
-      .inviaAnnuncio(this.tipoAnnuncio, { limite: this.quanteEmail() })
+      .inviaAnnuncio(this.tipoAnnuncio(), { limite: this.quanteEmail() })
       .subscribe({
         next: (es) => {
           this.invioInVolo.set(null);
@@ -408,6 +477,205 @@ export class AdminAwardsComponent {
     this.esitoAnnuncio.set({
       testo: apiErrorMessage(err, 'Non siamo riusciti a mandare l’email.'),
       errore: true,
+    });
+  }
+
+  // ── Rosa finale ──────────────────────────────────────────────────────────
+
+  protected readonly rosa = signal<RosaAdmin | null>(null);
+  protected readonly erroreRosa = signal<string | null>(null);
+  /** La casella in volo (`id:categoria`): una alla volta. */
+  protected readonly finalistaInVolo = signal<string | null>(null);
+  protected readonly confermaPubblica = signal(false);
+  protected readonly pubblicando = signal(false);
+  protected readonly cardInVolo = signal<string | null>(null);
+
+  /** Categorie che impediscono la pubblicazione (1-2 finalisti, o più di 5). */
+  protected readonly rosaBloccata = computed(
+    () =>
+      this.rosa()?.categorie.filter(
+        (c) => c.esito === 'POCHI' || c.esito === 'TROPPI',
+      ) ?? [],
+  );
+  protected readonly rosaVuota = computed(
+    () => !!this.rosa()?.categorie.every((c) => c.esito === 'NON_ASSEGNATA'),
+  );
+
+  protected caricaRosa(): void {
+    this.erroreRosa.set(null);
+    this.api.rosa().subscribe({
+      next: (r) => this.rosa.set(r),
+      error: (err: unknown) =>
+        this.erroreRosa.set(
+          apiErrorMessage(err, 'Non riusciamo a leggere la rosa finale.'),
+        ),
+    });
+  }
+
+  protected impostaFinalista(
+    cat: CategoriaRosa,
+    voce: CategoriaRosa['accettati'][number],
+    event: Event,
+  ): void {
+    const casella = event.target as HTMLInputElement;
+    const finalista = casella.checked;
+    if (this.finalistaInVolo()) {
+      casella.checked = !finalista;
+      return;
+    }
+    this.finalistaInVolo.set(`${voce.id}:${cat.categoria}`);
+    this.erroreRosa.set(null);
+    this.api.impostaFinalista(voce.id, cat.categoria, finalista).subscribe({
+      next: (c) => {
+        this.finalistaInVolo.set(null);
+        this.sostituisci(c);
+        this.caricaRosa();
+      },
+      error: (err: unknown) => {
+        this.finalistaInVolo.set(null);
+        // ⚠️ La casella torna com'era: il server non ha scritto niente.
+        casella.checked = !finalista;
+        this.erroreRosa.set(
+          apiErrorMessage(err, 'Non siamo riusciti a cambiare la rosa.'),
+        );
+      },
+    });
+  }
+
+  protected pubblica(): void {
+    if (this.pubblicando()) return;
+    this.pubblicando.set(true);
+    this.erroreRosa.set(null);
+    this.api.pubblicaFinalisti().subscribe({
+      next: () => {
+        this.pubblicando.set(false);
+        this.confermaPubblica.set(false);
+        this.caricaRosa();
+        this.api.edizioneAdmin().subscribe({
+          next: (e) => this.edizione.set(e),
+          error: () => undefined,
+        });
+        this.toast.success(
+          'Rosa finale pubblicata: la pagina Awards la mostra fra qualche minuto.',
+        );
+      },
+      error: (err: unknown) => {
+        this.pubblicando.set(false);
+        // ⚠️ Si disarma la conferma: lo stesso errore non cambia riprovando.
+        this.confermaPubblica.set(false);
+        this.erroreRosa.set(
+          apiErrorMessage(err, 'Non siamo riusciti a pubblicare la rosa.'),
+        );
+      },
+    });
+  }
+
+  /** L'anteprima della card, anche prima della pubblicazione. */
+  protected scaricaCard(
+    id: string,
+    categoria: AwardsCategoria,
+    formato: CardFormato,
+  ): void {
+    if (this.cardInVolo()) return;
+    this.cardInVolo.set(`${id}:${categoria}:${formato}`);
+    this.api.cardAdmin(id, categoria, formato).subscribe({
+      next: (blob) => {
+        this.cardInVolo.set(null);
+        scaricaBlob(blob, `awards-2026-${categoria}-${formato}.png`);
+      },
+      error: (err: unknown) => {
+        this.cardInVolo.set(null);
+        void messaggioErroreBlob(err, 'Card non generata.').then((m) =>
+          this.erroreRosa.set(m),
+        );
+      },
+    });
+  }
+
+  // ── Voti (controllo antifrode) ───────────────────────────────────────────
+
+  protected readonly voti = signal<RiepilogoVoti | null>(null);
+  protected readonly erroreVoti = signal<string | null>(null);
+
+  protected caricaVoti(): void {
+    this.erroreVoti.set(null);
+    this.api.riepilogoVoti().subscribe({
+      next: (r) => this.voti.set(r),
+      error: (err: unknown) =>
+        this.erroreVoti.set(apiErrorMessage(err, 'Non riusciamo a leggere i voti.')),
+    });
+  }
+
+  /** La modale dei votanti di un finalista. */
+  protected readonly votantiDi = signal<{
+    categoria: CategoriaVoti;
+    finalista: FinalistaVoti;
+  } | null>(null);
+  protected readonly votanti = signal<Votante[] | null>(null);
+  protected readonly erroreVotanti = signal<string | null>(null);
+  /** Il voto in conferma d'annullamento, e il motivo che si sta scrivendo. */
+  protected readonly annullaId = signal<string | null>(null);
+  protected readonly motivo = signal('');
+  protected readonly annullando = signal(false);
+
+  protected apriVotanti(categoria: CategoriaVoti, finalista: FinalistaVoti): void {
+    this.votantiDi.set({ categoria, finalista });
+    this.annullaId.set(null);
+    this.motivo.set('');
+    this.caricaVotanti();
+  }
+
+  protected caricaVotanti(): void {
+    const v = this.votantiDi();
+    if (!v) return;
+    this.votanti.set(null);
+    this.erroreVotanti.set(null);
+    this.api.votanti(v.categoria.categoria, v.finalista.id).subscribe({
+      next: (l) => this.votanti.set(l),
+      error: (err: unknown) =>
+        this.erroreVotanti.set(
+          apiErrorMessage(err, 'Non riusciamo a leggere i votanti.'),
+        ),
+    });
+  }
+
+  protected chiudiVotanti(): void {
+    this.votantiDi.set(null);
+    this.votanti.set(null);
+    this.annullaId.set(null);
+  }
+
+  protected chiediAnnulla(v: Votante): void {
+    this.annullaId.set(v.votoId);
+    this.motivo.set('');
+    this.erroreVotanti.set(null);
+  }
+
+  protected scriviMotivo(event: Event): void {
+    this.motivo.set((event.target as HTMLInputElement).value);
+  }
+
+  protected annulla(): void {
+    const id = this.annullaId();
+    const motivo = this.motivo().trim();
+    if (!id || motivo.length < 3 || this.annullando()) return;
+    this.annullando.set(true);
+    this.erroreVotanti.set(null);
+    this.api.annullaVoto(id, motivo).subscribe({
+      next: () => {
+        this.annullando.set(false);
+        this.annullaId.set(null);
+        this.caricaVotanti();
+        this.caricaVoti();
+      },
+      error: (err: unknown) => {
+        this.annullando.set(false);
+        this.annullaId.set(null);
+        // ⚠️ Dentro la modale: banda, mai toast (il toast dipinge dietro).
+        this.erroreVotanti.set(
+          apiErrorMessage(err, 'Non siamo riusciti ad annullare il voto.'),
+        );
+      },
     });
   }
 

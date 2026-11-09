@@ -1,3 +1,5 @@
+@use "../soglie" as s;
+
 // /admin/awards — il ritmo e i controlli arrivano dai fogli condivisi del pannello.
 
 .aw-ad__errore {
@@ -153,5 +155,112 @@
 
   .btn {
     min-height: 44px;
+  }
+}
+
+// ── Rosa finale ─────────────────────────────────────────────────────────────
+
+.aw-ad__quale {
+  max-width: 22rem;
+  margin-bottom: 0;
+}
+
+// La casella «Finalista» dentro la cella: 44px di bersaglio, ma ⚠️ col
+// rientro del padding della cella (idioma di `.admin-ico`). Senza, la riga
+// misurava ~54px contro il tetto di 46 della sonda delle tabelle.
+.aw-ad__finalista {
+  margin: -0.3rem 0;
+  min-height: 44px;
+  align-items: center;
+}
+
+// I due pulsanti della card: ⚠️ il rientro verticale è quello di `.admin-ico`
+// (il padding della cella), e i 44px sono dichiarati.
+.aw-ad__card {
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  margin-block: -0.3rem;
+
+  .btn {
+    min-height: 44px;
+    gap: 0.3rem;
+  }
+}
+
+// Sotto la soglia la tabella diventa a blocchi e la cella perde il padding:
+// il rientro va azzerato, o i controlli salgono sopra la riga precedente.
+@media (max-width: #{s.$bp-tabella-blocchi}) {
+  .aw-ad__finalista,
+  .aw-ad__card {
+    margin-block: 0;
+  }
+}
+
+.aw-ad__pubblica {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.8rem;
+
+  > * {
+    margin: 0;
+  }
+
+  > .btn {
+    min-height: 44px;
+  }
+}
+
+// ── Votanti (modale) ────────────────────────────────────────────────────────
+
+.aw-ad__votanti {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.aw-ad__votante {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--line);
+
+  &:first-child {
+    border-top: 0;
+  }
+
+  .btn--sm {
+    min-height: 44px;
+  }
+}
+
+.aw-ad__chi,
+.aw-ad__annullato {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.aw-ad__annulla {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .field {
+    margin: 0;
+  }
+
+  .row {
+    gap: 0.5rem;
   }
 }

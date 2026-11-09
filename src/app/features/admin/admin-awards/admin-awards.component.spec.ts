@@ -11,6 +11,8 @@ import {
   CandidatoAdmin,
   CategoriaSpoglio,
   EdizioneAwardsAdmin,
+  RiepilogoVoti,
+  RosaAdmin,
   StatoAnnuncio,
 } from '../../../core/models/awards.models';
 import { AdminAwardsComponent, aDataLocale } from './admin-awards.component';
@@ -70,6 +72,65 @@ const ANNUNCIO: StatoAnnuncio = {
   inCorso: false,
   inviabile: true,
   motivo: null,
+};
+
+/** Una rosa con fish completa (3) e sng-mid incompleta (2). */
+function rosa(over: Partial<RosaAdmin> = {}): RosaAdmin {
+  const voce = (id: string, nickname: string, finalista: boolean) => ({
+    id,
+    nickname,
+    finalista,
+  });
+  return {
+    fase: 'CONTATTI',
+    modificabile: true,
+    pubblicataAt: null,
+    categorie: [
+      {
+        categoria: 'sng-mid',
+        etichetta: 'Miglior giocatore Spin & Go Mid stakes',
+        esito: 'POCHI',
+        finalisti: 2,
+        accettati: [voce('m1', 'Delta', true), voce('m2', 'Epsilon', true)],
+      },
+      {
+        categoria: 'fish',
+        etichetta: "Fish dell'anno",
+        esito: 'OK',
+        finalisti: 3,
+        accettati: [
+          voce('f1', 'Alfa', true),
+          voce('f2', 'Beta', true),
+          voce('f3', 'Gamma', true),
+          voce('f4', 'Omega', false),
+        ],
+      },
+    ],
+    ...over,
+  };
+}
+
+const VOTI: RiepilogoVoti = {
+  generatoIl: '2026-12-10T12:00:00.000Z',
+  votoDal: '2026-12-06T23:00:00.000Z',
+  votanti: 3,
+  votiValidi: 3,
+  votiAnnullati: 1,
+  votantiNuovi: 1,
+  domini: [{ dominio: 'gmail.com', votanti: 2 }],
+  categorie: [
+    {
+      categoria: 'fish',
+      etichetta: "Fish dell'anno",
+      voti: 3,
+      annullati: 1,
+      fuoriRosa: 0,
+      finalisti: [
+        { id: 'f1', nickname: 'Alfa', voti: 2, daNuoviAccount: 1 },
+        { id: 'f2', nickname: 'Beta', voti: 1, daNuoviAccount: 0 },
+      ],
+    },
+  ],
 };
 
 describe('AdminAwardsComponent', () => {
@@ -169,6 +230,162 @@ describe('AdminAwardsComponent', () => {
     await rendi();
   });
 
+  const scheda = async (nome: string) => {
+    Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'))
+      .find((b) => b.textContent?.includes(nome))!
+      .click();
+    await rendi();
+  };
+  const bottoneDi = (radice: ParentNode, testo: string) =>
+    Array.from(radice.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+      b.textContent?.includes(testo),
+    );
+
+  describe('rosa finale', () => {
+    it('si legge entrando nella scheda e mostra l’esito per categoria', async () => {
+      http.expectNone(`${API}/rosa`);
+      await scheda('Rosa finale');
+      http.expectOne(`${API}/rosa`).flush(rosa());
+      await rendi();
+      const stati = Array.from(el.querySelectorAll('.admin-piega__sum .admin-stato')).map(
+        (s) => s.textContent?.trim(),
+      );
+      expect(stati).toEqual(['2 finalisti: pochi', '3 finalisti']);
+    });
+
+    it('⚠️ con una categoria a 1-2 finalisti la pubblicazione è spenta e lo dice', async () => {
+      await scheda('Rosa finale');
+      http.expectOne(`${API}/rosa`).flush(rosa());
+      await rendi();
+      expect(bottoneDi(el, 'Pubblica la rosa finale')!.disabled).toBeTrue();
+      expect(el.textContent).toContain('Da sistemare prima di pubblicare');
+    });
+
+    it('la casella «Finalista» manda il PATCH e rilegge la rosa dal server', async () => {
+      await scheda('Rosa finale');
+      http.expectOne(`${API}/rosa`).flush(rosa());
+      await rendi();
+      const omega = Array.from(
+        el.querySelectorAll<HTMLTableRowElement>('tbody tr'),
+      ).find((r) => r.textContent?.includes('Omega'))!;
+      omega.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+      const req = http.expectOne(`${API}/candidati/f4/finalista`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ categoria: 'fish', finalista: true });
+      req.flush({ ...CANDIDATO, id: 'f4' });
+      http.expectOne(`${API}/rosa`).flush(rosa());
+      await rendi();
+    });
+
+    it('⚠️ un rifiuto del server rimette la casella com’era e dice perché', async () => {
+      await scheda('Rosa finale');
+      http.expectOne(`${API}/rosa`).flush(rosa());
+      await rendi();
+      const omega = Array.from(
+        el.querySelectorAll<HTMLTableRowElement>('tbody tr'),
+      ).find((r) => r.textContent?.includes('Omega'))!;
+      const casella = omega.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+      casella.click();
+      http
+        .expectOne(`${API}/candidati/f4/finalista`)
+        .flush(
+          { message: "La rosa di «Fish dell'anno» ha già 5 finalisti." },
+          { status: 409, statusText: 'Conflict' },
+        );
+      await rendi();
+      expect(casella.checked).toBeFalse();
+      expect(el.querySelector('[role="alert"]')?.textContent).toContain('già 5 finalisti');
+    });
+
+    it('pubblica con conferma in linea, poi rilegge rosa ed edizione', async () => {
+      await scheda('Rosa finale');
+      const r = rosa();
+      r.categorie[0] = { ...r.categorie[0], esito: 'NON_ASSEGNATA', finalisti: 0, accettati: [] };
+      http.expectOne(`${API}/rosa`).flush(r);
+      await rendi();
+      bottoneDi(el, 'Pubblica la rosa finale')!.click();
+      await rendi();
+      http.expectNone(`${API}/finalisti/pubblica`);
+      expect(el.textContent).toContain('non si ripubblica');
+      bottoneDi(el, 'Sì, pubblica')!.click();
+      const req = http.expectOne(`${API}/finalisti/pubblica`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ pubblicataAt: '2026-12-05T10:00:00.000Z' });
+      http.expectOne(`${API}/rosa`).flush({ ...r, pubblicataAt: '2026-12-05T10:00:00.000Z' });
+      http.expectOne(`${API}/edizione`).flush(EDIZIONE);
+      await rendi();
+      expect(el.textContent).toContain('Pubblicata il');
+    });
+
+    it('a voto aperto le caselle sono spente', async () => {
+      await scheda('Rosa finale');
+      http.expectOne(`${API}/rosa`).flush(rosa({ fase: 'VOTO', modificabile: false }));
+      await rendi();
+      const caselle = el.querySelectorAll<HTMLInputElement>('tbody input[type="checkbox"]');
+      expect(caselle.length).toBeGreaterThan(0);
+      caselle.forEach((c) => expect(c.disabled).toBeTrue());
+    });
+  });
+
+  describe('voti', () => {
+    async function apriVoti() {
+      await scheda('Voti');
+      http.expectOne(`${API}/voti`).flush(VOTI);
+      await rendi();
+    }
+
+    it('mostra i conteggi per finalista e i segnali antifrode', async () => {
+      await apriVoti();
+      const testo = el.textContent ?? '';
+      expect(testo).toContain('Account nuovi');
+      expect(testo).toContain('gmail.com');
+      const alfa = Array.from(el.querySelectorAll('tbody tr')).find((r) =>
+        r.querySelector('th')?.textContent?.includes('Alfa'),
+      )!;
+      expect(
+        Array.from(alfa.querySelectorAll('td.is-num')).map((c) => c.textContent?.trim()),
+      ).toEqual(['2', '1']);
+    });
+
+    it('⚠️ annullare un voto chiede il motivo, e si legge nella modale', async () => {
+      await apriVoti();
+      el.querySelector<HTMLButtonElement>(
+        'button[aria-label="Votanti di Alfa in Fish dell\'anno"]',
+      )!.click();
+      await rendi();
+      const req = http.expectOne(
+        (r) => r.url === `${API}/voti/votanti` && r.params.get('candidatoId') === 'f1',
+      );
+      expect(req.request.params.get('categoria')).toBe('fish');
+      req.flush([
+        {
+          votoId: 'v1',
+          account: { nickname: 'nuovo', email: 'n@usaegetta.it', iscrittoIl: '2026-12-08T10:00:00.000Z' },
+          votatoIl: '2026-12-08T11:00:00.000Z',
+          annullato: null,
+        },
+      ]);
+      await rendi();
+      const dialogo = document.querySelector('dialog')!;
+      expect(dialogo.textContent).toContain('n@usaegetta.it');
+      bottoneDi(dialogo, 'Annulla…')!.click();
+      await rendi();
+      const annulla = bottoneDi(dialogo, 'Annulla il voto')!;
+      expect(annulla.disabled).toBeTrue();
+      const motivo = dialogo.querySelector<HTMLInputElement>('.aw-ad__annulla input')!;
+      motivo.value = 'account usa e getta';
+      motivo.dispatchEvent(new Event('input'));
+      await rendi();
+      annulla.click();
+      const post = http.expectOne(`${API}/voti/v1/annulla`);
+      expect(post.request.body).toEqual({ motivo: 'account usa e getta' });
+      post.flush({ ok: true });
+      http.expectOne((r) => r.url === `${API}/voti/votanti`).flush([]);
+      http.expectOne(`${API}/voti`).flush(VOTI);
+      await rendi();
+    });
+  });
+
   describe('email agli iscritti (scheda Edizione)', () => {
     async function apriEdizione(stato: StatoAnnuncio = ANNUNCIO) {
       Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'))
@@ -252,6 +469,22 @@ describe('AdminAwardsComponent', () => {
       expect(el.querySelector('.form-feedback.is-error[role="status"]')?.textContent).toContain(
         'già in corso',
       );
+    });
+
+    it('il selettore cambia email e ne rilegge lo stato', async () => {
+      await apriEdizione();
+      const select = el.querySelector<HTMLSelectElement>('.aw-ad__quale select')!;
+      select.value = 'voto-aperto';
+      select.dispatchEvent(new Event('change'));
+      await rendi();
+      http.expectOne(`${API}/annunci/voto-aperto`).flush({
+        ...ANNUNCIO,
+        tipo: 'voto-aperto',
+        inviabile: false,
+        motivo: 'Il voto non è ancora aperto: questa email si manda da quando si apre.',
+      });
+      await rendi();
+      expect(el.textContent).toContain('Il voto non è ancora aperto');
     });
 
     it('fuori dalle proposte il pulsante è spento e dice perché', async () => {

@@ -9,13 +9,18 @@ import {
   AwardsMio,
   CandidatoAdmin,
   CandidatoConLink,
+  CardFormato,
   CategoriaSpoglio,
   DateAwards,
   EdizioneAwards,
   EdizioneAwardsAdmin,
   EsitoAnnuncio,
   PropostaAwards,
+  RiepilogoVoti,
+  RosaAdmin,
   StatoAnnuncio,
+  Votante,
+  VotoAwards,
 } from '../models/awards.models';
 
 /** I 3 Max Hyper Awards (voce di registro A20). */
@@ -71,6 +76,28 @@ export class AwardsService {
       `${this.base}/invito/accetta`,
       { token, categorie, consenso: true },
     );
+  }
+
+  /** JWT: salva i voti (uno per categoria; `candidatoId` vuoto = togli). */
+  salvaVoti(
+    voti: { categoria: AwardsCategoria; candidatoId: string }[],
+  ): Observable<VotoAwards[]> {
+    return this.http.put<VotoAwards[]>(`${this.base}/voti`, { voti });
+  }
+
+  /**
+   * JWT: la card del finalista, come file. ⚠️ Via XHR e non con un link: il
+   * token sta in memoria e lo attacca l'interceptor.
+   */
+  card(
+    candidatoId: string,
+    categoria: AwardsCategoria,
+    formato: CardFormato,
+  ): Observable<Blob> {
+    return this.http.get(`${this.base}/candidature/${candidatoId}/card`, {
+      params: { categoria, formato },
+      responseType: 'blob',
+    });
   }
 
   /** JWT: il candidato si ritira da alcune categorie. */
@@ -135,6 +162,59 @@ export class AwardsService {
 
   rimuoviCandidato(id: string): Observable<{ ok: true }> {
     return this.http.delete<{ ok: true }>(`${this.admin}/candidati/${id}`);
+  }
+
+  rosa(): Observable<RosaAdmin> {
+    return this.http.get<RosaAdmin>(`${this.admin}/rosa`);
+  }
+
+  impostaFinalista(
+    id: string,
+    categoria: AwardsCategoria,
+    finalista: boolean,
+  ): Observable<CandidatoAdmin> {
+    return this.http.patch<CandidatoAdmin>(
+      `${this.admin}/candidati/${id}/finalista`,
+      { categoria, finalista },
+    );
+  }
+
+  pubblicaFinalisti(): Observable<{ pubblicataAt: string }> {
+    return this.http.post<{ pubblicataAt: string }>(
+      `${this.admin}/finalisti/pubblica`,
+      {},
+    );
+  }
+
+  cardAdmin(
+    id: string,
+    categoria: AwardsCategoria,
+    formato: CardFormato,
+  ): Observable<Blob> {
+    return this.http.get(`${this.admin}/candidati/${id}/card`, {
+      params: { categoria, formato },
+      responseType: 'blob',
+    });
+  }
+
+  riepilogoVoti(): Observable<RiepilogoVoti> {
+    return this.http.get<RiepilogoVoti>(`${this.admin}/voti`);
+  }
+
+  votanti(
+    categoria: AwardsCategoria,
+    candidatoId: string,
+  ): Observable<Votante[]> {
+    return this.http.get<Votante[]>(`${this.admin}/voti/votanti`, {
+      params: { categoria, candidatoId },
+    });
+  }
+
+  annullaVoto(votoId: string, motivo: string): Observable<{ ok: true }> {
+    return this.http.post<{ ok: true }>(
+      `${this.admin}/voti/${votoId}/annulla`,
+      { motivo },
+    );
   }
 
   statoAnnuncio(tipo: AnnuncioAwards): Observable<StatoAnnuncio> {

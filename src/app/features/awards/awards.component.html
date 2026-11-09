@@ -108,7 +108,7 @@
                     <button
                       type="button"
                       class="btn btn--ghost btn--sm"
-                      (click)="caricaProposte()"
+                      (click)="caricaMio()"
                     >
                       Riprova
                     </button>
@@ -173,6 +173,9 @@
                 vuole partecipare. La rosa finale esce prima dell'apertura del
                 voto, il {{ giorno(date().votoDal) }}.
               </p>
+              @if (rosaPubblicata()) {
+                <ng-container *ngTemplateOutlet="rosaLettura" />
+              }
             }
             @case ('ATTESA_VOTO') {
               <h2 id="aw-fase-titolo">Il voto si apre il {{ giorno(date().votoDal) }}</h2>
@@ -180,12 +183,142 @@
                 Fino al {{ giorno(date().votoAl, true) }} potrai scegliere un
                 finalista per categoria. Il voto è segreto.
               </p>
+              @if (rosaPubblicata()) {
+                <ng-container *ngTemplateOutlet="rosaLettura" />
+              }
             }
             @case ('VOTO') {
               <h2 id="aw-fase-titolo">
                 Il voto è aperto fino al {{ giorno(date().votoAl, true) }}
               </h2>
-              <p>Un voto per categoria fra i finalisti. Il voto è segreto.</p>
+              <p>
+                Un voto per categoria fra i finalisti, e puoi cambiarlo fino alla
+                chiusura. Il voto è segreto: non pubblichiamo né chi ha votato chi
+                né quanti voti ha preso ciascuno.
+              </p>
+              @if (!rosaPubblicata()) {
+                <p class="form-feedback is-info" role="status">
+                  La rosa finale sta per uscire: torna fra poco.
+                </p>
+              } @else if (!raccoltaAttiva()) {
+                <p class="form-feedback is-info" role="status">
+                  Il voto è momentaneamente sospeso. Riprova più tardi.
+                </p>
+                <ng-container *ngTemplateOutlet="rosaLettura" />
+              } @else if (!auth.isAuthenticated()) {
+                <div class="row">
+                  <a routerLink="/registrazione" class="btn btn--primary"
+                    >Registrati per votare</a
+                  >
+                  <a
+                    class="btn btn--ghost"
+                    [routerLink]="['/login']"
+                    [queryParams]="{ redirect: '/awards' }"
+                    >Accedi</a
+                  >
+                </div>
+                @if (!auth.ready()) {
+                  <p class="gate__hint">Stiamo verificando la tua sessione…</p>
+                }
+                <ng-container *ngTemplateOutlet="rosaLettura" />
+              } @else if (erroreCaricamento(); as errore) {
+                <div class="form-feedback is-error aw-prop__errore" role="alert">
+                  <span>{{ errore }}</span>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="caricaMio()"
+                  >
+                    Riprova
+                  </button>
+                </div>
+              } @else {
+                <!--
+                  ⚠️ Radio NATIVE in un fieldset per categoria, non un
+                  radiogroup scritto a mano: è un form, e le frecce, il nome
+                  del gruppo e la scelta unica le dà il browser.
+                -->
+                <form class="aw-voto" (submit)="$event.preventDefault(); salvaVoti()">
+                  @for (g of gruppi; track g.formato) {
+                    @if (rosaDi(g.formato).length > 0) {
+                      <h3 class="aw-rosa__gruppo">{{ g.titolo }}</h3>
+                      @for (c of rosaDi(g.formato); track c.categoria) {
+                        <fieldset
+                          class="aw-voto__cat"
+                          [disabled]="votiSalvati() === null || annullati().has(c.categoria)"
+                        >
+                          <legend>{{ c.etichetta }}</legend>
+                          @if ((c.finalisti ?? []).length === 0) {
+                            <p class="aw-voto__nota">Quest'anno la categoria non si assegna.</p>
+                          } @else {
+                            @if (annullati().has(c.categoria)) {
+                              <p class="aw-voto__nota">
+                                Il tuo voto in questa categoria è stato annullato dallo
+                                staff e non si può cambiare.
+                              </p>
+                            }
+                            <div class="aw-voto__scelte">
+                              @for (f of c.finalisti ?? []; track f.id) {
+                                <label
+                                  class="aw-voto__scelta"
+                                  [class.is-scelta]="bozzaVoti()[c.categoria] === f.id"
+                                >
+                                  <input
+                                    type="radio"
+                                    [name]="'aw-v-' + c.categoria"
+                                    [value]="f.id"
+                                    [checked]="bozzaVoti()[c.categoria] === f.id"
+                                    (change)="scegliVoto(c.categoria, f.id)"
+                                  />
+                                  <span>{{ f.nickname }}</span>
+                                </label>
+                              }
+                              <label
+                                class="aw-voto__scelta aw-voto__scelta--nessuno"
+                                [class.is-scelta]="!bozzaVoti()[c.categoria]"
+                              >
+                                <input
+                                  type="radio"
+                                  [name]="'aw-v-' + c.categoria"
+                                  value=""
+                                  [checked]="!bozzaVoti()[c.categoria]"
+                                  (change)="scegliVoto(c.categoria, '')"
+                                />
+                                <span>Nessun voto</span>
+                              </label>
+                            </div>
+                          }
+                        </fieldset>
+                      }
+                    }
+                  }
+                  @if (erroreVoti(); as errore) {
+                    <p class="form-feedback is-error" role="alert">{{ errore }}</p>
+                  }
+                  <div class="aw-prop__piede">
+                    <span class="aw-voto__stato" role="status">
+                      @if (votiSalvati() === null) {
+                        Carico i tuoi voti…
+                      } @else if (votiSporchi()) {
+                        Hai modifiche non salvate.
+                      } @else if (quantiVoti() === 0) {
+                        Non hai ancora votato.
+                      } @else {
+                        Hai votato in {{ quantiVoti() }}
+                        {{ quantiVoti() === 1 ? 'categoria' : 'categorie' }} su
+                        {{ categorieVotabili() }}.
+                      }
+                    </span>
+                    <button
+                      type="submit"
+                      class="btn btn--primary"
+                      [disabled]="!votiSporchi() || salvandoVoti()"
+                    >
+                      {{ salvandoVoti() ? 'Salvataggio…' : 'Salva i voti' }}
+                    </button>
+                  </div>
+                </form>
+              }
             }
             @case ('ATTESA_RISULTATI') {
               <h2 id="aw-fase-titolo">Il voto è chiuso</h2>
@@ -194,6 +327,9 @@
                 sul nostro canale YouTube. Subito dopo li trovi qui, nell'albo
                 d'oro.
               </p>
+              @if (rosaPubblicata()) {
+                <ng-container *ngTemplateOutlet="rosaLettura" />
+              }
             }
             @case ('RISULTATI') {
               <h2 id="aw-fase-titolo">I vincitori del 2026</h2>
@@ -216,8 +352,35 @@
             <li class="aw-mia__riga">
               <span class="aw-mia__cosa">
                 <strong>{{ c.etichetta }}</strong>
-                <span class="aw-mia__nick">come {{ c.nickname }}</span>
+                <span class="aw-mia__nick">
+                  come {{ c.nickname }}
+                  @if (c.finalista && rosaPubblicata()) {
+                    · finalista
+                  }
+                </span>
               </span>
+              @if (c.finalista && rosaPubblicata()) {
+                <span class="row aw-mia__card">
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    [disabled]="cardInVolo() !== null"
+                    [attr.aria-label]="'Scarica la card per i post: ' + c.etichetta"
+                    (click)="scaricaCard(c, 'post')"
+                  >
+                    {{ cardInVolo() === c.chiave + ':post' ? 'Preparo…' : 'Card per i post' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    [disabled]="cardInVolo() !== null"
+                    [attr.aria-label]="'Scarica la card per le storie: ' + c.etichetta"
+                    (click)="scaricaCard(c, 'storia')"
+                  >
+                    {{ cardInVolo() === c.chiave + ':storia' ? 'Preparo…' : 'Card per le storie' }}
+                  </button>
+                </span>
+              }
               @if (confermaRitiro() === c.chiave) {
                 <span class="row aw-mia__conferma">
                   <button
@@ -251,6 +414,15 @@
         </ul>
         @if (erroreRitiro(); as e) {
           <p class="form-feedback is-error" role="alert">{{ e }}</p>
+        }
+        @if (erroreCard(); as e) {
+          <p class="form-feedback is-error" role="alert">{{ e }}</p>
+        }
+        @if (rosaPubblicata() && haCard()) {
+          <p class="aw-mia__nota">
+            Sei in rosa: scarica la card e condividila dove vuoi. La storia ha la
+            parte bassa libera per l'adesivo del link.
+          </p>
         }
         <p class="aw-mia__nota">
           Ritirandoti esci dalla categoria e i voti che hai ricevuto lì vengono
@@ -333,3 +505,34 @@
     </section>
   </div>
 </section>
+
+<!--
+  La rosa finale in sola lettura: per chi non vota (anonimo, voto sospeso,
+  fasi di attesa). ⚠️ Nickname in ordine alfabetico e MAI un conteggio: l'ordine
+  di un elenco pubblico è già un'informazione.
+-->
+<ng-template #rosaLettura>
+  <div class="aw-rosa">
+    @for (g of gruppi; track g.formato) {
+      @if (rosaDi(g.formato).length > 0) {
+        <h3 class="aw-rosa__gruppo">{{ g.titolo }}</h3>
+        <ul class="aw-rosa__elenco">
+          @for (c of rosaDi(g.formato); track c.categoria) {
+            <li class="aw-rosa__voce">
+              <span class="aw-rosa__nome">{{ c.etichetta }}</span>
+              @if ((c.finalisti ?? []).length === 0) {
+                <span class="aw-rosa__vuota">Quest'anno la categoria non si assegna.</span>
+              } @else {
+                <span class="aw-rosa__finalisti">
+                  @for (f of c.finalisti ?? []; track f.id) {
+                    <span class="aw-rosa__nick">{{ f.nickname }}</span>
+                  }
+                </span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  </div>
+</ng-template>
