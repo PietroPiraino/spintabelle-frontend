@@ -1,0 +1,294 @@
+// /awards — solo token, nessun colore scritto a mano (tre temi).
+
+// ── Il blocco della fase ────────────────────────────────────────────────────
+//
+// ⚠️ `min-height` dichiarata: lo scheletro e i rami brevi (attesa, contatti)
+// occupano la stessa scatola, così l'arrivo della risposta non sposta il
+// calendario sotto. Il form delle proposte è più alto, ed è accettato: compare
+// solo dopo il ripristino della sessione, come il ramo autenticato di /docs.
+.aw-fase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  max-width: 760px;
+  min-height: 13rem;
+  margin: 0 auto;
+  padding: clamp(1.4rem, 3vw, 2.2rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(
+      420px 200px at 50% -20%,
+      color-mix(in srgb, var(--gold) 12%, transparent),
+      transparent 70%
+    ),
+    var(--surface-1);
+
+  h2 {
+    font-size: clamp(1.3rem, 2.6vw, 1.7rem);
+    margin: 0;
+  }
+
+  > p {
+    margin: 0;
+    max-width: 56ch;
+    color: var(--text-muted);
+    line-height: 1.65;
+  }
+
+  .row {
+    justify-content: center;
+  }
+
+  @media (max-width: 720px) {
+    .row {
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+    }
+  }
+}
+
+.aw-fase__sk-titolo {
+  width: min(28rem, 80%);
+  min-height: 2rem;
+}
+
+.aw-fase__sk-riga {
+  width: min(36rem, 90%);
+}
+
+.aw-fase__sk-azione {
+  width: min(16rem, 60%);
+}
+
+// ── Il form delle proposte ──────────────────────────────────────────────────
+.aw-prop {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  text-align: left;
+}
+
+.aw-prop__gruppo {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  legend {
+    padding: 0;
+    margin-bottom: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+}
+
+.aw-prop__riga {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 15rem);
+  align-items: center;
+  gap: 0.4rem 1rem;
+
+  label {
+    font-weight: 600;
+  }
+
+  // Sotto i 560px etichetta e campo si impilano; il carattere del campo torna
+  // a 16px perché iOS ingrandisce la pagina sui campi più piccoli.
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+
+    .input {
+      font-size: 16px;
+    }
+  }
+}
+
+.aw-prop__piede {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.aw-prop__stato {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.aw-prop__errore {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  width: 100%;
+  text-align: left;
+}
+
+// ── Sezioni statiche ────────────────────────────────────────────────────────
+.aw-sezione {
+  margin-top: clamp(2.5rem, 5vw, 3.5rem);
+
+  > h2 {
+    text-align: center;
+    margin: 0 0 1.4rem;
+  }
+}
+
+.aw-cal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+  gap: 1rem;
+}
+
+.aw-cal__passo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+
+  // ⚠️ Lo stato acceso NON cambia il bordo di spessore (cambierebbe la
+  // scatola): raddoppia il bordo con un `inset`, idioma dei filtri attivi.
+  &.is-attivo {
+    border-color: var(--copper-500);
+    box-shadow: inset 0 0 0 1px var(--copper-500);
+    background: color-mix(in srgb, var(--copper-500) 6%, var(--surface-1));
+  }
+}
+
+.aw-cal__titolo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.aw-cal__quando {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--gold-text);
+}
+
+.aw-cal__testo {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.aw-gruppo {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 1.6rem 0 0.7rem;
+}
+
+.aw-cat {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+  gap: 0.8rem;
+}
+
+.aw-cat__voce {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+.aw-cat__nome {
+  font-weight: 700;
+}
+
+.aw-cat__desc {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+// ── La candidatura dell'iscritto ────────────────────────────────────────────
+.aw-mia {
+  max-width: 760px;
+  margin: 1.5rem auto 0;
+  padding: 1.2rem 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+
+  h2 {
+    font-size: 1.2rem;
+    margin: 0;
+  }
+}
+
+.aw-mia__elenco {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.aw-mia__riga {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+
+  &:first-child {
+    border-top: 0;
+  }
+
+  // `.btn--sm` nudo sta sui 38px: i 44 si dichiarano.
+  .btn--sm {
+    min-height: 44px;
+  }
+}
+
+.aw-mia__cosa {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.aw-mia__nick,
+.aw-mia__nota {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.aw-mia__nota {
+  margin: 0;
+}
+
+.aw-mia__conferma {
+  gap: 0.5rem;
+}

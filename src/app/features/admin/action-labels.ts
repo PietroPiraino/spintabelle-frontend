@@ -120,6 +120,12 @@ export const ACTION_LABELS: Record<string, string> = {
   // scrittura del progetto che cambia un importo GIÀ registrato: nel log la
   // coppia prima/dopo è tutta la traccia di rettifica che resta.
   'edit-subscription-payment': 'Incasso abbonamento corretto',
+  // 3 Max Hyper Awards (voce di registro A20).
+  'update-awards-edition': 'Date dei premi aggiornate',
+  'invite-awards-candidate': 'Candidato ai premi invitato',
+  'add-awards-categories': 'Categorie aggiunte a un candidato',
+  'renew-awards-invite': 'Nuovo link d’invito ai premi',
+  'remove-awards-candidate': 'Candidato tolto dai premi',
 };
 
 /** Etichetta leggibile o, per un'azione non ancora mappata, lo slug grezzo. */

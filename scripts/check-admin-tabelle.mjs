@@ -75,6 +75,8 @@ const SEZIONI = [
   // `replayer`. Qui conta più che altrove, perché la tabella del rakeback ha
   // dieci colonne e due campi editabili per riga.
   'conteggi-mensili',
+  // 3 Max Hyper Awards (30/10/2026): spoglio e candidati sono tabelle.
+  'awards',
   // ⚠️ Aggiunte il 13/09/2026 col refactoring di Analisi: Statistiche è
   // passata alle tabelle condivise (prima aveva le sue, invisibili a questa
   // sonda per costruzione), e la Panoramica — che una tabella non ce l'ha —

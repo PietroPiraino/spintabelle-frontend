@@ -96,8 +96,13 @@ export const appConfig: ApplicationConfig = {
     provideClientHydration(
       withEventReplay(),
       withHttpTransferCacheOptions({
+        // ⚠️ `/awards`: la fase dei premi cambia con l'orologio e la rosa
+        // finale si pubblica dal pannello, senza deploy (stessa ragione di
+        // /canale qui sopra).
         filter: (req) =>
-          !req.url.includes('/news') && !req.url.includes('/canale'),
+          !req.url.includes('/news') &&
+          !req.url.includes('/canale') &&
+          !req.url.includes('/awards'),
       }),
     ),
     provideRouter(

@@ -62,9 +62,9 @@ export class HeaderComponent {
       label: 'Studia',
       children: [
         { path: '/lezioni', label: 'Lezioni' },
-        // ⚠️ `isNew` spostato qui dal Negozio: il flag e' UNO e si muove a mano,
-        // e il Replayer e' la sezione nuova. Riportarlo indietro e' una riga.
-        { path: '/replayer', label: 'Replayer', isNew: true },
+        // ⚠️ `isNew` spostato agli Awards il 30/10/2026: il flag e' UNO e si
+        // muove a mano.
+        { path: '/replayer', label: 'Replayer' },
         // ⚠️ /mie-mani era raggiungibile SOLO da /replayer (14/09/2026): la
         // libreria di chi ha caricato delle mani non aveva una porta nel menu.
         { path: '/mie-mani', label: 'Le mie mani' },
@@ -79,9 +79,10 @@ export class HeaderComponent {
       id: 'scuola',
       label: 'Scuola',
       children: [
+        // ⚠️ `isNew` e' un flag che si sposta A MANO: oggi sta sugli Awards.
+        // Replayer, guide e Negozio ce l'hanno avuto e non sono piu' novita'.
+        { path: '/awards', label: 'Awards 2026', isNew: true },
         { path: '/affiliazioni', label: 'Affiliazioni' },
-        // ⚠️ `isNew` e' un flag che si sposta A MANO: oggi sta sul Replayer.
-        // Le guide e il Negozio ce l'hanno avuto e non sono piu' una novita'.
         { path: '/negozio', label: 'Negozio' },
         { path: '/guide', label: 'Guide' },
         { path: '/chi-siamo', label: 'Chi siamo' },

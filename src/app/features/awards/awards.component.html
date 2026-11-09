@@ -1,0 +1,335 @@
+<!--
+  /awards — i 3 Max Hyper Awards (voce di registro A20).
+
+  ⚠️ Regolamento, calendario e categorie stanno FUORI da ogni condizione
+  sull'utente: sono l'HTML prerenderizzato, cioè ciò che legge chi arriva da
+  Google o da una card condivisa. Cambia solo il blocco della fase.
+  ⚠️ Art. 9 DL 87/2018: nessun nome di sala, nessun importo vinto, nessun
+  volume di gioco. I testi vivono in awards.data.ts e la spec li controlla.
+-->
+<section class="section">
+  <div class="container">
+    <header class="page-hero page-hero--center">
+      <div class="page-hero__ornament">
+        <app-hero-cards />
+      </div>
+      <span class="eyebrow">Edizione 2026</span>
+      <h1>3 Max Hyper <span class="text-gradient">Awards</span></h1>
+      <p class="lead">
+        Il premio della comunità per i giocatori italiani di Spin &amp; Go e
+        Twister. Gli iscritti propongono, i giocatori accettano, la comunità
+        vota: niente premi in denaro, solo il riconoscimento e un posto
+        nell'albo d'oro.
+      </p>
+    </header>
+
+    <!--
+      Il blocco della fase. ⚠️ Tre stati (attesa · pronto · assente): lo
+      scheletro occupa la stessa scatola del blocco vero, così l'arrivo della
+      risposta non sposta la pagina.
+    -->
+    <section
+      class="aw-fase"
+      aria-labelledby="aw-fase-titolo"
+      [attr.aria-busy]="statoEdizione() === 'attesa'"
+    >
+      @switch (statoEdizione()) {
+        @case ('attesa') {
+          <h2 id="aw-fase-titolo" class="visually-hidden">Stato dei premi</h2>
+          <span class="scheletro aw-fase__sk-titolo"></span>
+          <span class="scheletro aw-fase__sk-riga"></span>
+          <span class="scheletro scheletro--riga aw-fase__sk-azione"></span>
+        }
+        @case ('assente') {
+          <h2 id="aw-fase-titolo">
+            Le proposte si aprono il {{ giorno(date().proposteDal) }}
+          </h2>
+          <p>
+            In questo momento non riusciamo a leggere lo stato dei premi.
+            Ricarica la pagina fra qualche minuto.
+          </p>
+        }
+        @case ('pronto') {
+          @switch (fase()) {
+            @case ('PRIMA') {
+              <h2 id="aw-fase-titolo">
+                Le proposte si aprono il {{ giorno(date().proposteDal) }}
+              </h2>
+              <p>
+                Dal {{ giorno(date().proposteDal) }} al
+                {{ giorno(date().proposteAl) }} potrai indicare, in privato, il
+                giocatore che secondo te merita ciascuna categoria.
+              </p>
+              @if (!auth.isAuthenticated()) {
+                <div class="row">
+                  <a routerLink="/registrazione" class="btn btn--primary"
+                    >Registrati gratis</a
+                  >
+                  <a
+                    class="btn btn--ghost"
+                    [routerLink]="['/login']"
+                    [queryParams]="{ redirect: '/awards' }"
+                    >Accedi</a
+                  >
+                </div>
+              }
+            }
+            @case ('PROPOSTE') {
+              <h2 id="aw-fase-titolo">Proponi i tuoi candidati</h2>
+              <p>
+                Un nickname per categoria, fino al
+                {{ giorno(date().proposteAl) }}. Le proposte restano private:
+                servono solo a capire chi contattare.
+              </p>
+              @if (!raccoltaAttiva()) {
+                <p class="form-feedback is-info" role="status">
+                  La partecipazione ai premi è momentaneamente sospesa.
+                  Riprova più tardi.
+                </p>
+              } @else if (!auth.isAuthenticated()) {
+                <div class="row">
+                  <a routerLink="/registrazione" class="btn btn--primary"
+                    >Registrati per proporre</a
+                  >
+                  <a
+                    class="btn btn--ghost"
+                    [routerLink]="['/login']"
+                    [queryParams]="{ redirect: '/awards' }"
+                    >Accedi</a
+                  >
+                </div>
+                @if (!auth.ready()) {
+                  <p class="gate__hint">Stiamo verificando la tua sessione…</p>
+                }
+              } @else {
+                @if (erroreCaricamento(); as errore) {
+                  <div class="form-feedback is-error aw-prop__errore" role="alert">
+                    <span>{{ errore }}</span>
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      (click)="caricaProposte()"
+                    >
+                      Riprova
+                    </button>
+                  </div>
+                } @else {
+                  <form class="aw-prop" (submit)="$event.preventDefault(); salva()">
+                    @for (g of gruppi; track g.formato) {
+                      <fieldset class="aw-prop__gruppo">
+                        <legend>{{ g.titolo }}</legend>
+                        @for (c of categorieDi(g.formato); track c.categoria) {
+                          <div class="aw-prop__riga">
+                            <label [for]="'aw-p-' + c.categoria">{{ c.etichetta }}</label>
+                            <input
+                              class="input"
+                              type="text"
+                              [id]="'aw-p-' + c.categoria"
+                              maxlength="30"
+                              autocomplete="off"
+                              spellcheck="false"
+                              placeholder="Nickname"
+                              [value]="bozza()[c.categoria] ?? ''"
+                              [disabled]="salvate() === null"
+                              (input)="onInput(c.categoria, $event)"
+                            />
+                          </div>
+                        }
+                      </fieldset>
+                    }
+                    @if (erroreSalvataggio(); as errore) {
+                      <p class="form-feedback is-error" role="alert">{{ errore }}</p>
+                    }
+                    <div class="aw-prop__piede">
+                      <span class="aw-prop__stato" role="status">
+                        @if (salvate() === null) {
+                          Carico le tue proposte…
+                        } @else if (sporco()) {
+                          Hai modifiche non salvate.
+                        } @else if (quanteSalvate() === 0) {
+                          Non hai ancora proposto nessuno.
+                        } @else if (quanteSalvate() === 1) {
+                          Hai una proposta salvata.
+                        } @else {
+                          Hai {{ quanteSalvate() }} proposte salvate.
+                        }
+                      </span>
+                      <button
+                        type="submit"
+                        class="btn btn--primary"
+                        [disabled]="!sporco() || salvando()"
+                      >
+                        {{ salvando() ? 'Salvataggio…' : 'Salva le proposte' }}
+                      </button>
+                    </div>
+                  </form>
+                }
+              }
+            }
+            @case ('CONTATTI') {
+              <h2 id="aw-fase-titolo">Proposte chiuse: stiamo contattando i candidati</h2>
+              <p>
+                Scriviamo ai giocatori più proposti e chiediamo a ciascuno se
+                vuole partecipare. La rosa finale esce prima dell'apertura del
+                voto, il {{ giorno(date().votoDal) }}.
+              </p>
+            }
+            @case ('ATTESA_VOTO') {
+              <h2 id="aw-fase-titolo">Il voto si apre il {{ giorno(date().votoDal) }}</h2>
+              <p>
+                Fino al {{ giorno(date().votoAl, true) }} potrai scegliere un
+                finalista per categoria. Il voto è segreto.
+              </p>
+            }
+            @case ('VOTO') {
+              <h2 id="aw-fase-titolo">
+                Il voto è aperto fino al {{ giorno(date().votoAl, true) }}
+              </h2>
+              <p>Un voto per categoria fra i finalisti. Il voto è segreto.</p>
+            }
+            @case ('ATTESA_RISULTATI') {
+              <h2 id="aw-fase-titolo">Il voto è chiuso</h2>
+              <p>
+                I vincitori il {{ giorno(date().cerimoniaAt, true) }}, in diretta
+                sul nostro canale YouTube. Subito dopo li trovi qui, nell'albo
+                d'oro.
+              </p>
+            }
+            @case ('RISULTATI') {
+              <h2 id="aw-fase-titolo">I vincitori del 2026</h2>
+              <p>L'albo d'oro dei 3 Max Hyper Awards.</p>
+            }
+          }
+        }
+      }
+    </section>
+
+    <!--
+      La candidatura dell'iscritto: compare solo a chi ha accettato un invito.
+      ⚠️ Il ritiro è la revoca del consenso (art. 7.3): sempre disponibile.
+    -->
+    @if (mieCategorie().length > 0) {
+      <section class="aw-mia" aria-labelledby="aw-mia-titolo">
+        <h2 id="aw-mia-titolo">La tua candidatura</h2>
+        <ul class="aw-mia__elenco">
+          @for (c of mieCategorie(); track c.chiave) {
+            <li class="aw-mia__riga">
+              <span class="aw-mia__cosa">
+                <strong>{{ c.etichetta }}</strong>
+                <span class="aw-mia__nick">come {{ c.nickname }}</span>
+              </span>
+              @if (confermaRitiro() === c.chiave) {
+                <span class="row aw-mia__conferma">
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    [disabled]="ritirando()"
+                    (click)="ritira(c)"
+                  >
+                    Sì, ritirami
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="confermaRitiro.set(null)"
+                  >
+                    Annulla
+                  </button>
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [attr.aria-label]="'Ritirati da ' + c.etichetta"
+                  (click)="confermaRitiro.set(c.chiave); erroreRitiro.set(null)"
+                >
+                  Ritirati
+                </button>
+              }
+            </li>
+          }
+        </ul>
+        @if (erroreRitiro(); as e) {
+          <p class="form-feedback is-error" role="alert">{{ e }}</p>
+        }
+        <p class="aw-mia__nota">
+          Ritirandoti esci dalla categoria e i voti che hai ricevuto lì vengono
+          cancellati.
+        </p>
+      </section>
+    }
+
+    <section class="aw-sezione" aria-labelledby="aw-calendario">
+      <h2 id="aw-calendario">Il calendario</h2>
+      <ol class="aw-cal">
+        @for (p of passi(); track p.id) {
+          <li
+            class="aw-cal__passo"
+            [class.is-attivo]="passoAttivo() === p.id"
+            [attr.aria-current]="passoAttivo() === p.id ? 'step' : null"
+          >
+            <span class="aw-cal__titolo">{{ p.titolo }}</span>
+            <span class="aw-cal__quando">{{ p.quando }}</span>
+            <span class="aw-cal__testo">{{ p.testo }}</span>
+          </li>
+        }
+      </ol>
+    </section>
+
+    <section class="aw-sezione" aria-labelledby="aw-categorie">
+      <h2 id="aw-categorie">Le nove categorie</h2>
+      @for (g of gruppi; track g.formato) {
+        <h3 class="aw-gruppo">{{ g.titolo }}</h3>
+        <ul class="aw-cat">
+          @for (c of categorieDi(g.formato); track c.categoria) {
+            <li class="aw-cat__voce">
+              <span class="aw-cat__nome">{{ c.etichetta }}</span>
+              <span class="aw-cat__desc">{{ c.descrizione }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="seo-block" aria-labelledby="aw-regolamento">
+      <h2 id="aw-regolamento">Come funzionano i premi</h2>
+      <p>
+        I 3 Max Hyper Awards nascono per dare un riconoscimento ai giocatori che
+        la comunità italiana degli hyper turbo a tre stima di più. Non decide
+        lo staff: decidono gli iscritti, prima proponendo i nomi e poi votando
+        fra i finalisti.
+      </p>
+      <details class="seo-more">
+        <summary class="seo-more__sum">Leggi il regolamento</summary>
+        <ul>
+          @for (r of regole; track r) {
+            <li>{{ r }}</li>
+          }
+        </ul>
+        <p>
+          Come trattiamo proposte, voti e candidature è scritto
+          nell'<a routerLink="/privacy">informativa sulla privacy</a>.
+        </p>
+      </details>
+
+      <div class="seo-block__cta">
+        <p>
+          Partecipare è gratis: con un account hai anche le
+          <a routerLink="/tabelle">tabelle preflop</a>, il
+          <a routerLink="/simulatore-varianza">simulatore di varianza</a> e le
+          <a routerLink="/guide">guide</a> della scuola.
+        </p>
+      </div>
+
+      <h2>Domande frequenti sui premi</h2>
+      <div class="faq">
+        @for (item of faq; track item.q) {
+          <details class="faq__item">
+            <summary class="faq__sum"><h3 class="faq__q">{{ item.q }}</h3></summary>
+            <p class="faq__a">{{ item.a }}</p>
+          </details>
+        }
+      </div>
+    </section>
+  </div>
+</section>

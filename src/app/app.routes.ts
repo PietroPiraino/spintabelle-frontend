@@ -325,6 +325,36 @@ export const routes: Routes = [
     },
   },
   {
+    // 3 Max Hyper Awards (voce di registro A20). Pubblica e prerenderizzata:
+    // il gate delle proposte e del voto sta nel componente, non sulla rotta
+    // (una rotta con `authGuard` non si prerenderizza).
+    path: 'awards',
+    loadComponent: () =>
+      import('./features/awards/awards.component').then(
+        (m) => m.AwardsComponent,
+      ),
+    title: '3 Max Hyper Awards 2026 — Best Fish Forever',
+    data: {
+      description:
+        'Il premio della comunità per i giocatori italiani di Spin & Go e Twister: proponi i tuoi candidati, vota i finalisti e segui la premiazione in diretta.',
+    },
+  },
+  {
+    // ⚠️ Rotta CLIENT e noindex: il token sta nel frammento dell'indirizzo, e
+    // una pagina d'invito non ha niente da dire a un motore di ricerca. Nessun
+    // `authGuard`: chi è stato invitato deve poter RIFIUTARE senza registrarsi.
+    path: 'awards/invito',
+    loadComponent: () =>
+      import('./features/awards/awards-invito.component').then(
+        (m) => m.AwardsInvitoComponent,
+      ),
+    title: 'Invito ai 3 Max Hyper Awards — Best Fish Forever',
+    data: {
+      description: 'Il tuo invito ai 3 Max Hyper Awards 2026.',
+      noindex: true,
+    },
+  },
+  {
     path: 'affiliazioni',
     loadComponent: () =>
       import('./features/affiliations/affiliations.component').then(
@@ -495,6 +525,14 @@ export const routes: Routes = [
             (m) => m.AdminCanaleComponent,
           ),
         title: 'Admin · Canale — Best Fish Forever',
+      },
+      {
+        path: 'awards',
+        loadComponent: () =>
+          import('./features/admin/admin-awards/admin-awards.component').then(
+            (m) => m.AdminAwardsComponent,
+          ),
+        title: 'Admin · Awards — Best Fish Forever',
       },
       {
         path: 'fonti',

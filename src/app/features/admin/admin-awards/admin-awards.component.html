@@ -1,0 +1,472 @@
+<app-schede
+  #sch
+  etichetta="Sotto-sezioni dei premi"
+  [primarie]="true"
+  [voci]="schede"
+  [scelto]="vista()"
+  (scegli)="scegliVista($event)"
+/>
+
+<div
+  role="tabpanel"
+  tabindex="0"
+  [id]="sch.idPannello()"
+  [attr.aria-labelledby]="sch.idSchedaAttiva()"
+>
+  @if (errore(); as e) {
+    <div class="form-feedback is-error aw-ad__errore" role="alert">
+      <span>{{ e }}</span>
+      <button type="button" class="btn btn--ghost btn--sm" (click)="ricarica()">
+        Riprova
+      </button>
+    </div>
+  }
+
+  @switch (vista()) {
+    @case ('proposte') {
+      <div class="admin-users">
+        <div class="admin-barra">
+          <h2 class="admin-barra__titolo">Spoglio delle proposte</h2>
+          <span class="admin-barra__conta">
+            {{ totaleProposte() }} {{ totaleProposte() === 1 ? 'proposta' : 'proposte' }}
+          </span>
+        </div>
+        <p class="admin-nota">
+          Le proposte sono private: questi conteggi li vede solo il pannello, e non
+          vanno pubblicati né citati in diretta. «Invita» crea il candidato e il
+          link personale da mandare alla persona.
+        </p>
+
+        @if (spoglio(); as s) {
+          @for (cat of s; track cat.categoria) {
+            <details class="admin-piega">
+              <summary class="admin-piega__sum">
+                <span>{{ cat.etichetta }}</span>
+                <span class="admin-item__meta">
+                  {{ cat.totale }} {{ cat.totale === 1 ? 'proposta' : 'proposte' }}
+                </span>
+              </summary>
+              <div class="admin-piega__corpo">
+                @if (cat.voci.length === 0) {
+                  <p class="admin-nota">Nessuna proposta in questa categoria.</p>
+                } @else {
+                  <div class="admin-table__scroll">
+                    <table class="admin-table admin-table--etichettata">
+                      <caption class="visually-hidden">
+                        {{ cat.etichetta }}: nickname proposti, dal più votato
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col" class="admin-table__c-primo">Nickname</th>
+                          <th scope="col" class="is-num">Proposte</th>
+                          <th scope="col">Candidatura</th>
+                          <th scope="col" class="admin-table__c-ultimo">
+                            <span class="visually-hidden">Azioni</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (v of cat.voci; track v.nicknameKey) {
+                          <tr>
+                            <th scope="row" class="admin-table__c-primo">
+                              <span class="admin-table__ident">
+                                <span class="admin-table__ident-riga">
+                                  <strong [title]="v.nickname">{{ v.nickname }}</strong>
+                                </span>
+                              </span>
+                            </th>
+                            <td class="is-num" data-etichetta="Proposte">{{ v.proposte }}</td>
+                            <td data-etichetta="Candidatura">
+                              @if (v.candidato) {
+                                <span
+                                  class="admin-stato"
+                                  [attr.data-tono]="tonoCand(v.candidato.stato)"
+                                  >{{ v.candidato.stato ? statoCand(v.candidato.stato) : 'Altra categoria' }}</span
+                                >
+                              } @else {
+                                <span class="admin-item__meta">Non invitato</span>
+                              }
+                            </td>
+                            <td class="admin-table__c-ultimo">
+                              @if (!v.candidato) {
+                                <button
+                                  type="button"
+                                  class="admin-ico"
+                                  aria-haspopup="dialog"
+                                  [attr.aria-label]="'Invita ' + v.nickname"
+                                  title="Invita"
+                                  (click)="apriInvito(v)"
+                                >
+                                  <app-icon name="plus" [size]="18" />
+                                </button>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              </div>
+            </details>
+          }
+        } @else if (!errore()) {
+          <div class="spinner" role="status" aria-label="Caricamento dello spoglio"></div>
+        }
+      </div>
+    }
+
+    @case ('candidati') {
+      <div class="admin-users">
+        <div class="admin-barra">
+          <h2 class="admin-barra__titolo">Candidati</h2>
+          @if (candidati(); as c) {
+            <span class="admin-barra__conta">
+              {{ c.length }} {{ c.length === 1 ? 'candidato' : 'candidati' }}
+            </span>
+          }
+        </div>
+        <p class="admin-nota">
+          Un candidato compare in pubblico solo nelle categorie che ha accettato. La
+          scheda di ogni riga permette di aggiungere categorie, generare un nuovo
+          link o togliere il candidato.
+        </p>
+
+        @if (candidati(); as lista) {
+          @if (lista.length === 0) {
+            <div class="empty-state">
+              <p>Nessun candidato. Si invitano dallo spoglio delle proposte.</p>
+            </div>
+          } @else {
+            <div class="admin-table__scroll">
+              <table class="admin-table admin-table--etichettata">
+                <caption class="visually-hidden">Candidati, in ordine alfabetico</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="admin-table__c-primo">Candidato</th>
+                    <th scope="col">Categorie</th>
+                    <th scope="col">Invito</th>
+                    <th scope="col" class="admin-table__c-ultimo">
+                      <span class="visually-hidden">Azioni</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of lista; track c.id) {
+                    <tr>
+                      <th scope="row" class="admin-table__c-primo">
+                        <span class="admin-table__ident">
+                          <span class="admin-table__ident-riga">
+                            <strong [title]="c.nickname">{{ c.nickname }}</strong>
+                          </span>
+                          <span
+                            class="admin-table__sub"
+                            [title]="c.account ? c.account.email : 'Nessun account collegato'"
+                          >
+                            {{ c.account ? c.account.nickname + ' · ' + c.account.email : 'Nessun account collegato' }}
+                          </span>
+                        </span>
+                      </th>
+                      <td data-etichetta="Categorie">{{ riassunto(c) }}</td>
+                      <td data-etichetta="Invito">
+                        <span class="admin-stato" [attr.data-tono]="tonoInvito(c.invito.stato)">{{
+                          statoInvito(c.invito.stato)
+                        }}</span>
+                      </td>
+                      <td class="admin-table__c-ultimo">
+                        <button
+                          type="button"
+                          class="admin-ico"
+                          aria-haspopup="dialog"
+                          [attr.aria-label]="'Gestisci ' + c.nickname"
+                          title="Gestisci"
+                          (click)="apriScheda(c)"
+                        >
+                          <app-icon name="more-vertical" [size]="18" />
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        } @else if (!errore()) {
+          <div class="spinner" role="status" aria-label="Caricamento dei candidati"></div>
+        }
+      </div>
+    }
+
+    @case ('edizione') {
+      <div class="admin-users">
+        <div class="admin-barra">
+          <h2 class="admin-barra__titolo">
+            Edizione {{ edizione()?.anno ?? '' }}
+          </h2>
+          @if (edizione(); as e) {
+            <span class="admin-stato" data-tono="attesa">{{ fase(e.fase) }}</span>
+          }
+        </div>
+        <p class="admin-nota">
+          Le date sono nel fuso del tuo browser. Spostarle cambia subito la fase dei
+          premi sul sito: chiudere le proposte prima del previsto le chiude per
+          tutti.
+        </p>
+        @if (edizione()) {
+          <form class="aw-ad__date" (submit)="$event.preventDefault(); salvaDate()">
+            @for (d of campiData; track d.campo) {
+              <label class="field aw-ad__campo">
+                <span>{{ d.etichetta }}</span>
+                <input
+                  class="input"
+                  type="datetime-local"
+                  [value]="date()[d.campo] ?? ''"
+                  (input)="scriviData(d.campo, $event)"
+                />
+              </label>
+            }
+            @if (erroreDate(); as e) {
+              <p class="form-feedback is-error aw-ad__piena" role="alert">{{ e }}</p>
+            }
+            <div class="aw-ad__piena">
+              <button
+                type="submit"
+                class="btn btn--primary"
+                [disabled]="dateCambiate().length === 0 || salvandoDate()"
+              >
+                {{ salvandoDate() ? 'Salvataggio…' : 'Salva le date' }}
+              </button>
+            </div>
+          </form>
+        } @else if (!errore()) {
+          <div class="spinner" role="status" aria-label="Caricamento dell'edizione"></div>
+        }
+      </div>
+    }
+  }
+</div>
+
+@if (modale() === 'invito') {
+  <app-modal
+    [titolo]="link() ? 'Il link d’invito' : 'Invita ' + nickname()"
+    [sporco]="sporco()"
+    [salvando]="inVolo()"
+    (chiusa)="chiudi()"
+  >
+    <div class="admin-modale">
+      <div class="admin-modale__corpo">
+        @if (erroreModale(); as e) {
+          <p class="form-feedback is-error" role="alert">{{ e }}</p>
+        }
+        @if (link()) {
+          <ng-container *ngTemplateOutlet="bloccoLink" />
+        } @else {
+          <form id="aw-invito-form" (submit)="$event.preventDefault(); creaInvito()">
+            <label class="field">
+              <span>Nickname (come comparirà sul sito)</span>
+              <input
+                class="input"
+                type="text"
+                maxlength="30"
+                [value]="nickname()"
+                (input)="scriviNickname($event)"
+              />
+            </label>
+            <fieldset class="aw-ad__cat">
+              <legend>Categorie per cui invitarlo</legend>
+              @for (c of categorie; track c.categoria) {
+                <label class="row admin-panel__check">
+                  <input
+                    type="checkbox"
+                    [checked]="scelte().has(c.categoria)"
+                    (change)="scegli(c.categoria, $event)"
+                  />
+                  <span>{{ c.etichetta }}</span>
+                </label>
+              }
+            </fieldset>
+          </form>
+        }
+      </div>
+    </div>
+    <div class="row admin-panel__actions" moPiede>
+      @if (link()) {
+        <button type="button" class="btn btn--primary" (click)="chiudi()">
+          Fatto
+        </button>
+      } @else {
+        <button type="button" class="btn btn--ghost" (click)="chiudi()">
+          Annulla
+        </button>
+        <button
+          type="submit"
+          form="aw-invito-form"
+          class="btn btn--primary"
+          [disabled]="scelte().size === 0 || inVolo()"
+        >
+          {{ inVolo() ? 'Creazione…' : 'Crea l’invito' }}
+        </button>
+      }
+    </div>
+  </app-modal>
+}
+
+@if (modale() === 'scheda') {
+  @if (scheda(); as c) {
+    <app-modal
+      [titolo]="c.nickname"
+      [sottotitolo]="c.account ? 'Account: ' + c.account.nickname + ' · ' + c.account.email : 'Nessun account collegato'"
+      [sporco]="sporco()"
+      [salvando]="inVolo()"
+      (chiusa)="chiudi()"
+    >
+      <div class="admin-modale">
+        <div class="admin-modale__corpo">
+          @if (erroreModale(); as e) {
+            <p class="form-feedback is-error" role="alert">{{ e }}</p>
+          }
+          <ul class="aw-ad__stati">
+            @for (k of c.categorie; track k.categoria) {
+              <li>
+                <span>{{ k.etichetta }}</span>
+                <span class="admin-stato" [attr.data-tono]="tonoCand(k.stato)">{{
+                  statoCand(k.stato)
+                }}</span>
+              </li>
+            }
+          </ul>
+          <p class="admin-nota">
+            Invito: {{ statoInvito(c.invito.stato) }}
+            @if (c.invito.scadeAt && c.invito.stato === 'VALIDO') {
+              · scade il {{ c.invito.scadeAt | date: 'd MMM y, HH:mm' }}
+            }
+            @if (c.consenso) {
+              · consenso del {{ c.consenso.at | date: 'd MMM y' }} (testo
+              {{ c.consenso.versione }})
+            }
+          </p>
+
+          @if (link()) {
+            <ng-container *ngTemplateOutlet="bloccoLink" />
+          }
+
+          @if (mancanti().length > 0) {
+            <details class="admin-modale__sez">
+              <summary class="admin-modale__sum">Aggiungi categorie</summary>
+              <div class="admin-modale__corpo">
+                @for (m of mancanti(); track m.categoria) {
+                  <label class="row admin-panel__check">
+                    <input
+                      type="checkbox"
+                      [checked]="scelte().has(m.categoria)"
+                      (change)="scegli(m.categoria, $event)"
+                    />
+                    <span>{{ m.etichetta }}</span>
+                  </label>
+                }
+                <p class="admin-nota">
+                  Poi genera un nuovo link: la persona risponderà solo per le
+                  categorie in attesa.
+                </p>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  [disabled]="scelte().size === 0 || inVolo()"
+                  (click)="aggiungi()"
+                >
+                  Aggiungi
+                </button>
+              </div>
+            </details>
+          }
+
+          <details class="admin-modale__sez">
+            <summary class="admin-modale__sum">Nuovo link d’invito</summary>
+            <div class="admin-modale__corpo">
+              <p class="admin-nota">
+                Il link nuovo sostituisce il precedente, che smette di funzionare.
+                Serve se la persona l'ha perso o se hai aggiunto categorie.
+              </p>
+              <button
+                type="button"
+                class="btn btn--ghost btn--sm"
+                [disabled]="inVolo()"
+                (click)="rinnova()"
+              >
+                Genera un nuovo link
+              </button>
+            </div>
+          </details>
+
+          <details class="admin-modale__sez admin-modale__sez--rischio">
+            <summary class="admin-modale__sum">Togli dai premi</summary>
+            <div class="admin-modale__corpo">
+              <p class="admin-nota">
+                Cancella il candidato e tutti i voti che ha ricevuto. Non si annulla.
+              </p>
+              @if (confermaRimozione()) {
+                <div class="row">
+                  <button
+                    type="button"
+                    class="btn btn--danger btn--sm"
+                    [disabled]="inVolo()"
+                    (click)="rimuovi()"
+                  >
+                    Togli davvero
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="confermaRimozione.set(false)"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              } @else {
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="confermaRimozione.set(true)"
+                >
+                  Togli {{ c.nickname }}
+                </button>
+              }
+            </div>
+          </details>
+        </div>
+      </div>
+      <div class="row admin-panel__actions" moPiede>
+        <button type="button" class="btn btn--ghost" (click)="chiudi()">
+          Chiudi
+        </button>
+      </div>
+    </app-modal>
+  }
+}
+
+<ng-template #bloccoLink>
+  <div class="aw-ad__link">
+    <p class="form-feedback is-info" role="status">
+      Questo link si vede solo ora: copialo e mandalo alla persona, dove la
+      conosci. Chi lo possiede può accettare a suo nome.
+    </p>
+    <div class="row aw-ad__link-riga">
+      <input
+        #campoLink
+        class="input"
+        type="text"
+        readonly
+        aria-label="Link d’invito"
+        [value]="link()"
+        (focus)="campoLink.select()"
+      />
+      <button
+        type="button"
+        class="btn btn--primary btn--sm"
+        (click)="copia(campoLink)"
+      >
+        {{ copiato() ? 'Copiato' : 'Copia il link' }}
+      </button>
+    </div>
+  </div>
+</ng-template>

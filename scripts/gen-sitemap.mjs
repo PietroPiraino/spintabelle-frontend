@@ -54,6 +54,8 @@ const META = new Map([
   ['/glossario', { changefreq: 'weekly', priority: '0.7' }],
   ['/live', { changefreq: 'weekly', priority: '0.7' }],
   ['/docs', { changefreq: 'monthly', priority: '0.6' }],
+  // I premi cambiano fase ogni due settimane (proposte, rosa, voto, albo).
+  ['/awards', { changefreq: 'weekly', priority: '0.6' }],
   ['/chi-siamo', { changefreq: 'monthly', priority: '0.7' }],
   ['/tabelle', { changefreq: 'monthly', priority: '0.7' }],
   ['/simulatore-varianza', { changefreq: 'monthly', priority: '0.7' }],

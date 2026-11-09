@@ -42,6 +42,7 @@ export const PERCORSI_CON_BARRA_FINALE: readonly string[] = [
   'allenamento',
   'negozio',
   'docs',
+  'awards',
   'live',
   'guide',
   'guide/:slug',

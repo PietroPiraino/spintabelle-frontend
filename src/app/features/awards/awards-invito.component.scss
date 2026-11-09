@@ -1,0 +1,133 @@
+// /awards/invito — solo token.
+
+.inv {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 680px;
+  min-height: 14rem;
+  margin: 0 auto;
+  padding: clamp(1.4rem, 3vw, 2.2rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+
+  h2 {
+    font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+    line-height: 1.65;
+  }
+
+  > .btn {
+    align-self: flex-start;
+  }
+}
+
+.inv__sk-titolo {
+  width: min(26rem, 80%);
+  min-height: 2rem;
+}
+
+.inv__sk-riga {
+  width: min(34rem, 95%);
+}
+
+.inv__elenco {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.inv__scelte {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  legend {
+    padding: 0;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+}
+
+// ⚠️ Tutta la riga è il bersaglio: 44px dichiarati, il quadratino da solo
+// sarebbe un bersaglio da 13px.
+.inv__scelta {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  input {
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0.2rem;
+    accent-color: var(--copper-500);
+  }
+
+  > span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  &:has(input:checked) {
+    border-color: var(--copper-500);
+    box-shadow: inset 0 0 0 1px var(--copper-500);
+  }
+}
+
+.inv__desc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.inv__consenso {
+  padding: 1rem 1.1rem;
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--gold) 8%, var(--surface-1));
+}
+
+.inv__consenso-testo {
+  font-size: 0.95rem;
+}
+
+.inv__versione,
+.inv__nota {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.inv .inv__versione {
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+}
+
+.inv__rifiuto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+// `.btn--link` nudo sta sui 22px: qui è un comando, e i 44 si dichiarano.
+.inv__no {
+  align-self: flex-start;
+  min-height: 44px;
+}

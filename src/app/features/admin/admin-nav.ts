@@ -95,6 +95,9 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { path: 'iscritti', label: 'Iscritti', icon: 'users' },
       { path: 'partecipazione', label: 'Partecipazione', icon: 'activity' },
+      // 3 Max Hyper Awards (voce di registro A20). ⚠️ Nessun badge: le
+      // accettazioni arrivano da sole e non aspettano una decisione.
+      { path: 'awards', label: 'Awards', icon: 'trophy' },
       // ⚠️ Le segnalazioni sulle mani del Replayer. Il badge conta le APERTE, e
       // qui conta davvero: chi segnala e' quasi sempre un TERZO che si e'
       // trovato nominato in una mano, non ha un account e non ha altro canale.

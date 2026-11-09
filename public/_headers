@@ -59,6 +59,8 @@
   X-Robots-Tag: noindex, follow
 /live/:id/stanza
   X-Robots-Tag: noindex, follow
+/awards/invito
+  X-Robots-Tag: noindex, follow
 /login
   X-Robots-Tag: noindex, follow
 # ⚠️ Le pagine delle mani NON vanno indicizzate (decisione D2): contengono i

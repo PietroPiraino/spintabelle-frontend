@@ -58,6 +58,11 @@ const MIN_PAROLE = {
   // sta sotto per lasciare margine a una riscrittura, non a uno svuotamento.
   '/replayer': 700,
   '/docs': 300, // idem
+  // 3 Max Hyper Awards: regolamento, calendario, categorie e FAQ sono statici;
+  // il blocco della fase arriva dall'API (pubblica) e cambia poco il totale.
+  // ⚠️ Misurato 758 al primo build (30/10/2026): soglia sotto, per lasciare
+  // margine a una riscrittura e non a uno svuotamento.
+  '/awards': 550,
   // I due teaser nati il 27/08/2026, quando /allenamento e /negozio hanno
   // perso l'authGuard. ⚠️ Soglia SOTTO il misurato (503 e 495 al primo build
   // reale), non uguale: serve a intercettare uno svuotamento, non a impedire

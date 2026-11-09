@@ -82,6 +82,11 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'allenamento', renderMode: RenderMode.Prerender },
   { path: 'negozio', renderMode: RenderMode.Prerender },
   { path: 'docs', renderMode: RenderMode.Prerender },
+  { path: 'awards', renderMode: RenderMode.Prerender },
+  // ⚠️ L'invito è CLIENT: il token vive nel frammento, che in prerender non
+  // esiste. Lo coprirebbe già il `**` in fondo; è scritto per esteso perché
+  // non finisca per sbaglio fra le prerenderizzate.
+  { path: 'awards/invito', renderMode: RenderMode.Client },
   { path: 'live', renderMode: RenderMode.Prerender },
   { path: 'guide', renderMode: RenderMode.Prerender },
 

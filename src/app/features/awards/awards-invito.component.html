@@ -1,0 +1,191 @@
+<section class="section">
+  <div class="container">
+    <header class="page-hero page-hero--center">
+      <span class="eyebrow">3 Max Hyper Awards 2026</span>
+      <h1>Il tuo <span class="text-gradient">invito</span></h1>
+    </header>
+
+    <section class="inv" aria-live="polite">
+      @switch (stato()) {
+        @case ('carico') {
+          <span class="scheletro inv__sk-titolo"></span>
+          <span class="scheletro inv__sk-riga"></span>
+          <span class="scheletro scheletro--blocco"></span>
+        }
+        @case ('nessuno') {
+          <h2>Non troviamo il tuo invito</h2>
+          <p>
+            Apri per intero il collegamento che ti abbiamo mandato: l'invito è
+            nella parte finale dell'indirizzo, dopo il simbolo «#».
+          </p>
+          <a routerLink="/awards" class="btn btn--ghost">Vai ai premi</a>
+        }
+        @case ('errore') {
+          <h2>Questo invito non si può aprire</h2>
+          <p class="form-feedback is-error" role="alert">{{ errore() }}</p>
+          <div class="row">
+            <button type="button" class="btn btn--ghost" (click)="carica()">
+              Riprova
+            </button>
+            <a routerLink="/awards" class="btn btn--ghost">Vai ai premi</a>
+          </div>
+        }
+        @case ('accettato') {
+          <h2>Fatto: sei candidato</h2>
+          <p>Hai accettato per:</p>
+          <ul class="inv__elenco">
+            @for (c of accettate(); track c) {
+              <li>{{ etichettaDi().get(c) ?? c }}</li>
+            }
+          </ul>
+          <p>
+            Se entri nella rosa finale lo vedrai nella pagina dei premi. Da lì
+            puoi anche ritirarti, quando vuoi, fino alla chiusura del voto.
+          </p>
+          <a routerLink="/awards" class="btn btn--primary">Vai ai premi</a>
+        }
+        @case ('rifiutato') {
+          <h2>Ricevuto, grazie lo stesso</h2>
+          <p>
+            Il tuo nickname non comparirà da nessuna parte nei premi. Lo
+            cancelliamo insieme a tutte le proposte alla fine dell'edizione.
+          </p>
+        }
+        @case ('pronto') {
+          @if (invito(); as inv) {
+            <h2>La comunità ti ha proposto come <strong>{{ inv.nickname }}</strong></h2>
+
+            @if (inv.giaAccettate.length > 0) {
+              <p class="form-feedback is-info" role="status">
+                Hai già accettato per
+                @for (c of inv.giaAccettate; track c; let ultima = $last) {
+                  {{ etichettaDi().get(c) ?? c }}{{ ultima ? '.' : ', ' }}
+                }
+              </p>
+            }
+
+            @if (inv.categorie.length > 0) {
+              @if (auth.isAuthenticated()) {
+                <fieldset class="inv__scelte">
+                  <legend>Scegli in quali categorie partecipare</legend>
+                  @for (c of inv.categorie; track c.categoria) {
+                    <label class="inv__scelta">
+                      <input
+                        type="checkbox"
+                        [checked]="scelte().has(c.categoria)"
+                        (change)="scegli(c.categoria, $event)"
+                      />
+                      <span>
+                        <strong>{{ c.etichetta }}</strong>
+                        <span class="inv__desc">{{ c.descrizione }}</span>
+                      </span>
+                    </label>
+                  }
+                </fieldset>
+              } @else {
+                <p>Sei stato proposto per:</p>
+                <ul class="inv__elenco">
+                  @for (c of inv.categorie; track c.categoria) {
+                    <li>{{ c.etichetta }}</li>
+                  }
+                </ul>
+              }
+
+              <div class="inv__consenso">
+                <p class="inv__consenso-testo">{{ inv.consenso.testo }}</p>
+                <p class="inv__versione">Versione del testo: {{ inv.consenso.versione }}</p>
+              </div>
+
+              @if (auth.isAuthenticated()) {
+                <label class="inv__scelta inv__scelta--consenso">
+                  <input
+                    type="checkbox"
+                    [checked]="consenso()"
+                    (change)="spuntaConsenso($event)"
+                  />
+                  <span>Ho letto il testo qui sopra e do il mio consenso.</span>
+                </label>
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  [disabled]="!puoAccettare()"
+                  (click)="accetta()"
+                >
+                  {{ inVolo() ? 'Invio…' : 'Accetto di partecipare' }}
+                </button>
+              } @else {
+                <p>
+                  Per accettare serve un account gratuito con l'email confermata:
+                  colleghiamo la candidatura a te, così puoi ritirarti quando
+                  vuoi. Il tuo invito resta valido mentre ti registri.
+                </p>
+                <div class="row">
+                  <a
+                    class="btn btn--primary"
+                    [routerLink]="['/login']"
+                    [queryParams]="{ redirect: '/awards/invito' }"
+                    >Accedi per accettare</a
+                  >
+                  <a routerLink="/registrazione" class="btn btn--ghost"
+                    >Registrati</a
+                  >
+                </div>
+                @if (!auth.ready()) {
+                  <p class="gate__hint">Stiamo verificando la tua sessione…</p>
+                }
+              }
+
+              @if (erroreAzione(); as e) {
+                <p class="form-feedback is-error" role="alert">{{ e }}</p>
+              }
+
+              <div class="inv__rifiuto">
+                @if (confermaRifiuto()) {
+                  <p>
+                    Confermi? Non comparirai in nessuna categoria di questo
+                    invito.
+                  </p>
+                  <div class="row">
+                    <button
+                      type="button"
+                      class="btn btn--ghost"
+                      [disabled]="inVolo()"
+                      (click)="rifiuta()"
+                    >
+                      Sì, non voglio partecipare
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn--ghost"
+                      (click)="confermaRifiuto.set(false)"
+                    >
+                      Annulla
+                    </button>
+                  </div>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn--link inv__no"
+                    (click)="confermaRifiuto.set(true)"
+                  >
+                    Non voglio partecipare
+                  </button>
+                  <p class="inv__nota">Per rifiutare non serve un account.</p>
+                }
+              </div>
+            } @else {
+              <p>Non ci sono categorie che aspettano una tua risposta.</p>
+              <a routerLink="/awards" class="btn btn--ghost">Vai ai premi</a>
+            }
+
+            <p class="inv__nota">
+              Come trattiamo il tuo nickname è scritto al
+              <a routerLink="/privacy" fragment="terzi-awards">punto 12
+                dell'informativa sulla privacy</a>.
+            </p>
+          }
+        }
+      }
+    </section>
+  </div>
+</section>
