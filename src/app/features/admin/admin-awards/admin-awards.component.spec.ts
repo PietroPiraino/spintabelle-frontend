@@ -11,6 +11,7 @@ import {
   CandidatoAdmin,
   CategoriaSpoglio,
   EdizioneAwardsAdmin,
+  StatoAnnuncio,
 } from '../../../core/models/awards.models';
 import { AdminAwardsComponent, aDataLocale } from './admin-awards.component';
 
@@ -57,6 +58,19 @@ const CANDIDATO: CandidatoAdmin = {
 };
 
 const LINK = `https://bestfishforever.it/awards/invito#${'a'.repeat(24)}.${'S'.repeat(32)}`;
+
+const ANNUNCIO: StatoAnnuncio = {
+  tipo: 'proposte-aperte',
+  destinatariTotali: 250,
+  giaInviati: 0,
+  restanti: 250,
+  inviatiTotali: 0,
+  ultimoInvioAt: null,
+  ultimoErrore: null,
+  inCorso: false,
+  inviabile: true,
+  motivo: null,
+};
 
 describe('AdminAwardsComponent', () => {
   let fixture: ComponentFixture<AdminAwardsComponent>;
@@ -140,6 +154,8 @@ describe('AdminAwardsComponent', () => {
     )!;
     scheda.click();
     await rendi();
+    http.expectOne(`${API}/annunci/proposte-aperte`).flush(ANNUNCIO);
+    await rendi();
     const campi = el.querySelectorAll<HTMLInputElement>('input[type="datetime-local"]');
     expect(campi.length).toBe(6);
     campi[1].value = '2026-11-29T23:59';
@@ -151,5 +167,101 @@ describe('AdminAwardsComponent', () => {
     expect(Object.keys(req.request.body as object)).toEqual(['proposteAl']);
     req.flush(EDIZIONE);
     await rendi();
+  });
+
+  describe('email agli iscritti (scheda Edizione)', () => {
+    async function apriEdizione(stato: StatoAnnuncio = ANNUNCIO) {
+      Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'))
+        .find((b) => b.textContent?.includes('Edizione'))!
+        .click();
+      await rendi();
+      const req = http.expectOne(`${API}/annunci/proposte-aperte`);
+      expect(req.request.method).toBe('GET');
+      req.flush(stato);
+      await rendi();
+    }
+    const bottone = (testo: string) =>
+      Array.from(el.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.includes(testo),
+      );
+
+    it('lo stato si legge entrando nella scheda, non all’avvio', async () => {
+      http.expectNone(`${API}/annunci/proposte-aperte`);
+      await apriEdizione();
+      const testo = el.textContent ?? '';
+      expect(testo).toContain('Destinatari');
+      expect(testo).toContain('250');
+      expect(bottone('Invia ai prossimi 90')).toBeDefined();
+    });
+
+    it('la prova va solo a chi preme, e l’esito lo dice', async () => {
+      await apriEdizione();
+      bottone('Manda una prova a me')!.click();
+      const req = http.expectOne(`${API}/annunci/proposte-aperte`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ prova: true });
+      req.flush({ tipo: 'proposte-aperte', prova: true, inviati: 1, errore: null, stato: ANNUNCIO });
+      await rendi();
+      expect(el.querySelector('.form-feedback.is-success')?.textContent).toContain(
+        'Prova inviata',
+      );
+    });
+
+    it('⚠️ l’invio vero chiede conferma in linea, e manda il numero scelto', async () => {
+      await apriEdizione();
+      const quante = el.querySelector<HTMLInputElement>('input[type="number"]')!;
+      quante.value = '40';
+      quante.dispatchEvent(new Event('input'));
+      await rendi();
+      bottone('Invia ai prossimi 40')!.click();
+      await rendi();
+      http.expectNone(`${API}/annunci/proposte-aperte`);
+      expect(el.textContent).toContain("Un'email partita non si ritira");
+      bottone('Sì, invia 40 email')!.click();
+      const req = http.expectOne(`${API}/annunci/proposte-aperte`);
+      expect(req.request.body).toEqual({ limite: 40 });
+      req.flush({
+        tipo: 'proposte-aperte',
+        prova: false,
+        inviati: 40,
+        errore: null,
+        stato: { ...ANNUNCIO, giaInviati: 40, restanti: 210, inviatiTotali: 40 },
+      });
+      await rendi();
+      expect(el.querySelector('.form-feedback.is-success')?.textContent).toContain(
+        '40 email inviate. Ne restano 210.',
+      );
+      expect(bottone('Sì, invia')).toBeUndefined();
+    });
+
+    it('⚠️ il messaggio di Resend e quello del server si leggono così come sono', async () => {
+      const quota = 'You have reached your daily email sending quota.';
+      await apriEdizione({ ...ANNUNCIO, ultimoErrore: quota });
+      expect(el.querySelector('[role="alert"]')?.textContent).toContain(quota);
+
+      bottone('Invia ai prossimi')!.click();
+      await rendi();
+      bottone('Sì, invia')!.click();
+      http
+        .expectOne(`${API}/annunci/proposte-aperte`)
+        .flush(
+          { message: 'Un invio di questa email è già in corso: aspetta che finisca e ricarica.' },
+          { status: 409, statusText: 'Conflict' },
+        );
+      await rendi();
+      expect(el.querySelector('.form-feedback.is-error[role="status"]')?.textContent).toContain(
+        'già in corso',
+      );
+    });
+
+    it('fuori dalle proposte il pulsante è spento e dice perché', async () => {
+      await apriEdizione({
+        ...ANNUNCIO,
+        inviabile: false,
+        motivo: 'Le proposte sono chiuse: questa email direbbe una cosa non più vera.',
+      });
+      expect(bottone('Invia ai prossimi')!.disabled).toBe(true);
+      expect(el.textContent).toContain('Le proposte sono chiuse');
+    });
   });
 });

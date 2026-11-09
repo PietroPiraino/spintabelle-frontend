@@ -102,3 +102,56 @@
     }
   }
 }
+
+// ── Email agli iscritti (scheda Edizione) ───────────────────────────────────
+// Un blocco sotto le date, staccato da un filetto: è un'azione verso centinaia
+// di persone, e non deve leggersi come un altro campo del form delle date.
+.aw-ad__email {
+  margin-top: 1.6rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+
+  // ⚠️ Nel blocco a colonna i margini a mano si SOMMEREBBERO al gap.
+  > * {
+    margin: 0;
+  }
+}
+
+.aw-ad__sottotitolo {
+  font-size: 1.05rem;
+}
+
+// Nella riga i campi si allineano al fondo coi pulsanti: il margine che il
+// campo ha nella griglia delle date qui sposterebbe l'input di .6rem.
+.aw-ad__email-riga .aw-ad__campo {
+  margin-bottom: 0;
+}
+
+.aw-ad__quante {
+  max-width: 9rem;
+}
+
+.aw-ad__email-riga > .btn {
+  min-height: 44px;
+}
+
+.aw-ad__conferma {
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--copper-400);
+  border-radius: var(--radius-sm);
+
+  p {
+    margin: 0;
+  }
+
+  .admin-panel__actions {
+    margin-top: 0.6rem;
+  }
+
+  .btn {
+    min-height: 44px;
+  }
+}

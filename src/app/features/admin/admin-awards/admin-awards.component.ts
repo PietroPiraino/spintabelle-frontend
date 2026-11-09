@@ -8,12 +8,14 @@ import {
 } from '@angular/core';
 import {
   AWARDS_CATEGORIE,
+  AnnuncioAwards,
   AwardsCategoria,
   AwardsFase,
   CandidatoAdmin,
   CategoriaSpoglio,
   DateAwards,
   EdizioneAwardsAdmin,
+  StatoAnnuncio,
   StatoCandidatura,
   StatoInvito,
   VoceSpoglio,
@@ -205,6 +207,11 @@ export class AdminAwardsComponent {
 
   protected scegliVista(v: Vista): void {
     this.vista.set(v);
+    // Lo stato dell'email si legge entrando nella scheda: conta gli iscritti,
+    // e chi apre il pannello per lo spoglio non ne ha bisogno.
+    if (v === 'edizione' && !this.annuncio() && !this.caricandoAnnuncio()) {
+      this.caricaAnnuncio();
+    }
   }
 
   // ── Etichette ─────────────────────────────────────────────────────────────
@@ -282,6 +289,125 @@ export class AdminAwardsComponent {
           apiErrorMessage(err, 'Non siamo riusciti a salvare le date.'),
         );
       },
+    });
+  }
+
+  // ── Email agli iscritti ──────────────────────────────────────────────────
+
+  /** L'unica email di questo lotto; la tupla del backend ne prevede altre. */
+  protected readonly tipoAnnuncio: AnnuncioAwards = 'proposte-aperte';
+  protected readonly annuncio = signal<StatoAnnuncio | null>(null);
+  protected readonly caricandoAnnuncio = signal(false);
+  protected readonly erroreAnnuncio = signal<string | null>(null);
+  /**
+   * Quante email per pressione. ⚠️ 90 e non 100: col piano gratuito di Resend
+   * il tetto è di 100 al giorno, e ci devono stare anche le email di verifica
+   * dei nuovi iscritti che il lancio porta.
+   */
+  protected readonly quanteEmail = signal(90);
+  protected readonly confermaInvio = signal(false);
+  protected readonly invioInVolo = signal<'prova' | 'invio' | null>(null);
+  protected readonly esitoAnnuncio = signal<{
+    testo: string;
+    errore: boolean;
+  } | null>(null);
+
+  /** Quante partirebbero davvero: il numero scelto, ma non oltre i restanti. */
+  protected readonly prossimi = computed(() =>
+    Math.min(this.quanteEmail(), this.annuncio()?.restanti ?? 0),
+  );
+
+  protected caricaAnnuncio(): void {
+    this.caricandoAnnuncio.set(true);
+    this.erroreAnnuncio.set(null);
+    this.api.statoAnnuncio(this.tipoAnnuncio).subscribe({
+      next: (a) => {
+        this.caricandoAnnuncio.set(false);
+        this.annuncio.set(a);
+      },
+      error: (err: unknown) => {
+        this.caricandoAnnuncio.set(false);
+        this.erroreAnnuncio.set(
+          apiErrorMessage(err, 'Non riusciamo a leggere lo stato dell’email.'),
+        );
+      },
+    });
+  }
+
+  protected scriviQuante(event: Event): void {
+    const n = Math.floor(Number((event.target as HTMLInputElement).value));
+    this.quanteEmail.set(Number.isFinite(n) ? Math.min(1000, Math.max(1, n)) : 1);
+    this.confermaInvio.set(false);
+  }
+
+  protected mandaProva(): void {
+    if (this.invioInVolo()) return;
+    this.invioInVolo.set('prova');
+    this.esitoAnnuncio.set(null);
+    this.api.inviaAnnuncio(this.tipoAnnuncio, { prova: true }).subscribe({
+      next: (es) => {
+        this.invioInVolo.set(null);
+        this.annuncio.set(es.stato);
+        this.esitoAnnuncio.set(
+          es.errore
+            ? {
+                testo: `La prova non è partita. Resend ha risposto: «${es.errore}»`,
+                errore: true,
+              }
+            : {
+                testo:
+                  'Prova inviata al tuo indirizzo: controlla la casella (anche lo spam) prima di mandarla a tutti.',
+                errore: false,
+              },
+        );
+      },
+      error: (err: unknown) => this.invioFallito(err),
+    });
+  }
+
+  protected chiediInvio(): void {
+    if (this.prossimi() > 0) this.confermaInvio.set(true);
+  }
+
+  protected annullaInvio(): void {
+    this.confermaInvio.set(false);
+  }
+
+  protected invia(): void {
+    if (this.invioInVolo() || this.prossimi() === 0) return;
+    this.invioInVolo.set('invio');
+    this.esitoAnnuncio.set(null);
+    this.api
+      .inviaAnnuncio(this.tipoAnnuncio, { limite: this.quanteEmail() })
+      .subscribe({
+        next: (es) => {
+          this.invioInVolo.set(null);
+          this.confermaInvio.set(false);
+          this.annuncio.set(es.stato);
+          const fatte = `${es.inviati} ${es.inviati === 1 ? 'email inviata' : 'email inviate'}`;
+          const resto =
+            es.stato.restanti > 0
+              ? ` Ne restano ${es.stato.restanti}.`
+              : ' Hanno ricevuto l’email tutti gli iscritti.';
+          this.esitoAnnuncio.set(
+            es.errore
+              ? {
+                  testo: `${fatte}, poi l’invio si è fermato. Resend ha risposto: «${es.errore}». Riprendi più tardi: si riparte da dove si è fermato.`,
+                  errore: true,
+                }
+              : { testo: `${fatte}.${resto}`, errore: false },
+          );
+        },
+        error: (err: unknown) => this.invioFallito(err),
+      });
+  }
+
+  private invioFallito(err: unknown): void {
+    this.invioInVolo.set(null);
+    this.confermaInvio.set(false);
+    this.esitoAnnuncio.set({
+      testo: apiErrorMessage(err, 'Non siamo riusciti a mandare l’email.'),
+      errore: true,
     });
   }
 

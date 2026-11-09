@@ -147,3 +147,31 @@ export interface CandidatoConLink {
   candidato: CandidatoAdmin;
   link: string;
 }
+
+// ── Email agli iscritti (pannello) ──────────────────────────────────────────
+
+/** Copia della tupla `ANNUNCI_AWARDS` del backend (`awards.types.ts`). */
+export type AnnuncioAwards = 'proposte-aperte';
+
+/** Lo stato di un'email agli iscritti, come lo restituisce il pannello. */
+export interface StatoAnnuncio {
+  tipo: AnnuncioAwards;
+  destinatariTotali: number;
+  giaInviati: number;
+  restanti: number;
+  inviatiTotali: number;
+  ultimoInvioAt: string | null;
+  /** Il messaggio di Resend dell'ultimo invio interrotto, così com'è. */
+  ultimoErrore: string | null;
+  inCorso: boolean;
+  inviabile: boolean;
+  motivo: string | null;
+}
+
+export interface EsitoAnnuncio {
+  tipo: AnnuncioAwards;
+  prova: boolean;
+  inviati: number;
+  errore: string | null;
+  stato: StatoAnnuncio;
+}

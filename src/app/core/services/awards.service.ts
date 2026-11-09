@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AnnuncioAwards,
   AnteprimaInvito,
   AwardsCategoria,
   AwardsMio,
@@ -12,7 +13,9 @@ import {
   DateAwards,
   EdizioneAwards,
   EdizioneAwardsAdmin,
+  EsitoAnnuncio,
   PropostaAwards,
+  StatoAnnuncio,
 } from '../models/awards.models';
 
 /** I 3 Max Hyper Awards (voce di registro A20). */
@@ -132,5 +135,20 @@ export class AwardsService {
 
   rimuoviCandidato(id: string): Observable<{ ok: true }> {
     return this.http.delete<{ ok: true }>(`${this.admin}/candidati/${id}`);
+  }
+
+  statoAnnuncio(tipo: AnnuncioAwards): Observable<StatoAnnuncio> {
+    return this.http.get<StatoAnnuncio>(`${this.admin}/annunci/${tipo}`);
+  }
+
+  /** `prova`: solo all'admin che preme, senza toccare cursore né contatori. */
+  inviaAnnuncio(
+    tipo: AnnuncioAwards,
+    corpo: { limite?: number; prova?: boolean },
+  ): Observable<EsitoAnnuncio> {
+    return this.http.post<EsitoAnnuncio>(
+      `${this.admin}/annunci/${tipo}`,
+      corpo,
+    );
   }
 }

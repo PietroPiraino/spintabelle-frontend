@@ -126,6 +126,7 @@ export const ACTION_LABELS: Record<string, string> = {
   'add-awards-categories': 'Categorie aggiunte a un candidato',
   'renew-awards-invite': 'Nuovo link d’invito ai premi',
   'remove-awards-candidate': 'Candidato tolto dai premi',
+  'send-awards-announcement': 'Email Awards inviata',
 };
 
 /** Etichetta leggibile o, per un'azione non ancora mappata, lo slug grezzo. */

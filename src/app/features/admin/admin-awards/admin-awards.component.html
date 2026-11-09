@@ -241,6 +241,147 @@
         } @else if (!errore()) {
           <div class="spinner" role="status" aria-label="Caricamento dell'edizione"></div>
         }
+
+        <section class="aw-ad__email" aria-labelledby="aw-email-titolo">
+          <h3 id="aw-email-titolo" class="aw-ad__sottotitolo">
+            Email agli iscritti — proposte aperte
+          </h3>
+          <p class="admin-nota">
+            La ricevono gli iscritti con l'indirizzo confermato che non hanno spento
+            gli avvisi email. Manda prima una prova: arriva solo a te e non conta.
+          </p>
+          @if (annuncio(); as a) {
+            <div class="admin-kpi-griglia">
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Destinatari</span>
+                <span class="admin-kpi__valore">{{ a.destinatariTotali }}</span>
+                <span class="admin-kpi__nota">email confermata, avvisi accesi</span>
+              </div>
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Già raggiunti</span>
+                <span class="admin-kpi__valore">{{ a.giaInviati }}</span>
+                <span class="admin-kpi__nota">{{ a.inviatiTotali }} email inviate in tutto</span>
+              </div>
+              <div class="card admin-kpi">
+                <span class="admin-kpi__etichetta">Restanti</span>
+                <span class="admin-kpi__valore">{{ a.restanti }}</span>
+                <span class="admin-kpi__nota">
+                  @if (a.ultimoInvioAt) {
+                    ultimo invio {{ a.ultimoInvioAt | date: 'd MMM, HH:mm' }}
+                  } @else {
+                    mai inviata
+                  }
+                </span>
+              </div>
+            </div>
+
+            @if (a.ultimoErrore) {
+              <p class="form-feedback is-error aw-ad__email-riga" role="alert">
+                L'ultimo invio si è fermato. Resend ha risposto: «{{ a.ultimoErrore }}»
+              </p>
+            }
+            @if (a.inCorso) {
+              <p class="admin-nota" role="status">
+                Un invio è in corso: ricarica fra qualche minuto.
+              </p>
+            } @else if (!a.inviabile && a.motivo) {
+              <p class="admin-nota">{{ a.motivo }}</p>
+            }
+
+            <div class="row admin-panel__row aw-ad__email-riga">
+              <label class="field aw-ad__campo">
+                <span>Quante email</span>
+                <input
+                  class="input aw-ad__quante"
+                  type="number"
+                  min="1"
+                  max="1000"
+                  inputmode="numeric"
+                  [value]="quanteEmail()"
+                  (input)="scriviQuante($event)"
+                  aria-describedby="aw-email-aiuto"
+                />
+              </label>
+              <button
+                type="button"
+                class="btn btn--ghost"
+                [disabled]="invioInVolo() !== null"
+                (click)="mandaProva()"
+              >
+                {{ invioInVolo() === 'prova' ? 'Invio della prova…' : 'Manda una prova a me' }}
+              </button>
+              @if (!confermaInvio()) {
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  [disabled]="
+                    !a.inviabile || a.inCorso || prossimi() === 0 || invioInVolo() !== null
+                  "
+                  (click)="chiediInvio()"
+                >
+                  Invia ai prossimi {{ prossimi() }}
+                </button>
+              }
+              <p id="aw-email-aiuto" class="admin-panel__aiuto">
+                Col piano gratuito di Resend il tetto è di 100 email al giorno, comprese
+                le verifiche dei nuovi iscritti: per questo si parte da 90. Se l'invio si
+                ferma, la volta dopo riprende da dove era arrivato.
+              </p>
+            </div>
+
+            @if (confermaInvio()) {
+              <div class="aw-ad__conferma" role="group" aria-label="Conferma l'invio">
+                <p>
+                  Mandi l'email a {{ prossimi() }}
+                  {{ prossimi() === 1 ? 'iscritto' : 'iscritti' }}? Un'email partita non
+                  si ritira.
+                </p>
+                <div class="row admin-panel__actions">
+                  <button
+                    type="button"
+                    class="btn btn--primary"
+                    [disabled]="invioInVolo() !== null"
+                    (click)="invia()"
+                  >
+                    {{
+                      invioInVolo() === 'invio'
+                        ? 'Invio in corso…'
+                        : 'Sì, invia ' + prossimi() + ' email'
+                    }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost"
+                    [disabled]="invioInVolo() !== null"
+                    (click)="annullaInvio()"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (esitoAnnuncio(); as es) {
+              <p
+                class="form-feedback aw-ad__email-riga"
+                [class.is-error]="es.errore"
+                [class.is-success]="!es.errore"
+                role="status"
+              >
+                {{ es.testo }}
+              </p>
+            }
+          } @else if (erroreAnnuncio(); as e) {
+            <div class="form-feedback is-error aw-ad__errore" role="alert">
+              <span>{{ e }}</span>
+              <button type="button" class="btn btn--ghost btn--sm" (click)="caricaAnnuncio()">
+                Riprova
+              </button>
+            </div>
+          } @else {
+            <div class="spinner" role="status" aria-label="Caricamento dello stato dell'email"></div>
+          }
+        </section>
       </div>
     }
   }
