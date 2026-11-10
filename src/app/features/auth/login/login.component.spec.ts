@@ -85,6 +85,24 @@ describe('LoginComponent', () => {
     );
   });
 
+  it('il link «Registrati» porta avanti la destinazione (es. i premi)', async () => {
+    fixture.componentRef.setInput('redirect', '/awards');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const reg = el.querySelector<HTMLAnchorElement>('a[href^="/registrazione"]');
+    expect(reg?.getAttribute('href')).toBe('/registrazione?redirect=%2Fawards');
+  });
+
+  it('senza destinazione (o con una ostile) «Registrati» resta nudo', async () => {
+    fixture.componentRef.setInput('redirect', '//evil.it');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const reg = el.querySelector<HTMLAnchorElement>('a[href^="/registrazione"]');
+    expect(reg?.getAttribute('href')).toBe('/registrazione');
+  });
+
   it('ignora un redirect verso un altro dominio e torna in home', async () => {
     fixture.componentRef.setInput('redirect', '//evil.it/finta-pagina');
     fixture.detectChanges();

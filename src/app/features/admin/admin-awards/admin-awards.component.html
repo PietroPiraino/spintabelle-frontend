@@ -29,6 +29,11 @@
           <h2 class="admin-barra__titolo">Spoglio delle proposte</h2>
           <span class="admin-barra__conta">
             {{ totaleProposte() }} {{ totaleProposte() === 1 ? 'proposta' : 'proposte' }}
+            @if (persone(); as p) {
+              · {{ p }} {{ p === 1 ? 'persona' : 'persone' }}
+            } @else if (persone() === 0) {
+              · nessuna persona
+            }
           </span>
         </div>
         <p class="admin-nota">

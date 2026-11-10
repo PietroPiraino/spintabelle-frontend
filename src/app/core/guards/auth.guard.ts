@@ -3,6 +3,7 @@ import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { Observable, map, take } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { Role } from '../models/api.models';
+import { safeRedirect } from '../utils/safe-redirect';
 
 /**
  * Aspetta che il ripristino sessione in background sia concluso, poi valuta.
@@ -45,11 +46,21 @@ export function roleGuard(roles: Role[]): CanActivateFn {
   };
 }
 
-/** Per login/registrazione: chi è già dentro torna alla home. */
-export const guestGuard: CanActivateFn = () => {
+/**
+ * Per login/registrazione: chi è già dentro va dove il link voleva portarlo
+ * (`?redirect=`), altrimenti in home.
+ *
+ * ⚠️ Ignorare `redirect` mandava in home chi apriva da loggato un link come
+ * `/login?redirect=/awards` — quello del pulsante dell'email dei premi: il
+ * socio finiva sulla pagina che dei premi non parla. Passa da `safeRedirect`
+ * come nel login: è lo stesso valore, e lo stesso open redirect.
+ */
+export const guestGuard: CanActivateFn = (route) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   return whenReady(auth, () =>
-    auth.isAuthenticated() ? router.createUrlTree(['/']) : true,
+    auth.isAuthenticated()
+      ? router.parseUrl(safeRedirect(route.queryParamMap.get('redirect')))
+      : true,
   );
 };

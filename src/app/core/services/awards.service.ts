@@ -129,6 +129,11 @@ export class AwardsService {
     return this.http.get<CategoriaSpoglio[]>(`${this.admin}/spoglio`);
   }
 
+  /** Quante persone hanno proposto (lo spoglio conta le proposte). */
+  personeSpoglio(): Observable<{ persone: number }> {
+    return this.http.get<{ persone: number }>(`${this.admin}/spoglio/persone`);
+  }
+
   candidati(): Observable<CandidatoAdmin[]> {
     return this.http.get<CandidatoAdmin[]>(`${this.admin}/candidati`);
   }

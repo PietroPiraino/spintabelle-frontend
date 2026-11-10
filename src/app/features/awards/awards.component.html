@@ -21,6 +21,18 @@
         vota: niente premi in denaro, solo il riconoscimento e un posto
         nell'albo d'oro.
       </p>
+      <!--
+        ⚠️ Un link vero alla stessa pagina, non un pulsante: prima
+        dell'idratazione il browser scorre da sé (e rispetta `scroll-margin`).
+        Dopo, `vaiAlBlocco` fa lo stesso con `scrollIntoView`: l'àncora del
+        router scorre con `window.scrollTo` e ignora `scroll-margin`, e il
+        titolo del blocco finiva sotto l'header (misurato: top 0).
+      -->
+      <div class="row aw-hero__azioni">
+        <a class="btn btn--primary" href="/awards/#aw-fase" (click)="vaiAlBlocco($event)">{{
+          etichettaHero()
+        }}</a>
+      </div>
     </header>
 
     <!--
@@ -29,6 +41,7 @@
       risposta non sposta la pagina.
     -->
     <section
+      id="aw-fase"
       class="aw-fase"
       aria-labelledby="aw-fase-titolo"
       [attr.aria-busy]="statoEdizione() === 'attesa'"
@@ -61,17 +74,9 @@
                 giocatore che secondo te merita ciascuna categoria.
               </p>
               @if (!auth.isAuthenticated()) {
-                <div class="row">
-                  <a routerLink="/registrazione" class="btn btn--primary"
-                    >Registrati gratis</a
-                  >
-                  <a
-                    class="btn btn--ghost"
-                    [routerLink]="['/login']"
-                    [queryParams]="{ redirect: '/awards' }"
-                    >Accedi</a
-                  >
-                </div>
+                <ng-container
+                  *ngTemplateOutlet="accesso; context: { $implicit: 'Accedi' }"
+                />
               }
             }
             @case ('PROPOSTE') {
@@ -87,20 +92,46 @@
                   Riprova più tardi.
                 </p>
               } @else if (!auth.isAuthenticated()) {
-                <div class="row">
-                  <a routerLink="/registrazione" class="btn btn--primary"
-                    >Registrati per proporre</a
-                  >
-                  <a
-                    class="btn btn--ghost"
-                    [routerLink]="['/login']"
-                    [queryParams]="{ redirect: '/awards' }"
-                    >Accedi</a
-                  >
-                </div>
-                @if (!auth.ready()) {
-                  <p class="gate__hint">Stiamo verificando la tua sessione…</p>
-                }
+                <!--
+                  ⚠️ I passi in chiaro e «Accedi» come pulsante principale: il
+                  pubblico vero sono i soci, che un account ce l'hanno già. Il
+                  10/11/2026, col solo «Registrati per proporre» in evidenza e
+                  il requisito scritto nel regolamento chiuso, ~50 visite hanno
+                  prodotto le proposte di UNA persona.
+                -->
+                <!--
+                  ⚠️ Il testo di ogni passo sta in UNO span: il `li` è una
+                  griglia (numero | testo), e `<strong>` più il testo sciolto
+                  sarebbero due celle, cioè il testo in colonna da 1,9rem, una
+                  parola per riga (misurato: blocco alto 1.300px su telefono).
+                -->
+                <ol class="aw-passi">
+                  <li>
+                    <span
+                      ><strong>Accedi al sito</strong> con la tua email o il
+                      nickname. Non hai un account? Registrati gratis: ti
+                      mandiamo un'email per confermarlo.</span
+                    >
+                  </li>
+                  <li>
+                    <span
+                      ><strong>Scrivi un nickname</strong> in una o più
+                      categorie: anche una sola va bene.</span
+                    >
+                  </li>
+                  <li>
+                    <span
+                      ><strong>Premi «Salva le proposte».</strong> Puoi
+                      cambiarle fino al {{ giorno(date().proposteAl) }}.</span
+                    >
+                  </li>
+                </ol>
+                <ng-container
+                  *ngTemplateOutlet="
+                    accesso;
+                    context: { $implicit: 'Accedi e proponi' }
+                  "
+                />
               } @else {
                 @if (erroreCaricamento(); as errore) {
                   <div class="form-feedback is-error aw-prop__errore" role="alert">
@@ -114,6 +145,10 @@
                     </button>
                   </div>
                 } @else {
+                  <p>
+                    Scrivi il nickname in una o più categorie, poi premi
+                    <strong>Salva le proposte</strong> in fondo.
+                  </p>
                   <form class="aw-prop" (submit)="$event.preventDefault(); salva()">
                     @for (g of gruppi; track g.formato) {
                       <fieldset class="aw-prop__gruppo">
@@ -206,20 +241,9 @@
                 </p>
                 <ng-container *ngTemplateOutlet="rosaLettura" />
               } @else if (!auth.isAuthenticated()) {
-                <div class="row">
-                  <a routerLink="/registrazione" class="btn btn--primary"
-                    >Registrati per votare</a
-                  >
-                  <a
-                    class="btn btn--ghost"
-                    [routerLink]="['/login']"
-                    [queryParams]="{ redirect: '/awards' }"
-                    >Accedi</a
-                  >
-                </div>
-                @if (!auth.ready()) {
-                  <p class="gate__hint">Stiamo verificando la tua sessione…</p>
-                }
+                <ng-container
+                  *ngTemplateOutlet="accesso; context: { $implicit: 'Accedi e vota' }"
+                />
                 <ng-container *ngTemplateOutlet="rosaLettura" />
               } @else if (erroreCaricamento(); as errore) {
                 <div class="form-feedback is-error aw-prop__errore" role="alert">
@@ -505,6 +529,37 @@
     </section>
   </div>
 </section>
+
+<!--
+  I pulsanti per chi non ha fatto l'accesso, uguali in ogni fase che lo chiede.
+  ⚠️ ENTRAMBI portano `redirect=/awards`: senza, chi si registrava finiva in
+  home dopo la conferma dell'email e non tornava mai al modulo. «Accedi» è il
+  principale perché il pubblico vero sono i soci; l'etichetta la sceglie la fase.
+-->
+<ng-template #accesso let-etichetta>
+  <div class="row">
+    <a
+      class="btn btn--primary"
+      [routerLink]="['/login']"
+      [queryParams]="{ redirect: '/awards' }"
+      >{{ etichetta }}</a
+    >
+    <a
+      class="btn btn--ghost"
+      [routerLink]="['/registrazione']"
+      [queryParams]="{ redirect: '/awards' }"
+      >Registrati gratis</a
+    >
+  </div>
+  @if (!auth.ready()) {
+    <p class="gate__hint">Stiamo verificando la tua sessione…</p>
+  } @else {
+    <p class="gate__hint">
+      Password dimenticata?
+      <a routerLink="/password-dimenticata">Recuperala qui</a>
+    </p>
+  }
+</ng-template>
 
 <!--
   La rosa finale in sola lettura: per chi non vota (anonimo, voto sospeso,

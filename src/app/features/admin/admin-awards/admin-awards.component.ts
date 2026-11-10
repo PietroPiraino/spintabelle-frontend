@@ -229,6 +229,13 @@ export class AdminAwardsComponent {
     () => this.spoglio()?.reduce((s, c) => s + c.totale, 0) ?? 0,
   );
 
+  /**
+   * Quante PERSONE hanno proposto: il totale conta le proposte, e chi ne fa
+   * nove pesa nove (il 10/11/2026 «9 proposte» erano una persona sola).
+   * `null` = non letto: un backend più vecchio risponde 404, e la riga sparisce.
+   */
+  protected readonly persone = signal<number | null>(null);
+
   constructor() {
     this.ricarica();
   }
@@ -247,6 +254,10 @@ export class AdminAwardsComponent {
     this.api.spoglio().subscribe({
       next: (s) => this.spoglio.set(s),
       error: fallito,
+    });
+    this.api.personeSpoglio().subscribe({
+      next: (p) => this.persone.set(p.persone),
+      error: () => this.persone.set(null),
     });
     this.api.candidati().subscribe({
       next: (c) => this.candidati.set(c),

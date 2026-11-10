@@ -79,9 +79,9 @@ export class HeaderComponent {
       id: 'scuola',
       label: 'Scuola',
       children: [
-        // ⚠️ `isNew` e' un flag che si sposta A MANO: oggi sta sugli Awards.
-        // Replayer, guide e Negozio ce l'hanno avuto e non sono piu' novita'.
-        { path: '/awards', label: 'Awards 2026', isNew: true },
+        // ⚠️ `isNew` e' un flag che si sposta A MANO: oggi non sta su nessuna
+        // voce. Replayer, guide, Negozio e Awards ce l'hanno avuto (gli Awards
+        // sono saliti fra le voci dirette il 10/11/2026).
         { path: '/affiliazioni', label: 'Affiliazioni' },
         { path: '/negozio', label: 'Negozio' },
         { path: '/guide', label: 'Guide' },
@@ -99,6 +99,10 @@ export class HeaderComponent {
    * markup e CSS nuovi.
    */
   protected readonly dirette: NavLink[] = [
+    // ⚠️ TEMPORANEA: dal 10/11/2026 al 9/1/2027 (premiazione), decisione owner.
+    // Dentro «Scuola» nessuno la trovava. Col lotto 4 torna nella tendina,
+    // o sparisce: la barra e' stata misurata a 1025px con sei voci.
+    { path: '/awards', label: 'Awards' },
     { path: '/news', label: 'News' },
     { path: '/live', label: 'Live' },
     { path: '/abbonati', label: 'Abbonati' },

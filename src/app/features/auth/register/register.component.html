@@ -5,9 +5,16 @@
       <h1>Controlla la posta</h1>
       <p class="auth-card__sub">
         Ti abbiamo inviato un link di verifica a <strong>{{ email }}</strong>.
-        Cliccalo per attivare l'account, poi torna qui per accedere.
+        @if (perPremi()) {
+          Cliccalo per attivare l'account, poi accedi: ti riportiamo alla
+          pagina dei premi per fare le tue proposte.
+        } @else {
+          Cliccalo per attivare l'account, poi torna qui per accedere.
+        }
       </p>
-      <a routerLink="/login" class="btn btn--primary">Vai all'accesso</a>
+      <a routerLink="/login" [queryParams]="queryAccesso()" class="btn btn--primary"
+        >Vai all'accesso</a
+      >
       <p class="auth-card__footer">
         Non è arrivata? <a routerLink="/recupera-verifica">Reinvia il link</a>
       </p>
@@ -16,7 +23,14 @@
     <div class="card card--pad auth-card rise">
       <div class="auth-card__suit" aria-hidden="true"></div>
       <h1>Unisciti al banco</h1>
-      <p class="auth-card__sub">Crea l'account per accedere alle lezioni della scuola.</p>
+      <p class="auth-card__sub">
+        @if (perPremi()) {
+          Crea l'account gratis per proporre i tuoi candidati ai 3 Max Hyper
+          Awards.
+        } @else {
+          Crea l'account per accedere alle lezioni della scuola.
+        }
+      </p>
 
       @if (error()) {
         <div class="form-feedback is-error" role="alert">{{ error() }}</div>
@@ -108,7 +122,8 @@
       </form>
 
       <p class="auth-card__footer">
-        Hai già un account? <a routerLink="/login">Accedi</a>
+        Hai già un account?
+        <a routerLink="/login" [queryParams]="queryAccesso()">Accedi</a>
       </p>
     </div>
   }

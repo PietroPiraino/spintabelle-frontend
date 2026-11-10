@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -9,6 +16,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { apiErrorMessage } from '../../../core/utils/http-error';
+import { safeRedirect } from '../../../core/utils/safe-redirect';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   const password = group.get('password')?.value as string;
@@ -27,6 +35,28 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 export class RegisterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+
+  /**
+   * Dove portare la persona dopo il primo accesso (`?redirect=`, per esempio
+   * da `/awards`). Non sopravvive al link di conferma, che si apre spesso in un
+   * altro browser: per questo la schermata «Controlla la posta» la mette nel
+   * pulsante «Vai all'accesso», e `/verifica-email` ha un pulsante suo per i
+   * premi. Ripulita con `safeRedirect` come nel login.
+   */
+  readonly redirect = input<string>();
+
+  protected readonly destinazione = computed(() => safeRedirect(this.redirect()));
+
+  /** Si arriva dalla pagina dei premi: i testi lo dicono. */
+  protected readonly perPremi = computed(() =>
+    this.destinazione().startsWith('/awards'),
+  );
+
+  /** Il `redirect` da passare all'accesso; vuoto se si torna in home. */
+  protected readonly queryAccesso = computed((): Record<string, string> => {
+    const dove = this.destinazione();
+    return dove === '/' ? {} : { redirect: dove };
+  });
 
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);

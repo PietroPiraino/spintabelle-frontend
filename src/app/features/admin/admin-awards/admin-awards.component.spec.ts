@@ -160,8 +160,13 @@ describe('AdminAwardsComponent', () => {
     fixture.detectChanges();
     http.expectOne(`${API}/edizione`).flush(EDIZIONE);
     http.expectOne(`${API}/spoglio`).flush(SPOGLIO);
+    http.expectOne(`${API}/spoglio/persone`).flush({ persone: 4 });
     http.expectOne(`${API}/candidati`).flush([]);
     await rendi();
+  });
+
+  it('accanto alle proposte dice quante PERSONE hanno proposto', () => {
+    expect(el.querySelector('.admin-barra__conta')?.textContent).toContain('4 persone');
   });
 
   afterEach(() => {

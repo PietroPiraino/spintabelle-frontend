@@ -134,11 +134,45 @@ describe('AwardsComponent', () => {
     http.expectOne(`${API}/edizione`).flush(edizione());
     await rendi();
     expect(el.querySelector('form.aw-prop')).toBeNull();
-    const accedi = Array.from(el.querySelectorAll('a')).find(
-      (a) => a.textContent?.trim() === 'Accedi',
-    );
+    const link = (testo: string) =>
+      Array.from(el.querySelectorAll('a')).find(
+        (a) => a.textContent?.trim() === testo,
+      );
+    // ⚠️ ENTRAMBI con la destinazione: senza, chi si registra finisce in home
+    // dopo la conferma dell'email e non torna mai al modulo.
+    const accedi = link('Accedi e proponi');
+    expect(accedi?.getAttribute('href')).toContain('/login');
     expect(accedi?.getAttribute('href')).toContain('redirect=%2Fawards');
+    expect(accedi?.classList).toContain('btn--primary');
+    const registrati = link('Registrati gratis');
+    expect(registrati?.getAttribute('href')).toContain('/registrazione');
+    expect(registrati?.getAttribute('href')).toContain('redirect=%2Fawards');
+    // I tre passi in chiaro, con la data di chiusura.
+    const passi = el.querySelectorAll('.aw-passi li');
+    expect(passi.length).toBe(3);
+    expect(passi[0].textContent).toContain('Accedi al sito');
+    expect(passi[2].textContent).toContain('22 novembre');
     http.expectNone(`${API}/me`);
+  });
+
+  it('l’hero porta al blocco della fase con un’àncora, uguale per tutti', async () => {
+    monta(false);
+    http.expectOne(`${API}/edizione`).flush(edizione());
+    await rendi();
+    const hero = el.querySelector<HTMLAnchorElement>('.aw-hero__azioni a');
+    expect(hero?.textContent?.trim()).toBe('Proponi i tuoi candidati');
+    expect(hero?.getAttribute('href')).toContain('#aw-fase');
+    expect(el.querySelector('section#aw-fase')).not.toBeNull();
+  });
+
+  it('a un iscritto dice dove sta il pulsante per salvare', async () => {
+    monta(true);
+    http.expectOne(`${API}/edizione`).flush(edizione());
+    http.expectOne(`${API}/me`).flush(MIO_VUOTO);
+    await rendi();
+    expect(el.querySelector('.aw-fase')?.textContent).toContain(
+      'poi premi Salva le proposte in fondo',
+    );
   });
 
   it('un iscritto vede un campo per ciascuna delle nove categorie', async () => {
@@ -315,7 +349,10 @@ describe('AwardsComponent — rosa finale e voto', () => {
       (n) => n.textContent?.trim(),
     );
     expect(nick).toEqual(['Delta', 'Epsilon', 'Zeta', 'Alfa', 'Beta', 'Gamma']);
-    expect(el.textContent).toContain('Registrati per votare');
+    const accedi = Array.from(el.querySelectorAll('a')).find(
+      (a) => a.textContent?.trim() === 'Accedi e vota',
+    );
+    expect(accedi?.getAttribute('href')).toContain('redirect=%2Fawards');
     // Una categoria pubblicata senza finalisti lo dice, non resta vuota.
     expect(el.textContent).toContain("Quest'anno la categoria non si assegna.");
     http.expectNone(`${API}/me`);

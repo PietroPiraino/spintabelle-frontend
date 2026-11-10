@@ -15,6 +15,8 @@
   max-width: 760px;
   min-height: 13rem;
   margin: 0 auto;
+  // L'hero ci porta con un'àncora: senza, il titolo finisce sotto l'header.
+  scroll-margin-top: 5.5rem;
   padding: clamp(1.4rem, 3vw, 2.2rem);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -62,6 +64,55 @@
 
 .aw-fase__sk-azione {
   width: min(16rem, 60%);
+}
+
+// ── Il pulsante dell'hero ───────────────────────────────────────────────────
+.aw-hero__azioni {
+  justify-content: center;
+}
+
+// ── I tre passi per chi non ha fatto l'accesso ──────────────────────────────
+//
+// Elenco numerato vero (`<ol>`): l'ordine è il contenuto. Allineato a sinistra
+// dentro un blocco centrato, perché tre righe centrate non si leggono come passi.
+.aw-passi {
+  counter-reset: passo;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 34rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  text-align: left;
+
+  li {
+    counter-increment: passo;
+    display: grid;
+    grid-template-columns: 1.9rem minmax(0, 1fr);
+    gap: 0.7rem;
+    align-items: baseline;
+    color: var(--text-muted);
+    line-height: 1.55;
+
+    &::before {
+      content: counter(passo);
+      display: inline-grid;
+      place-items: center;
+      width: 1.9rem;
+      height: 1.9rem;
+      border-radius: 50%;
+      border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+      color: var(--gold-text);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+  }
+
+  strong {
+    color: var(--text);
+  }
 }
 
 // ── Il form delle proposte ──────────────────────────────────────────────────

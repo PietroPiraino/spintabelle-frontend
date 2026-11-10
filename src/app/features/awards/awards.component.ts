@@ -142,6 +142,43 @@ export class AwardsComponent {
     return e?.disponibile ? e.fase : null;
   });
 
+  /**
+   * Il pulsante dell'hero, che porta al blocco della fase. ⚠️ Finché l'API non
+   * risponde vale quello delle proposte: è l'unica cosa che l'hero deve dire
+   * nella finestra in cui la pagina viene promossa.
+   */
+  protected readonly etichettaHero = computed(() => {
+    switch (this.fase()) {
+      case 'CONTATTI':
+      case 'ATTESA_RISULTATI':
+        return 'A che punto siamo';
+      case 'ATTESA_VOTO':
+      case 'VOTO':
+        return 'Vota i finalisti';
+      case 'RISULTATI':
+        return 'I vincitori';
+      default:
+        return 'Proponi i tuoi candidati';
+    }
+  });
+
+  /**
+   * Il pulsante dell'hero: scorre al blocco della fase e ci porta il fuoco
+   * (chi usa la tastiera o uno screen reader deve arrivare dove è andata la
+   * pagina). `preventDefault` evita che il router tratti il link come una
+   * navigazione.
+   */
+  protected vaiAlBlocco(evento: Event): void {
+    const blocco = document.getElementById('aw-fase');
+    if (!blocco) return;
+    evento.preventDefault();
+    const ridotto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    blocco.scrollIntoView({ behavior: ridotto ? 'auto' : 'smooth', block: 'start' });
+    const titolo = document.getElementById('aw-fase-titolo');
+    titolo?.setAttribute('tabindex', '-1');
+    titolo?.focus({ preventScroll: true });
+  }
+
   protected readonly raccoltaAttiva = computed(() => {
     const e = this.edizione();
     return e?.disponibile ? e.raccoltaAttiva : false;

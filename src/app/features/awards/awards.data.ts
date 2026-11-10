@@ -133,6 +133,12 @@ export const REGOLE_AWARDS: readonly string[] = [
 /** FAQ: unica sorgente per il testo a schermo e per il JSON-LD FAQPage. */
 export const FAQ_AWARDS: readonly { q: string; a: string }[] = [
   {
+    // ⚠️ Prima di tutte: è la domanda che la pagina non diceva da nessuna parte
+    // (il requisito stava solo nella regola 1, dentro il regolamento chiuso).
+    q: 'Come faccio a proporre un candidato?',
+    a: 'Accedi al sito con la tua email o il nickname: l’iscrizione è gratuita, e la prima volta ti chiediamo di confermare l’indirizzo email. Poi torna in questa pagina, scrivi un nickname in una o più categorie e premi «Salva le proposte». Puoi cambiarle fino alla chiusura delle proposte.',
+  },
+  {
     q: 'Posso proporre un giocatore che non è iscritto al sito?',
     a: 'Sì. Lo contattiamo noi, con un invito personale, e compare sul sito solo se accetta. Finché non accetta, il suo nickname resta un conteggio privato.',
   },

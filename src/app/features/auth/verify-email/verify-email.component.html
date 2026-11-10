@@ -6,7 +6,20 @@
       <p class="auth-card__sub">
         Il tuo account è attivo: prendi posto al tavolo.
       </p>
-      <a routerLink="/login" class="btn btn--primary">Accedi ora</a>
+      @if (invitoPremi(); as invito) {
+        <p class="auth-card__sub">{{ invito.testo }}</p>
+        <a
+          routerLink="/login"
+          [queryParams]="{ redirect: '/awards' }"
+          class="btn btn--primary"
+          >{{ invito.pulsante }}</a
+        >
+        <p class="auth-card__footer">
+          Oppure <a routerLink="/login">accedi e vai alla home</a>
+        </p>
+      } @else {
+        <a routerLink="/login" class="btn btn--primary">Accedi ora</a>
+      }
     } @else {
       <div class="auth-card__suit" aria-hidden="true"></div>
       <h1>Verifica non riuscita</h1>
