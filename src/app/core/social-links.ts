@@ -19,6 +19,6 @@ export const SOCIAL_LINKS = {
    */
   youtubeIscriviti:
     'https://www.youtube.com/@Best_Fish_Forever?sub_confirmation=1',
-  discord: 'https://discord.gg/Cq7VUN6Kgc',
+  discord: 'https://discord.gg/CfeumbbdEg',
   instagram: 'https://www.instagram.com/bestfishforever/',
 } as const;
