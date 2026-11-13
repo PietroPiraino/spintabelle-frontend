@@ -1,4 +1,4 @@
-import { runSimulation, DEFAULT_BANDS } from './sim-engine';
+import { runSimulation, DEFAULT_BANDS, DEFAULT_BANKROLLS } from './sim-engine';
 import { buildCombined } from './model';
 import type { PayoutStructure, SimConfig } from './types';
 
@@ -116,6 +116,16 @@ describe('runSimulation — correttezza statistica', () => {
 });
 
 describe('runSimulation — rischio di rovina (bust chart)', () => {
+  it('le scelte del menu arrivano a 300 buy-in, in ordine crescente', () => {
+    const scelte = [...DEFAULT_BANKROLLS] as number[];
+    expect(scelte).toContain(300);
+    expect(scelte).toEqual([...scelte].sort((a, b) => a - b));
+    // Il motore restituisce una curva per ogni scelta, 300 compreso.
+    const r = runSimulation(cfg({ bankrolls: scelte, numGames: 500, numSims: 100 }));
+    expect(r.bust!.bankrolls).toEqual(scelte);
+    expect(r.bust!.final.length).toBe(scelte.length);
+  });
+
   it('assente senza bankroll richiesti', () => {
     expect(runSimulation(cfg()).bust).toBeUndefined();
   });

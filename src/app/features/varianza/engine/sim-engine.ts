@@ -24,8 +24,13 @@ export const DEFAULT_BANDS = [
   0.01, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99,
 ] as const;
 
-/** Bankroll di default (in buy-in) per le curve di rischio di rovina. */
-export const DEFAULT_BANKROLLS = [10, 20, 30, 50, 100, 200] as const;
+/**
+ * Bankroll di default (in buy-in) per le curve di rischio di rovina.
+ * In ordine crescente: è anche l'ordine del menu «Ho N buy-in di bankroll».
+ * 300 aggiunto il 13/11/2026 su richiesta degli studenti (è la soglia che molti
+ * tengono ai limiti alti, dove 100-200 buy-in non bastano).
+ */
+export const DEFAULT_BANKROLLS = [10, 20, 30, 50, 100, 200, 300] as const;
 
 function pIndex(p: number, n: number): number {
   return Math.min(n - 1, Math.max(0, Math.round(p * (n - 1))));
