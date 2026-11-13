@@ -169,7 +169,7 @@ export type LessonVisibility = 'USER' | 'PESCE_ROSSO' | 'SQUALO';
 export type LessonStakes = 'LOW' | 'HIGH';
 
 /**
- * Le sette categorie delle lezioni, nell'ordine del programma di studio.
+ * Le otto categorie delle lezioni, nell'ordine del programma di studio.
  *
  * ⚠️ È lo SPECCHIO di `backend/src/lessons/lessons.types.ts` e non c'è alcuna
  * guardia che confronti le due copie: una deriva (una categoria aggiunta di là
@@ -182,6 +182,7 @@ export const LESSON_CATEGORIES = [
   'heads-up',
   'review',
   'leak-finder',
+  'studi-mda',
   'mental-coaching',
   'sessioni-live',
 ] as const;
@@ -193,6 +194,7 @@ export const LESSON_CATEGORY_LABELS: Record<LessonCategory, string> = {
   'heads-up': 'Heads-up',
   review: 'Hand Review',
   'leak-finder': 'Leak finder',
+  'studi-mda': 'Studi MDA',
   'mental-coaching': 'Mental coaching',
   'sessioni-live': 'Sessioni dal vivo',
 };
