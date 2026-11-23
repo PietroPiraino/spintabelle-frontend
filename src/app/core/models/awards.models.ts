@@ -150,6 +150,46 @@ export interface CandidatoAdmin {
   invito: { stato: StatoInvito; scadeAt: string | null };
   account: { nickname: string; email: string } | null;
   consenso: { versione: string; at: string } | null;
+  /**
+   * I consensi dati per messaggio e messi a verbale dallo staff. ⚠️ Opzionale:
+   * un backend più vecchio del pannello non manda il campo, e chi legge usa
+   * `?? []`.
+   */
+  consensiStaff?: ConsensoStaffAdmin[];
+}
+
+/**
+ * Copia dell'elenco CHIUSO del backend (`AWARDS_CANALI_CONSENSO`): solo canali
+ * scritti, e nessun «altro» — il consenso per messaggio vale perché resta un
+ * messaggio da conservare come prova. Le etichette le manda il server.
+ */
+export type CanaleConsenso =
+  'INSTAGRAM' | 'FACEBOOK' | 'DISCORD' | 'WHATSAPP' | 'TELEGRAM' | 'EMAIL';
+
+/** Un consenso dato per messaggio: quale via, quando, su quale testo. */
+export interface ConsensoStaffAdmin {
+  categorie: AwardsCategoria[];
+  canale: CanaleConsenso;
+  etichettaCanale: string;
+  versione: string;
+  at: string;
+  registratoAt: string;
+}
+
+/** Il testo versionato da mandare a chi accetta per messaggio, e i canali. */
+export interface ConsensoPerMessaggio {
+  versione: string;
+  testo: string;
+  canali: { canale: CanaleConsenso; etichetta: string }[];
+}
+
+/** Ciò che il pannello manda per mettere a verbale un consenso per messaggio. */
+export interface RegistraConsenso {
+  categorie: AwardsCategoria[];
+  canale: CanaleConsenso;
+  /** Quando la persona ha risposto (istante ISO). */
+  at: string;
+  dichiaro: true;
 }
 
 // ── Rosa finale e voti (pannello) ───────────────────────────────────────────

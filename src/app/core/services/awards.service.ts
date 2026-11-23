@@ -11,11 +11,13 @@ import {
   CandidatoConLink,
   CardFormato,
   CategoriaSpoglio,
+  ConsensoPerMessaggio,
   DateAwards,
   EdizioneAwards,
   EdizioneAwardsAdmin,
   EsitoAnnuncio,
   PropostaAwards,
+  RegistraConsenso,
   RiepilogoVoti,
   RosaAdmin,
   StatoAnnuncio,
@@ -167,6 +169,35 @@ export class AwardsService {
 
   rimuoviCandidato(id: string): Observable<{ ok: true }> {
     return this.http.delete<{ ok: true }>(`${this.admin}/candidati/${id}`);
+  }
+
+  // ── Consenso dato per messaggio ───────────────────────────────────────────
+
+  /** Il testo versionato del consenso e i canali ammessi: si copia, non si riscrive. */
+  consensoPerMessaggio(): Observable<ConsensoPerMessaggio> {
+    return this.http.get<ConsensoPerMessaggio>(`${this.admin}/consenso`);
+  }
+
+  /** Mette a verbale un consenso arrivato per messaggio. */
+  registraConsenso(
+    id: string,
+    corpo: RegistraConsenso,
+  ): Observable<CandidatoAdmin> {
+    return this.http.post<CandidatoAdmin>(
+      `${this.admin}/candidati/${id}/consenso`,
+      corpo,
+    );
+  }
+
+  /** Esegue un ritiro chiesto dall'interessato (chi non ha un account lo chiede così). */
+  ritiraPerConto(
+    id: string,
+    categorie: AwardsCategoria[],
+  ): Observable<CandidatoAdmin> {
+    return this.http.post<CandidatoAdmin>(
+      `${this.admin}/candidati/${id}/ritira`,
+      { categorie },
+    );
   }
 
   rosa(): Observable<RosaAdmin> {

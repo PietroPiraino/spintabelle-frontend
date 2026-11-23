@@ -134,7 +134,8 @@
         <p class="admin-nota">
           Un candidato compare in pubblico solo nelle categorie che ha accettato. La
           scheda di ogni riga permette di aggiungere categorie, generare un nuovo
-          link o togliere il candidato.
+          link, registrare un consenso arrivato per messaggio (per chi non vuole
+          registrarsi), ritirare una candidatura o togliere il candidato.
         </p>
 
         @if (candidati(); as lista) {
@@ -164,11 +165,8 @@
                           <span class="admin-table__ident-riga">
                             <strong [title]="c.nickname">{{ c.nickname }}</strong>
                           </span>
-                          <span
-                            class="admin-table__sub"
-                            [title]="c.account ? c.account.email : 'Nessun account collegato'"
-                          >
-                            {{ c.account ? c.account.nickname + ' · ' + c.account.email : 'Nessun account collegato' }}
+                          <span class="admin-table__sub" [title]="sottoRiga(c)">
+                            {{ sottoRiga(c) }}
                           </span>
                         </span>
                       </th>
@@ -805,7 +803,7 @@
   @if (scheda(); as c) {
     <app-modal
       [titolo]="c.nickname"
-      [sottotitolo]="c.account ? 'Account: ' + c.account.nickname + ' · ' + c.account.email : 'Nessun account collegato'"
+      [sottotitolo]="c.account ? 'Account: ' + c.account.nickname + ' · ' + c.account.email : sottoRiga(c)"
       [sporco]="sporco()"
       [salvando]="inVolo()"
       (chiusa)="chiudi()"
@@ -814,6 +812,9 @@
         <div class="admin-modale__corpo">
           @if (erroreModale(); as e) {
             <p class="form-feedback is-error" role="alert">{{ e }}</p>
+          }
+          @if (esitoModale(); as ok) {
+            <p class="form-feedback is-success" role="status">{{ ok }}</p>
           }
           <ul class="aw-ad__stati">
             @for (k of c.categorie; track k.categoria) {
@@ -831,13 +832,129 @@
               · scade il {{ c.invito.scadeAt | date: 'd MMM y, HH:mm' }}
             }
             @if (c.consenso) {
-              · consenso del {{ c.consenso.at | date: 'd MMM y' }} (testo
+              · consenso dal link del {{ c.consenso.at | date: 'd MMM y' }} (testo
               {{ c.consenso.versione }})
             }
           </p>
+          @for (k of c.consensiStaff ?? []; track k.registratoAt) {
+            <p class="admin-nota aw-ad__prova">
+              Consenso per messaggio ({{ k.etichettaCanale }}) del
+              {{ k.at | date: 'd MMM y, HH:mm' }}, testo {{ k.versione }}, per
+              {{ k.categorie.length === 1 ? 'una categoria' : k.categorie.length + ' categorie' }}.
+              La prova è il messaggio: va conservato.
+            </p>
+          }
 
           @if (link()) {
             <ng-container *ngTemplateOutlet="bloccoLink" />
+          }
+
+          @if (inAttesa().length > 0) {
+            <details class="admin-modale__sez aw-ad__consenso">
+              <summary class="admin-modale__sum">Ha accettato per messaggio</summary>
+              <div class="admin-modale__corpo">
+                <p class="admin-nota">
+                  Per chi non vuole registrarsi sul sito. Vale solo una risposta
+                  <strong>scritta</strong>, arrivata dal profilo su cui lo conosci,
+                  <strong>dopo</strong> aver ricevuto il testo qui sotto. Un «sì»
+                  arrivato prima non basta: manda il messaggio e aspetta la nuova
+                  risposta.
+                </p>
+                @if (consensoTesto(); as t) {
+                  <label class="field">
+                    <span>1. Messaggio da mandare (testo del consenso {{ t.versione }})</span>
+                    <textarea
+                      #campoMessaggio
+                      class="input aw-ad__messaggio"
+                      readonly
+                      rows="9"
+                      [value]="messaggio()"
+                      (focus)="campoMessaggio.select()"
+                    ></textarea>
+                  </label>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm aw-ad__copia"
+                    (click)="copiaMessaggio(campoMessaggio)"
+                  >
+                    {{ messaggioCopiato() ? 'Copiato' : 'Copia il messaggio' }}
+                  </button>
+
+                  <fieldset class="aw-ad__cat">
+                    <legend>2. Categorie che ha accettato nella risposta</legend>
+                    @for (k of inAttesa(); track k.categoria) {
+                      <label class="row admin-panel__check">
+                        <input
+                          type="checkbox"
+                          [checked]="accettate().has(k.categoria)"
+                          (change)="segna('accettate', k.categoria, $event)"
+                        />
+                        <span>{{ k.etichetta }}</span>
+                      </label>
+                    }
+                  </fieldset>
+                  <div class="admin-panel__row">
+                    <label class="field">
+                      <span>Dove ha risposto</span>
+                      <select
+                        class="input aw-ad__canale"
+                        aria-describedby="aw-canale-aiuto"
+                        (change)="scegliCanale($event)"
+                      >
+                        <option value="" [selected]="canale() === ''">Scegli…</option>
+                        @for (k of t.canali; track k.canale) {
+                          <option [value]="k.canale" [selected]="canale() === k.canale">
+                            {{ k.etichetta }}
+                          </option>
+                        }
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span>Quando ha risposto</span>
+                      <input
+                        class="input aw-ad__quando"
+                        type="datetime-local"
+                        [value]="dataRisposta()"
+                        (input)="scriviDataRisposta($event)"
+                      />
+                    </label>
+                    <p class="admin-panel__aiuto" id="aw-canale-aiuto">
+                      Si annota il canale, non il profilo: il sito non conserva
+                      recapiti. Il messaggio resta a te, come prova.
+                    </p>
+                  </div>
+                  <label class="row admin-panel__check aw-ad__dichiaro">
+                    <input
+                      type="checkbox"
+                      [checked]="dichiaro()"
+                      (change)="spuntaDichiaro($event)"
+                    />
+                    <span>
+                      Dichiaro che ha ricevuto questo testo, che ha risposto per
+                      iscritto dal profilo su cui lo conosco accettando queste
+                      categorie, e che conservo il messaggio come prova.
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--sm aw-ad__registra"
+                    [disabled]="!puoRegistrare() || inVolo()"
+                    (click)="registraConsenso()"
+                  >
+                    {{ inVolo() ? 'Registrazione…' : 'Registra il consenso' }}
+                  </button>
+                } @else if (erroreConsenso(); as ec) {
+                  <div class="aw-ad__errore">
+                    <p class="form-feedback is-error" role="alert">{{ ec }}</p>
+                    <button type="button" class="btn btn--ghost btn--sm" (click)="caricaConsenso()">
+                      Riprova
+                    </button>
+                  </div>
+                } @else {
+                  <div class="spinner" role="status" aria-label="Caricamento del testo del consenso"></div>
+                }
+              </div>
+            </details>
           }
 
           @if (mancanti().length > 0) {
@@ -887,6 +1004,61 @@
               </button>
             </div>
           </details>
+
+          @if (accettateOra().length > 0) {
+            <details class="admin-modale__sez admin-modale__sez--rischio aw-ad__ritiro">
+              <summary class="admin-modale__sum">Ritira da una categoria</summary>
+              <div class="admin-modale__corpo">
+                <p class="admin-nota">
+                  Quando è la persona a chiederlo: chi ha accettato per messaggio
+                  non ha un account da cui ritirarsi, e lo chiede scrivendoti. La
+                  candidatura in quella categoria sparisce dal sito e i voti
+                  ricevuti lì vengono cancellati. Non si annulla.
+                </p>
+                <fieldset class="aw-ad__cat">
+                  <legend>Categorie da cui ritirarlo</legend>
+                  @for (k of accettateOra(); track k.categoria) {
+                    <label class="row admin-panel__check">
+                      <input
+                        type="checkbox"
+                        [checked]="daRitirare().has(k.categoria)"
+                        (change)="segna('daRitirare', k.categoria, $event)"
+                      />
+                      <span>{{ k.etichetta }}</span>
+                    </label>
+                  }
+                </fieldset>
+                @if (confermaRitiro()) {
+                  <div class="row">
+                    <button
+                      type="button"
+                      class="btn btn--danger btn--sm aw-ad__ritira-si"
+                      [disabled]="inVolo()"
+                      (click)="ritiraPerConto()"
+                    >
+                      Ritira davvero
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      (click)="confermaRitiro.set(false)"
+                    >
+                      Annulla
+                    </button>
+                  </div>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm aw-ad__ritira"
+                    [disabled]="daRitirare().size === 0"
+                    (click)="confermaRitiro.set(true)"
+                  >
+                    Ritira la candidatura
+                  </button>
+                }
+              </div>
+            </details>
+          }
 
           <details class="admin-modale__sez admin-modale__sez--rischio">
             <summary class="admin-modale__sum">Togli dai premi</summary>

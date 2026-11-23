@@ -86,6 +86,55 @@
   gap: 0.6rem;
 }
 
+// ── Consenso dato per messaggio ─────────────────────────────────────────────
+// Il messaggio da mandare è un testo da COPIARE, non da scrivere: sola lettura,
+// carattere piccolo, e alto abbastanza da far vedere che dentro c'è il testo
+// del consenso (a tre righe sembrerebbe un campo note).
+.aw-ad__messaggio {
+  width: 100%;
+  min-height: 11rem;
+  resize: vertical;
+  font-size: 0.82rem;
+  line-height: 1.45;
+
+  @media (max-width: 560px) {
+    // iOS ingrandisce la pagina quando il fuoco entra in un campo sotto i 16px.
+    font-size: 16px;
+  }
+}
+
+// ⚠️ Una riga con la casella sta sui 26px: in queste due sezioni i 44 si
+// dichiarano. Sono caselle che decidono un consenso o una revoca, e la scheda
+// a schermo stretto si usa col dito. (Le liste di categorie dell'invito restano
+// com'erano: nove righe da 44px farebbero uscire «Crea l'invito» dallo schermo.)
+.aw-ad__consenso,
+.aw-ad__ritiro {
+  .admin-panel__check {
+    min-height: 44px;
+    margin-top: 0;
+  }
+}
+
+// La dichiarazione è una frase di tre righe ACCANTO a una casella. ⚠️ `.row`
+// va a capo (`flex-wrap: wrap`): senza `nowrap` la frase scende sotto la
+// casella, che resta sola su una riga. E la casella sta in alto, o finirebbe
+// centrata a metà del testo.
+.aw-ad__consenso .aw-ad__dichiaro {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  margin-top: 0.6rem;
+
+  input {
+    flex: none;
+    margin-top: 0.3rem;
+  }
+
+  span {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .aw-ad__link-riga {
   flex-wrap: nowrap;
 

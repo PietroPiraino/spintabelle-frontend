@@ -10,12 +10,17 @@ import { environment } from '../../../../environments/environment';
 import {
   CandidatoAdmin,
   CategoriaSpoglio,
+  ConsensoPerMessaggio,
   EdizioneAwardsAdmin,
   RiepilogoVoti,
   RosaAdmin,
   StatoAnnuncio,
 } from '../../../core/models/awards.models';
-import { AdminAwardsComponent, aDataLocale } from './admin-awards.component';
+import {
+  AdminAwardsComponent,
+  aDataLocale,
+  componiMessaggioConsenso,
+} from './admin-awards.component';
 
 const API = `${environment.API_URL}/admin/awards`;
 
@@ -500,6 +505,222 @@ describe('AdminAwardsComponent', () => {
       });
       expect(bottone('Invia ai prossimi')!.disabled).toBe(true);
       expect(el.textContent).toContain('Le proposte sono chiuse');
+    });
+  });
+  describe('consenso dato per messaggio (valutazione §D-bis)', () => {
+    const CONSENSO: ConsensoPerMessaggio = {
+      versione: '2026-10-30',
+      testo: 'Accetto che il mio nickname compaia come candidato.',
+      canali: [
+        { canale: 'INSTAGRAM', etichetta: 'Instagram' },
+        { canale: 'FACEBOOK', etichetta: 'Facebook' },
+      ],
+    };
+    const dlg = () => document.querySelector('dialog') as HTMLElement;
+    const sezione = (classe: string) =>
+      dlg().querySelector<HTMLDetailsElement>(`details.${classe}`);
+
+    /** Mette un candidato in elenco passando dall'invito, poi ne apre la scheda. */
+    async function apriSchedaDi(candidato: CandidatoAdmin, conTesto = true) {
+      el.querySelector<HTMLButtonElement>('button[aria-label="Invita Squalo"]')!.click();
+      await rendi();
+      document.querySelector<HTMLButtonElement>('dialog button[type="submit"]')!.click();
+      http.expectOne(`${API}/candidati`).flush({ candidato, link: LINK });
+      http.expectOne(`${API}/spoglio`).flush(SPOGLIO);
+      await rendi();
+      // Il link è «copiato»: la modale non è più sporca e si chiude da «Fatto».
+      bottoneDi(dlg(), 'Copia il link')!.click();
+      await rendi();
+      bottoneDi(dlg(), 'Fatto')!.click();
+      await rendi();
+      await scheda('Candidati');
+      el.querySelector<HTMLButtonElement>('button[aria-label="Gestisci Squalo"]')!.click();
+      await rendi();
+      const req = http.expectOne(`${API}/consenso`);
+      if (conTesto) req.flush(CONSENSO);
+      else req.flush({ message: 'giù' }, { status: 500, statusText: 'KO' });
+      await rendi();
+    }
+
+    async function compila(categorie: string[]) {
+      const sez = sezione('aw-ad__consenso')!;
+      for (const box of Array.from(
+        sez.querySelectorAll<HTMLInputElement>('fieldset input[type="checkbox"]'),
+      )) {
+        if (categorie.includes(box.parentElement!.textContent!.trim())) box.click();
+      }
+      const canale = sez.querySelector<HTMLSelectElement>('select.aw-ad__canale')!;
+      canale.value = 'INSTAGRAM';
+      canale.dispatchEvent(new Event('change'));
+      const quando = sez.querySelector<HTMLInputElement>('input.aw-ad__quando')!;
+      quando.value = '2026-11-24T19:30';
+      quando.dispatchEvent(new Event('input'));
+      await rendi();
+    }
+
+    it('il messaggio da mandare porta il testo del server parola per parola, le categorie in attesa e l’informativa', async () => {
+      await apriSchedaDi(CANDIDATO);
+      const testo = sezione('aw-ad__consenso')!.querySelector<HTMLTextAreaElement>(
+        'textarea.aw-ad__messaggio',
+      )!.value;
+      expect(testo).toContain(`«${CONSENSO.testo}»`);
+      expect(testo).toContain('• Mid');
+      expect(testo).toContain('• Fish');
+      expect(testo).toContain('versione 2026-10-30');
+      expect(testo).toContain('https://bestfishforever.it/privacy/');
+      // ⚠️ Mai quante volte è stato proposto: i conteggi restano nel pannello.
+      expect(testo).not.toMatch(/\d+\s+(proposte|volte|voti)/i);
+    });
+
+    it('il messaggio non nomina sale, importi né inviti al gioco (art. 9)', () => {
+      const m = componiMessaggioConsenso(['Fish dell’anno'], CONSENSO);
+      expect(m).not.toMatch(/bonus|deposit|€|euro|vinc|gioca ora|iscriviti/i);
+      expect(m).toContain('«Accetto»');
+    });
+
+    it('⚠️ «Registra il consenso» resta spento finché mancano categorie, canale o dichiarazione', async () => {
+      await apriSchedaDi(CANDIDATO);
+      const registra = () =>
+        sezione('aw-ad__consenso')!.querySelector<HTMLButtonElement>('.aw-ad__registra')!;
+      expect(registra().disabled).toBe(true);
+      await compila(['Fish']);
+      // Tutto compilato tranne la dichiarazione: ancora spento.
+      expect(registra().disabled).toBe(true);
+      sezione('aw-ad__consenso')!
+        .querySelector<HTMLInputElement>('.aw-ad__dichiaro input')!
+        .click();
+      await rendi();
+      expect(registra().disabled).toBe(false);
+    });
+
+    it('manda categorie in ordine di programma, canale, istante ISO e la dichiarazione; poi lo dice in una banda', async () => {
+      await apriSchedaDi(CANDIDATO);
+      await compila(['Fish', 'Mid']);
+      const sez = sezione('aw-ad__consenso')!;
+      sez.querySelector<HTMLInputElement>('.aw-ad__dichiaro input')!.click();
+      await rendi();
+      sez.querySelector<HTMLButtonElement>('.aw-ad__registra')!.click();
+      const req = http.expectOne(`${API}/candidati/c1/consenso`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        categorie: ['sng-mid', 'fish'],
+        canale: 'INSTAGRAM',
+        at: new Date('2026-11-24T19:30').toISOString(),
+        dichiaro: true,
+      });
+      req.flush({
+        ...CANDIDATO,
+        categorie: CANDIDATO.categorie.map((k) => ({ ...k, stato: 'ACCETTATA' })),
+        consensiStaff: [
+          {
+            categorie: ['sng-mid', 'fish'],
+            canale: 'INSTAGRAM',
+            etichettaCanale: 'Instagram',
+            versione: '2026-10-30',
+            at: new Date('2026-11-24T19:30').toISOString(),
+            registratoAt: '2026-11-24T20:00:00.000Z',
+          },
+        ],
+      } satisfies CandidatoAdmin);
+      http.expectOne(`${API}/spoglio`).flush(SPOGLIO);
+      await rendi();
+      // La scheda resta aperta: l'esito è una banda, un toast non si vedrebbe.
+      expect(dlg().querySelector('.form-feedback.is-success')?.textContent).toContain(
+        'Consenso registrato per 2 categorie',
+      );
+      expect(dlg().querySelector('.aw-ad__prova')?.textContent).toContain(
+        'Consenso per messaggio (Instagram)',
+      );
+      // Niente più in attesa: la sezione sparisce, e compare il ritiro.
+      expect(sezione('aw-ad__consenso')).toBeNull();
+      expect(sezione('aw-ad__ritiro')).not.toBeNull();
+    });
+
+    it('⚠️ un rifiuto del server si legge nella scheda e non butta via ciò che era compilato', async () => {
+      await apriSchedaDi(CANDIDATO);
+      await compila(['Fish']);
+      const sez = sezione('aw-ad__consenso')!;
+      sez.querySelector<HTMLInputElement>('.aw-ad__dichiaro input')!.click();
+      await rendi();
+      sez.querySelector<HTMLButtonElement>('.aw-ad__registra')!.click();
+      http
+        .expectOne(`${API}/candidati/c1/consenso`)
+        .flush(
+          { message: 'La candidatura è cambiata nel frattempo: ricarica la scheda.' },
+          { status: 409, statusText: 'Conflict' },
+        );
+      await rendi();
+      expect(dlg().querySelector('.form-feedback.is-error')?.textContent).toContain(
+        'La candidatura è cambiata nel frattempo',
+      );
+      expect(
+        sezione('aw-ad__consenso')!.querySelector<HTMLInputElement>('.aw-ad__dichiaro input')!
+          .checked,
+      ).toBe(true);
+    });
+
+    it('se il testo del consenso non si legge lo dice, con «Riprova»: mai un messaggio scritto a memoria', async () => {
+      await apriSchedaDi(CANDIDATO, false);
+      const sez = sezione('aw-ad__consenso')!;
+      expect(sez.querySelector('textarea')).toBeNull();
+      expect(sez.querySelector('.aw-ad__registra')).toBeNull();
+      bottoneDi(sez, 'Riprova')!.click();
+      http.expectOne(`${API}/consenso`).flush(CONSENSO);
+      await rendi();
+      expect(sezione('aw-ad__consenso')!.querySelector('textarea')).not.toBeNull();
+    });
+
+    it('il ritiro per conto chiede conferma in linea e manda le sole categorie scelte', async () => {
+      const accettato: CandidatoAdmin = {
+        ...CANDIDATO,
+        categorie: CANDIDATO.categorie.map((k) => ({ ...k, stato: 'ACCETTATA' })),
+      };
+      await apriSchedaDi(accettato);
+      // Niente in attesa: la sezione del consenso non c'è.
+      expect(sezione('aw-ad__consenso')).toBeNull();
+      const sez = sezione('aw-ad__ritiro')!;
+      const ritira = () => sez.querySelector<HTMLButtonElement>('.aw-ad__ritira');
+      expect(ritira()!.disabled).toBe(true);
+      Array.from(sez.querySelectorAll<HTMLInputElement>('fieldset input[type="checkbox"]'))
+        .find((b) => b.parentElement!.textContent!.trim() === 'Fish')!
+        .click();
+      await rendi();
+      ritira()!.click();
+      await rendi();
+      http.expectNone(`${API}/candidati/c1/ritira`);
+      sez.querySelector<HTMLButtonElement>('.aw-ad__ritira-si')!.click();
+      const req = http.expectOne(`${API}/candidati/c1/ritira`);
+      expect(req.request.body).toEqual({ categorie: ['fish'] });
+      req.flush({
+        ...accettato,
+        categorie: accettato.categorie.map((k) =>
+          k.categoria === 'fish' ? { ...k, stato: 'RITIRATA' } : k,
+        ),
+      } satisfies CandidatoAdmin);
+      http.expectOne(`${API}/spoglio`).flush(SPOGLIO);
+      await rendi();
+      expect(dlg().querySelector('.form-feedback.is-success')?.textContent).toContain(
+        'ritirata in una categoria',
+      );
+    });
+
+    it('in tabella chi ha accettato per messaggio non è «Nessun account collegato»', async () => {
+      await apriSchedaDi({
+        ...CANDIDATO,
+        consensiStaff: [
+          {
+            categorie: ['fish'],
+            canale: 'FACEBOOK',
+            etichettaCanale: 'Facebook',
+            versione: '2026-10-30',
+            at: '2026-11-24T18:30:00.000Z',
+            registratoAt: '2026-11-24T20:00:00.000Z',
+          },
+        ],
+      });
+      expect(el.querySelector('.admin-table__sub')?.textContent?.trim()).toBe(
+        'Consenso per messaggio · Facebook',
+      );
     });
   });
 });

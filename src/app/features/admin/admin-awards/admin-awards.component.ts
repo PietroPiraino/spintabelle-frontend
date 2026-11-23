@@ -2,6 +2,8 @@ import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   signal,
@@ -12,11 +14,13 @@ import {
   AnnuncioAwards,
   AwardsCategoria,
   AwardsFase,
+  CanaleConsenso,
   CandidatoAdmin,
   CardFormato,
   CategoriaRosa,
   CategoriaSpoglio,
   CategoriaVoti,
+  ConsensoPerMessaggio,
   DateAwards,
   EdizioneAwardsAdmin,
   EsitoRosa,
@@ -62,6 +66,30 @@ export function aDataLocale(iso: string): string {
   const d = new Date(iso);
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/**
+ * Il messaggio da mandare a chi preferisce accettare senza registrarsi
+ * (valutazione §D-bis). ⚠️ Il testo del consenso entra così com'è, fra
+ * virgolette: è la sola parte che ha valore legale, e arriva dal server.
+ * ⚠️ Niente sale, importi o inviti al gioco: è un messaggio privato, ma parla
+ * di un premio a giocatori (art. 9 DL 87/2018).
+ */
+export function componiMessaggioConsenso(
+  categorie: readonly string[],
+  consenso: { versione: string; testo: string },
+): string {
+  return [
+    'Ciao! Per i 3 Max Hyper Awards 2026 la comunità ti ha proposto in:',
+    ...categorie.map((c) => `• ${c}`),
+    '',
+    'Se ti va di candidarti senza registrarti sul sito, rispondi a questo messaggio scrivendo «Accetto» e le categorie che vuoi (anche solo alcune). Ecco che cosa accetti, parola per parola:',
+    '',
+    `«${consenso.testo}»`,
+    '',
+    'Puoi ritirarti quando vuoi scrivendomi qui. L’informativa completa è al punto 12 di https://bestfishforever.it/privacy/',
+    `(Testo del consenso, versione ${consenso.versione})`,
+  ].join('\n');
 }
 
 export function etichettaStatoCandidatura(s: StatoCandidatura | null): string {
@@ -208,6 +236,7 @@ function etichettaFase(f: AwardsFase): string {
 export class AdminAwardsComponent {
   private readonly api = inject(AwardsService);
   private readonly toast = inject(ToastService);
+  private readonly injector = inject(Injector);
 
   protected readonly schede: readonly VoceScheda<Vista>[] = [
     { valore: 'proposte', etichetta: 'Proposte' },
@@ -713,8 +742,256 @@ export class AdminAwardsComponent {
     return this.categorie.filter((c) => !presenti.has(c.categoria));
   });
 
-  /** ⚠️ Un link mostrato e non ancora copiato è un lavoro da non perdere. */
-  protected readonly sporco = computed(() => !!this.link() && !this.copiato());
+  /**
+   * ⚠️ Un link mostrato e non ancora copiato è un lavoro da non perdere; lo è
+   * anche un consenso che si stava mettendo a verbale.
+   */
+  protected readonly sporco = computed(
+    () =>
+      (!!this.link() && !this.copiato()) ||
+      this.accettate().size > 0 ||
+      this.dichiaro(),
+  );
+
+  // ── Consenso dato per messaggio (valutazione §D-bis) ─────────────────────
+  //
+  // Chi non vuole registrarsi risponde per iscritto sul canale su cui lo staff
+  // l'ha contattato. Qui si fanno due cose: si copia il messaggio da mandare
+  // (col testo del consenso preso dal server, mai riscritto) e, arrivata la
+  // risposta, la si mette a verbale.
+
+  protected readonly consensoTesto = signal<ConsensoPerMessaggio | null>(null);
+  protected readonly erroreConsenso = signal<string | null>(null);
+  /**
+   * Le categorie che la persona ha accettato nella risposta. ⚠️ Un signal suo,
+   * non `scelte`: nella stessa scheda `scelte` è di «Aggiungi categorie», e
+   * condividerlo spunterebbe una casella in due sezioni che fanno cose diverse.
+   */
+  protected readonly accettate = signal<ReadonlySet<AwardsCategoria>>(
+    new Set(),
+  );
+  protected readonly canale = signal<CanaleConsenso | ''>('');
+  /** Valore del `datetime-local`: quando la persona ha risposto. */
+  protected readonly dataRisposta = signal('');
+  protected readonly dichiaro = signal(false);
+  protected readonly messaggioCopiato = signal(false);
+  /** L'esito di un'azione che lascia la scheda aperta: una banda, mai un toast. */
+  protected readonly esitoModale = signal<string | null>(null);
+  protected readonly daRitirare = signal<ReadonlySet<AwardsCategoria>>(
+    new Set(),
+  );
+  protected readonly confermaRitiro = signal(false);
+
+  /** Le categorie del candidato aperto che aspettano una risposta. */
+  protected readonly inAttesa = computed(
+    () => this.scheda()?.categorie.filter((k) => k.stato === 'INVITATO') ?? [],
+  );
+
+  /** Quelle accettate: le sole da cui ci si può ritirare. */
+  protected readonly accettateOra = computed(
+    () => this.scheda()?.categorie.filter((k) => k.stato === 'ACCETTATA') ?? [],
+  );
+
+  /**
+   * Il messaggio da mandare. ⚠️ Il testo del consenso è quello del server,
+   * parola per parola: è ciò che la `versione` dichiara, e un testo riscritto
+   * a mano sarebbe un consenso dato su parole diverse.
+   */
+  protected readonly messaggio = computed(() => {
+    const t = this.consensoTesto();
+    const c = this.scheda();
+    if (!t || !c) return '';
+    return componiMessaggioConsenso(
+      this.inAttesa().map((k) => k.etichetta),
+      t,
+    );
+  });
+
+  protected readonly puoRegistrare = computed(
+    () =>
+      this.accettate().size > 0 &&
+      this.canale() !== '' &&
+      this.dataRisposta() !== '' &&
+      this.dichiaro(),
+  );
+
+  protected caricaConsenso(): void {
+    this.erroreConsenso.set(null);
+    this.api.consensoPerMessaggio().subscribe({
+      next: (t) => this.consensoTesto.set(t),
+      error: (err: unknown) =>
+        this.erroreConsenso.set(
+          apiErrorMessage(
+            err,
+            'Non riusciamo a leggere il testo del consenso.',
+          ),
+        ),
+    });
+  }
+
+  protected segna(
+    insieme: 'accettate' | 'daRitirare',
+    c: AwardsCategoria,
+    event: Event,
+  ): void {
+    const on = (event.target as HTMLInputElement).checked;
+    this[insieme].update((s) => {
+      const n = new Set(s);
+      if (on) n.add(c);
+      else n.delete(c);
+      return n;
+    });
+    if (insieme === 'daRitirare') this.confermaRitiro.set(false);
+  }
+
+  protected scegliCanale(event: Event): void {
+    this.canale.set(
+      (event.target as HTMLSelectElement).value as CanaleConsenso | '',
+    );
+  }
+
+  protected scriviDataRisposta(event: Event): void {
+    this.dataRisposta.set((event.target as HTMLInputElement).value);
+  }
+
+  protected spuntaDichiaro(event: Event): void {
+    this.dichiaro.set((event.target as HTMLInputElement).checked);
+  }
+
+  private azzeraConsenso(): void {
+    this.accettate.set(new Set());
+    this.canale.set('');
+    // Precompilato con adesso: il caso normale è registrare appena arriva la
+    // risposta, e su iOS un `datetime-local` vuoto è un rettangolo muto.
+    this.dataRisposta.set(aDataLocale(new Date().toISOString()));
+    this.dichiaro.set(false);
+    this.messaggioCopiato.set(false);
+    this.daRitirare.set(new Set());
+    this.confermaRitiro.set(false);
+    this.esitoModale.set(null);
+  }
+
+  /**
+   * Porta in vista la banda di esito (o d'errore) della scheda.
+   *
+   * ⚠️ La banda sta IN CIMA al corpo della modale, e questi due comandi stanno
+   * in fondo a sezioni lunghe: senza, chi preme «Registra il consenso» non
+   * vede né il successo né il rifiuto, e ripreme. Non si può spostare la banda
+   * accanto al pulsante: a registrazione riuscita la sezione può sparire (non
+   * resta niente in attesa) e si porterebbe via l'esito.
+   * ⚠️ `afterNextRender`: in zoneless la banda non esiste ancora quando il
+   * signal viene scritto.
+   */
+  private mostraEsito(): void {
+    afterNextRender(
+      () => {
+        document
+          .querySelector('dialog[open] .form-feedback')
+          ?.scrollIntoView({ block: 'nearest' });
+      },
+      { injector: this.injector },
+    );
+  }
+
+  protected registraConsenso(): void {
+    const id = this.schedaId();
+    const canale = this.canale();
+    if (!id || this.inVolo() || !this.puoRegistrare() || canale === '') return;
+    const quando = new Date(this.dataRisposta());
+    if (Number.isNaN(quando.getTime())) {
+      this.erroreModale.set('La data della risposta non è valida.');
+      return;
+    }
+    const categorie = AWARDS_CATEGORIE.filter((c) => this.accettate().has(c));
+    this.inVolo.set(true);
+    this.erroreModale.set(null);
+    this.esitoModale.set(null);
+    this.api
+      .registraConsenso(id, {
+        categorie,
+        canale,
+        at: quando.toISOString(),
+        dichiaro: true,
+      })
+      .subscribe({
+        next: (c) => {
+          this.inVolo.set(false);
+          this.sostituisci(c);
+          this.azzeraConsenso();
+          this.esitoModale.set(
+            `Consenso registrato per ${categorie.length === 1 ? 'una categoria' : categorie.length + ' categorie'}. Conserva il messaggio: è la prova.`,
+          );
+          this.mostraEsito();
+          this.ricaricaSpoglio();
+        },
+        error: (err: unknown) => {
+          this.inVolo.set(false);
+          this.erroreModale.set(
+            apiErrorMessage(
+              err,
+              'Non siamo riusciti a registrare il consenso.',
+            ),
+          );
+          this.mostraEsito();
+        },
+      });
+  }
+
+  protected ritiraPerConto(): void {
+    const id = this.schedaId();
+    if (!id || this.inVolo() || this.daRitirare().size === 0) return;
+    const categorie = AWARDS_CATEGORIE.filter((c) => this.daRitirare().has(c));
+    this.inVolo.set(true);
+    this.erroreModale.set(null);
+    this.esitoModale.set(null);
+    this.api.ritiraPerConto(id, categorie).subscribe({
+      next: (c) => {
+        this.inVolo.set(false);
+        this.sostituisci(c);
+        this.daRitirare.set(new Set());
+        this.confermaRitiro.set(false);
+        this.esitoModale.set(
+          categorie.length === 1
+            ? 'Candidatura ritirata in una categoria.'
+            : `Candidatura ritirata in ${categorie.length} categorie.`,
+        );
+        this.mostraEsito();
+        this.ricaricaSpoglio();
+      },
+      error: (err: unknown) => {
+        this.inVolo.set(false);
+        // ⚠️ Si disarma la conferma: lo stesso errore non cambia riprovando.
+        this.confermaRitiro.set(false);
+        this.erroreModale.set(
+          apiErrorMessage(err, 'Non siamo riusciti a ritirare la candidatura.'),
+        );
+        this.mostraEsito();
+      },
+    });
+  }
+
+  protected copiaMessaggio(campo: HTMLTextAreaElement): void {
+    const testo = this.messaggio();
+    if (!testo) return;
+    const ok = () => this.messaggioCopiato.set(true);
+    const clip = navigator.clipboard as Clipboard | undefined;
+    if (clip?.writeText) {
+      clip.writeText(testo).then(ok, () => this.copiaRipiego(campo, ok));
+      return;
+    }
+    this.copiaRipiego(campo, ok);
+  }
+
+  /** La riga sotto il nickname in tabella: l'account, o la via del consenso. */
+  protected sottoRiga(c: CandidatoAdmin): string {
+    if (c.account) return `${c.account.nickname} · ${c.account.email}`;
+    const canali = [
+      ...new Set((c.consensiStaff ?? []).map((k) => k.etichettaCanale)),
+    ];
+    return canali.length > 0
+      ? `Consenso per messaggio · ${canali.join(', ')}`
+      : 'Nessun account collegato';
+  }
 
   /** «Invita» dallo spoglio: precompila le categorie in cui è stato proposto. */
   protected apriInvito(voce: VoceSpoglio): void {
@@ -733,6 +1010,9 @@ export class AdminAwardsComponent {
     this.schedaId.set(c.id);
     this.scelte.set(new Set());
     this.apri('scheda');
+    // Il testo del consenso si legge alla prima scheda aperta, una volta sola:
+    // chi apre il pannello per lo spoglio non ne ha bisogno.
+    if (!this.consensoTesto()) this.caricaConsenso();
   }
 
   private apri(m: 'invito' | 'scheda'): void {
@@ -740,6 +1020,7 @@ export class AdminAwardsComponent {
     this.copiato.set(false);
     this.erroreModale.set(null);
     this.confermaRimozione.set(false);
+    this.azzeraConsenso();
     this.modale.set(m);
   }
 
@@ -747,6 +1028,9 @@ export class AdminAwardsComponent {
     this.modale.set(null);
     this.link.set(null);
     this.schedaId.set(null);
+    // ⚠️ Una dichiarazione rimasta spuntata si ritroverebbe già fatta sulla
+    // scheda del candidato successivo.
+    this.azzeraConsenso();
   }
 
   protected scriviNickname(event: Event): void {
@@ -882,7 +1166,10 @@ export class AdminAwardsComponent {
     this.copiaRipiego(campo, ok);
   }
 
-  private copiaRipiego(campo: HTMLInputElement, ok: () => void): void {
+  private copiaRipiego(
+    campo: HTMLInputElement | HTMLTextAreaElement,
+    ok: () => void,
+  ): void {
     campo.select();
     let riuscito = false;
     try {
@@ -891,6 +1178,7 @@ export class AdminAwardsComponent {
       riuscito = false;
     }
     if (riuscito) ok();
-    else this.erroreModale.set('Copia non riuscita: seleziona il link a mano.');
+    else
+      this.erroreModale.set('Copia non riuscita: seleziona il testo a mano.');
   }
 }
